@@ -37,7 +37,6 @@ public abstract class SingleInputOperator extends LogicalOperatorBase {
   public void setInput(LogicalOperator input) {
     if(input instanceof SinkOperator) throw new UnexpectedOperatorType("You have set the input of a sink node of type ["+input.getClass().getSimpleName()+ "] as the input for another node of type ["+this.getClass().getSimpleName()+ "].  This is invalid.");
     this.input = input;
-    input.registerAsSubscriber(this);
   }
 
   

@@ -20,6 +20,10 @@ package org.apache.drill.common.logical.data;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.collect.Iterators;
+import org.apache.drill.common.logical.data.visitors.LogicalVisitor;
+
+import java.util.Iterator;
 
 @JsonTypeName("union")
 public class Union extends LogicalOperatorBase {
@@ -35,7 +39,6 @@ public class Union extends LogicalOperatorBase {
   public Union(@JsonProperty("inputs") LogicalOperator[] inputs, @JsonProperty("distinct") Boolean distinct){
     this.inputs = inputs;
     for (LogicalOperator o : inputs) {
-      o.registerAsSubscriber(this);
     }
     this.distinct = distinct == null ? false : distinct;
   }
@@ -48,6 +51,17 @@ public class Union extends LogicalOperatorBase {
     return distinct;
   }
 
-  
-  
+    @Override
+    public <T, X, E extends Throwable> T accept(LogicalVisitor<T, X, E> logicalVisitor, X value) throws E {
+        return logicalVisitor.visitUnion(this, value);
+    }
+
+    @Override
+    public Iterator<LogicalOperator> iterator() {
+        return Iterators.forArray(inputs);
+    }
+
+
+
+
 }
