@@ -60,7 +60,7 @@ public class LogicalPlan {
 
   @JsonProperty("query")
   public List<LogicalOperator> getSortedOperators() {
-    return GraphAlgos.TopoSorter.sort(graph);
+    return GraphAlgos.TopoSorter.sortLogical(graph);
   }
 
   public StorageEngineConfig getStorageEngine(String name) {

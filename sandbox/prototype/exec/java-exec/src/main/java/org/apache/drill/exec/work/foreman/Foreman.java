@@ -21,10 +21,12 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.exec.exception.FragmentSetupException;
 import org.apache.drill.exec.ops.QueryContext;
+import org.apache.drill.exec.physical.BasicOptimizer;
 import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.impl.materialize.QueryWritableBatch;
@@ -225,7 +227,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
   }
 
   private PhysicalPlan convert(LogicalPlan plan) {
-    throw new UnsupportedOperationException();
+    return new BasicOptimizer(DrillConfig.create(), context).convert(plan);
   }
 
   public QueryResult getResult(UserClientConnection connection, RequestResults req) {

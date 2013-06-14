@@ -52,6 +52,8 @@ public class Join extends LogicalOperatorBase {
     this.conditions = conditions;
     this.left = left;
     this.right = right;
+    left.registerAsSubscriber(this);
+    right.registerAsSubscriber(this);
     this.type = JoinType.resolve(type);
 
   }

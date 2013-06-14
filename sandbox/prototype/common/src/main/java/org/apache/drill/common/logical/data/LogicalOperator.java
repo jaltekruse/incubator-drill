@@ -41,6 +41,6 @@ public interface LogicalOperator extends GraphValue<LogicalOperator>{
      */
     public <T, X, E extends Throwable> T accept(LogicalVisitor<T, X, E> logicalVisitor, X value) throws E;
 
-	
+    public void registerAsSubscriber(LogicalOperator operator);
 
 }

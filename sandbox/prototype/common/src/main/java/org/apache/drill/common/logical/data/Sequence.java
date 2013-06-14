@@ -66,7 +66,7 @@ public class Sequence extends LogicalOperatorBase {
 
     @Override
     public Iterator<LogicalOperator> iterator() {
-        return Iterators.singletonIterator(input);
+        return Iterators.singletonIterator(stream[stream.length - 1]);
     }
 
 

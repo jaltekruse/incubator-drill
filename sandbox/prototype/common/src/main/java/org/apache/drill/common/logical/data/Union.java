@@ -38,8 +38,9 @@ public class Union extends LogicalOperatorBase {
   @JsonCreator
   public Union(@JsonProperty("inputs") LogicalOperator[] inputs, @JsonProperty("distinct") Boolean distinct){
     this.inputs = inputs;
-    for (LogicalOperator o : inputs) {
-    }
+      for (LogicalOperator o : inputs) {
+          o.registerAsSubscriber(this);
+      }
     this.distinct = distinct == null ? false : distinct;
   }
 

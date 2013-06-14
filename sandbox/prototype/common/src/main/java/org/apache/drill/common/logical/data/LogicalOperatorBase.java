@@ -35,6 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public abstract class LogicalOperatorBase implements LogicalOperator{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(LogicalOperatorBase.class);
 
+    private List<LogicalOperator> children = new ArrayList<LogicalOperator>();
 	private String memo;
 	
 	public final int hashCode(){
@@ -49,9 +50,18 @@ public abstract class LogicalOperatorBase implements LogicalOperator{
   @Override
   public void accept(GraphVisitor<LogicalOperator> visitor) {
     if(visitor.enter(this)){
+        for(LogicalOperator o : children){
+            o.accept(visitor);
+        }
     }
     visitor.leave(this);
   }
+
+    @Override
+    public void registerAsSubscriber(LogicalOperator operator) {
+        if(operator == null) throw new IllegalArgumentException("You attempted to register a null operators.");
+        children.add(operator);
+    }
 
   @Override
   public String toString() {
