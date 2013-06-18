@@ -59,7 +59,8 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   static {
     try {
       OF_METHOD =
-          EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
+          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
+          EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }

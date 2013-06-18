@@ -21,12 +21,17 @@ import com.google.common.base.Function;
 
 import junit.framework.TestCase;
 
+import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.exec.client.DrillClient;
+import org.apache.drill.exec.server.Drillbit;
+import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.jdbc.DrillTable;
 
 import java.sql.*;
 
 /** Unit tests for Drill's JDBC driver. */
 public class JdbcTest extends TestCase {
+
   private static final String MODEL =
       "{\n"
       + "  version: '1.0',\n"
@@ -91,6 +96,14 @@ public class JdbcTest extends TestCase {
         .sql("select * from donuts")
         .returns(EXPECTED);
   }
+
+  public void testFullEngine() throws Exception {
+
+          JdbcAssert.withModel(MODEL, "DONUTS")
+                .sql("select * from donuts")
+                .returns(EXPECTED);
+
+ }
 
   /** Query with project list. No field references yet. */
   public void testProjectConstant() throws Exception {
@@ -187,10 +200,10 @@ public class JdbcTest extends TestCase {
   }
 
   public void testFilterConstant() throws Exception {
-    JdbcAssert.withModel(MODEL, "DONUTS")
-        .sql("select * from donuts where 3 < 4")
-        .returns(EXPECTED);
-  }
+        JdbcAssert.withModel(MODEL, "DONUTS")
+                .sql("select * from donuts where 3 < 4")
+                .returns(EXPECTED);
+    }
 
   public void testValues() throws Exception {
     JdbcAssert.withModel(MODEL, "DONUTS")

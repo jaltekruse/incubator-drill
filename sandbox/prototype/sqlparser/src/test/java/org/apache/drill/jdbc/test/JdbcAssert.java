@@ -20,6 +20,8 @@ package org.apache.drill.jdbc.test;
 import com.google.common.base.Function;
 import junit.framework.Assert;
 import org.apache.drill.common.util.Hook;
+import org.apache.drill.exec.client.DrillClient;
+import org.apache.drill.exec.server.DrillbitContext;
 
 import java.sql.*;
 import java.util.Properties;
@@ -28,6 +30,7 @@ import java.util.Properties;
  * Fluent interface for writing JDBC and query-planning tests.
  */
 public class JdbcAssert {
+
   public static One withModel(String model, String schema) {
     final Properties info = new Properties();
     info.setProperty("schema", schema);
@@ -52,7 +55,7 @@ public class JdbcAssert {
     return buf.toString();
   }
 
-  public static class One {
+    public static class One {
     private final Properties info;
     private final ConnectionFactory connectionFactory;
 
@@ -82,7 +85,9 @@ public class JdbcAssert {
         }
       }
     }
-  }
+
+
+    }
 
   public static class Two {
     private final ConnectionFactory connectionFactory;
