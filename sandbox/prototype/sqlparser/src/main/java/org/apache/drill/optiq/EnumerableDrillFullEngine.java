@@ -244,6 +244,11 @@ public class EnumerableDrillFullEngine<E>
 
         public boolean moveNext() {
             try {
+                // not sure how julian's code worked without this check
+
+                // looks like the RI was adding a RunOutcome to the end of the results that was not being added by the full engine, is this somehting
+                // we want to add? Is this success reporting being handled differently by the full execution enginge?
+                if (queue.isEmpty()) return false;
                 Object o = queue.take();
                 if (o instanceof RunOutcome.OutcomeType) {
                     switch ((RunOutcome.OutcomeType) o) {

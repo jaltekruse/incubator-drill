@@ -101,7 +101,7 @@ public class JdbcTest extends TestCase {
 
           JdbcAssert.withModel(MODEL, "DONUTS")
                 .sql("select * from donuts")
-                .returns(EXPECTED);
+                    .displayResults();
 
  }
 

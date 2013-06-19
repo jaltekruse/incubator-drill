@@ -101,18 +101,23 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
     drillImplementor.go(input);
     String plan = drillImplementor.getJsonString();
     Hook.LOGICAL_PLAN.run(plan);
-    final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
+
+    // not quite sure where this list was supposed to be set earlier, leaving it null got me back the full result set
+
+    //final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
+    final List<String> fieldNameList = null;
     return new BlockBuilder()
         .append(
             Expressions.call(
                 OF_METHOD,
                 Expressions.constant(plan),
-                Expressions.call(
-                    Arrays.class,
-                    "asList",
-                    Expressions.newArrayInit(
-                        String.class,
-                        Functions.apply(fieldNameList, TO_LITERAL))),
+                Expressions.constant(fieldNameList),
+//                Expressions.call(
+//                    Arrays.class,
+//                    "asList",
+//                    Expressions.newArrayInit(
+//                        String.class,
+//                        Functions.apply(fieldNameList, TO_LITERAL))),
                 Expressions.constant(Object.class)))
         .toBlock();
   }

@@ -40,6 +40,7 @@ public class JdbcAssert {
 
   static String toString(ResultSet resultSet) throws SQLException {
     StringBuilder buf = new StringBuilder();
+    int j = 0;
     while (resultSet.next()) {
       int n = resultSet.getMetaData().getColumnCount();
       String sep = "";
@@ -51,9 +52,15 @@ public class JdbcAssert {
         sep = "; ";
       }
       buf.append("\n");
+      j++;
+      if ( j == 49 ){
+          j--;
+          j++;
+      }
     }
     return buf.toString();
   }
+
 
     public static class One {
     private final Properties info;
@@ -116,6 +123,26 @@ public class JdbcAssert {
           connection.close();
         }
       }
+    }
+
+    public Two displayResults() throws Exception{
+        Connection connection = null;
+        Statement statement = null;
+        try {
+            connection = connectionFactory.createConnection();
+            statement = connection.createStatement();
+            ResultSet resultSet = statement.executeQuery(sql);
+            System.out.println(JdbcAssert.toString(resultSet));
+            resultSet.close();
+            return this;
+        } finally {
+            if (statement != null) {
+                statement.close();
+            }
+            if (connection != null) {
+                connection.close();
+            }
+        }
     }
 
     public void planContains(String expected) {

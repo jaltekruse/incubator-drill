@@ -24,13 +24,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jaltekruse
- * Date: 6/11/13
- * Time: 5:32 PM
- * To change this template use File | Settings | File Templates.
- */
 public class BasicOptimizer extends Optimizer{
 
     private DrillConfig config;
@@ -58,9 +51,9 @@ public class BasicOptimizer extends Optimizer{
                 System.out.println(pop);
                 physOps.add(pop);
             } catch (OptimizerException e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                e.printStackTrace();
             } catch (Throwable throwable) {
-                throwable.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                throwable.printStackTrace();
             }
         }
 
