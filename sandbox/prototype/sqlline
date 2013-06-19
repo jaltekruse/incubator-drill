@@ -1,0 +1,16 @@
+#!/bin/bash
+# sqlline - Script to launch SQL shell
+#
+# Example:
+# $ ./sqlline
+# sqlline> !connect jdbc:optiq:model=common/target/test-classes/donuts-model.json admin admin
+
+# Build classpath on first call. (To force rebuild, remove .classpath.txt.)
+if [ ! -f .classpath.txt ]; then
+        (cd sqlparser; mvn dependency:build-classpath -Dmdep.outputFile=../.classpath.txt)
+            find . -type d -name classes |awk 'BEGIN {ORS=":"} {print}' >> .classpath.txt
+            fi
+
+            exec java -cp "$(cat .classpath.txt)" sqlline.SqlLine "$@"
+
+# End sqlline
