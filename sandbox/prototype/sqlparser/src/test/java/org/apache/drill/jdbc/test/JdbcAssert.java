@@ -40,7 +40,6 @@ public class JdbcAssert {
 
   static String toString(ResultSet resultSet) throws SQLException {
     StringBuilder buf = new StringBuilder();
-    int j = 0;
     while (resultSet.next()) {
       int n = resultSet.getMetaData().getColumnCount();
       String sep = "";
@@ -52,11 +51,6 @@ public class JdbcAssert {
         sep = "; ";
       }
       buf.append("\n");
-      j++;
-      if ( j == 49 ){
-          j--;
-          j++;
-      }
     }
     return buf.toString();
   }

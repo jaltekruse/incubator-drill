@@ -50,6 +50,7 @@ import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 
 import io.netty.buffer.ByteBuf;
+import org.apache.drill.jdbc.DrillInstance;
 
 /**
  * Runtime helper that executes a Drill query and converts it into an
@@ -98,22 +99,17 @@ public class EnumerableDrillFullEngine<E>
     Future<List<QueryResultBatch>> runPlan(
             CompletionService<List<QueryResultBatch>> service) throws Exception {
         IteratorRegistry ir = new IteratorRegistry();
-        DrillConfig config = DrillConfig.create();
 
-        RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
-        try (Drillbit bit1 = new Drillbit(config, serviceSet); DrillClient client = new DrillClient(config, serviceSet.getCoordinator());) {
-            bit1.run();
-            client.connect();
             config.setSinkQueues(0, queue);
 
-//            return service.submit(
-//                new Callable<List<QueryResultBatch>>() {
-//                    @Override
-//                    public List<QueryResultBatch> call() throws Exception {
-                        List<QueryResultBatch> results = client.runQuery(UserProtos.QueryType.LOGICAL, plan);
+            return service.submit(
+                new Callable<List<QueryResultBatch>>() {
+                    @Override
+                    public List<QueryResultBatch> call() throws Exception {
+                        List<QueryResultBatch> results = DrillInstance.getClient().runQuery(UserProtos.QueryType.LOGICAL, plan);
 
-                        RecordBatchLoader batchLoader = new RecordBatchLoader(bit1.getContext().getAllocator());
+                        RecordBatchLoader batchLoader = new RecordBatchLoader(DrillInstance.getBit().getContext().getAllocator());
                         int recordCount = 0;
                         for (QueryResultBatch batch : results) {
                             if (!batch.hasData()) continue;
@@ -135,12 +131,11 @@ public class EnumerableDrillFullEngine<E>
                             }
                         }
                         return null;
-//                    }
-//                }
-//            );
+                    }
+                }
+            );
+       }
 
-        }
-    }
 
     @Override
     public Enumerator<E> enumerator() {

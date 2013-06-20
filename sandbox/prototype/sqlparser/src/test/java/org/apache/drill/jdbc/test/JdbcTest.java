@@ -25,6 +25,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.jdbc.DrillInstance;
 import org.apache.drill.jdbc.DrillTable;
 
 import java.sql.*;
@@ -76,18 +77,18 @@ public class JdbcTest extends TestCase {
   public void testPrepare() throws Exception {
     JdbcAssert.withModel(MODEL, "DONUTS")
         .withConnection(
-            new Function<Connection, Void>() {
-              public Void apply(Connection connection) {
-                try {
-                  final Statement statement = connection.prepareStatement(
-                      "select * from donuts");
-                  statement.close();
-                  return null;
-                } catch (Exception e) {
-                  throw new RuntimeException(e);
-                }
-              }
-            });
+                new Function<Connection, Void>() {
+                    public Void apply(Connection connection) {
+                        try {
+                            final Statement statement = connection.prepareStatement(
+                                    "select * from donuts");
+                            statement.close();
+                            return null;
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                });
   }
 
   /** Simple query against JSON. */
@@ -98,10 +99,26 @@ public class JdbcTest extends TestCase {
   }
 
   public void testFullEngine() throws Exception {
+      DrillConfig config = DrillConfig.create();
+      RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
+      DrillInstance.setBit(new Drillbit(config, serviceSet));
+      DrillInstance.setClient(new DrillClient(config, serviceSet.getCoordinator()));
 
+      try {
+          DrillInstance.getBit().run();
+          DrillInstance.getClient().connect();
           JdbcAssert.withModel(MODEL, "DONUTS")
                 .sql("select * from donuts")
                     .displayResults();
+      }
+      finally{
+          try{
+              DrillInstance.getBit().close();
+          }
+          finally {
+              DrillInstance.getClient().close();
+          }
+      }
 
  }
 

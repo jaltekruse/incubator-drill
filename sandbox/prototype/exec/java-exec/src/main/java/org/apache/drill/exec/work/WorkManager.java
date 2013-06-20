@@ -22,11 +22,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.PriorityBlockingQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.coord.ClusterCoordinator;
@@ -63,7 +59,7 @@ public class WorkManager implements Closeable{
   private final BitComHandler bitComWorker;
   private final UserWorker userWorker;
   private final WorkerBee bee;
-  private Executor executor = Executors.newFixedThreadPool(4, new NamedThreadFactory("Working Thread - "));
+  private ExecutorService executor = Executors.newFixedThreadPool(4, new NamedThreadFactory("Working Thread - "));
   private final EventThread eventThread;
   
   public WorkManager(BootStrapContext context){
@@ -90,6 +86,7 @@ public class WorkManager implements Closeable{
   
   @Override
   public void close() throws IOException {
+      executor.shutdown();
   }
   
 
