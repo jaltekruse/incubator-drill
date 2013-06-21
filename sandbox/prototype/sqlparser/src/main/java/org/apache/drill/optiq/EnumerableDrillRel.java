@@ -59,8 +59,8 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   static {
     try {
       OF_METHOD =
-          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
-          EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
+          EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
+          //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
@@ -104,20 +104,20 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
 
     // not quite sure where this list was supposed to be set earlier, leaving it null got me back the full result set
 
-    //final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
-    final List<String> fieldNameList = null;
+    final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
+    //final List<String> fieldNameList = null;
     return new BlockBuilder()
         .append(
             Expressions.call(
                 OF_METHOD,
                 Expressions.constant(plan),
-                Expressions.constant(fieldNameList),
-//                Expressions.call(
-//                    Arrays.class,
-//                    "asList",
-//                    Expressions.newArrayInit(
-//                        String.class,
-//                        Functions.apply(fieldNameList, TO_LITERAL))),
+                //Expressions.constant(fieldNameList),
+                Expressions.call(
+                    Arrays.class,
+                    "asList",
+                    Expressions.newArrayInit(
+                        String.class,
+                        Functions.apply(fieldNameList, TO_LITERAL))),
                 Expressions.constant(Object.class)))
         .toBlock();
   }
