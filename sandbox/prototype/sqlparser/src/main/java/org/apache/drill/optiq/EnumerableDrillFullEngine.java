@@ -88,7 +88,7 @@ public class EnumerableDrillFullEngine<E>
      * returned is a {@link JsonNode}.
      */
     public static <E> EnumerableDrillFullEngine<E> of(String plan,
-                                                      final List<String> fieldNames, Class<E> clazz) {
+                                                      final List<String> fieldNames, Class<E> clazz, net.hydromatic.optiq.DataContext context) {
         DrillConfig config = DrillConfig.create();
         return new EnumerableDrillFullEngine<>(config, plan, clazz, fieldNames);
     }

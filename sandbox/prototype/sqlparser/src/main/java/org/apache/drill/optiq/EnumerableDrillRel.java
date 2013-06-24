@@ -59,8 +59,8 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   static {
     try {
       OF_METHOD =
-          EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
-          //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
+          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
+          EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, net.hydromatic.optiq.DataContext.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
@@ -118,7 +118,8 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
                     Expressions.newArrayInit(
                         String.class,
                         Functions.apply(fieldNameList, TO_LITERAL))),
-                Expressions.constant(Object.class)))
+                Expressions.constant(Object.class),
+                Expressions.variable(net.hydromatic.optiq.DataContext.class, "root")))
         .toBlock();
   }
 }

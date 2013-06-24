@@ -27,7 +27,11 @@ import java.sql.SQLException;
 
 public class Foo {
     public net.hydromatic.linq4j.Enumerable execute(final net.hydromatic.optiq.DataContext root) {
-        return org.apache.drill.optiq.EnumerableDrill.of("{\"head\":{\"type\":\"APACHE_DRILL_LOGICAL\",\"version\":\"1\",\"generator\":{\"type\":\"manual\",\"info\":\"na\"}},\"storage\":{\"donuts-json\":{\"type\":\"classpath\"},\"queue\":{\"type\":\"queue\"}},\"query\":[{\"op\":\"sequence\",\"do\":[{\"op\":\"scan\",\"memo\":\"initial_scan\",\"ref\":\"_MAP\",\"storageengine\":\"donuts-json\",\"selection\":{\"path\":\"/donuts.json\",\"type\":\"JSON\"}},{\"op\":\"project\",\"projections\":[{\"expr\":\"_MAP\",\"ref\":\"output._MAP\"}]},{\"op\":\"store\",\"storageengine\":\"queue\",\"memo\":\"output sink\",\"target\":{\"number\":0}}]}]}", java.util.Arrays.asList(new String[] {
+        return org.apache.drill.optiq.EnumerableDrill.of("{\"head\":{\"type\":\"APACHE_DRILL_LOGICAL\",\"version\":\"1\",\"generator\":{\"type\"" +
+                ":\"manual\",\"info\":\"na\"}},\"storage\":{\"donuts-json\":{\"type\":\"classpath\"},\"queue\":{\"type\":\"queue\"}},\"query\":" +
+                "[{\"op\":\"sequence\",\"do\":[{\"op\":\"scan\",\"memo\":\"initial_scan\",\"ref\":\"_MAP\",\"storageengine\":\"donuts-json\"," +
+                "\"selection\":{\"path\":\"/donuts.json\",\"type\":\"JSON\"}},{\"op\":\"project\",\"projections\":[{\"expr\":\"_MAP\",\"ref\":" +
+                "\"output._MAP\"}]},{\"op\":\"store\",\"storageengine\":\"queue\",\"memo\":\"output sink\",\"target\":{\"number\":0}}]}]}", java.util.Arrays.asList(new String[] {
                 "_MAP"}), java.lang.Object.class);
     }
 
