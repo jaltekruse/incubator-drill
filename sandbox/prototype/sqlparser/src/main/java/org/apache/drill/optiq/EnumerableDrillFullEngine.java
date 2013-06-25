@@ -88,7 +88,7 @@ public class EnumerableDrillFullEngine<E>
      * returned is a {@link JsonNode}.
      */
     public static <E> EnumerableDrillFullEngine<E> of(String plan,
-                                                      final List<String> fieldNames, Class<E> clazz, net.hydromatic.optiq.DataContext context) {
+                                                      final List<String> fieldNames, Class<E> clazz) {
         DrillConfig config = DrillConfig.create();
         return new EnumerableDrillFullEngine<>(config, plan, clazz, fieldNames);
     }
@@ -103,10 +103,11 @@ public class EnumerableDrillFullEngine<E>
 
             config.setSinkQueues(0, queue);
 
-            return service.submit(
-                new Callable<List<QueryResultBatch>>() {
-                    @Override
-                    public List<QueryResultBatch> call() throws Exception {
+//            return service.submit(
+//                new Callable<List<QueryResultBatch>>() {
+//                    @Override
+//                    public List<QueryResultBatch> call() throws Exception {
+                        System.out.println("!!!!!" + DrillInstance.getClient());
                         List<QueryResultBatch> results = DrillInstance.getClient().runQuery(UserProtos.QueryType.LOGICAL, plan);
 
                         RecordBatchLoader batchLoader = new RecordBatchLoader(DrillInstance.getBit().getContext().getAllocator());
@@ -131,9 +132,9 @@ public class EnumerableDrillFullEngine<E>
                             }
                         }
                         return null;
-                    }
-                }
-            );
+//                    }
+//                }
+//            );
        }
 
 

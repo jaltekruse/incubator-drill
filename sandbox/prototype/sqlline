@@ -12,5 +12,4 @@ if [ ! -f .classpath.txt ]; then
             fi
 
             exec java -cp "$(cat .classpath.txt)" sqlline.SqlLine "$@"
-
 # End sqlline
