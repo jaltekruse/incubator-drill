@@ -86,7 +86,7 @@ public class WorkManager implements Closeable{
   
   @Override
   public void close() throws IOException {
-      executor.shutdown();
+      //executor.shutdown();
   }
   
 
