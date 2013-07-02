@@ -20,10 +20,12 @@ package org.apache.drill.optiq;
 import net.hydromatic.linq4j.expressions.*;
 import net.hydromatic.linq4j.function.Function1;
 import net.hydromatic.linq4j.function.Functions;
+import net.hydromatic.optiq.DataContext;
 import net.hydromatic.optiq.impl.java.JavaTypeFactory;
 import net.hydromatic.optiq.rules.java.*;
 
 import org.apache.drill.common.util.Hook;
+import org.apache.drill.jdbc.DrillTableFullEngine;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.SingleRel;
 import org.eigenbase.relopt.*;
@@ -59,8 +61,8 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   static {
     try {
       OF_METHOD =
-          EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
-          //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, net.hydromatic.optiq.DataContext.class);
+          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
+          EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, DataContext.class);
           //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
@@ -112,15 +114,14 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
             Expressions.call(
                 OF_METHOD,
                 Expressions.constant(plan),
-                //Expressions.constant(fieldNameList),
                 Expressions.call(
                     Arrays.class,
                     "asList",
                     Expressions.newArrayInit(
                         String.class,
                         Functions.apply(fieldNameList, TO_LITERAL))),
-                Expressions.constant(Object.class)
-                //Expressions.variable(net.hydromatic.optiq.DataContext.class, "root")
+                Expressions.constant(Object.class),
+                Expressions.variable(DataContext.class, "root")
                 ))
         .toBlock();
   }

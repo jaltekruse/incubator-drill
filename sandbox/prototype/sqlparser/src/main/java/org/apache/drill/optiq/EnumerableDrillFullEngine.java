@@ -28,6 +28,8 @@ import net.hydromatic.linq4j.AbstractEnumerable;
 import net.hydromatic.linq4j.Enumerable;
 import net.hydromatic.linq4j.Enumerator;
 
+import net.hydromatic.optiq.DataContext;
+import net.hydromatic.optiq.MutableSchema;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.common.util.FileUtils;
@@ -51,6 +53,7 @@ import org.apache.drill.exec.server.RemoteServiceSet;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.jdbc.DrillInstance;
+import org.apache.drill.jdbc.DrillTableFullEngine;
 
 /**
  * Runtime helper that executes a Drill query and converts it into an
@@ -64,6 +67,7 @@ public class EnumerableDrillFullEngine<E>
     final DrillConfig config;
     private final String holder;
     private final List<String> fields;
+    private DataContext drillTable;
 
     private static final ObjectMapper mapper = createMapper();
 
@@ -75,11 +79,12 @@ public class EnumerableDrillFullEngine<E>
      * @param fields Names of fields, or null to return the whole blob
      */
     public EnumerableDrillFullEngine(DrillConfig config, String plan, Class<E> clazz,
-                                     List<String> fields) {
+                                     List<String> fields, DataContext drillTable) {
         this.plan = plan;
         this.config = config;
         this.holder = null;
         this.fields = fields;
+        this.drillTable = drillTable;
         config.setSinkQueues(0, queue);
     }
 
@@ -88,9 +93,9 @@ public class EnumerableDrillFullEngine<E>
      * returned is a {@link JsonNode}.
      */
     public static <E> EnumerableDrillFullEngine<E> of(String plan,
-                                                      final List<String> fieldNames, Class<E> clazz) {
+                                                      final List<String> fieldNames, Class<E> clazz, DataContext drillTable) {
         DrillConfig config = DrillConfig.create();
-        return new EnumerableDrillFullEngine<>(config, plan, clazz, fieldNames);
+        return new EnumerableDrillFullEngine<>(config, plan, clazz, fieldNames, drillTable);
     }
 
     /**

@@ -99,26 +99,26 @@ public class JdbcTest extends TestCase {
   }
 
   public void testFullEngine() throws Exception {
-//      DrillConfig config = DrillConfig.create();
-//      RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
-//      DrillInstance.setBit(new Drillbit(config, serviceSet));
-//      DrillInstance.setClient(new DrillClient(config, serviceSet.getCoordinator()));
-//
-//      try {
-//          DrillInstance.getBit().run();
-//          DrillInstance.getClient().connect();
-//          JdbcAssert.withModel(MODEL, "DONUTS")
-//                .sql("select * from donuts")
-//                    .displayResults();
-//      }
-//      finally{
-//          try{
-//              DrillInstance.getBit().close();
-//          }
-//          finally {
-//              DrillInstance.getClient().close();
-//          }
-//      }
+      DrillConfig config = DrillConfig.create();
+      RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
+      DrillInstance.setBit(new Drillbit(config, serviceSet));
+      DrillInstance.setClient(new DrillClient(config, serviceSet.getCoordinator()));
+
+      try {
+          DrillInstance.getBit().run();
+          DrillInstance.getClient().connect();
+          JdbcAssert.withModel(MODEL, "DONUTS")
+                .sql("select * from donuts")
+                    .displayResults();
+      }
+      finally{
+          try{
+              DrillInstance.getBit().close();
+          }
+          finally {
+              DrillInstance.getClient().close();
+          }
+      }
 
  }
 
