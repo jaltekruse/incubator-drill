@@ -23,7 +23,7 @@ import java.sql.SQLException;
 import net.hydromatic.linq4j.function.Function0;
 import net.hydromatic.optiq.jdbc.*;
 import net.hydromatic.optiq.model.ModelHandler;
-import org.apache.drill.optiq.DrillPrepareImpl;
+import org.apache.drill.optiq.ref.DrillPrepareImpl;
 
 /**
  * JDBC driver for Apache Drill.
@@ -46,22 +46,21 @@ public class Driver extends UnregisteredDriver {
   @Override
   protected Function0<OptiqPrepare> createPrepareFactory() {
     return new Function0<OptiqPrepare>() {
-        @Override
-        public OptiqPrepare apply() {
-            return new DrillPrepareImpl();
-        }
+      @Override
+      public OptiqPrepare apply() {
+        return new DrillPrepareImpl();
+      }
     };
   }
 
-    @Override
+  @Override
   protected Handler createHandler() {
     return new DrillHandler();
   }
 
   private static class DrillHandler extends HandlerImpl {
     public void onConnectionInit(OptiqConnection connection)
-        throws SQLException
-    {
+        throws SQLException {
       super.onConnectionInit(connection);
 
       final String model = connection.getProperties().getProperty("model");

@@ -15,30 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.jdbc;
+package org.apache.drill.optiq.ref;
 
-import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.exec.server.Drillbit;
+import org.eigenbase.rel.ValuesRel;
+import org.eigenbase.relopt.*;
 
-public class DrillInstance {
+/**
+ * Rule that converts a {@link ValuesRel} to a Drill
+ * "values" operation.
+ */
+public class DrillValuesRule extends RelOptRule {
+  public static final RelOptRule INSTANCE = new DrillValuesRule();
 
-  private static Drillbit bit;
-  private static DrillClient client;
-
-
-  public static Drillbit getBit() {
-    return bit;
+  private DrillValuesRule() {
+    super(
+        new RelOptRuleOperand(
+            ValuesRel.class,
+            Convention.NONE),
+        "DrillValuesRule");
   }
 
-  public static DrillClient getClient() {
-    return client;
-  }
-
-  public static void setBit(Drillbit bit) {
-    DrillInstance.bit = bit;
-  }
-
-  public static void setClient(DrillClient client) {
-    DrillInstance.client = client;
+  @Override
+  public void onMatch(RelOptRuleCall call) {
+    final ValuesRel values = (ValuesRel) call.getRels()[0];
+    final RelTraitSet traits = values.getTraitSet().plus(DrillRel.CONVENTION);
+    call.transformTo(
+        new DrillValuesRel(values.getCluster(), values.getRowType(),
+            values.getTuples(), traits));
   }
 }
+
+// End DrillValuesRule.java

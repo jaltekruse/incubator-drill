@@ -15,31 +15,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.optiq;
+package org.apache.drill.optiq.ref;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.eigenbase.rel.FilterRelBase;
+import org.eigenbase.rel.ValuesRelBase;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.*;
-import org.eigenbase.rex.RexNode;
+import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.rex.RexLiteral;
 
 import java.util.List;
 
 /**
- * Filter implemented in Drill.
+ * Values implemented in Drill.
  */
-public class DrillFilterRel extends FilterRelBase implements DrillRel {
-  protected DrillFilterRel(RelOptCluster cluster, RelTraitSet traits,
-      RelNode child, RexNode condition) {
-    super(cluster, traits, child, condition);
+public class DrillValuesRel extends ValuesRelBase implements DrillRel {
+  protected DrillValuesRel(RelOptCluster cluster,
+                           RelDataType rowType,
+                           List<List<RexLiteral>> tuples,
+                           RelTraitSet traits) {
+    super(cluster, rowType, tuples, traits);
     assert getConvention() == CONVENTION;
   }
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return new DrillFilterRel(getCluster(), traitSet, sole(inputs),
-        getCondition());
+    assert inputs.isEmpty();
+    return new DrillValuesRel(getCluster(), rowType, tuples, traitSet);
   }
 
   @Override
@@ -49,18 +50,9 @@ public class DrillFilterRel extends FilterRelBase implements DrillRel {
 
   @Override
   public void implement(DrillImplementor implementor) {
-    implementor.visitChild(this, 0, getChild());
-    final ObjectNode node = implementor.mapper.createObjectNode();
-/*
-      E.g. {
-	      op: "filter",
-	      expr: "donuts.ppu < 1.00"
-	    }
-*/
-    node.put("op", "filter");
-    node.put("expr", DrillOptiq.toDrill(getChild(), getCondition()));
-    implementor.add(node);
+    // Update when https://issues.apache.org/jira/browse/DRILL-57 fixed
+    throw new UnsupportedOperationException();
   }
 }
 
-// End DrillFilterRel.java
+// End DrillValuesRel.java

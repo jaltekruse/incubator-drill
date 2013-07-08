@@ -28,20 +28,22 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.eigenbase.rel.RelNode;
 
 /**
- * Context for converting a tree of {@link DrillRel} nodes into a Drill logical
+ * Context for converting a tree of {@link DrillFullEngineRel} nodes into a Drill logical
  * plan.
  */
-public class DrillImplementor {
+public class DrillFullEngineImplementor {
   final ObjectMapper mapper = new ObjectMapper();
+
   {
     mapper.enable(SerializationFeature.INDENT_OUTPUT);
     mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
     mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
   }
+
   private final ObjectNode rootNode = mapper.createObjectNode();
   private final ArrayNode operatorsNode;
 
-  public DrillImplementor() {
+  public DrillFullEngineImplementor() {
     final ObjectNode headNode = mapper.createObjectNode();
     rootNode.put("head", headNode);
     headNode.put("type", "APACHE_DRILL_LOGICAL");
@@ -56,7 +58,7 @@ public class DrillImplementor {
     // the query
     final ObjectNode sourcesNode = mapper.createObjectNode();
     rootNode.put("storage", sourcesNode);
-    
+
     // input file source
     {
       final ObjectNode sourceNode = mapper.createObjectNode();
@@ -68,9 +70,8 @@ public class DrillImplementor {
       sourceNode.put("type", "queue");
       sourcesNode.put("queue", sourceNode);
     }
-    
 
-    
+
     final ArrayNode queryNode = mapper.createArrayNode();
     rootNode.put("query", queryNode);
 
@@ -82,7 +83,7 @@ public class DrillImplementor {
     sequenceOpNode.put("do", operatorsNode);
   }
 
-  public void go(DrillRel root) {
+  public void go(DrillFullEngineRel root) {
     root.implement(this);
 
     // Add a last node, to write to the output queue.
@@ -100,15 +101,17 @@ public class DrillImplementor {
     operatorsNode.add(operator);
   }
 
-  /** Returns the generated plan. */
+  /**
+   * Returns the generated plan.
+   */
   public String getJsonString() {
     String s = rootNode.toString();
     System.out.println(s);
     return s;
   }
 
-  public void visitChild(DrillRel parent, int ordinal, RelNode child) {
-    ((DrillRel) child).implement(this);
+  public void visitChild(DrillFullEngineRel parent, int ordinal, RelNode child) {
+    ((DrillFullEngineRel) child).implement(this);
   }
 }
 

@@ -15,34 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.optiq;
+package org.apache.drill.optiq.ref;
 
-import org.eigenbase.rel.ValuesRel;
-import org.eigenbase.relopt.*;
+import net.hydromatic.optiq.prepare.OptiqPrepareImpl;
+import net.hydromatic.optiq.rules.java.JavaRules;
+import org.eigenbase.relopt.RelOptPlanner;
 
 /**
- * Rule that converts a {@link ValuesRel} to a Drill
- * "values" operation.
+ * Implementation of {@link net.hydromatic.optiq.jdbc.OptiqPrepare} for Drill.
  */
-public class DrillValuesRule extends RelOptRule {
-  public static final RelOptRule INSTANCE = new DrillValuesRule();
-
-  private DrillValuesRule() {
-    super(
-        new RelOptRuleOperand(
-            ValuesRel.class,
-            Convention.NONE),
-        "DrillValuesRule");
+public class DrillPrepareImpl extends OptiqPrepareImpl {
+  public DrillPrepareImpl() {
+    super();
   }
 
   @Override
-  public void onMatch(RelOptRuleCall call) {
-    final ValuesRel values = (ValuesRel) call.getRels()[0];
-    final RelTraitSet traits = values.getTraitSet().plus(DrillRel.CONVENTION);
-    call.transformTo(
-        new DrillValuesRel(values.getCluster(), values.getRowType(),
-            values.getTuples(), traits));
+  protected RelOptPlanner createPlanner() {
+    final RelOptPlanner planner = super.createPlanner();
+    planner.addRule(EnumerableDrillRule.ARRAY_INSTANCE);
+    planner.addRule(EnumerableDrillRule.CUSTOM_INSTANCE);
+
+    // Enable when https://issues.apache.org/jira/browse/DRILL-57 fixed
+    if (false) {
+      planner.addRule(DrillValuesRule.INSTANCE);
+      planner.removeRule(JavaRules.ENUMERABLE_VALUES_RULE);
+    }
+    return planner;
   }
 }
 
-// End DrillValuesRule.java
+// End DrillPrepareImpl.java

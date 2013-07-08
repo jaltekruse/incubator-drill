@@ -23,12 +23,14 @@ import org.eigenbase.relopt.Convention;
 /**
  * Relational expression that is implemented in Drill.
  */
-public interface DrillRel extends RelNode {
-  /** Calling convention for relational expressions that are "implemented" by
-   * generating Drill logical plans. */
-  Convention CONVENTION = new Convention.Impl("DRILL", DrillRel.class);
+public interface DrillFullEngineRel extends RelNode {
+  /**
+   * Calling convention for relational expressions that are "implemented" by
+   * generating Drill logical plans.
+   */
+  final Convention CONVENTION = new Convention.Impl("DRILL", DrillFullEngineRel.class);
 
-  void implement(DrillImplementor implementor);
+  void implement(DrillFullEngineImplementor implementor);
 }
 
 // End DrillRel.java

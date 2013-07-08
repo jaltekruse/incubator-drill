@@ -19,13 +19,14 @@ package org.apache.drill.optiq;
 
 import net.hydromatic.linq4j.expressions.*;
 import net.hydromatic.linq4j.function.Function1;
-import net.hydromatic.linq4j.function.Functions;
 import net.hydromatic.optiq.DataContext;
 import net.hydromatic.optiq.impl.java.JavaTypeFactory;
 import net.hydromatic.optiq.rules.java.*;
 
 import org.apache.drill.common.util.Hook;
-import org.apache.drill.jdbc.DrillTableFullEngine;
+import org.apache.drill.optiq.ref.DrillImplementor;
+import org.apache.drill.optiq.ref.DrillRel;
+import org.apache.drill.optiq.ref.EnumerableDrillRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.SingleRel;
 import org.eigenbase.relopt.*;
@@ -42,11 +43,11 @@ import java.util.*;
  * it executes a Drill query and returns the results as an
  * {@link net.hydromatic.linq4j.Enumerable}.
  */
-public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
+public class EnumerableDrillFullEngineRel extends SingleRel implements EnumerableRel {
   private static final Logger LOG =
       LoggerFactory.getLogger(EnumerableDrillRel.class);
 
-  private static final Function1<String,Expression> TO_LITERAL =
+  private static final Function1<String, Expression> TO_LITERAL =
       new Function1<String, Expression>() {
         @Override
         public Expression apply(String a0) {
@@ -61,18 +62,15 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   static {
     try {
       OF_METHOD =
-          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
           EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, DataContext.class);
-          //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public EnumerableDrillRel(RelOptCluster cluster,
-      RelTraitSet traitSet,
-      RelNode input)
-  {
+  public EnumerableDrillFullEngineRel(RelOptCluster cluster,
+                                      RelTraitSet traitSet,
+                                      RelNode input) {
     super(cluster, traitSet, input);
     assert getConvention() instanceof EnumerableConvention;
     assert input.getConvention() == DrillRel.CONVENTION;
@@ -92,14 +90,14 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return new EnumerableDrillRel(getCluster(), traitSet, sole(inputs));
+    return new EnumerableDrillFullEngineRel(getCluster(), traitSet, sole(inputs));
   }
 
   public BlockExpression implement(EnumerableRelImplementor implementor) {
     LOG.debug("implementing enumerable");
 
-    final DrillImplementor drillImplementor = new DrillImplementor();
-    DrillRel input = (DrillRel) getChild();
+    final DrillFullEngineImplementor drillImplementor = new DrillFullEngineImplementor();
+    DrillFullEngineRel input = (DrillFullEngineRel) getChild();
 
     drillImplementor.go(input);
     String plan = drillImplementor.getJsonString();
@@ -107,22 +105,23 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
 
     // not quite sure where this list was supposed to be set earlier, leaving it null got me back the full result set
 
-    final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
-    //final List<String> fieldNameList = null;
+    //final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
+    final List<String> fieldNameList = null;
     return new BlockBuilder()
         .append(
             Expressions.call(
                 OF_METHOD,
                 Expressions.constant(plan),
-                Expressions.call(
-                    Arrays.class,
-                    "asList",
-                    Expressions.newArrayInit(
-                        String.class,
-                        Functions.apply(fieldNameList, TO_LITERAL))),
+                Expressions.constant(null),
+//                Expressions.call(
+//                    Arrays.class,
+//                    "asList",
+//                    Expressions.newArrayInit(
+//                        String.class,
+//                        Functions.apply(fieldNameList, TO_LITERAL))),
                 Expressions.constant(Object.class),
                 Expressions.variable(DataContext.class, "root")
-                ))
+            ))
         .toBlock();
   }
 }

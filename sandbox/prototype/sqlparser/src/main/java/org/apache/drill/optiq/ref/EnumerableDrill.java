@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.optiq;
+package org.apache.drill.optiq.ref;
 
 import java.io.IOException;
 import java.util.*;
@@ -53,14 +53,15 @@ public class EnumerableDrill<E>
 
   private static final ObjectMapper mapper = createMapper();
 
-  /** Creates a DrillEnumerable.
+  /**
+   * Creates a DrillEnumerable.
    *
-   * @param plan Logical plan
-   * @param clazz Type of elements returned from enumerable
+   * @param plan   Logical plan
+   * @param clazz  Type of elements returned from enumerable
    * @param fields Names of fields, or null to return the whole blob
    */
   public EnumerableDrill(DrillConfig config, LogicalPlan plan, Class<E> clazz,
-      List<String> fields) {
+                         List<String> fields) {
     this.plan = plan;
     this.config = config;
     this.holder = null;
@@ -68,16 +69,20 @@ public class EnumerableDrill<E>
     config.setSinkQueues(0, queue);
   }
 
-  /** Creates a DrillEnumerable from a plan represented as a string. Each record
-   * returned is a {@link JsonNode}. */
+  /**
+   * Creates a DrillEnumerable from a plan represented as a string. Each record
+   * returned is a {@link JsonNode}.
+   */
   public static <E> EnumerableDrill<E> of(String plan,
-      final List<String> fieldNames, Class<E> clazz) {
+                                          final List<String> fieldNames, Class<E> clazz) {
     DrillConfig config = DrillConfig.create();
     final LogicalPlan parse = LogicalPlan.parse(config, plan);
     return new EnumerableDrill<>(config, parse, clazz, fieldNames);
   }
 
-  /** Runs the plan as a background task. */
+  /**
+   * Runs the plan as a background task.
+   */
   Future<Collection<RunOutcome>> runPlan(
       CompletionService<Collection<RunOutcome>> service) {
     IteratorRegistry ir = new IteratorRegistry();
@@ -131,8 +136,10 @@ public class EnumerableDrill<E>
     return new ObjectMapper();
   }
 
-  /** Converts a JSON document, represented as an array of bytes, into a Java
-   * object (consisting of Map, List, String, Integer, Double, Boolean). */
+  /**
+   * Converts a JSON document, represented as an array of bytes, into a Java
+   * object (consisting of Map, List, String, Integer, Double, Boolean).
+   */
   static Object parseJson(byte[] bytes) {
     try {
       return wrapper(mapper.readTree(bytes));
@@ -141,28 +148,30 @@ public class EnumerableDrill<E>
     }
   }
 
-  /** Converts a JSON node to Java objects ({@link List}, {@link Map},
-   * {@link String}, {@link Integer}, {@link Double}, {@link Boolean}. */
+  /**
+   * Converts a JSON node to Java objects ({@link List}, {@link Map},
+   * {@link String}, {@link Integer}, {@link Double}, {@link Boolean}.
+   */
   static Object wrapper(JsonNode node) {
     switch (node.asToken()) {
-    case START_OBJECT:
-      return map((ObjectNode) node);
-    case START_ARRAY:
-      return array((ArrayNode) node);
-    case VALUE_STRING:
-      return node.asText();
-    case VALUE_NUMBER_INT:
-      return node.asInt();
-    case VALUE_NUMBER_FLOAT:
-      return node.asDouble();
-    case VALUE_TRUE:
-      return Boolean.TRUE;
-    case VALUE_FALSE:
-      return Boolean.FALSE;
-    case VALUE_NULL:
-      return null;
-    default:
-      throw new AssertionError("unexpected: " + node + ": " + node.asToken());
+      case START_OBJECT:
+        return map((ObjectNode) node);
+      case START_ARRAY:
+        return array((ArrayNode) node);
+      case VALUE_STRING:
+        return node.asText();
+      case VALUE_NUMBER_INT:
+        return node.asInt();
+      case VALUE_NUMBER_FLOAT:
+        return node.asDouble();
+      case VALUE_TRUE:
+        return Boolean.TRUE;
+      case VALUE_FALSE:
+        return Boolean.FALSE;
+      case VALUE_NULL:
+        return null;
+      default:
+        throw new AssertionError("unexpected: " + node + ": " + node.asToken());
     }
   }
 
@@ -206,13 +215,13 @@ public class EnumerableDrill<E>
         Object o = queue.take();
         if (o instanceof RunOutcome.OutcomeType) {
           switch ((RunOutcome.OutcomeType) o) {
-          case SUCCESS:
-            return false; // end of data
-          case CANCELED:
-            throw new RuntimeException("canceled");
-          case FAILED:
-          default:
-            throw new RuntimeException("failed");
+            case SUCCESS:
+              return false; // end of data
+            case CANCELED:
+              throw new RuntimeException("canceled");
+            case FAILED:
+            default:
+              throw new RuntimeException("failed");
           }
         } else {
           Object o1 = parseJson((byte[]) o);

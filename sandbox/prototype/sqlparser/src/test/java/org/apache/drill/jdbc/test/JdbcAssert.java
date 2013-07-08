@@ -48,6 +48,7 @@ public class JdbcAssert {
       int n = resultSet.getMetaData().getColumnCount();
       String sep = "";
       for (int i = 1; i <= n; i++) {
+        Object o = resultSet.getObject(i);
         buf.append(sep)
             .append(resultSet.getMetaData().getColumnLabel(i))
             .append("=")
@@ -60,7 +61,7 @@ public class JdbcAssert {
   }
 
 
-    public static class One {
+  public static class One {
     private final Properties info;
     private final ConnectionFactory connectionFactory;
 
@@ -92,7 +93,7 @@ public class JdbcAssert {
     }
 
 
-    }
+  }
 
   public static class Two {
     private final ConnectionFactory connectionFactory;
@@ -123,27 +124,24 @@ public class JdbcAssert {
       }
     }
 
-    public Two displayResults() throws Exception{
-        Connection connection = null;
-        Statement statement = null;
-        try {
-            connection = connectionFactory.createConnection();
-            statement = connection.createStatement();
-            MutableSchema schema = ((OptiqConnection)connection).getRootSchema();
-            DrillTableFullEngine.Factory factory = new DrillTableFullEngine.Factory();
-            schema.addTable(factory.create());
-            ResultSet resultSet = statement.executeQuery(sql);
-            System.out.println(JdbcAssert.toString(resultSet));
-            resultSet.close();
-            return this;
-        } finally {
-            if (statement != null) {
-                statement.close();
-            }
-            if (connection != null) {
-                connection.close();
-            }
+    public Two displayResults() throws Exception {
+      Connection connection = null;
+      Statement statement = null;
+      try {
+        connection = connectionFactory.createConnection();
+        statement = connection.createStatement();
+        ResultSet resultSet = statement.executeQuery(sql);
+        System.out.println(JdbcAssert.toString(resultSet));
+        resultSet.close();
+        return this;
+      } finally {
+        if (statement != null) {
+          statement.close();
         }
+        if (connection != null) {
+          connection.close();
+        }
+      }
     }
 
     public void planContains(String expected) {

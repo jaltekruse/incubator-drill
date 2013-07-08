@@ -34,18 +34,20 @@ import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.ref.rops.DataWriter;
 import org.apache.drill.exec.ref.rse.ClasspathRSE;
 import org.apache.drill.exec.ref.rse.ClasspathRSE.ClasspathInputConfig;
-import org.apache.drill.optiq.*;
 
+import org.apache.drill.optiq.ref.DrillRel;
+import org.apache.drill.optiq.ref.DrillScan;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.sql.type.SqlTypeName;
 
-/** Optiq Table used by Drill. */
+/**
+ * Optiq Table used by Drill.
+ */
 public class DrillTable extends BaseQueryable<Object>
-    implements TranslatableTable<Object>
-{
+    implements TranslatableTable<Object> {
   private final Schema schema;
   private final String name;
   private final String storageEngineName;
@@ -53,16 +55,18 @@ public class DrillTable extends BaseQueryable<Object>
   public final StorageEngineConfig storageEngineConfig;
   public final Object selection;
 
-  /** Creates a DrillTable. */
+  /**
+   * Creates a DrillTable.
+   */
   public DrillTable(Schema schema,
-      Type elementType,
-      Expression expression,
-      RelDataType rowType,
-      String name,
-      StorageEngineConfig storageEngineConfig,
-      Object selection,
-      String storageEngineName
-      ) {
+                    Type elementType,
+                    Expression expression,
+                    RelDataType rowType,
+                    String name,
+                    StorageEngineConfig storageEngineConfig,
+                    Object selection,
+                    String storageEngineName
+  ) {
     super(schema.getQueryProvider(), elementType, expression);
     this.schema = schema;
     this.name = name;
@@ -79,7 +83,7 @@ public class DrillTable extends BaseQueryable<Object>
       StorageEngineConfig storageEngineConfig,
       Object selection,
       String storageEngineName
-      ) {
+  ) {
     final MethodCallExpression call = Expressions.call(schema.getExpression(),
         BuiltinMethod.DATA_CONTEXT_GET_TABLE.method,
         Expressions.constant(name),
@@ -91,8 +95,8 @@ public class DrillTable extends BaseQueryable<Object>
                     typeFactory.createSqlType(SqlTypeName.VARCHAR),
                     typeFactory.createSqlType(SqlTypeName.ANY))),
             Collections.singletonList("_MAP"));
-      return new DrillTable(schema, Object.class, call, rowType, name,
-          storageEngineConfig, selection, storageEngineName);
+    return new DrillTable(schema, Object.class, call, rowType, name,
+        storageEngineConfig, selection, storageEngineName);
   }
 
   @Override
@@ -129,12 +133,14 @@ public class DrillTable extends BaseQueryable<Object>
     return t0 != null ? t0 : t1;
   }
 
-  /** Factory for custom tables in Optiq schema. */
+  /**
+   * Factory for custom tables in Optiq schema.
+   */
   @SuppressWarnings("UnusedDeclaration")
   public static class Factory implements TableFactory<DrillTable> {
     @Override
     public DrillTable create(Schema schema, String name,
-        Map<String, Object> operand, RelDataType rowType) {
+                             Map<String, Object> operand, RelDataType rowType) {
       final ClasspathRSE.ClasspathRSEConfig rseConfig =
           new ClasspathRSE.ClasspathRSEConfig();
       final ClasspathInputConfig inputConfig = new ClasspathInputConfig();

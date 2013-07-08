@@ -27,28 +27,30 @@ import org.eigenbase.sql.fun.SqlStdOperatorTable;
 /**
  * Utilities for Drill's planner.
  */
-public class DrillOptiq {
+public class DrillFullEngineOptiq {
   static void registerStandardPlannerRules(RelOptPlanner planner) {
-    planner.addRule(EnumerableDrillRule.ARRAY_INSTANCE);
-    planner.addRule(EnumerableDrillRule.CUSTOM_INSTANCE);
+    planner.addRule(EnumerableDrillFullEngineRule.ARRAY_INSTANCE);
+    planner.addRule(EnumerableDrillFullEngineRule.CUSTOM_INSTANCE);
 
 //    planner.addRule(DrillTableModificationConverterRule.INSTANCE);
 //    planner.addRule(DrillAggregateConverterRule.INSTANCE);
 //    planner.addRule(DrillCalcConverterRule.INSTANCE);
 
-    planner.addRule(DrillFilterRule.INSTANCE);
-    planner.addRule(DrillProjectRule.INSTANCE);
+    // TODO - make corresponding rules for the full engine
+    //planner.addRule(DrillFilterRule.INSTANCE);
+    //planner.addRule(DrillProjectRule.INSTANCE);
 
-    // Enable when https://issues.apache.org/jira/browse/DRILL-57 fixed
-    if (false) planner.addRule(DrillValuesRule.INSTANCE);
+    //if (false) planner.addRule(DrillValuesRule.INSTANCE);
 //    planner.addRule(DrillSortRule.INSTANCE);
 //    planner.addRule(DrillJoinRule.INSTANCE);
 //    planner.addRule(DrillUnionRule.INSTANCE);
 //    planner.addRule(AbstractConverter.ExpandConversionRule.instance);
   }
 
-  /** Converts a tree of {@link RexNode} operators into a scalar expression in
-   * Drill syntax. */
+  /**
+   * Converts a tree of {@link RexNode} operators into a scalar expression in
+   * Drill syntax.
+   */
   static String toDrill(RelNode input, RexNode expr) {
     final RexToDrill visitor = new RexToDrill(input);
     expr.accept(visitor);
@@ -68,36 +70,36 @@ public class DrillOptiq {
     public StringBuilder visitCall(RexCall call) {
       final SqlSyntax syntax = call.getOperator().getSyntax();
       switch (syntax) {
-      case Binary:
-        buf.append("(");
-        call.getOperandList().get(0).accept(this)
-            .append(" ")
-            .append(call.getOperator().getName())
-            .append(" ");
-        return call.getOperandList().get(1).accept(this)
-            .append(")");
-      case Special:
-        switch (call.getKind()) {
-        case Cast:
-          // Ignore casts. Drill is type-less.
-          return call.getOperandList().get(0).accept(this);
-        }
-        if (call.getOperator() == SqlStdOperatorTable.itemOp) {
-          final RexNode left = call.getOperandList().get(0);
-          final RexLiteral literal = (RexLiteral) call.getOperandList().get(1);
-          final String field = (String) literal.getValue2();
-          final int length = buf.length();
-          left.accept(this);
-          if (buf.length() > length) {
-            // check before generating empty LHS if inputName is null
-            buf.append('.');
+        case Binary:
+          buf.append("(");
+          call.getOperandList().get(0).accept(this)
+              .append(" ")
+              .append(call.getOperator().getName())
+              .append(" ");
+          return call.getOperandList().get(1).accept(this)
+              .append(")");
+        case Special:
+          switch (call.getKind()) {
+            case Cast:
+              // Ignore casts. Drill is type-less.
+              return call.getOperandList().get(0).accept(this);
           }
-          return buf.append(field);
-        }
-        // fall through
-      default:
-        throw new AssertionError("todo: implement syntax " + syntax + "(" + call
-            + ")");
+          if (call.getOperator() == SqlStdOperatorTable.itemOp) {
+            final RexNode left = call.getOperandList().get(0);
+            final RexLiteral literal = (RexLiteral) call.getOperandList().get(1);
+            final String field = (String) literal.getValue2();
+            final int length = buf.length();
+            left.accept(this);
+            if (buf.length() > length) {
+              // check before generating empty LHS if inputName is null
+              buf.append('.');
+            }
+            return buf.append(field);
+          }
+          // fall through
+        default:
+          throw new AssertionError("todo: implement syntax " + syntax + "(" + call
+              + ")");
       }
     }
 

@@ -23,7 +23,9 @@ import net.hydromatic.optiq.jdbc.DriverVersion;
  * Version information for Drill JDBC Driver.
  */
 class DrillDriverVersion extends DriverVersion {
-  /** Creates a DrillDriverVersion. */
+  /**
+   * Creates a DrillDriverVersion.
+   */
   DrillDriverVersion() {
     super(
         "Apache Drill JDBC Driver",

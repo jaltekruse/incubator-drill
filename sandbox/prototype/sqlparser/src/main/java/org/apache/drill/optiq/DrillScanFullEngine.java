@@ -1,6 +1,6 @@
 package org.apache.drill.optiq;
 
-import org.apache.drill.jdbc.DrillTable;
+import org.apache.drill.jdbc.DrillTableFullEngine;
 import org.eigenbase.rel.TableAccessRelBase;
 import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelOptPlanner;
@@ -13,27 +13,28 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 /**
  * Scan of a Drill table.
  */
-public class DrillScan extends TableAccessRelBase implements DrillRel {
-  private final DrillTable drillTable;
+public class DrillScanFullEngine extends TableAccessRelBase implements DrillFullEngineRel {
+  private final DrillTableFullEngine drillTable;
 
-  /** Creates a DrillScan. */
-  public DrillScan(RelOptCluster cluster,
-      RelTraitSet traits,
-      RelOptTable table)
-  {
+  /**
+   * Creates a DrillScan.
+   */
+  public DrillScanFullEngine(RelOptCluster cluster,
+                             RelTraitSet traits,
+                             RelOptTable table) {
     super(cluster, traits, table);
     assert getConvention() == CONVENTION;
-    this.drillTable = table.unwrap(DrillTable.class);
+    this.drillTable = table.unwrap(DrillTableFullEngine.class);
     assert drillTable != null;
   }
 
   @Override
   public void register(RelOptPlanner planner) {
     super.register(planner);
-    DrillOptiq.registerStandardPlannerRules(planner);
+    DrillFullEngineOptiq.registerStandardPlannerRules(planner);
   }
 
-  public void implement(DrillImplementor implementor) {
+  public void implement(DrillFullEngineImplementor implementor) {
     final ObjectNode node = implementor.mapper.createObjectNode();
     node.put("op", "scan");
     node.put("memo", "initial_scan");
