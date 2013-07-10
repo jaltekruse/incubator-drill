@@ -68,6 +68,8 @@ public class ParquetRecordReader implements RecordReader {
     VectorHolder valueVec;
     // column description from the parquet library
     ColumnDescriptor parquetColumnDescriptor;
+    // metadata of the column, from the parquet library
+    ColumnChunkMetaData columnChunkMetaData;
     // status information on the current page
     PageReadStatus pageReadStatus;
   }
@@ -151,10 +153,12 @@ public class ParquetRecordReader implements RecordReader {
 
     List<ColumnDescriptor> columns = schema.getColumns();
     allFieldsFixedLength = true;
+    ColumnDescriptor column;
+    ColumnChunkMetaData columnChunkMetaData;
     SchemaBuilder builder = BatchSchema.newBuilder();
     for (int i = 0; i < columns.size(); ++i) {
-      ColumnDescriptor column = columns.get(i);
-
+      column = columns.get(i);
+      columnChunkMetaData = footer.getBlocks().get(i).getColumns().get(i);
 
       // sum the lengths of all of the fixed length fields
       if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
@@ -205,7 +209,7 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   // might want to update this to create an entire column read status and add it to the columns map
-  private boolean getOrCreateColumnStatus(MaterializedField field, ColumnDescriptor descriptor, int allocateSize) throws SchemaChangeException {
+  private boolean createColumnStatus(MaterializedField field, ColumnDescriptor descriptor, int allocateSize) throws SchemaChangeException {
     SchemaDefProtos.MajorType type = field.getType();
     MaterializedField f = MaterializedField.create(new SchemaPath(field.getName()), type);
     ValueVector.Base v = TypeHelper.getNewVector(f, allocator);
@@ -251,10 +255,6 @@ public class ParquetRecordReader implements RecordReader {
       while (currentRowGroup != null && recordsToRead < recordsToRead) {
 
         for (ColumnChunkMetaData column : footer.getBlocks().get(currentRowGroupIndex).getColumns()) {
-
-          MaterializedField field = checkNotNull(
-              currentSchema.(toFieldName(column.getPath()), 0), "Field not found: %s", column.getPath()
-          );
 
           ColumnDescriptor descriptor = columns.get(field)
 
