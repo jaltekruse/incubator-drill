@@ -17,8 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.store;
 
-import com.carrotsearch.hppc.IntObjectOpenHashMap;
-import com.carrotsearch.hppc.cursors.ObjectCursor;
+import com.beust.jcommander.internal.Maps;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
@@ -43,11 +42,9 @@ import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.MessageType;
 import parquet.schema.PrimitiveType;
 
-import javax.management.AttributeList;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -65,13 +62,21 @@ public class ParquetRecordReader implements RecordReader {
 
   private class ColumnReadStatus {
     // Value Vector for this column
-    VectorHolder valueVec;
+    VectorHolder valueVecHolder;
     // column description from the parquet library
-    ColumnDescriptor parquetColumnDescriptor;
+    ColumnDescriptor columnDescriptor;
     // metadata of the column, from the parquet library
     ColumnChunkMetaData columnChunkMetaData;
     // status information on the current page
     PageReadStatus pageReadStatus;
+    // quick reference to see if the field is fixed length (as this requires an instanceof)
+    boolean isFixedLength;
+    // counter for the total number of values read from one or more pages
+    // when a batch is filled all of these values should be the same for each column
+    int valuesRead;
+    // length of single data value in bits
+    int dataTypeLengthInBits;
+
   }
 
   // class to keep track of the read position of variable length columns
@@ -84,11 +89,21 @@ public class ParquetRecordReader implements RecordReader {
     int readPos;
     // the number of values read out of the last page
     int valuesRead;
+
+    public boolean next() {
+      currentPage = pageReader.readPage();
+      if (currentPage == null) {
+        return false;
+      }
+      readPos = 0;
+      valuesRead = 0;
+      return true;
+    }
   }
 
   // this class represents a row group, it is named poorly in the parquet library
   private PageReadStore currentRowGroup;
-  private HashMap<MaterializedField, ColumnReadStatus> columns;
+  private Map<MaterializedField, ColumnReadStatus> columnStatuses;
 
 
   // would only need this to compare schemas of different row groups
@@ -123,7 +138,7 @@ public class ParquetRecordReader implements RecordReader {
    * @param type a fixed length type from the parquet library enum
    * @return the length in bytes of the type
    */
-  public int getTypeLengthInBytes(PrimitiveType.PrimitiveTypeName type) {
+  public static int getTypeLengthInBytes(PrimitiveType.PrimitiveTypeName type) {
     switch (type) {
       case INT64:
         return 64;
@@ -148,45 +163,61 @@ public class ParquetRecordReader implements RecordReader {
     outputMutator = output;
     schema = footer.getFileMetaData().getSchema();
     currentRowGroupIndex = -1;
-    columns = new HashMap();
+    columnStatuses = Maps.newHashMap();
     currentRowGroup = null;
 
     List<ColumnDescriptor> columns = schema.getColumns();
     allFieldsFixedLength = true;
-    ColumnDescriptor column;
-    ColumnChunkMetaData columnChunkMetaData;
+    ColumnDescriptor column = null;
+    ColumnChunkMetaData columnChunkMetaData = null;
     SchemaBuilder builder = BatchSchema.newBuilder();
+    boolean fieldFixed = false;
     for (int i = 0; i < columns.size(); ++i) {
       column = columns.get(i);
-      columnChunkMetaData = footer.getBlocks().get(i).getColumns().get(i);
+      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())),
+          toMajorType(column.getType(), getDataMode(column)));
 
       // sum the lengths of all of the fixed length fields
       if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
         // There is not support for the fixed binary type yet in parquet, leaving a task here as a reminder
         // TODO - implement this when the feature is added upstream
-//          if (column.getType() != PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY){
+//          if (column.getType() == PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY){
 //              byteWidthAllFixedFields += column.getType().getWidth()
 //          }
+//          else { } // the code below for the rest of the fixed length fields
+
+        fieldFixed = true;
         bitWidthAllFixedFields += getTypeLengthInBytes(column.getType());
       } else {
+        fieldFixed = false;
         allFieldsFixedLength = false;
       }
-      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())),
-          toMajorType(column.getType(), getDataMode(column)));
 
       builder.addField(field);
     }
     currentSchema = builder.build();
 
     if (allFieldsFixedLength) {
-      try {
-        recordsPerBatch = DEFAULT_LENGTH_IN_BITS / bitWidthAllFixedFields;
-        for (MaterializedField field : currentSchema) {
-          getOrCreateVectorHolder(field, TypeHelper.getSize(field.getType()));
+      recordsPerBatch = (int) Math.min(DEFAULT_LENGTH_IN_BITS / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
+    }
+    try {
+      // initialize all of the value vectors, as their sizes are all known
+      int i = 0;
+      for (MaterializedField field : currentSchema) {
+        column = columns.get(i);
+        columnChunkMetaData = footer.getBlocks().get(0).getColumns().get(i);
+        field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())),
+            toMajorType(column.getType(), getDataMode(column)));
+        if (allFieldsFixedLength) {
+          createColumnStatus(fieldFixed, field, column, columnChunkMetaData, recordsPerBatch);
         }
-      } catch (SchemaChangeException e) {
-        throw new DrillRuntimeException(e);
+        else{
+          createColumnStatus(fieldFixed, field, column, columnChunkMetaData, -1);
+        }
+        i++;
       }
+    } catch (SchemaChangeException e) {
+      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
     }
   }
 
@@ -203,42 +234,96 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   private void resetBatch() {
-    for (ColumnReadStatus column : columns.values()) {
-      column.valueVec.reset();
+    for (ColumnReadStatus column : columnStatuses.values()) {
+      column.valueVecHolder.reset();
+      column.valuesRead = 0;
     }
   }
 
-  // might want to update this to create an entire column read status and add it to the columns map
-  private boolean createColumnStatus(MaterializedField field, ColumnDescriptor descriptor, int allocateSize) throws SchemaChangeException {
+  /**
+   * @param fixedLength
+   * @param field
+   * @param descriptor
+   * @param columnChunkMetaData
+   * @param allocateSize        - the size of the vector to create, if the value is less than 1 the vector is left null for variable length
+   * @return
+   * @throws SchemaChangeException
+   */
+  private boolean createColumnStatus(boolean fixedLength, MaterializedField field, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, int allocateSize) throws SchemaChangeException {
     SchemaDefProtos.MajorType type = field.getType();
-    MaterializedField f = MaterializedField.create(new SchemaPath(field.getName()), type);
-    ValueVector.Base v = TypeHelper.getNewVector(f, allocator);
-    v.allocateNew(allocateSize);
+    ValueVector.Base v = TypeHelper.getNewVector(field, allocator);
     ColumnReadStatus newCol = new ColumnReadStatus();
-    newCol.valueVec = new VectorHolder(allocateSize, v);
-    newCol.parquetColumnDescriptor = descriptor;
-    columns.put(field, newCol);
-    outputMutator.addField(fieldId, v);
+    newCol.valueVecHolder = new VectorHolder(allocateSize, v);
+    if (allocateSize > 1) {
+      newCol.valueVecHolder.reset();
+    }
+    newCol.columnDescriptor = descriptor;
+    newCol.columnChunkMetaData = columnChunkMetaData;
+    newCol.isFixedLength = fixedLength;
+    newCol.dataTypeLengthInBits = getTypeLengthInBytes(newCol.columnDescriptor.getType());
+    columnStatuses.put(field, newCol);
+    outputMutator.addField(0, v);
     return true;
   }
 
-  // created this method to remove extra logic in the method for creating a new valuevector
-  // as the schema will only change between file or row groups, there is no need to check that a field exists
-  // every time we want to access it
-  private ColumnReadStatus getColumnStatus(MaterializedField field) {
-    return columns.get(field);
+  public void readAllFixedFields(int recordsToRead) throws IOException {
+    for (ColumnReadStatus columnReadStatus : columnStatuses.values()) {
+      if (columnReadStatus.pageReadStatus == null) {
+        columnReadStatus.pageReadStatus = new PageReadStatus();
+      }
+      if (columnReadStatus.pageReadStatus.pageReader == null) {
+        columnReadStatus.pageReadStatus.pageReader = currentRowGroup.getPageReader(columnReadStatus.columnDescriptor);
+      }
+      int readStart = 0, readLength = 0;
+      do {
+        // if no page has been read, or all of the records have been read out of a page, read the next one
+        if (columnReadStatus.pageReadStatus.currentPage == null
+            || columnReadStatus.pageReadStatus.valuesRead == columnReadStatus.pageReadStatus.currentPage.getValueCount()) {
+          columnReadStatus.valuesRead += columnReadStatus.pageReadStatus.valuesRead;
+          if (!columnReadStatus.pageReadStatus.next()) {
+            break;
+          }
+        }
+
+        readStart = columnReadStatus.pageReadStatus.readPos;
+        currBytes = columnReadStatus.pageReadStatus.currentPage.getBytes();
+
+        // read to the end of the page, or the end of the last value that will fit in the batch
+        readLength = Math.min( (columnReadStatus.pageReadStatus.currentPage.getValueCount() * columnReadStatus.dataTypeLengthInBits) / 8,
+            ((recordsToRead - columnReadStatus.pageReadStatus.valuesRead) * columnReadStatus.dataTypeLengthInBits) / 8);
+
+        columnReadStatus.valueVecHolder.getValueVector().data.writeBytes(currBytes.toByteArray(), readStart, readStart + readLength);
+        int curRecordsRead = ( readLength * 8 ) / columnReadStatus.dataTypeLengthInBits;
+        columnReadStatus.valuesRead += curRecordsRead;
+        if (readStart + readLength >= currBytes.size()) {
+          columnReadStatus.valuesRead += columnReadStatus.pageReadStatus.valuesRead;
+          columnReadStatus.pageReadStatus.next();
+        } else {
+          columnReadStatus.pageReadStatus.valuesRead += curRecordsRead;
+          columnReadStatus.pageReadStatus.readPos = readStart + readLength + 1;
+        }
+      } while (columnReadStatus.valuesRead < recordsToRead && columnReadStatus.pageReadStatus.currentPage != null);
+    }
+  }
+
+  public void readFields() {
+
   }
 
   @Override
   public int next() {
     resetBatch();
-    int newRecordCount = 0;
     int recordsToRead = 0;
     try {
-
       if (allFieldsFixedLength) {
         recordsToRead = recordsPerBatch;
       } else {
+        // set the number of records to read so that reaching a defined maximum will not terminate the read loop
+        // the size of the variable length records will determine how many will fit
+        recordsToRead = Integer.MAX_VALUE;
+
+        // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
+        // get too complicated
 
         //loop through variable length data to find the maximum records that will fit in this batch
         // this will be a bit annoying if we want to loop though row groups, columns, pages and then individual variable
@@ -252,69 +337,36 @@ public class ParquetRecordReader implements RecordReader {
         currentRowGroupIndex++;
       }
 
-      while (currentRowGroup != null && recordsToRead < recordsToRead) {
+      /* Pseudo code
 
-        for (ColumnChunkMetaData column : footer.getBlocks().get(currentRowGroupIndex).getColumns()) {
+      Check if there is a current row group being read, grab the next one if needed
+      */
 
-          ColumnDescriptor descriptor = columns.get(field)
+      // at the start of a read, and at the beginning of this loop, every column will have read in the same number of values
+      while (currentRowGroup != null && columnStatuses.values().iterator().next().valuesRead < recordsToRead) {
 
-          PageReader pageReader = currentRowGroup.getPageReader(descriptor);
+        if (allFieldsFixedLength) {
+          readAllFixedFields(recordsToRead);
+        } else { // variable length columns
 
-          if (pageReader == null) {
-            continue;
-          }
+        }
 
-          Page p = pageReader.readPage();
+        if (columnStatuses.values().iterator().next().pageReadStatus.currentPage == null){
+          break;
+        }
+      }
 
-          VectorHolder holder = valueVectorMap.get(field.getFieldId());
-
-          int recordsRead = newRecordCount;
-          if (descriptor.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
-            boolean finishedLastPage = previousPageFinished;
-            int readStart = 0, readEnd = 0, typeLength = 0;
-            while (recordsRead < recordsToRead && p != null) {
-              readStart = 0;
-              currBytes = p.getBytes();
-              typeLength = getTypeLengthInBytes(descriptor.getType());
-
-              if (!finishedLastPage) {
-                readStart = typeLength * recordsReadFromPage;
-                finishedLastPage = true;
-              }
-
-              // read to the end of the page, or the end of the last value that will fit in the batch
-              readEnd = Math.min(p.getValueCount() * typeLength, (recordsToRead - newRecordCount) * typeLength);
-
-              holder.getValueVector().data.writeBytes(currBytes.toByteArray(), readStart, readEnd);
-              recordsRead += (readEnd - readStart) / typeLength;
-              p = pageReader.readPage();
-            }
-
-            //FIXME: (Tim) This flag is a global flag but each individual column has its own page.
-            // Can we safely assume all column pages have the exact same length of bytes?
-            // If that's true than we just need one index and one flag.
-            // If not we need tracking for each column.
-
-
-            // the last page of this row group was read
-            if (p == null) {
-              previousPageFinished = true;
-              // FIXME: (Tim) Not all pages have finished reading their pages? Just one of them in this case right?
-            }
-            // the end of the page was not reached with the last read, set up for the next read
-            else if (readEnd < p.getValueCount() * typeLength) {
-              previousPageFinished = false;
-              recordsReadFromPage = (readEnd - readStart) / typeLength;
-            } else {
-              previousPageFinished = true;
-            }
-          } else { // TODO - variable length columns
-
+      int values = columnStatuses.values().iterator().next().valuesRead;
+      for (ColumnReadStatus columnReadStatus : columnStatuses.values()) {
+        for(int i = 0; i < values; i++){
+          System.out.println(i + " " + columnReadStatus.valueVecHolder.getValueVector().getObject(i));
+          if (i == 299){
+            Math.min(4,4);
           }
         }
       }
 
-      return newRecordCount;
+      return columnStatuses.values().iterator().next().valuesRead;
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }
@@ -326,7 +378,7 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   static SchemaDefProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName, int length,
-                                               SchemaDefProtos.DataMode mode) {
+      SchemaDefProtos.DataMode mode) {
     switch (primitiveTypeName) {
       case BINARY:
         return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.VARBINARY4).setMode(mode).build();

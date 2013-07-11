@@ -57,7 +57,7 @@ public class MockRecordReader implements RecordReader {
     assert context != null : "Context shouldn't be null.";
     if(type.getMode() != DataMode.REQUIRED) throw new UnsupportedOperationException();
     
-    MaterializedField f = MaterializedField.create(new SchemaPath(name), fieldId, 0, type);
+    MaterializedField f = MaterializedField.create(new SchemaPath(name), type);
     ValueVector.Base v;
     v = TypeHelper.getNewVector(f, context.getAllocator());
     v.allocateNew(length);
@@ -99,11 +99,12 @@ public class MockRecordReader implements RecordReader {
   @Override
   public void cleanup() {
     for (int i = 0; i < valueVectors.length; i++) {
-      try {
-        output.removeField(valueVectors[i].getField().getFieldId());
-      } catch (SchemaChangeException e) {
-        logger.warn("Failure while trying to remove field.", e);
-      }
+      // TODO - fix this when code for Jacques to remove field ID is incorporated (July 10, 2013)
+//      try {
+//        output.removeField(valueVectors[i].getField().getFieldId());
+//      } catch (SchemaChangeException e) {
+//        logger.warn("Failure while trying to remove field.", e);
+//      }
       valueVectors[i].close();
     }
   }

@@ -93,7 +93,7 @@ public class ParquetRecordReaderTest {
   @Test
   public void testBasicWriteRead() throws Exception {
 
-    File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
+    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
     System.out.println(testFile.toPath().toString());
     testFile.delete();
 
@@ -130,17 +130,54 @@ public class ParquetRecordReaderTest {
       String[] path1 = {(String) fieldInfo[1]};
       ColumnDescriptor c1 = schema.getColumnDescription(path1);
 
-      w.startColumn(c1, 5, codec);
-      for (int i = 0; i < 1000; i++) {
-        w.writeDataPage(1, (int) fieldInfo[2], BytesInput.from(toByta(fieldInfo[3])), BIT_PACKED, BIT_PACKED, PLAIN);
-        w.writeDataPage(1, (int) fieldInfo[2], BytesInput.from(toByta(fieldInfo[4])), BIT_PACKED, BIT_PACKED, PLAIN);
-        w.writeDataPage(1, (int) fieldInfo[2], BytesInput.from(toByta(fieldInfo[5])), BIT_PACKED, BIT_PACKED, PLAIN);
+      w.startColumn(c1, 300, codec);
+      byte[] bytes = new byte[ (int) fieldInfo[2] * 3 * 100];
+      for (int i = 0; i < 100; i++) {
+        System.arraycopy(toByta(fieldInfo[3]), 0, bytes, ( i + 1 ) * 3 - 3, (int) fieldInfo[2]);
+        System.arraycopy(toByta(fieldInfo[4]), 0, bytes, ( i + 1 ) * 3 - 2, (int) fieldInfo[2]);
+        System.arraycopy(toByta(fieldInfo[5]), 0, bytes, ( i + 1 ) * 3 - 1, (int) fieldInfo[2]);
       }
+      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), BIT_PACKED, BIT_PACKED, PLAIN);
       w.endColumn();
     }
 
     w.endBlock();
     w.end(new HashMap<String, String>());
+  }
+
+  @Test
+  public void testBasicWrite() throws Exception {
+
+    File testFile = new File("/tmp/testParquetFile").getAbsoluteFile();
+    System.out.println(testFile.toPath().toString());
+    testFile.delete();
+
+    Path path = new Path(testFile.toURI());
+    Configuration configuration = new Configuration();
+
+    MessageType schema = MessageTypeParser.parseMessageType("message m { required int64 d; }");
+    String[] path2 = { "d"};
+    ColumnDescriptor c2 = schema.getColumnDescription(path2);
+
+    byte[] bytes1 = { 0, 1, 2, 3};
+    byte[] bytes2 = { 1, 2, 3, 4};
+    byte[] bytes3 = { 2, 3, 4, 5};
+    int numValues = 8;
+    int datalength = 8;
+    byte[] bytes4 = new byte[ numValues * datalength];
+    for (int i = 0; i < bytes4.length; i++){
+      bytes4[i] = (byte) i;
+    }
+    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
+    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
+    w.start();
+    w.startBlock(4);
+    w.startColumn(c2, 8, codec);
+    w.writeDataPage(8, bytes4.length, BytesInput.from(bytes4), BIT_PACKED, BIT_PACKED, PLAIN);
+    w.endColumn();
+    w.endBlock();
+    w.end(new HashMap<String, String>());
+    PrintFooter.main(new String[] {path.toString()});
   }
 
   @Test
@@ -152,21 +189,69 @@ public class ParquetRecordReaderTest {
       }
     };
 
-    //
-    MessageType schema = MessageTypeParser.parseMessageType("message m { required int64 b; }");
-    String[] path1 = {"b"};
-    ColumnDescriptor c1 = schema.getColumnDescription(path1);
-
-    File testFile = FileUtils.getResourceAsFile("/testParquetFile").getAbsoluteFile();
-    System.err.println(testFile.toPath().toString());
-    //testFile.delete();
+    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
+    System.out.println(testFile.toPath().toString());
+    testFile.delete();
 
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
+
+    //"message m { required int32 integer; required int64 integer64; required boolean b; required float f; required double d;}"
+
+    // format: type, field name, uncompressed size, value1, value2, value3
+    Object[][] fields = {
+        {"int32", "integer", 4, -200, 100, Integer.MAX_VALUE},
+        {"int64", "bigInt", 8, -5000l, 5000l, Long.MAX_VALUE},
+        {"boolean", "b", 1, true, false, true},
+        {"float", "f", 4, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE},
+        {"double", "d", 8, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE}
+    };
+    String messageSchema = "message m {";
+    for (Object[] fieldInfo : fields) {
+      messageSchema += " required " + fieldInfo[0] + " " + fieldInfo[1] + ";";
+    }
+    // remove the last semicolon, java really needs a join method for strings...
+    // TODO - nvm apparently it requires a semicolon after every field decl, might want to file a bug
+    //messageSchema = messageSchema.substring(0, messageSchema.length() - 1);
+    messageSchema += "}";
+
+    MessageType schema = MessageTypeParser.parseMessageType(messageSchema);
+
+    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
+    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
+    w.start();
+    w.startBlock(1);
+    for (Object[] fieldInfo : fields) {
+
+      String[] path1 = {(String) fieldInfo[1]};
+      ColumnDescriptor c1 = schema.getColumnDescription(path1);
+
+      w.startColumn(c1, 300, codec);
+      byte[] bytes = new byte[ (int) fieldInfo[2] * 3 * 100];
+      for (int i = 0; i < 100; i++) {
+        System.arraycopy(toByta(fieldInfo[3]), 0, bytes, ( i + 1 ) * 3 - 3, (int) fieldInfo[2]);
+        System.arraycopy(toByta(fieldInfo[4]), 0, bytes, ( i + 1 ) * 3 - 2, (int) fieldInfo[2]);
+        System.arraycopy(toByta(fieldInfo[5]), 0, bytes, ( i + 1 ) * 3 - 1, (int) fieldInfo[2]);
+      }
+      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), BIT_PACKED, BIT_PACKED, PLAIN);
+      w.endColumn();
+    }
+
+    w.endBlock();
+    w.end(new HashMap<String, String>());
+
+    //File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
+    testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
+    System.out.println(testFile.toPath().toString());
+    //testFile.delete();
+
+    path = new Path(testFile.toURI());
+    configuration = new Configuration();
+
     ParquetMetadata readFooter = ParquetFileReader.readFooter(configuration, path);
 
     ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
-        readFooter.getBlocks().get(0)), Arrays.asList(schema.getColumnDescription(path1)));
+        readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
     ParquetRecordReader pr = new ParquetRecordReader(context, parReader, readFooter);
 
     MockOutputMutator mutator = new MockOutputMutator();

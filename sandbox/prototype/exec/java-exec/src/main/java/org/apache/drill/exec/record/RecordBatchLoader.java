@@ -101,7 +101,7 @@ public class RecordBatchLoader implements Iterable<IntObjectCursor<ValueVector.B
       for(IntObjectCursor<ValueVector.Base> cursor : newVectors){
         b.addField(cursor.value.getField());
       }
-      b.setSelectionVector(false);
+      b.setSelectionVectorMode(BatchSchema.SelectionVectorMode.NONE);
       this.schema = b.build();
     }
     vectors = newVectors;

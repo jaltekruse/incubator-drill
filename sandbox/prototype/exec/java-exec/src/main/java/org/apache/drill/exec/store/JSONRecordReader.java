@@ -404,7 +404,7 @@ public class JSONRecordReader implements RecordReader {
         if (!valueVectorMap.containsKey(field.getFieldId())) {
             SchemaDefProtos.MajorType type = field.getFieldType();
             int fieldId = field.getFieldId();
-            MaterializedField f = MaterializedField.create(new SchemaPath(field.getFieldName()), fieldId, parentFieldId, type);
+            MaterializedField f = MaterializedField.create(new SchemaPath(field.getFieldName()), type);
             ValueVector.Base v = TypeHelper.getNewVector(f, allocator);
             v.allocateNew(batchSize);
             VectorHolder holder = new VectorHolder(batchSize, v);
