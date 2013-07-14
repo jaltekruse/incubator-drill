@@ -27,6 +27,8 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
+import org.apache.drill.exec.proto.SchemaDefProtos;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.record.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -53,7 +55,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.*;
-import static parquet.column.Encoding.BIT_PACKED;
+import static org.junit.Assert.assertEquals;
 import static parquet.column.Encoding.PLAIN;
 
 public class ParquetRecordReaderTest {
@@ -137,7 +139,8 @@ public class ParquetRecordReaderTest {
         System.arraycopy(toByta(fieldInfo[4]), 0, bytes, ( i + 1 ) * 3 - 2, (int) fieldInfo[2]);
         System.arraycopy(toByta(fieldInfo[5]), 0, bytes, ( i + 1 ) * 3 - 1, (int) fieldInfo[2]);
       }
-      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), BIT_PACKED, BIT_PACKED, PLAIN);
+      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
       w.endColumn();
     }
 
@@ -173,11 +176,56 @@ public class ParquetRecordReaderTest {
     w.start();
     w.startBlock(4);
     w.startColumn(c2, 8, codec);
-    w.writeDataPage(8, bytes4.length, BytesInput.from(bytes4), BIT_PACKED, BIT_PACKED, PLAIN);
+    w.writeDataPage(8, bytes4.length, BytesInput.from(bytes4), PLAIN, PLAIN, PLAIN);
     w.endColumn();
     w.endBlock();
     w.end(new HashMap<String, String>());
     PrintFooter.main(new String[] {path.toString()});
+  }
+
+  private <T> void assertField(ValueVector.Base valueVector, int index, SchemaDefProtos.MinorType expectedMinorType, T value, String name) {
+    assertField(valueVector, index, expectedMinorType, value, name, 0);
+  }
+
+  private <T> void assertField(ValueVector.Base valueVector, int index, SchemaDefProtos.MinorType expectedMinorType, T value, String name, int parentFieldId) {
+    UserBitShared.FieldMetadata metadata = valueVector.getMetadata();
+    SchemaDefProtos.FieldDef def = metadata.getDef();
+    assertEquals(expectedMinorType, def.getMajorType().getMinorType());
+    assertEquals(name, def.getNameList().get(0).getName());
+    assertEquals(parentFieldId, def.getParentId());
+
+    if(expectedMinorType == SchemaDefProtos.MinorType.MAP) {
+      return;
+    }
+
+    T val = (T) valueVector.getObject(index);
+    if (val instanceof byte[]) {
+      assertTrue(Arrays.equals((byte[]) value, (byte[]) val));
+    } else {
+      assertEquals(value, val);
+    }
+  }
+
+  private class WrapAroundCounter{
+
+    int maxVal;
+    int val;
+    public WrapAroundCounter(int maxVal){
+      this.maxVal = maxVal;
+    }
+
+    public int increment(){
+      val++;
+      if (val > maxVal){
+        val = 0;
+      }
+      return val;
+    }
+
+    public void reset(){
+      val = 0;
+    }
+
   }
 
   @Test
@@ -198,21 +246,23 @@ public class ParquetRecordReaderTest {
 
     //"message m { required int32 integer; required int64 integer64; required boolean b; required float f; required double d;}"
 
-    // format: type, field name, uncompressed size, value1, value2, value3
+    // indices into the following array (to avoid indexing errors, and allow for future expansion)
+    int schemaType = 0, fieldName = 1, bitLength = 2, numPages = 3, val1 = 4, val2 = 5, val3 = 6, minorType = 7;
+    // format: type, field name, uncompressed size in bits, number of pages, value1, value2, value3
     Object[][] fields = {
-        {"int32", "integer", 4, -200, 100, Integer.MAX_VALUE},
-        {"int64", "bigInt", 8, -5000l, 5000l, Long.MAX_VALUE},
-        {"boolean", "b", 1, true, false, true},
-        {"float", "f", 4, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE},
-        {"double", "d", 8, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE}
+        {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, SchemaDefProtos.MinorType.INT},
+        {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
+        {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
+        {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
+        {"boolean", "b", 1, 2, true, false, true, SchemaDefProtos.MinorType.BOOLEAN}
     };
     String messageSchema = "message m {";
     for (Object[] fieldInfo : fields) {
-      messageSchema += " required " + fieldInfo[0] + " " + fieldInfo[1] + ";";
+      messageSchema += " required " + fieldInfo[schemaType] + " " + fieldInfo[fieldName] + ";";
     }
     // remove the last semicolon, java really needs a join method for strings...
     // TODO - nvm apparently it requires a semicolon after every field decl, might want to file a bug
-    //messageSchema = messageSchema.substring(0, messageSchema.length() - 1);
+    //messageSchema = messageSchema.substring(schemaType, messageSchema.length() - 1);
     messageSchema += "}";
 
     MessageType schema = MessageTypeParser.parseMessageType(messageSchema);
@@ -221,19 +271,49 @@ public class ParquetRecordReaderTest {
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
     w.startBlock(1);
+    int numTotalVals = 12000;
+    // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
+    byte[] bitFields = { 1, 2, 4, 8, 16, 32, 64, -128};
+    WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
+    int currentBooleanByte = 0;
+    byte allBitsTrue = -1;
+    byte allBitsFalse = 0;
     for (Object[] fieldInfo : fields) {
 
-      String[] path1 = {(String) fieldInfo[1]};
+      String[] path1 = {(String) fieldInfo[fieldName]};
       ColumnDescriptor c1 = schema.getColumnDescription(path1);
 
-      w.startColumn(c1, 300, codec);
-      byte[] bytes = new byte[ (int) fieldInfo[2] * 3 * 100];
-      for (int i = 0; i < 100; i++) {
-        System.arraycopy(toByta(fieldInfo[3]), 0, bytes, ( i + 1 ) * 3 - 3, (int) fieldInfo[2]);
-        System.arraycopy(toByta(fieldInfo[4]), 0, bytes, ( i + 1 ) * 3 - 2, (int) fieldInfo[2]);
-        System.arraycopy(toByta(fieldInfo[5]), 0, bytes, ( i + 1 ) * 3 - 1, (int) fieldInfo[2]);
+
+      w.startColumn(c1, numTotalVals, codec);
+      int valsPerPage = (int) Math.ceil(numTotalVals / (float)((int) fieldInfo[numPages]));
+      byte[] bytes = new byte[ (int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0) ];
+      int bytesPerPage = (int) (valsPerPage * ((int)fieldInfo[bitLength] / 8.0));
+      for (int i = 0; i < Math.ceil(valsPerPage / 3.0); i++) {
+        System.out.print(i + ", " + (i % 25 == 0 ? "\n gen: " : ""));
+        if (fieldInfo[4] instanceof Boolean){
+          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val1] ? allBitsTrue : allBitsFalse);
+          booleanBitCounter.increment();
+          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
+          if (currentBooleanByte > bytesPerPage) break;
+          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val2] ? allBitsTrue : allBitsFalse);
+          booleanBitCounter.increment();
+          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
+          if (currentBooleanByte > bytesPerPage) break;
+          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val3] ? allBitsTrue : allBitsFalse);
+          booleanBitCounter.increment();
+          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
+          if (currentBooleanByte > bytesPerPage) break;
+        }
+        else{
+          int j = (( i + 1 ) * 3 - 3) * ((int) fieldInfo[bitLength] / 8);
+          System.arraycopy(toByta(fieldInfo[val1]), 0, bytes, (( i + 1 ) * 3 - 3) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
+          System.arraycopy(toByta(fieldInfo[val2]), 0, bytes, (( i + 1 ) * 3 - 2) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
+          System.arraycopy(toByta(fieldInfo[val3]), 0, bytes, (( i + 1 ) * 3 - 1) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
+        }
       }
-      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), BIT_PACKED, BIT_PACKED, PLAIN);
+      for (int i = 0; i < (int) fieldInfo[numPages]; i++){
+        w.writeDataPage(numTotalVals / (int) fieldInfo[numPages] , bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+      }
       w.endColumn();
     }
 
@@ -257,11 +337,26 @@ public class ParquetRecordReaderTest {
     MockOutputMutator mutator = new MockOutputMutator();
     List<ValueVector.Base> addFields = mutator.getAddFields();
     pr.setup(mutator);
-    while(pr.next() > 0){}
+    int batchCounter = 1;
+    while(pr.next() > 0){
+      int i = 0;
+      for (ValueVector.Base vv : addFields) {
+        System.out.println("\n" + (String) fields[i][fieldName]);
+        for(int j = 0; j < vv.getRecordCount(); j++){
+          if (j == 1358){
+            Math.min(4,5);
+          }
+          System.out.print(vv.getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - ": ""));
+          assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType], fields[i][ val1 + j % 3], (String) fields[i][fieldName] + "/");
+        }
+        i++;
+      }
+      batchCounter++;
+    }
 
-    assertEquals(5, pr.next());
-    assertEquals(1, addFields.size());
-    assertEquals(0, pr.next());
+
+
+    assertEquals(5, addFields.size());
   }
 
   public static byte[] toByta(Object data) {
