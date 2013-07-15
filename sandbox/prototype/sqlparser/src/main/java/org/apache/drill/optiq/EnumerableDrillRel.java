@@ -19,6 +19,7 @@ package org.apache.drill.optiq;
 
 import net.hydromatic.linq4j.expressions.*;
 import net.hydromatic.linq4j.function.Function1;
+import net.hydromatic.linq4j.function.Functions;
 import net.hydromatic.optiq.DataContext;
 import net.hydromatic.optiq.impl.java.JavaTypeFactory;
 import net.hydromatic.optiq.rules.java.*;
@@ -54,13 +55,15 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
       };
 
   private static final Method OF_METHOD;
+  private static final Method OF_METHOD_REF_INTERP;
 
   private PhysType physType;
 
   static {
     try {
+      OF_METHOD_REF_INTERP =
+          EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
       OF_METHOD =
-          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
           EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, DataContext.class);
       //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
@@ -105,20 +108,19 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
 
     // not quite sure where this list was supposed to be set earlier, leaving it null got me back the full result set
 
-    //final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
-    final List<String> fieldNameList = null;
+    final List<String> fieldNameList = RelOptUtil.getFieldNameList(rowType);
+    //final List<String> fieldNameList = null;
     return new BlockBuilder()
         .append(
             Expressions.call(
                 OF_METHOD,
                 Expressions.constant(plan),
-                Expressions.constant(null),
-//                Expressions.call(
-//                    Arrays.class,
-//                    "asList",
-//                    Expressions.newArrayInit(
-//                        String.class,
-//                        Functions.apply(fieldNameList, TO_LITERAL))),
+                Expressions.call(
+                    Arrays.class,
+                    "asList",
+                    Expressions.newArrayInit(
+                        String.class,
+                        Functions.apply(fieldNameList, TO_LITERAL))),
                 Expressions.constant(Object.class),
                 Expressions.variable(DataContext.class, "root")
             ))

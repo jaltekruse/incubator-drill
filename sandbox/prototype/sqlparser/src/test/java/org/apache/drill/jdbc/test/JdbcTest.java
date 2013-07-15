@@ -41,6 +41,27 @@ public class JdbcTest extends TestCase {
           + "           type: 'custom',\n"
           + "           factory: '" + DrillTable.Factory.class.getName() + "'\n,"
           + "           operand: {\n"
+          + "             path: '/donuts.json',\n"
+          + "             useReferenceInterpreter: 'true'\n"
+          + "           }\n"
+          + "         }\n"
+          + "       ]\n"
+          + "     }\n"
+          + "   ]\n"
+          + "}";
+
+  private static final String MODEL_FULL_ENGINE =
+      "{\n"
+          + "  version: '1.0',\n"
+          + "   schemas: [\n"
+          + "     {\n"
+          + "       name: 'DONUTS',\n"
+          + "       tables: [\n"
+          + "         {\n"
+          + "           name: 'DONUTS',\n"
+          + "           type: 'custom',\n"
+          + "           factory: '" + DrillTable.Factory.class.getName() + "'\n,"
+          + "           operand: {\n"
           + "             path: '/donuts.json'\n"
           + "           }\n"
           + "         }\n"
@@ -103,7 +124,7 @@ public class JdbcTest extends TestCase {
   }
 
   public void testFullEngine() throws Exception {
-    JdbcAssert.withModel(MODEL, "DONUTS")
+    JdbcAssert.withModel(MODEL_FULL_ENGINE, "DONUTS")
         .sql("select * from donuts")
         .displayResults();
   }

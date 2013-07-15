@@ -59,6 +59,7 @@ public class DrillTable extends BaseQueryable<Object>
   private final RelDataType rowType;
   public final StorageEngineConfig storageEngineConfig;
   public final Object selection;
+  private boolean useReferenceInterpreter;
 
   // full engine connection information
   public Drillbit bit;
@@ -74,7 +75,8 @@ public class DrillTable extends BaseQueryable<Object>
                     String name,
                     StorageEngineConfig storageEngineConfig,
                     Object selection,
-                    String storageEngineName
+                    String storageEngineName,
+                    boolean useReferenceInterpreter
   ) {
 
     super(schema.getQueryProvider(), elementType, expression);
@@ -95,6 +97,7 @@ public class DrillTable extends BaseQueryable<Object>
     this.storageEngineConfig = storageEngineConfig;
     this.selection = selection;
     this.storageEngineName = storageEngineName;
+    this.useReferenceInterpreter = useReferenceInterpreter;
   }
 
   private static DrillTable createTable(
@@ -103,7 +106,8 @@ public class DrillTable extends BaseQueryable<Object>
       String name,
       StorageEngineConfig storageEngineConfig,
       Object selection,
-      String storageEngineName
+      String storageEngineName,
+      boolean useReferenceInterpreter
   ) {
     final MethodCallExpression call = Expressions.call(schema.getExpression(),
         BuiltinMethod.DATA_CONTEXT_GET_TABLE.method,
@@ -117,7 +121,7 @@ public class DrillTable extends BaseQueryable<Object>
                     typeFactory.createSqlType(SqlTypeName.ANY))),
             Collections.singletonList("_MAP"));
     return new DrillTable(schema, Object.class, call, rowType, name,
-        storageEngineConfig, selection, storageEngineName);
+        storageEngineConfig, selection, storageEngineName, useReferenceInterpreter);
   }
 
   @Override
@@ -154,6 +158,10 @@ public class DrillTable extends BaseQueryable<Object>
     return t0 != null ? t0 : t1;
   }
 
+  public boolean useReferenceInterpreter() {
+    return useReferenceInterpreter;
+  }
+
   /**
    * Factory for custom tables in Optiq schema.
    */
@@ -166,9 +174,16 @@ public class DrillTable extends BaseQueryable<Object>
           new ClasspathRSE.ClasspathRSEConfig();
       final ClasspathInputConfig inputConfig = new ClasspathInputConfig();
       inputConfig.path = last((String) operand.get("path"), "/donuts.json");
+      boolean useReferenceInterpreter;
+      if (operand.get("useReferenceInterpreter") != null){
+        useReferenceInterpreter = operand.get("useReferenceInterpreter").equals("true") ? true : false;
+      }
+      else{
+        useReferenceInterpreter = false;
+      }
       inputConfig.type = DataWriter.ConverterType.JSON;
       return createTable(schema.getTypeFactory(), (MutableSchema) schema, name,
-          rseConfig, inputConfig, "donuts-json");
+          rseConfig, inputConfig, "donuts-json", useReferenceInterpreter);
     }
   }
 }

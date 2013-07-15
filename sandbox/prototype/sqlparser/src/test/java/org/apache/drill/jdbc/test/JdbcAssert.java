@@ -42,7 +42,6 @@ public class JdbcAssert {
       int n = resultSet.getMetaData().getColumnCount();
       String sep = "";
       for (int i = 1; i <= n; i++) {
-        Object o = resultSet.getObject(i);
         buf.append(sep)
             .append(resultSet.getMetaData().getColumnLabel(i))
             .append("=")

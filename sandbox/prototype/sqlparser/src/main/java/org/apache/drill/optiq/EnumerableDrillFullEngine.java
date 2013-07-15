@@ -28,16 +28,20 @@ import net.hydromatic.linq4j.Enumerator;
 
 import net.hydromatic.optiq.DataContext;
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.vector.ValueVector;
 import org.apache.drill.exec.ref.IteratorRegistry;
+import org.apache.drill.exec.ref.ReferenceInterpreter;
 import org.apache.drill.exec.ref.RunOutcome;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.drill.exec.ref.eval.BasicEvaluatorFactory;
+import org.apache.drill.exec.ref.rse.RSERegistry;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 
 import org.apache.drill.jdbc.DrillInstance;
@@ -89,11 +93,10 @@ public class EnumerableDrillFullEngine<E>
   /**
    * Runs the plan as a background task.
    */
-  Future<List<QueryResultBatch>> runPlan(
+  Future<Collection<QueryResultBatch>> runPlan(
       CompletionService<List<QueryResultBatch>> service) throws Exception {
     IteratorRegistry ir = new IteratorRegistry();
     DrillTable table = (DrillTable) drillConnectionDataContext.getSubSchema("DONUTS").getTable("DONUTS", Object.class);
-
 
     config.setSinkQueues(0, queue);
 
@@ -101,7 +104,6 @@ public class EnumerableDrillFullEngine<E>
 //                new Callable<List<QueryResultBatch>>() {
 //                    @Override
 //                    public List<QueryResultBatch> call() throws Exception {
-    System.out.println("!!!!!" + DrillInstance.getClient());
     table.client.connect();
     List<QueryResultBatch> results = table.client.runQuery(UserProtos.QueryType.LOGICAL, plan);
 
@@ -135,24 +137,41 @@ public class EnumerableDrillFullEngine<E>
 
   @Override
   public Enumerator<E> enumerator() {
-    // TODO: use a completion service from the container
-    final ExecutorCompletionService<List<QueryResultBatch>> service =
-        new ExecutorCompletionService<List<QueryResultBatch>>(
-            new ThreadPoolExecutor(1, 1, 1, TimeUnit.SECONDS,
-                new LinkedBlockingDeque<Runnable>(10)));
+    if (((DrillTable)drillConnectionDataContext.getSubSchema("DONUTS").getTable("DONUTS", Object.class))
+        .useReferenceInterpreter()){
+      // TODO: use a completion service from the container
+      final ExecutorCompletionService<Collection<RunOutcome>> service =
+          new ExecutorCompletionService<Collection<RunOutcome>>(
+              new ThreadPoolExecutor(1, 1, 1, TimeUnit.SECONDS,
+                  new LinkedBlockingDeque<Runnable>(10)));
 
-    // Run the plan using an executor. It runs in a different thread, writing
-    // results to our queue.
-    //
-    // TODO: use the result of task, and check for exceptions
+      // Run the plan using an executor. It runs in a different thread, writing
+      // results to our queue.
+      //
+      // TODO: use the result of task, and check for exceptions
+      final Future<Collection<RunOutcome>> task = runJSONPlan(service);
 
-    try {
-      runPlan(service);
-    } catch (Exception e) {
-      e.printStackTrace();
+      return new JsonEnumerator(queue, fields);
     }
+    else{
+      // TODO: use a completion service from the container
+      final ExecutorCompletionService<List<QueryResultBatch>> service =
+          new ExecutorCompletionService<List<QueryResultBatch>>(
+              new ThreadPoolExecutor(1, 1, 1, TimeUnit.SECONDS,
+                  new LinkedBlockingDeque<Runnable>(10)));
 
-    return new ResultEnumerator(queue, fields);
+      // Run the plan using an executor. It runs in a different thread, writing
+      // results to our queue.
+      //
+      // TODO: use the result of task, and check for exceptions
+
+      try {
+        runPlan(service);
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+      return new ResultEnumerator(queue, fields);
+   }
   }
 
   private static ObjectMapper createMapper() {
@@ -259,6 +278,103 @@ public class EnumerableDrillFullEngine<E>
             current = o;
           } else {
             final Map<String, Object> map = (Map<String, Object>) o;
+            if (fields.size() == 1) {
+              current = map.get(fields.get(0));
+            } else {
+              Object[] os = new Object[fields.size()];
+              for (int i = 0; i < os.length; i++) {
+                os[i] = map.get(fields.get(i));
+              }
+              current = os;
+            }
+          }
+          return true;
+        }
+      } catch (InterruptedException e) {
+        Thread.interrupted();
+        throw new RuntimeException(e);
+      }
+    }
+
+    public void reset() {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  /**
+   * Runs the plan as a background task.
+   */
+  Future<Collection<RunOutcome>> runJSONPlan(
+      CompletionService<Collection<RunOutcome>> service) {
+    LogicalPlan parsedPlan = LogicalPlan.parse(DrillConfig.create(), plan);
+    IteratorRegistry ir = new IteratorRegistry();
+    DrillConfig config = DrillConfig.create();
+    config.setSinkQueues(0, queue);
+    final ReferenceInterpreter i =
+        new ReferenceInterpreter(parsedPlan, ir, new BasicEvaluatorFactory(ir),
+            new RSERegistry(config));
+    try {
+      i.setup();
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return service.submit(
+        new Callable<Collection<RunOutcome>>() {
+          @Override
+          public Collection<RunOutcome> call() throws Exception {
+            Collection<RunOutcome> outcomes = i.run();
+
+            for (RunOutcome outcome : outcomes) {
+              System.out.println("============");
+              System.out.println(outcome);
+              if (outcome.outcome == RunOutcome.OutcomeType.FAILED
+                  && outcome.exception != null) {
+                outcome.exception.printStackTrace();
+              }
+            }
+            return outcomes;
+          }
+        });
+  }
+
+  private static class JsonEnumerator implements Enumerator {
+    private final BlockingQueue<Object> queue;
+    private final String holder;
+    private final List<String> fields;
+    private Object current;
+
+    public JsonEnumerator(BlockingQueue<Object> queue, List<String> fields) {
+      this.queue = queue;
+      this.holder = null;
+      this.fields = fields;
+    }
+
+    public Object current() {
+      return current;
+    }
+
+    public boolean moveNext() {
+      try {
+        Object o = queue.take();
+        if (o instanceof RunOutcome.OutcomeType) {
+          switch ((RunOutcome.OutcomeType) o) {
+            case SUCCESS:
+              return false; // end of data
+            case CANCELED:
+              throw new RuntimeException("canceled");
+            case FAILED:
+            default:
+              throw new RuntimeException("failed");
+          }
+        } else {
+          Object o1 = parseJson((byte[]) o);
+          if (holder != null) {
+            o1 = ((Map<String, Object>) o1).get(holder);
+          }
+          if (fields == null) {
+            current = o1;
+          } else {
+            final Map<String, Object> map = (Map<String, Object>) o1;
             if (fields.size() == 1) {
               current = map.get(fields.get(0));
             } else {
