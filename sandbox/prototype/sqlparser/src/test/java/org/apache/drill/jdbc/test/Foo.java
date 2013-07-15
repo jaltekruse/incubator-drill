@@ -20,7 +20,7 @@ package org.apache.drill.jdbc.test;
 import net.hydromatic.optiq.DataContext;
 import net.hydromatic.optiq.jdbc.OptiqConnection;
 import org.apache.drill.jdbc.Driver;
-import org.apache.drill.optiq.ref.EnumerableDrill;
+import org.apache.drill.optiq.EnumerableDrill;
 
 import java.sql.DriverManager;
 import java.sql.SQLException;

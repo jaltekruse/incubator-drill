@@ -23,7 +23,7 @@ import java.sql.SQLException;
 import net.hydromatic.linq4j.function.Function0;
 import net.hydromatic.optiq.jdbc.*;
 import net.hydromatic.optiq.model.ModelHandler;
-import org.apache.drill.optiq.ref.DrillPrepareImpl;
+import org.apache.drill.optiq.DrillPrepareImpl;
 
 /**
  * JDBC driver for Apache Drill.

@@ -24,9 +24,7 @@ import net.hydromatic.optiq.impl.java.JavaTypeFactory;
 import net.hydromatic.optiq.rules.java.*;
 
 import org.apache.drill.common.util.Hook;
-import org.apache.drill.optiq.ref.DrillImplementor;
-import org.apache.drill.optiq.ref.DrillRel;
-import org.apache.drill.optiq.ref.EnumerableDrillRel;
+import org.apache.drill.optiq.EnumerableDrillFullEngine;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.SingleRel;
 import org.eigenbase.relopt.*;
@@ -43,7 +41,7 @@ import java.util.*;
  * it executes a Drill query and returns the results as an
  * {@link net.hydromatic.linq4j.Enumerable}.
  */
-public class EnumerableDrillFullEngineRel extends SingleRel implements EnumerableRel {
+public class EnumerableDrillRel extends SingleRel implements EnumerableRel {
   private static final Logger LOG =
       LoggerFactory.getLogger(EnumerableDrillRel.class);
 
@@ -62,15 +60,17 @@ public class EnumerableDrillFullEngineRel extends SingleRel implements Enumerabl
   static {
     try {
       OF_METHOD =
+          //EnumerableDrill.class.getMethod("of", String.class, List.class, Class.class);
           EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class, DataContext.class);
+      //EnumerableDrillFullEngine.class.getMethod("of", String.class, List.class, Class.class);
     } catch (NoSuchMethodException e) {
       throw new RuntimeException(e);
     }
   }
 
-  public EnumerableDrillFullEngineRel(RelOptCluster cluster,
-                                      RelTraitSet traitSet,
-                                      RelNode input) {
+  public EnumerableDrillRel(RelOptCluster cluster,
+                            RelTraitSet traitSet,
+                            RelNode input) {
     super(cluster, traitSet, input);
     assert getConvention() instanceof EnumerableConvention;
     assert input.getConvention() == DrillRel.CONVENTION;
@@ -90,14 +90,14 @@ public class EnumerableDrillFullEngineRel extends SingleRel implements Enumerabl
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return new EnumerableDrillFullEngineRel(getCluster(), traitSet, sole(inputs));
+    return new EnumerableDrillRel(getCluster(), traitSet, sole(inputs));
   }
 
   public BlockExpression implement(EnumerableRelImplementor implementor) {
     LOG.debug("implementing enumerable");
 
-    final DrillFullEngineImplementor drillImplementor = new DrillFullEngineImplementor();
-    DrillFullEngineRel input = (DrillFullEngineRel) getChild();
+    final DrillImplementor drillImplementor = new DrillImplementor();
+    DrillRel input = (DrillRel) getChild();
 
     drillImplementor.go(input);
     String plan = drillImplementor.getJsonString();

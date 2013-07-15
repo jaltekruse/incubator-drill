@@ -20,14 +20,7 @@ package org.apache.drill.jdbc.test;
 import com.google.common.base.Function;
 
 import junit.framework.TestCase;
-
-import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.exec.server.Drillbit;
-import org.apache.drill.exec.server.RemoteServiceSet;
-import org.apache.drill.jdbc.DrillInstance;
 import org.apache.drill.jdbc.DrillTable;
-import org.apache.drill.jdbc.DrillTableFullEngine;
 
 import java.sql.*;
 
@@ -46,7 +39,7 @@ public class JdbcTest extends TestCase {
           + "         {\n"
           + "           name: 'DONUTS',\n"
           + "           type: 'custom',\n"
-          + "           factory: '" + DrillTableFullEngine.Factory.class.getName() + "'\n,"
+          + "           factory: '" + DrillTable.Factory.class.getName() + "'\n,"
           + "           operand: {\n"
           + "             path: '/donuts.json'\n"
           + "           }\n"

@@ -41,7 +41,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 
 import org.apache.drill.jdbc.DrillInstance;
-import org.apache.drill.jdbc.DrillTableFullEngine;
+import org.apache.drill.jdbc.DrillTable;
 
 /**
  * Runtime helper that executes a Drill query and converts it into an
@@ -92,7 +92,7 @@ public class EnumerableDrillFullEngine<E>
   Future<List<QueryResultBatch>> runPlan(
       CompletionService<List<QueryResultBatch>> service) throws Exception {
     IteratorRegistry ir = new IteratorRegistry();
-    DrillTableFullEngine table = (DrillTableFullEngine) drillConnectionDataContext.getSubSchema("DONUTS").getTable("DONUTS", Object.class);
+    DrillTable table = (DrillTable) drillConnectionDataContext.getSubSchema("DONUTS").getTable("DONUTS", Object.class);
 
 
     config.setSinkQueues(0, queue);

@@ -18,21 +18,20 @@
 package org.apache.drill.optiq;
 
 import net.hydromatic.optiq.rules.java.EnumerableConvention;
-import org.apache.drill.optiq.ref.DrillRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.convert.ConverterRule;
 
 /**
  * Rule that converts any Drill relational expression to enumerable format by
- * adding a {@link org.apache.drill.optiq.ref.EnumerableDrillRel}.
+ * adding a {@link EnumerableDrillRel}.
  */
-public class EnumerableDrillFullEngineRule extends ConverterRule {
-  public static final EnumerableDrillFullEngineRule ARRAY_INSTANCE =
-      new EnumerableDrillFullEngineRule(EnumerableConvention.ARRAY);
-  public static final EnumerableDrillFullEngineRule CUSTOM_INSTANCE =
-      new EnumerableDrillFullEngineRule(EnumerableConvention.CUSTOM);
+public class EnumerableDrillRule extends ConverterRule {
+  public static final EnumerableDrillRule ARRAY_INSTANCE =
+      new EnumerableDrillRule(EnumerableConvention.ARRAY);
+  public static final EnumerableDrillRule CUSTOM_INSTANCE =
+      new EnumerableDrillRule(EnumerableConvention.CUSTOM);
 
-  private EnumerableDrillFullEngineRule(EnumerableConvention outConvention) {
+  private EnumerableDrillRule(EnumerableConvention outConvention) {
     super(RelNode.class,
         DrillRel.CONVENTION,
         outConvention,
@@ -47,7 +46,7 @@ public class EnumerableDrillFullEngineRule extends ConverterRule {
   @Override
   public RelNode convert(RelNode rel) {
     assert rel.getTraitSet().contains(DrillRel.CONVENTION);
-    return new EnumerableDrillFullEngineRel(rel.getCluster(),
+    return new EnumerableDrillRel(rel.getCluster(),
         rel.getTraitSet().replace(getOutConvention()),
         rel);
   }

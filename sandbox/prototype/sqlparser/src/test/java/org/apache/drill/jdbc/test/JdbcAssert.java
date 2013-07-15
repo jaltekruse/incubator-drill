@@ -19,13 +19,7 @@ package org.apache.drill.jdbc.test;
 
 import com.google.common.base.Function;
 import junit.framework.Assert;
-import net.hydromatic.optiq.DataContext;
-import net.hydromatic.optiq.MutableSchema;
-import net.hydromatic.optiq.jdbc.OptiqConnection;
 import org.apache.drill.common.util.Hook;
-import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.exec.server.DrillbitContext;
-import org.apache.drill.jdbc.DrillTableFullEngine;
 
 import java.sql.*;
 import java.util.Properties;

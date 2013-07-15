@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.jdbc;
 
+import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Collections;
 import java.util.Map;
@@ -30,13 +31,17 @@ import net.hydromatic.linq4j.expressions.MethodCallExpression;
 
 import net.hydromatic.optiq.*;
 
+import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.logical.StorageEngineConfig;
+import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.ref.rops.DataWriter;
 import org.apache.drill.exec.ref.rse.ClasspathRSE;
 import org.apache.drill.exec.ref.rse.ClasspathRSE.ClasspathInputConfig;
 
-import org.apache.drill.optiq.ref.DrillRel;
-import org.apache.drill.optiq.ref.DrillScan;
+import org.apache.drill.exec.server.Drillbit;
+import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.optiq.DrillRel;
+import org.apache.drill.optiq.DrillScan;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.reltype.RelDataType;
@@ -55,6 +60,10 @@ public class DrillTable extends BaseQueryable<Object>
   public final StorageEngineConfig storageEngineConfig;
   public final Object selection;
 
+  // full engine connection information
+  public Drillbit bit;
+  public DrillClient client;
+
   /**
    * Creates a DrillTable.
    */
@@ -67,7 +76,19 @@ public class DrillTable extends BaseQueryable<Object>
                     Object selection,
                     String storageEngineName
   ) {
+
     super(schema.getQueryProvider(), elementType, expression);
+    DrillConfig config = DrillConfig.create();
+    RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
+    try {
+      bit = new Drillbit(config, serviceSet);
+      client = new DrillClient(config, serviceSet.getCoordinator());
+      bit.run();
+    } catch (IOException e) {
+      System.out.println("Error creating drill client or connecting to drillbit.");
+    } catch (Exception e) {
+      System.out.println("Error creating drill client or connecting to drillbit.");
+    }
     this.schema = schema;
     this.name = name;
     this.rowType = rowType;

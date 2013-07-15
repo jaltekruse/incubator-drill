@@ -27,20 +27,20 @@ import org.eigenbase.sql.fun.SqlStdOperatorTable;
 /**
  * Utilities for Drill's planner.
  */
-public class DrillFullEngineOptiq {
+public class DrillOptiq {
   static void registerStandardPlannerRules(RelOptPlanner planner) {
-    planner.addRule(EnumerableDrillFullEngineRule.ARRAY_INSTANCE);
-    planner.addRule(EnumerableDrillFullEngineRule.CUSTOM_INSTANCE);
+    planner.addRule(EnumerableDrillRule.ARRAY_INSTANCE);
+    planner.addRule(EnumerableDrillRule.CUSTOM_INSTANCE);
 
 //    planner.addRule(DrillTableModificationConverterRule.INSTANCE);
 //    planner.addRule(DrillAggregateConverterRule.INSTANCE);
 //    planner.addRule(DrillCalcConverterRule.INSTANCE);
 
-    // TODO - make corresponding rules for the full engine
-    //planner.addRule(DrillFilterRule.INSTANCE);
-    //planner.addRule(DrillProjectRule.INSTANCE);
+    planner.addRule(DrillFilterRule.INSTANCE);
+    planner.addRule(DrillProjectRule.INSTANCE);
 
-    //if (false) planner.addRule(DrillValuesRule.INSTANCE);
+    // Enable when https://issues.apache.org/jira/browse/DRILL-57 fixed
+    if (false) planner.addRule(DrillValuesRule.INSTANCE);
 //    planner.addRule(DrillSortRule.INSTANCE);
 //    planner.addRule(DrillJoinRule.INSTANCE);
 //    planner.addRule(DrillUnionRule.INSTANCE);

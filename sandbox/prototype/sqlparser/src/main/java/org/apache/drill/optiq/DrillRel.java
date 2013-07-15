@@ -15,38 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.optiq.ref;
+package org.apache.drill.optiq;
 
-import org.eigenbase.rel.FilterRel;
 import org.eigenbase.rel.RelNode;
-import org.eigenbase.relopt.*;
+import org.eigenbase.relopt.Convention;
 
 /**
- * Rule that converts a {@link org.eigenbase.rel.FilterRel} to a Drill
- * "filter" operation.
+ * Relational expression that is implemented in Drill.
  */
-public class DrillFilterRule extends RelOptRule {
-  public static final RelOptRule INSTANCE = new DrillFilterRule();
+public interface DrillRel extends RelNode {
+  /**
+   * Calling convention for relational expressions that are "implemented" by
+   * generating Drill logical plans.
+   */
+  Convention CONVENTION = new Convention.Impl("DRILL", DrillRel.class);
 
-  private DrillFilterRule() {
-    super(
-        new RelOptRuleOperand(
-            FilterRel.class,
-            Convention.NONE,
-            new RelOptRuleOperand(RelNode.class, ANY)),
-        "DrillFilterRule");
-  }
-
-  @Override
-  public void onMatch(RelOptRuleCall call) {
-    final FilterRel filter = (FilterRel) call.getRels()[0];
-    final RelNode input = call.getRels()[1];
-    final RelTraitSet traits = filter.getTraitSet().plus(DrillRel.CONVENTION);
-    final RelNode convertedInput = convert(input, traits);
-    call.transformTo(
-        new DrillFilterRel(filter.getCluster(), traits, convertedInput,
-            filter.getCondition()));
-  }
+  void implement(DrillImplementor implementor);
 }
 
-// End DrillFilterRule.java
+// End DrillRel.java

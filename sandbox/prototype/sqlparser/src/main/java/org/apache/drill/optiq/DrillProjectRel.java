@@ -15,31 +15,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.optiq.ref;
+package org.apache.drill.optiq;
 
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import org.eigenbase.rel.FilterRelBase;
-import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.*;
 import org.eigenbase.relopt.*;
+import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.util.Pair;
 
-import java.util.List;
+import java.util.*;
 
 /**
- * Filter implemented in Drill.
+ * Project implemented in Drill.
  */
-public class DrillFilterRel extends FilterRelBase implements DrillRel {
-  protected DrillFilterRel(RelOptCluster cluster, RelTraitSet traits,
-                           RelNode child, RexNode condition) {
-    super(cluster, traits, child, condition);
+public class DrillProjectRel extends ProjectRelBase implements DrillRel {
+  protected DrillProjectRel(RelOptCluster cluster, RelTraitSet traits,
+                            RelNode child, RexNode[] exps, RelDataType rowType) {
+    super(cluster, traits, child, exps, rowType, Flags.Boxed,
+        Collections.<RelCollation>emptyList());
     assert getConvention() == CONVENTION;
   }
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return new DrillFilterRel(getCluster(), traitSet, sole(inputs),
-        getCondition());
+    return new DrillProjectRel(getCluster(), traitSet, sole(inputs),
+        exps.clone(), rowType);
   }
 
   @Override
@@ -47,20 +50,37 @@ public class DrillFilterRel extends FilterRelBase implements DrillRel {
     return super.computeSelfCost(planner).multiplyBy(0.1);
   }
 
+  private List<Pair<RexNode, String>> projects() {
+    return Pair.zip(
+        Arrays.asList(exps),
+        RelOptUtil.getFieldNameList(getRowType()));
+  }
+
   @Override
   public void implement(DrillImplementor implementor) {
     implementor.visitChild(this, 0, getChild());
     final ObjectNode node = implementor.mapper.createObjectNode();
 /*
-      E.g. {
-	      op: "filter",
-	      expr: "donuts.ppu < 1.00"
-	    }
+    E.g. {
+      op: "project",
+	    projections: [
+	      { ref: "output.quantity", expr: "donuts.sales"}
+	    ]
 */
-    node.put("op", "filter");
-    node.put("expr", DrillOptiq.toDrill(getChild(), getCondition()));
+    node.put("op", "project");
+    final ArrayNode transforms = implementor.mapper.createArrayNode();
+    node.put("projections", transforms);
+    final String prefix = "output.";
+    for (Pair<RexNode, String> pair : projects()) {
+      final ObjectNode objectNode = implementor.mapper.createObjectNode();
+      transforms.add(objectNode);
+      String expr = DrillOptiq.toDrill(getChild(), pair.left);
+      objectNode.put("expr", expr);
+      String ref = prefix + pair.right;
+      objectNode.put("ref", ref);
+    }
     implementor.add(node);
   }
 }
 
-// End DrillFilterRel.java
+// End DrillProjectRel.java

@@ -8,7 +8,7 @@
         {
           name: 'DONUTS',
           type: 'custom',
-          factory: 'org.apache.drill.jdbc.DrillTableFullEngine$Factory',
+          factory: 'org.apache.drill.jdbc.DrillTable$Factory',
           operand: {
             path: "/donuts.json"
           }

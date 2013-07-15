@@ -28,10 +28,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.eigenbase.rel.RelNode;
 
 /**
- * Context for converting a tree of {@link DrillFullEngineRel} nodes into a Drill logical
+ * Context for converting a tree of {@link DrillRel} nodes into a Drill logical
  * plan.
  */
-public class DrillFullEngineImplementor {
+public class DrillImplementor {
   final ObjectMapper mapper = new ObjectMapper();
 
   {
@@ -43,7 +43,7 @@ public class DrillFullEngineImplementor {
   private final ObjectNode rootNode = mapper.createObjectNode();
   private final ArrayNode operatorsNode;
 
-  public DrillFullEngineImplementor() {
+  public DrillImplementor() {
     final ObjectNode headNode = mapper.createObjectNode();
     rootNode.put("head", headNode);
     headNode.put("type", "APACHE_DRILL_LOGICAL");
@@ -83,7 +83,7 @@ public class DrillFullEngineImplementor {
     sequenceOpNode.put("do", operatorsNode);
   }
 
-  public void go(DrillFullEngineRel root) {
+  public void go(DrillRel root) {
     root.implement(this);
 
     // Add a last node, to write to the output queue.
@@ -110,8 +110,8 @@ public class DrillFullEngineImplementor {
     return s;
   }
 
-  public void visitChild(DrillFullEngineRel parent, int ordinal, RelNode child) {
-    ((DrillFullEngineRel) child).implement(this);
+  public void visitChild(DrillRel parent, int ordinal, RelNode child) {
+    ((DrillRel) child).implement(this);
   }
 }
 
