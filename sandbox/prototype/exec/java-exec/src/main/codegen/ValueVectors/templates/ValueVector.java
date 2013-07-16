@@ -44,7 +44,7 @@ public class ValueVector {
     protected final BufferAllocator allocator;
     public ByteBuf data = DeadBuf.DEAD_BUFFER;
     protected MaterializedField field;
-    protected int recordCount;
+    public int recordCount;
     protected int totalBytes;
 
     public Base(MaterializedField field, BufferAllocator allocator) {

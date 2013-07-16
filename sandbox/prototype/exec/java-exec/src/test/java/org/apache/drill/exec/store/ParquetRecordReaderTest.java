@@ -254,7 +254,7 @@ public class ParquetRecordReaderTest {
         {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
         {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
         {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
-        {"boolean", "b", 1, 2, true, false, true, SchemaDefProtos.MinorType.BOOLEAN}
+        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN}
     };
     String messageSchema = "message m {";
     for (Object[] fieldInfo : fields) {
@@ -271,7 +271,7 @@ public class ParquetRecordReaderTest {
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
     w.startBlock(1);
-    int numTotalVals = 12000;
+    int numTotalVals = 24000;
     // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
     byte[] bitFields = { 1, 2, 4, 8, 16, 32, 64, -128};
     WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -349,6 +349,7 @@ public class ParquetRecordReaderTest {
           System.out.print(vv.getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - ": ""));
           assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType], fields[i][ val1 + j % 3], (String) fields[i][fieldName] + "/");
         }
+        System.out.println("\n" + vv.getRecordCount());
         i++;
       }
       batchCounter++;

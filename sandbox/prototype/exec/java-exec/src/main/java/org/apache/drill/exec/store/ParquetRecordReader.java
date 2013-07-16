@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store;
 
 import com.beust.jcommander.internal.Maps;
+import io.netty.buffer.ByteBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
@@ -62,6 +63,9 @@ public class ParquetRecordReader implements RecordReader {
 
   // used for clearing the last n bits of a byte
   private byte[] bitMasks = { -2, -4, -8, -16, -32, -64, -128};
+
+  // used for clearing the first n bits of a byte
+  private byte[] startBitMasks = { 127, 63, 31, 15, 7, 3, 1};
 
   private class ColumnReadStatus {
     // Value Vector for this column
@@ -297,6 +301,12 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   public void readAllFixedFields(long recordsToRead) throws IOException {
+    long readStartInBits = 0, readLength = 0, readLengthInBits = 0, currRecordsRead = 0;
+    byte[] bytes;
+    byte firstByte;
+    byte currentByte;
+    byte nextByte;
+    ByteBuf buffer;
     for (ColumnReadStatus columnReadStatus : columnStatuses.values()) {
       if (columnReadStatus.pageReadStatus == null) {
         columnReadStatus.pageReadStatus = new PageReadStatus();
@@ -304,8 +314,6 @@ public class ParquetRecordReader implements RecordReader {
       if (columnReadStatus.pageReadStatus.pageReader == null) {
         columnReadStatus.pageReadStatus.pageReader = currentRowGroup.getPageReader(columnReadStatus.columnDescriptor);
       }
-      long readStartInBits = 0, readLength = 0, readLengthInBits = 0, currRecordsRead = 0;
-      byte[] bytes;
       do {
         // if no page has been read, or all of the records have been read out of a page, read the next one
         if (columnReadStatus.pageReadStatus.currentPage == null
@@ -316,35 +324,68 @@ public class ParquetRecordReader implements RecordReader {
           }
         }
 
+        currRecordsRead =  Math.min( columnReadStatus.pageReadStatus.currentPage.getValueCount()
+            - columnReadStatus.pageReadStatus.valuesRead, recordsToRead - columnReadStatus.valuesReadInCurrentPass);
+
         readStartInBits = columnReadStatus.pageReadStatus.readPosInBits;
+        readLengthInBits = currRecordsRead * columnReadStatus.dataTypeLengthInBits;
+        readLength = (int) Math.ceil(readLengthInBits / 8.0);
         currBytes = columnReadStatus.pageReadStatus.currentPage.getBytes();
 
-        currRecordsRead =  Math.min( columnReadStatus.pageReadStatus.currentPage.getValueCount(), recordsToRead - columnReadStatus.valuesReadInCurrentPass);
+
 
         bytes = currBytes.toByteArray();
         // read in individual values, because a bitshift is necessary with where the last page ended
         if (columnReadStatus.pageReadStatus.bitShift != 0){
-          byte firstByte = (byte) (columnReadStatus.pageReadStatus.extraBits & bitMasks[columnReadStatus.pageReadStatus.bitShift]
-              & (bytes[0] >>> (columnReadStatus.pageReadStatus.bitShift)));
-          columnReadStatus.valueVecHolder.getValueVector().data.writeByte(firstByte);
+          buffer = columnReadStatus.valueVecHolder.getValueVector().data;
+          // bit shift the leftover bits from the last read
+          firstByte = (byte) (columnReadStatus.pageReadStatus.extraBits >>> columnReadStatus.pageReadStatus.bitShift);
+          // mask the bits about to be added from the next byte
+          firstByte = (byte) (firstByte & startBitMasks[columnReadStatus.pageReadStatus.bitShift - 1]);
+          // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
+          nextByte = bytes[(int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0)];
+          firstByte = (byte) (firstByte | nextByte
+              << (8 - columnReadStatus.pageReadStatus.bitShift)
+              & bitMasks[8 - columnReadStatus.pageReadStatus.bitShift - 1]);
+          buffer.setByte(columnReadStatus.valuesReadInCurrentPass / 8, firstByte);
           readLengthInBits = currRecordsRead * columnReadStatus.dataTypeLengthInBits - columnReadStatus.pageReadStatus.bitShift;
 
-          if (checkBitShiftNeeded(readLengthInBits, readLength, columnReadStatus, currRecordsRead, bytes)){
-
+          int i = 1;
+          for ( ; i < (int) Math.ceil(readLengthInBits / 8.0); i++){
+            currentByte = nextByte;
+            currentByte = (byte) (currentByte >>> columnReadStatus.pageReadStatus.bitShift);
+            // mask the bits about to be added from the next byte
+            currentByte = (byte) (currentByte & startBitMasks[columnReadStatus.pageReadStatus.bitShift - 1]);
+            if ( (int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) + i < bytes.length){
+              // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
+              nextByte = bytes[(int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) + i];
+              currentByte = (byte) (currentByte | nextByte
+                  << (8 - columnReadStatus.pageReadStatus.bitShift)
+                  & bitMasks[8 - columnReadStatus.pageReadStatus.bitShift - 1]);
+            }
+            buffer.setByte(columnReadStatus.valuesReadInCurrentPass / 8 + i, currentByte);
           }
-
-
-          columnReadStatus.pageReadStatus.bitShift = 0;
-          columnReadStatus.pageReadStatus.extraBits = 0;
+          if (readLengthInBits % 8 != 0 ){
+            columnReadStatus.pageReadStatus.extraBits = (byte) (bytes[bytes.length - 1] << readLengthInBits % 8);
+            columnReadStatus.pageReadStatus.bitShift = 8 - (int) readLengthInBits % 8;
+          }
+          else{
+            columnReadStatus.pageReadStatus.extraBits = 0;
+            columnReadStatus.pageReadStatus.bitShift = 0;
+          }
         }
         else{ // standard read, using memory mapping
-          // read to the end of the page, or the end of the last value that will fit in the batch
-          readLengthInBits = currRecordsRead * columnReadStatus.dataTypeLengthInBits;
-          readLength = (int) Math.ceil(readLengthInBits / 8.0);
 
           // check if the values in this page did not end on a byte boundary, keep them in temporary storage so they can be added to
           // the beginning of the next page
-          checkBitShiftNeeded(readLengthInBits, readLength, columnReadStatus, currRecordsRead, bytes);
+          if (readLengthInBits % 8 != 0){
+            columnReadStatus.pageReadStatus.extraBits = bytes[(int)readLength - 1];
+            columnReadStatus.pageReadStatus.bitShift = (int) readLengthInBits % 8;
+          }
+          else{
+            columnReadStatus.pageReadStatus.extraBits = 0;
+            columnReadStatus.pageReadStatus.bitShift = 0;
+          }
           columnReadStatus.valueVecHolder.getValueVector().data.writeBytes(bytes, (int) readStartInBits,  (int) readLength);
         }
 
