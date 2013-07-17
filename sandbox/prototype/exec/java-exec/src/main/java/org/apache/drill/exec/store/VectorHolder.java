@@ -18,19 +18,20 @@
 
 package org.apache.drill.exec.store;
 
-import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.record.vector.TypeHelper;
-import org.apache.drill.exec.record.vector.ValueVector;
+import org.apache.drill.exec.vector.FixedWidthVector;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.VariableWidthVector;
 
 public class VectorHolder {
     private int length;
-    private ValueVector.Base vector;
+    private ValueVector vector;
+    private ValueVector.Mutator mutator;
     private int currentLength;
 
-    VectorHolder(int length, ValueVector.Base vector) {
+    VectorHolder(int length, ValueVector vector) {
         this.length = length;
         this.vector = vector;
+        this.mutator = vector.getMutator();
     }
 
     public ValueVector.Base getValueVector() {
@@ -54,6 +55,21 @@ public class VectorHolder {
 
     public void reset() {
         currentLength = 0;
-        vector.allocateNew(length);
+        allocateNew(length);
+        
+    }
+    
+    public void allocateNew(int valueLength){
+      if(vector instanceof FixedWidthVector){
+        ((FixedWidthVector)vector).allocateNew(valueLength);  
+      }else if(vector instanceof VariableWidthVector){
+        ((VariableWidthVector)vector).allocateNew(valueLength * 10, valueLength);  
+      }else{
+        throw new UnsupportedOperationException();
+      }
+    }
+    
+    public ValueVector.Mutator getMutator(){
+      return mutator;
     }
 }

@@ -27,9 +27,12 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.proto.SchemaDefProtos.DataMode;
 import org.apache.drill.exec.proto.SchemaDefProtos.MajorType;
 import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.record.vector.TypeHelper;
-import org.apache.drill.exec.record.vector.ValueVector;
 import org.apache.drill.exec.store.RecordReader;
+import org.apache.drill.exec.vector.FixedWidthVector;
+import org.apache.drill.exec.vector.NonRepeatedMutator;
+import org.apache.drill.exec.vector.TypeHelper;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.VariableWidthVector;
 
 public class MockRecordReader implements RecordReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockRecordReader.class);
@@ -37,8 +40,9 @@ public class MockRecordReader implements RecordReader {
   private OutputMutator output;
   private MockScanEntry config;
   private FragmentContext context;
-  private ValueVector.Base[] valueVectors;
+  private ValueVector[] valueVectors;
   private int recordsRead;
+  private int batchRecordCount;
 
   public MockRecordReader(FragmentContext context, MockScanEntry config) {
     this.context = context;
@@ -53,14 +57,21 @@ public class MockRecordReader implements RecordReader {
     return x;
   }
 
-  private ValueVector.Base getVector(int fieldId, String name, MajorType type, int length) {
+  private ValueVector getVector(int fieldId, String name, MajorType type, int length) {
     assert context != null : "Context shouldn't be null.";
     if(type.getMode() != DataMode.REQUIRED) throw new UnsupportedOperationException();
     
-    MaterializedField f = MaterializedField.create(new SchemaPath(name), type);
-    ValueVector.Base v;
+    MaterializedField f = MaterializedField.create(new SchemaPath(name), fieldId, 0, type);
+    ValueVector v;
     v = TypeHelper.getNewVector(f, context.getAllocator());
-    v.allocateNew(length);
+    if(v instanceof FixedWidthVector){
+      ((FixedWidthVector)v).allocateNew(length);  
+    }else if(v instanceof VariableWidthVector){
+      ((VariableWidthVector)v).allocateNew(50*length, length);
+    }else{
+      throw new UnsupportedOperationException(String.format("Unable to get allocate vector %s", v.getClass().getName()));
+    }
+    
     return v;
 
   }
@@ -70,8 +81,8 @@ public class MockRecordReader implements RecordReader {
     try {
       this.output = output;
       int estimateRowSize = getEstimatedRecordSize(config.getTypes());
-      valueVectors = new ValueVector.Base[config.getTypes().length];
-      int batchRecordCount = 250000 / estimateRowSize;
+      valueVectors = new ValueVector[config.getTypes().length];
+      batchRecordCount = 250000 / estimateRowSize;
 
       for (int i = 0; i < config.getTypes().length; i++) {
         valueVectors[i] = getVector(i, config.getTypes()[i].getName(), config.getTypes()[i].getMajorType(), batchRecordCount);
@@ -86,12 +97,29 @@ public class MockRecordReader implements RecordReader {
 
   @Override
   public int next() {
-    int recordSetSize = Math.min(valueVectors[0].capacity(), this.config.getRecords()- recordsRead);
+    
+    int recordSetSize = Math.min(batchRecordCount, this.config.getRecords()- recordsRead);
+
     recordsRead += recordSetSize;
-    for(ValueVector.Base v : valueVectors){
+    for(ValueVector v : valueVectors){
+      if(v instanceof FixedWidthVector){
+        ((FixedWidthVector)v).allocateNew(recordSetSize);
+      }else if(v instanceof VariableWidthVector){
+        ((VariableWidthVector)v).allocateNew(50*recordSetSize, recordSetSize);
+      }else{
+        throw new UnsupportedOperationException();
+      }
+      
       logger.debug("MockRecordReader:  Generating random data for VV of type " + v.getClass().getName());
-      v.randomizeData();
-      v.setRecordCount(recordSetSize);
+      ValueVector.Mutator m = v.getMutator();
+      m.randomizeData();
+      
+      if(m instanceof NonRepeatedMutator){
+        ((NonRepeatedMutator)m).setValueCount(recordSetSize);  
+      }else{
+        throw new UnsupportedOperationException();
+      }
+      
     }
     return recordSetSize;
   }
@@ -99,12 +127,11 @@ public class MockRecordReader implements RecordReader {
   @Override
   public void cleanup() {
     for (int i = 0; i < valueVectors.length; i++) {
-      // TODO - fix this when code for Jacques to remove field ID is incorporated (July 10, 2013)
-//      try {
-//        output.removeField(valueVectors[i].getField().getFieldId());
-//      } catch (SchemaChangeException e) {
-//        logger.warn("Failure while trying to remove field.", e);
-//      }
+      try {
+        output.removeField(valueVectors[i].getField().getFieldId());
+      } catch (SchemaChangeException e) {
+        logger.warn("Failure while trying to remove field.", e);
+      }
       valueVectors[i].close();
     }
   }
