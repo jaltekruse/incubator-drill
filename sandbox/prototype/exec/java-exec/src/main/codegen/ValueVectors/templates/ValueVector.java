@@ -448,7 +448,7 @@ public class ValueVector {
   public static class ${minor.class} extends Base {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${minor.class}.class);
 
-    protected final MutableUInt${type.width} lengthVector;
+    public final MutableUInt${type.width} lengthVector;
 
     public ${minor.class}(MaterializedField field, BufferAllocator allocator) {
       super(field, allocator);

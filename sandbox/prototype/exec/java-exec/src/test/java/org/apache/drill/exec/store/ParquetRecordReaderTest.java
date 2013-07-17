@@ -29,6 +29,7 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.proto.SchemaDefProtos;
 import org.apache.drill.exec.proto.UserBitShared;
+import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -65,6 +66,168 @@ public class ParquetRecordReaderTest {
     return "resource:" + resourceName;
   }
 
+
+  @Test
+  public void parquetTest(@Injectable final FragmentContext context) throws Exception {
+    new Expectations() {
+      {
+        context.getAllocator();
+        returns(new DirectBufferAllocator());
+      }
+    };
+
+    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
+    System.out.println(testFile.toPath().toString());
+    testFile.delete();
+
+    Path path = new Path(testFile.toURI());
+    Configuration configuration = new Configuration();
+
+    //"message m { required int32 integer; required int64 integer64; required boolean b; required float f; required double d;}"
+
+    byte[] varLen1 = {50, 51, 52, 53, 54, 55, 56};
+    byte[] varLen2 = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1};
+    byte[] varLen3 = {100, 99, 98};
+    // indices into the following array (to avoid indexing errors, and allow for future expansion)
+    int schemaType = 0, fieldName = 1, bitLength = 2, numPages = 3, val1 = 4, val2 = 5, val3 = 6, minorType = 7;
+    // format: type, field name, uncompressed size in bits, number of pages, value1, value2, value3
+    Object[][] fields = {
+        {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, SchemaDefProtos.MinorType.INT},
+        {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
+        {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
+        {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
+        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN},
+        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
+    };
+    String messageSchema = "message m {";
+    for (Object[] fieldInfo : fields) {
+      messageSchema += " required " + fieldInfo[schemaType] + " " + fieldInfo[fieldName] + ";";
+    }
+    // remove the last semicolon, java really needs a join method for strings...
+    // TODO - nvm apparently it requires a semicolon after every field decl, might want to file a bug
+    //messageSchema = messageSchema.substring(schemaType, messageSchema.length() - 1);
+    messageSchema += "}";
+
+    MessageType schema = MessageTypeParser.parseMessageType(messageSchema);
+
+    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
+    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
+    w.start();
+    w.startBlock(1);
+    int numTotalVals = 30000;
+    // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
+    byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
+    WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
+    int currentBooleanByte = 0;
+    byte allBitsTrue = -1;
+    byte allBitsFalse = 0;
+    for (Object[] fieldInfo : fields) {
+
+      String[] path1 = {(String) fieldInfo[fieldName]};
+      ColumnDescriptor c1 = schema.getColumnDescription(path1);
+
+      w.startColumn(c1, numTotalVals, codec);
+      int valsPerPage = (int) Math.ceil(numTotalVals / (float) ((int) fieldInfo[numPages]));
+      byte[] bytes;
+      if ((int) fieldInfo[bitLength] > 0) {
+        bytes = new byte[(int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0)];
+      } else {
+        // the twelve at the end is to account for storing a 4 byte length with each value
+        int totalValLength = ((byte[]) fieldInfo[val1]).length + ((byte[]) fieldInfo[val2]).length + ((byte[]) fieldInfo[val3]).length + 12;
+        bytes = new byte[(int) Math.ceil(valsPerPage / 3 * totalValLength)];
+      }
+      int bytesPerPage = (int) (valsPerPage * ((int) fieldInfo[bitLength] / 8.0));
+      int valsWritten = 0;
+      int bytesWritten = 0;
+      for (int z = 0; z < (int) fieldInfo[numPages]; z++) {
+        bytesWritten = 0;
+        valsWritten = 0;
+          for (int i = 0; i < valsPerPage; i++) {
+            //System.out.print(i + ", " + (i % 25 == 0 ? "\n gen " + fieldInfo[fieldName] + ": " : ""));
+            if (fieldInfo[val1] instanceof Boolean) {
+
+              bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val1 + valsWritten % 3]
+                  ? allBitsTrue : allBitsFalse);
+              booleanBitCounter.increment();
+              if (booleanBitCounter.val == 0) {
+                currentBooleanByte++;
+              }
+              valsWritten++;
+              if (currentBooleanByte > bytesPerPage) break;
+            } else {
+              if (fieldInfo[val1 + valsWritten % 3] instanceof byte[]){
+                System.arraycopy(toByta(Integer.reverseBytes(((byte[])fieldInfo[val1 + valsWritten % 3]).length)),
+                    0, bytes, bytesWritten, 4);
+                System.arraycopy(fieldInfo[val1 + valsWritten % 3],
+                    0, bytes, bytesWritten + 4, ((byte[])fieldInfo[val1 + valsWritten % 3]).length);
+                bytesWritten += ((byte[])fieldInfo[val1 + valsWritten % 3]).length + 4;
+              }
+              else{
+                System.arraycopy( toByta(fieldInfo[val1 + valsWritten % 3]),
+                    0, bytes, i * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
+              }
+
+              valsWritten++;
+            }
+
+        }
+        w.writeDataPage(numTotalVals / (int) fieldInfo[numPages], bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+        currentBooleanByte = 0;
+      }
+      w.endColumn();
+    }
+
+    w.endBlock();
+    w.end(new HashMap<String, String>());
+
+    //File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
+    testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
+    System.out.println(testFile.toPath().toString());
+    //testFile.delete();
+
+    path = new Path(testFile.toURI());
+    configuration = new Configuration();
+
+    ParquetMetadata readFooter = ParquetFileReader.readFooter(configuration, path);
+
+    ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
+        readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
+    ParquetRecordReader pr = new ParquetRecordReader(context, parReader, readFooter);
+
+    MockOutputMutator mutator = new MockOutputMutator();
+    List<ValueVector.Base> addFields = mutator.getAddFields();
+    pr.setup(mutator);
+    HashMap<MaterializedField, Integer> valuesChecked = new HashMap();
+    for (ValueVector.Base vv : addFields) {
+      valuesChecked.put(vv.getField(), 0);
+    }
+    int batchCounter = 1;
+    int columnValCounter = 0;
+    while (pr.next() > 0) {
+      int i = 0;
+      for (ValueVector.Base vv : addFields) {
+        System.out.println("\n" + (String) fields[i][fieldName]);
+        columnValCounter = valuesChecked.get(vv.getField());
+        for (int j = 0; j < vv.getRecordCount(); j++) {
+          if (j == 10863) {
+            Math.min(4, 5);
+            //vv.data.writeByte(-2);
+          }
+          System.out.print(vv.getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
+          assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType], fields[i][val1 + columnValCounter % 3],
+              (String) fields[i][fieldName] + "/");
+          columnValCounter++;
+        }
+        System.out.println("\n" + vv.getRecordCount());
+        valuesChecked.remove(vv.getField());
+        valuesChecked.put(vv.getField(), columnValCounter);
+        i++;
+      }
+      batchCounter++;
+    }
+    //assertEquals(5, addFields.size());
+  }
+
   class MockOutputMutator implements OutputMutator {
     List<Integer> removedFields = Lists.newArrayList();
     List<ValueVector.Base> addFields = Lists.newArrayList();
@@ -92,97 +255,6 @@ public class ParquetRecordReaderTest {
     }
   }
 
-  @Test
-  public void testBasicWriteRead() throws Exception {
-
-    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
-    System.out.println(testFile.toPath().toString());
-    testFile.delete();
-
-    Path path = new Path(testFile.toURI());
-    Configuration configuration = new Configuration();
-
-    //"message m { required int32 integer; required int64 integer64; required boolean b; required float f; required double d;}"
-
-    // format: type, field name, uncompressed size, value1, value2, value3
-    Object[][] fields = {
-        {"int32", "integer", 4, -100, 100, Integer.MAX_VALUE},
-        {"int64", "bigInt", 8, -5000l, 5000l, Long.MAX_VALUE},
-        {"boolean", "b", 1, true, false, true},
-        {"float", "f", 4, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE},
-        {"double", "d", 8, 1.74d, Double.MAX_VALUE, Double.MIN_VALUE}
-    };
-    String messageSchema = "message m {";
-    for (Object[] fieldInfo : fields) {
-      messageSchema += " required " + fieldInfo[0] + " " + fieldInfo[1] + ";";
-    }
-    // remove the last semicolon, java really needs a join method for strings...
-    // TODO - nvm apparently it requires a semicolon after every field decl, might want to file a bug
-    //messageSchema = messageSchema.substring(0, messageSchema.length() - 1);
-    messageSchema += "}";
-
-    MessageType schema = MessageTypeParser.parseMessageType(messageSchema);
-
-    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
-    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
-    w.start();
-    w.startBlock(1);
-    for (Object[] fieldInfo : fields) {
-
-      String[] path1 = {(String) fieldInfo[1]};
-      ColumnDescriptor c1 = schema.getColumnDescription(path1);
-
-      w.startColumn(c1, 300, codec);
-      byte[] bytes = new byte[ (int) fieldInfo[2] * 3 * 100];
-      for (int i = 0; i < 100; i++) {
-        System.arraycopy(toByta(fieldInfo[3]), 0, bytes, ( i + 1 ) * 3 - 3, (int) fieldInfo[2]);
-        System.arraycopy(toByta(fieldInfo[4]), 0, bytes, ( i + 1 ) * 3 - 2, (int) fieldInfo[2]);
-        System.arraycopy(toByta(fieldInfo[5]), 0, bytes, ( i + 1 ) * 3 - 1, (int) fieldInfo[2]);
-      }
-      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
-      w.writeDataPage(300, bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
-      w.endColumn();
-    }
-
-    w.endBlock();
-    w.end(new HashMap<String, String>());
-  }
-
-  @Test
-  public void testBasicWrite() throws Exception {
-
-    File testFile = new File("/tmp/testParquetFile").getAbsoluteFile();
-    System.out.println(testFile.toPath().toString());
-    testFile.delete();
-
-    Path path = new Path(testFile.toURI());
-    Configuration configuration = new Configuration();
-
-    MessageType schema = MessageTypeParser.parseMessageType("message m { required int64 d; }");
-    String[] path2 = { "d"};
-    ColumnDescriptor c2 = schema.getColumnDescription(path2);
-
-    byte[] bytes1 = { 0, 1, 2, 3};
-    byte[] bytes2 = { 1, 2, 3, 4};
-    byte[] bytes3 = { 2, 3, 4, 5};
-    int numValues = 8;
-    int datalength = 8;
-    byte[] bytes4 = new byte[ numValues * datalength];
-    for (int i = 0; i < bytes4.length; i++){
-      bytes4[i] = (byte) i;
-    }
-    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
-    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
-    w.start();
-    w.startBlock(4);
-    w.startColumn(c2, 8, codec);
-    w.writeDataPage(8, bytes4.length, BytesInput.from(bytes4), PLAIN, PLAIN, PLAIN);
-    w.endColumn();
-    w.endBlock();
-    w.end(new HashMap<String, String>());
-    PrintFooter.main(new String[] {path.toString()});
-  }
-
   private <T> void assertField(ValueVector.Base valueVector, int index, SchemaDefProtos.MinorType expectedMinorType, T value, String name) {
     assertField(valueVector, index, expectedMinorType, value, name, 0);
   }
@@ -194,7 +266,7 @@ public class ParquetRecordReaderTest {
     assertEquals(name, def.getNameList().get(0).getName());
     assertEquals(parentFieldId, def.getParentId());
 
-    if(expectedMinorType == SchemaDefProtos.MinorType.MAP) {
+    if (expectedMinorType == SchemaDefProtos.MinorType.MAP) {
       return;
     }
 
@@ -206,169 +278,38 @@ public class ParquetRecordReaderTest {
     }
   }
 
-  private class WrapAroundCounter{
+  private class WrapAroundCounter {
 
     int maxVal;
     int val;
-    public WrapAroundCounter(int maxVal){
+
+    public WrapAroundCounter(int maxVal) {
       this.maxVal = maxVal;
     }
 
-    public int increment(){
+    public int increment() {
       val++;
-      if (val > maxVal){
+      if (val > maxVal) {
         val = 0;
       }
       return val;
     }
 
-    public void reset(){
+    public void reset() {
       val = 0;
     }
 
   }
 
-  @Test
-  public void parquetTest(@Injectable final FragmentContext context) throws IOException, ExecutionSetupException {
-    new Expectations() {
-      {
-        context.getAllocator();
-        returns(new DirectBufferAllocator());
-      }
-    };
-
-    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
-    System.out.println(testFile.toPath().toString());
-    testFile.delete();
-
-    Path path = new Path(testFile.toURI());
-    Configuration configuration = new Configuration();
-
-    //"message m { required int32 integer; required int64 integer64; required boolean b; required float f; required double d;}"
-
-    // indices into the following array (to avoid indexing errors, and allow for future expansion)
-    int schemaType = 0, fieldName = 1, bitLength = 2, numPages = 3, val1 = 4, val2 = 5, val3 = 6, minorType = 7;
-    // format: type, field name, uncompressed size in bits, number of pages, value1, value2, value3
-    Object[][] fields = {
-        {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, SchemaDefProtos.MinorType.INT},
-        {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
-        {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
-        {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
-        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN}
-    };
-    String messageSchema = "message m {";
-    for (Object[] fieldInfo : fields) {
-      messageSchema += " required " + fieldInfo[schemaType] + " " + fieldInfo[fieldName] + ";";
-    }
-    // remove the last semicolon, java really needs a join method for strings...
-    // TODO - nvm apparently it requires a semicolon after every field decl, might want to file a bug
-    //messageSchema = messageSchema.substring(schemaType, messageSchema.length() - 1);
-    messageSchema += "}";
-
-    MessageType schema = MessageTypeParser.parseMessageType(messageSchema);
-
-    CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
-    ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
-    w.start();
-    w.startBlock(1);
-    int numTotalVals = 18000;
-    // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
-    byte[] bitFields = { 1, 2, 4, 8, 16, 32, 64, -128};
-    WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
-    int currentBooleanByte = 0;
-    byte allBitsTrue = -1;
-    byte allBitsFalse = 0;
-    for (Object[] fieldInfo : fields) {
-
-      String[] path1 = {(String) fieldInfo[fieldName]};
-      ColumnDescriptor c1 = schema.getColumnDescription(path1);
-
-
-      w.startColumn(c1, numTotalVals, codec);
-      int valsPerPage = (int) Math.ceil(numTotalVals / (float)((int) fieldInfo[numPages]));
-      byte[] bytes = new byte[ (int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0) ];
-      int bytesPerPage = (int) (valsPerPage * ((int)fieldInfo[bitLength] / 8.0));
-      for (int i = 0; i < Math.ceil(valsPerPage / 3.0); i++) {
-        System.out.print(i + ", " + (i % 25 == 0 ? "\n gen: " : ""));
-        if (fieldInfo[4] instanceof Boolean){
-          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val1] ? allBitsTrue : allBitsFalse);
-          booleanBitCounter.increment();
-          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
-          if (currentBooleanByte > bytesPerPage) break;
-          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val2] ? allBitsTrue : allBitsFalse);
-          booleanBitCounter.increment();
-          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
-          if (currentBooleanByte > bytesPerPage) break;
-          bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val3] ? allBitsTrue : allBitsFalse);
-          booleanBitCounter.increment();
-          if (booleanBitCounter.val == 0) { currentBooleanByte++; }
-          if (currentBooleanByte > bytesPerPage) break;
-        }
-        else{
-          int j = (( i + 1 ) * 3 - 3) * ((int) fieldInfo[bitLength] / 8);
-          System.arraycopy(toByta(fieldInfo[val1]), 0, bytes, (( i + 1 ) * 3 - 3) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
-          System.arraycopy(toByta(fieldInfo[val2]), 0, bytes, (( i + 1 ) * 3 - 2) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
-          System.arraycopy(toByta(fieldInfo[val3]), 0, bytes, (( i + 1 ) * 3 - 1) * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
-        }
-      }
-      for (int i = 0; i < (int) fieldInfo[numPages]; i++){
-        w.writeDataPage(numTotalVals / (int) fieldInfo[numPages] , bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
-      }
-      w.endColumn();
-    }
-
-    w.endBlock();
-    w.end(new HashMap<String, String>());
-
-    //File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
-    testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
-    System.out.println(testFile.toPath().toString());
-    //testFile.delete();
-
-    path = new Path(testFile.toURI());
-    configuration = new Configuration();
-
-    ParquetMetadata readFooter = ParquetFileReader.readFooter(configuration, path);
-
-    ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
-        readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
-    ParquetRecordReader pr = new ParquetRecordReader(context, parReader, readFooter);
-
-    MockOutputMutator mutator = new MockOutputMutator();
-    List<ValueVector.Base> addFields = mutator.getAddFields();
-    pr.setup(mutator);
-    int batchCounter = 1;
-    while(pr.next() > 0){
-      int i = 0;
-      for (ValueVector.Base vv : addFields) {
-        System.out.println("\n" + (String) fields[i][fieldName]);
-        for(int j = 0; j < vv.getRecordCount(); j++){
-          if (j == 10863){
-            Math.min(4,5);
-            vv.data.writeByte(-2);
-          }
-          System.out.print(vv.getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - ": ""));
-          assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType], fields[i][ val1 + j % 3], (String) fields[i][fieldName] + "/");
-        }
-        System.out.println("\n" + vv.getRecordCount());
-        i++;
-      }
-      batchCounter++;
-    }
-
-
-
-    assertEquals(5, addFields.size());
+  public static byte[] toByta(Object data) throws Exception {
+    if (data instanceof Integer) return toByta((int) data);
+    else if (data instanceof Double) return toByta((double) data);
+    else if (data instanceof Float) return toByta((float) data);
+    else if (data instanceof Boolean) return toByta((boolean) data);
+    else if (data instanceof Long) return toByta((long) data);
+    else throw new Exception("Cannot convert that type to a byte array.");
   }
 
-  public static byte[] toByta(Object data) {
-    if ( data instanceof Integer) return toByta((int) data);
-    else if ( data instanceof Double) return toByta((double) data);
-    else if ( data instanceof Float) return toByta((float) data);
-    else if ( data instanceof Boolean) return toByta((boolean) data);
-    else if ( data instanceof Long) return toByta((long) data);
-    else return null;
-  }
   // found at http://www.daniweb.com/software-development/java/code/216874/primitive-types-as-byte-arrays
   /* ========================= */
   /* "primitive type --> byte[] data" Methods */
