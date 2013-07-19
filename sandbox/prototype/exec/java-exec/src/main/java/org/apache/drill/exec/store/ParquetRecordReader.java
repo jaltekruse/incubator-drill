@@ -80,7 +80,7 @@ public class ParquetRecordReader implements RecordReader {
 
   private static final class ColumnReadStatus {
     // Value Vector for this column
-    ValueVector valueVecHolder;
+    VectorHolder valueVecHolder;
     // column description from the parquet library
     ColumnDescriptor columnDescriptor;
     // metadata of the column, from the parquet library
@@ -257,7 +257,7 @@ public class ParquetRecordReader implements RecordReader {
     currentSchema = builder.build();
 
     if (allFieldsFixedLength) {
-      recordsPerBatch = (int) Math.min(DEFAULT_BATCH_LENGTH_IN_BITS / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
+      recordsPerBatch = (int) Math.min(batchSize / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
     }
     try {
       // initialize all of the column read status objects, if their lengths are known value vectors are allocated
@@ -466,7 +466,7 @@ public class ParquetRecordReader implements RecordReader {
       }
       // check that the next record will fit in the batch
       if (rowGroupFinished || (currRecordsRead + 1) * bitWidthAllFixedFields + lengthVarFieldsInCurrentRecord * 8
-          > DEFAULT_BATCH_LENGTH_IN_BITS){
+          > batchSize){
         break;
       }
       else{

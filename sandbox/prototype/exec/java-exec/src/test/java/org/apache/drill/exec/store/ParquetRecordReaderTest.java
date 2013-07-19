@@ -113,7 +113,7 @@ public class ParquetRecordReaderTest {
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
     w.startBlock(1);
-    int numTotalVals = 6000;
+    int numTotalVals = 30000;
     // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
     byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
     WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -208,10 +208,6 @@ public class ParquetRecordReaderTest {
         System.out.println("\n" + (String) fields[i][fieldName]);
         columnValCounter = valuesChecked.get(vv.getField());
         for (int j = 0; j < ((BaseDataValueVector)vv).getValueCount(); j++) {
-          if (j == 10863) {
-            Math.min(4, 5);
-            //vv.data.writeByte(-2);
-          }
           System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
           assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType],
               fields[i][val1 + columnValCounter % 3], (String) fields[i][fieldName] + "/");
