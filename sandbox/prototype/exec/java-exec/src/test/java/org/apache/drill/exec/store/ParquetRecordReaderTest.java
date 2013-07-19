@@ -95,7 +95,8 @@ public class ParquetRecordReaderTest {
         {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
         {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
         {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN},
-        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
+        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4},
+        {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
     };
     String messageSchema = "message m {";
     for (Object[] fieldInfo : fields) {

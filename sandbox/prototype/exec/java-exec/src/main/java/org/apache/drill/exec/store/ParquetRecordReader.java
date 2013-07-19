@@ -80,7 +80,7 @@ public class ParquetRecordReader implements RecordReader {
 
   private static final class ColumnReadStatus {
     // Value Vector for this column
-    VectorHolder valueVecHolder;
+    ValueVector valueVecHolder;
     // column description from the parquet library
     ColumnDescriptor columnDescriptor;
     // metadata of the column, from the parquet library
@@ -99,6 +99,8 @@ public class ParquetRecordReader implements RecordReader {
     // data structure for maintaining the positions in the value vector of variable length values
     // allows for faster determination of a good cutoff point for a batch
     //ValueIndex valueIndex = new ValueIndex(50);
+
+    int bytesReadInCurrentPass;
 
     // used to keep track of a running average of the lengths of the data values (for variable length fields)
     float averageLength;
@@ -149,8 +151,6 @@ public class ParquetRecordReader implements RecordReader {
     //byte extraBits;
     // the number of values read out of the last page
     int valuesRead;
-    int bytesReadInCurrentPass;
-    int valuesReadInCurrentPass;
 
     public boolean next() throws IOException {
       currentPage = pageReader.readPage();
@@ -439,8 +439,8 @@ public class ParquetRecordReader implements RecordReader {
       }
       currVec = (VarBinary4Vector) columnReadStatus.valueVecHolder.getValueVector();
       currVec.offsetVector.data.writeInt(0);
-      columnReadStatus.pageReadStatus.bytesReadInCurrentPass = 0;
-      columnReadStatus.pageReadStatus.valuesReadInCurrentPass = 0;
+      columnReadStatus.bytesReadInCurrentPass = 0;
+      columnReadStatus.valuesReadInCurrentPass = 0;
     }
     do {
       lengthVarFieldsInCurrentRecord = 0;
@@ -458,7 +458,7 @@ public class ParquetRecordReader implements RecordReader {
         }
         bytes = columnReadStatus.pageReadStatus.bytes;
 
-        // re-purposing  this field here for length in bytes to prevent repetitive multiplication/division
+        // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
         columnReadStatus.dataTypeLengthInBits = BytesUtils.readIntLittleEndian(bytes,
             (int) columnReadStatus.pageReadStatus.readPosInBytes);
         lengthVarFieldsInCurrentRecord += columnReadStatus.dataTypeLengthInBits;
@@ -469,6 +469,9 @@ public class ParquetRecordReader implements RecordReader {
           > DEFAULT_BATCH_LENGTH_IN_BITS){
         break;
       }
+      else{
+        currRecordsRead++;
+      }
       for (ColumnReadStatus columnReadStatus : columnStatuses.values()) {
         if (columnReadStatus.isFixedLength) {
           continue;
@@ -476,22 +479,20 @@ public class ParquetRecordReader implements RecordReader {
         bytes = columnReadStatus.pageReadStatus.bytes;
         currVec = (VarBinary4Vector) columnReadStatus.valueVecHolder.getValueVector();
         // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-        currVec.offsetVector.data.writeInt((int) columnReadStatus.pageReadStatus.bytesReadInCurrentPass  +
-            columnReadStatus.dataTypeLengthInBits - 4 * (int) columnReadStatus.pageReadStatus.valuesReadInCurrentPass);
+        currVec.offsetVector.data.writeInt((int) columnReadStatus.bytesReadInCurrentPass  +
+            columnReadStatus.dataTypeLengthInBits - 4 * (int) columnReadStatus.valuesReadInCurrentPass);
         currVec.data.writeBytes(bytes, (int) columnReadStatus.pageReadStatus.readPosInBytes + 4,
             columnReadStatus.dataTypeLengthInBits);
         columnReadStatus.pageReadStatus.readPosInBytes += columnReadStatus.dataTypeLengthInBits + 4;
-        columnReadStatus.pageReadStatus.bytesReadInCurrentPass += columnReadStatus.dataTypeLengthInBits + 4;
-        currRecordsRead++;
+        columnReadStatus.bytesReadInCurrentPass += columnReadStatus.dataTypeLengthInBits + 4;
         columnReadStatus.pageReadStatus.valuesRead++;
-        columnReadStatus.pageReadStatus.valuesReadInCurrentPass++;
+        columnReadStatus.valuesReadInCurrentPass++;
         currVec.setValueCount((int)currRecordsRead);
         // reached the end of a page
         if ( columnReadStatus.pageReadStatus.valuesRead == columnReadStatus.pageReadStatus.currentPage.getValueCount()) {
           columnReadStatus.pageReadStatus.next();
         }
       }
-
     } while (currRecordsRead < recordsToRead);
     readAllFixedFields(currRecordsRead, firstColumnStatus);
 
@@ -506,8 +507,7 @@ public class ParquetRecordReader implements RecordReader {
       if (allFieldsFixedLength) {
         recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
       } else {
-        // set the number of records to read so that reaching a defined maximum will not terminate the read loop
-        // the size of the variable length records will determine how many will fit
+        // arbitrary
         recordsToRead = 8000;
 
         // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
