@@ -18,11 +18,12 @@
 
 package org.apache.drill.exec.store;
 
+import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.FixedWidthVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VariableWidthVector;
 
-public class VectorHolder {
+public class VectorHolder < V extends ValueVector> {
     private int length;
     private ValueVector vector;
     private ValueVector.Mutator mutator;
@@ -34,7 +35,7 @@ public class VectorHolder {
         this.mutator = vector.getMutator();
     }
 
-    public ValueVector.Base getValueVector() {
+    public ValueVector getValueVector() {
         return vector;
     }
 

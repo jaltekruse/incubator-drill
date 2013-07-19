@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -35,15 +35,17 @@ public class MaterializedField implements Comparable<MaterializedField> {
   public MaterializedField(FieldDef def) {
     this.def = def;
   }
-  
+
   public static MaterializedField create(FieldDef def){
     return new MaterializedField(def);
   }
-  
-  public static MaterializedField create(SchemaPath path, MajorType type) {
+
+  public static MaterializedField create(SchemaPath path, int fieldId, int parentId, MajorType type) {
     FieldDef.Builder b = FieldDef.newBuilder();
+    b.setFieldId(fieldId);
     b.setMajorType(type);
     addSchemaPathToFieldDef(path, b);
+    b.setParentId(parentId);
     return create(b.build());
   }
 
@@ -64,7 +66,7 @@ public class MaterializedField implements Comparable<MaterializedField> {
   public FieldDef getDef() {
     return def;
   }
-  
+
   public String getName(){
     StringBuilder sb = new StringBuilder();
     boolean first = true;
@@ -78,7 +80,7 @@ public class MaterializedField implements Comparable<MaterializedField> {
           sb.append(".");
         }
         sb.append(np.getName());
-        
+
       }
     }
     return sb.toString();
@@ -86,6 +88,10 @@ public class MaterializedField implements Comparable<MaterializedField> {
 
   public int getWidth() {
     return def.getMajorType().getWidth();
+  }
+
+  public int getFieldId() {
+    return def.getFieldId();
   }
 
   public MajorType getType() {
@@ -99,26 +105,26 @@ public class MaterializedField implements Comparable<MaterializedField> {
   public DataMode getDataMode() {
     return def.getMajorType().getMode();
   }
-  
+
   public MaterializedField getOtherNullableVersion(){
     MajorType mt = def.getMajorType();
     DataMode newDataMode = null;
     switch(mt.getMode()){
-    case OPTIONAL:
-      newDataMode = DataMode.REQUIRED;
-      break;
-    case REQUIRED:
-      newDataMode = DataMode.OPTIONAL;
-      break;
-    default:
-      throw new UnsupportedOperationException();
+      case OPTIONAL:
+        newDataMode = DataMode.REQUIRED;
+        break;
+      case REQUIRED:
+        newDataMode = DataMode.OPTIONAL;
+        break;
+      default:
+        throw new UnsupportedOperationException();
     }
     return new MaterializedField(def.toBuilder().setMajorType(mt.toBuilder().setMode(newDataMode).build()).build());
   }
 
   public boolean matches(SchemaPath path) {
     Iterator<NamePart> iter = def.getNameList().iterator();
-    
+
     for (PathSegment p = path.getRootSegment();; p = p.getChild()) {
       if(p == null) break;
       if (!iter.hasNext()) return false;
@@ -131,7 +137,7 @@ public class MaterializedField implements Comparable<MaterializedField> {
         if (p.getNameSegment().getPath().equals(n.getName())) continue;
         return false;
       }
-      
+
     }
     // we've reviewed all path segments. confirm that we don't have any extra name parts.
     return !iter.hasNext();
@@ -161,23 +167,13 @@ public class MaterializedField implements Comparable<MaterializedField> {
 
   @Override
   public int compareTo(MaterializedField o) {
-    return getName().compareTo(o.getName());
+    return Integer.compare(this.getFieldId(), o.getFieldId());
   }
-
-  @Override
-  public int hashCode(){
-    return getName().hashCode();
-  }
-
-  public boolean equals(MaterializedField o) {
-    return getName().equals(o.getName());
-  }
-
 
   @Override
   public String toString() {
     return "MaterializedField [" + def.toString() + "]";
   }
 
-  
+
 }

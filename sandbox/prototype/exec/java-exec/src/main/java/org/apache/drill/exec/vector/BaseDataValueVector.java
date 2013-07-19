@@ -7,9 +7,9 @@ import org.apache.drill.exec.proto.UserBitShared.FieldMetadata;
 import org.apache.drill.exec.record.DeadBuf;
 import org.apache.drill.exec.record.MaterializedField;
 
-abstract class BaseDataValueVector extends BaseValueVector{
+public abstract class BaseDataValueVector extends BaseValueVector{
 
-  protected ByteBuf data = DeadBuf.DEAD_BUFFER;
+  public ByteBuf data = DeadBuf.DEAD_BUFFER;
   protected int recordCount;
   
   public BaseDataValueVector(MaterializedField field, BufferAllocator allocator) {
@@ -27,6 +27,14 @@ abstract class BaseDataValueVector extends BaseValueVector{
       data = DeadBuf.DEAD_BUFFER;
       recordCount = 0;
     }
+  }
+
+  public int getValueCount(){
+    return recordCount;
+  }
+
+  public void setValueCount(int count){
+    recordCount = count;
   }
   
   @Override

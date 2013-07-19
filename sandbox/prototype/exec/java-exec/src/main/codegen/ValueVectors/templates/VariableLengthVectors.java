@@ -35,7 +35,7 @@ import org.apache.drill.exec.vector.ByteHolder;
 public final class ${minor.class}Vector extends BaseDataValueVector implements VariableWidthVector{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${minor.class}Vector.class);
 
-  private final UInt${type.width}Vector offsetVector;
+  public final UInt${type.width}Vector offsetVector;
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
   

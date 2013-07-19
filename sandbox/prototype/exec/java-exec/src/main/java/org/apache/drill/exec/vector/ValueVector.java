@@ -105,7 +105,7 @@ public interface ValueVector extends Closeable {
 //     * Get the number of records allocated for this value vector.
 //     * @return number of allocated records
 //     */
-//    public int getRecordCount();
+    //public int getRecordCount();
 
     /**
      * Get the Java Object representation of the element at the specified position.  Useful for testing.

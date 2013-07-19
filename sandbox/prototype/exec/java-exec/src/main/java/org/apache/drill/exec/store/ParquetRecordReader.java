@@ -30,8 +30,10 @@ import org.apache.drill.exec.proto.SchemaDefProtos;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.SchemaBuilder;
-import org.apache.drill.exec.record.vector.TypeHelper;
-import org.apache.drill.exec.record.vector.ValueVector;
+import org.apache.drill.exec.vector.BaseDataValueVector;
+import org.apache.drill.exec.vector.TypeHelper;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.VarBinary4Vector;
 import parquet.bytes.BytesInput;
 import parquet.bytes.BytesUtils;
 import parquet.column.ColumnDescriptor;
@@ -125,7 +127,6 @@ public class ParquetRecordReader implements RecordReader {
       index = new int[(int) (DEFAULT_BATCH_LENGTH_IN_BITS / 8 * percentageEstimate / valuesPerIndex)];
     }
 
-
     public void refactorIndex() {
 
     }
@@ -148,6 +149,8 @@ public class ParquetRecordReader implements RecordReader {
     //byte extraBits;
     // the number of values read out of the last page
     int valuesRead;
+    int bytesReadInCurrentPass;
+    int valuesReadInCurrentPass;
 
     public boolean next() throws IOException {
       currentPage = pageReader.readPage();
@@ -230,7 +233,7 @@ public class ParquetRecordReader implements RecordReader {
     // loop to add up the length of the fixed width columns and build the schema
     for (int i = 0; i < columns.size(); ++i) {
       column = columns.get(i);
-      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())),
+      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())), 0, 0,
           toMajorType(column.getType(), getDataMode(column)));
 
       // sum the lengths of all of the fixed length fields
@@ -262,7 +265,7 @@ public class ParquetRecordReader implements RecordReader {
       for (MaterializedField field : currentSchema) {
         column = columns.get(i);
         columnChunkMetaData = footer.getBlocks().get(0).getColumns().get(i);
-        field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())),
+        field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())), 0, 0,
             toMajorType(column.getType(), getDataMode(column)));
         if (allFieldsFixedLength) {
           createColumnStatus(column.getType() != PrimitiveType.PrimitiveTypeName.BINARY, field, column, columnChunkMetaData, recordsPerBatch);
@@ -307,14 +310,14 @@ public class ParquetRecordReader implements RecordReader {
   private boolean createColumnStatus(boolean fixedLength, MaterializedField field, ColumnDescriptor descriptor,
                                      ColumnChunkMetaData columnChunkMetaData, int allocateSize) throws SchemaChangeException {
     SchemaDefProtos.MajorType type = field.getType();
-    ValueVector.Base v = TypeHelper.getNewVector(field, allocator);
+    ValueVector v = TypeHelper.getNewVector(field, allocator);
     ColumnReadStatus newCol = new ColumnReadStatus();
     if (allocateSize > 1) {
-      newCol.valueVecHolder = new VectorHolder(allocateSize, v);
+      newCol.valueVecHolder = new VectorHolder(allocateSize, (BaseDataValueVector) v);
       newCol.valueVecHolder.reset();
     }
     else{
-      newCol.valueVecHolder = new VectorHolder(5000, v);
+      newCol.valueVecHolder = new VectorHolder(5000, (BaseDataValueVector) v);
     }
     newCol.columnDescriptor = descriptor;
     newCol.columnChunkMetaData = columnChunkMetaData;
@@ -363,11 +366,11 @@ public class ParquetRecordReader implements RecordReader {
         bytes = columnReadStatus.pageReadStatus.bytes;
         // standard read, using memory mapping
         if (columnReadStatus.pageReadStatus.bitShift == 0) {
-          columnReadStatus.valueVecHolder.getValueVector().data.writeBytes(bytes, (int) readStartInBytes, (int) readLength);
+          ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).data.writeBytes(bytes, (int) readStartInBytes, (int) readLength);
         }
         else{ // read in individual values, because a bitshift is necessary with where the last page ended
 
-          buffer = columnReadStatus.valueVecHolder.getValueVector().data;
+          buffer = ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).data;
           nextByte = bytes[(int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) - 1];
           readLengthInBits = currRecordsRead * columnReadStatus.dataTypeLengthInBits + columnReadStatus.pageReadStatus.bitShift;
           currRecordsRead -= (8 - columnReadStatus.pageReadStatus.bitShift);
@@ -410,7 +413,8 @@ public class ParquetRecordReader implements RecordReader {
         }
       }
       while (columnReadStatus.valuesReadInCurrentPass < recordsToRead && columnReadStatus.pageReadStatus.currentPage != null);
-      columnReadStatus.valueVecHolder.getValueVector().recordCount = columnReadStatus.valuesReadInCurrentPass;
+      ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).setValueCount(
+          columnReadStatus.valuesReadInCurrentPass);
     }
   }
 
@@ -420,7 +424,9 @@ public class ParquetRecordReader implements RecordReader {
     int lengthVarFieldsInCurrentRecord;
     boolean rowGroupFinished = false;
     byte[] bytes;
-    ValueVector.VarBinary4 currVec;
+    VarBinary4Vector currVec;
+    // ensure all of the columns have a page reader associated with them for the current row group
+    // write the first 0 offset
     for (ColumnReadStatus columnReadStatus : columnStatuses.values()) {
       if (columnReadStatus.isFixedLength) {
         continue;
@@ -431,8 +437,10 @@ public class ParquetRecordReader implements RecordReader {
           continue;
         }
       }
-      currVec = (ValueVector.VarBinary4) columnReadStatus.valueVecHolder.getValueVector();
-      currVec.lengthVector.data.writeInt(0);
+      currVec = (VarBinary4Vector) columnReadStatus.valueVecHolder.getValueVector();
+      currVec.offsetVector.data.writeInt(0);
+      columnReadStatus.pageReadStatus.bytesReadInCurrentPass = 0;
+      columnReadStatus.pageReadStatus.valuesReadInCurrentPass = 0;
     }
     do {
       lengthVarFieldsInCurrentRecord = 0;
@@ -466,14 +474,18 @@ public class ParquetRecordReader implements RecordReader {
           continue;
         }
         bytes = columnReadStatus.pageReadStatus.bytes;
-        currVec = (ValueVector.VarBinary4) columnReadStatus.valueVecHolder.getValueVector();
+        currVec = (VarBinary4Vector) columnReadStatus.valueVecHolder.getValueVector();
         // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-        currVec.lengthVector.data.writeInt(columnReadStatus.dataTypeLengthInBits);
+        currVec.offsetVector.data.writeInt((int) columnReadStatus.pageReadStatus.bytesReadInCurrentPass  +
+            columnReadStatus.dataTypeLengthInBits - 4 * (int) columnReadStatus.pageReadStatus.valuesReadInCurrentPass);
         currVec.data.writeBytes(bytes, (int) columnReadStatus.pageReadStatus.readPosInBytes + 4,
             columnReadStatus.dataTypeLengthInBits);
         columnReadStatus.pageReadStatus.readPosInBytes += columnReadStatus.dataTypeLengthInBits + 4;
+        columnReadStatus.pageReadStatus.bytesReadInCurrentPass += columnReadStatus.dataTypeLengthInBits + 4;
         currRecordsRead++;
         columnReadStatus.pageReadStatus.valuesRead++;
+        columnReadStatus.pageReadStatus.valuesReadInCurrentPass++;
+        currVec.setValueCount((int)currRecordsRead);
         // reached the end of a page
         if ( columnReadStatus.pageReadStatus.valuesRead == columnReadStatus.pageReadStatus.currentPage.getValueCount()) {
           columnReadStatus.pageReadStatus.next();

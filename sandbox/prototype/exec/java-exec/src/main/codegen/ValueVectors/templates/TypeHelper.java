@@ -16,7 +16,6 @@
  * limitations under the License.
  ******************************************************************************/
 package org.apache.drill.exec.vector;
->>>>>>> c941874d73f1d387c68daa40d6089e3068cd0073
 
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.SchemaDefProtos.DataMode;

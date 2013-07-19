@@ -35,24 +35,6 @@ public class TestValueVector {
         MaterializedField field = MaterializedField.create(defBuilder.build());
 
     // Create a new value vector for 1024 integers
-    ValueVector.MutableUInt4 v = new ValueVector.MutableUInt4(field, allocator);
-    v.allocateNew(1024);
-
-    // Put and set a few values
-    v.set(0, 100);
-    v.set(1, 101);
-    v.set(100, 102);
-    v.set(1022, 103);
-    v.set(1023, 104);
-    assertEquals(100, v.get(0));
-    assertEquals(101, v.get(1));
-    assertEquals(102, v.get(100));
-    assertEquals(103, v.get(1022));
-    assertEquals(104, v.get(1023));
-
-    // Ensure unallocated space returns 0
-    assertEquals(0, v.get(3));
-=======
     UInt4Vector v = new UInt4Vector(field, allocator);
     UInt4Vector.Mutator m = v.getMutator();
     v.allocateNew(1024);
