@@ -76,7 +76,7 @@ public class ParquetRecordReaderTest {
 
     File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
     System.out.println(testFile.toPath().toString());
-    testFile.delete();
+    //testFile.delete();
 
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
@@ -98,6 +98,7 @@ public class ParquetRecordReaderTest {
         {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4},
         {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
     };
+    /*
     String messageSchema = "message m {";
     for (Object[] fieldInfo : fields) {
       messageSchema += " required " + fieldInfo[schemaType] + " " + fieldInfo[fieldName] + ";";
@@ -178,7 +179,7 @@ public class ParquetRecordReaderTest {
 
     w.endBlock();
     w.end(new HashMap<String, String>());
-
+*/
     //File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
     testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
     System.out.println(testFile.toPath().toString());

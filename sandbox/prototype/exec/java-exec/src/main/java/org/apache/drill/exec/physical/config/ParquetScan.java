@@ -55,7 +55,7 @@ public class ParquetScan extends AbstractScan<ParquetScan.ScanEntry> {
 
   public static class ScanEntry implements ReadEntry {
 
-    String filename;
+    private String filename;
 
     @JsonCreator
     public ScanEntry(@JsonProperty("filename") String filename) {
@@ -69,9 +69,13 @@ public class ParquetScan extends AbstractScan<ParquetScan.ScanEntry> {
 
     @Override
     public Size getSize() {
-      return null;
+      // TODO - these values are wrong, I cannot know these until after I read a file
+      return new Size(10, 10);
     }
 
+    public String getFilename() {
+      return filename;
+    }
   }
 
   @Override

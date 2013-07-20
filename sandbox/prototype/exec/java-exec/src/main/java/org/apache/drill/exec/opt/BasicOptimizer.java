@@ -15,6 +15,7 @@ import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.MockScanPOP;
 import org.apache.drill.exec.physical.config.MockStorePOP;
+import org.apache.drill.exec.physical.config.ParquetScan;
 import org.apache.drill.exec.physical.config.Screen;
 import org.apache.drill.exec.proto.SchemaDefProtos;
 import org.apache.drill.exec.server.DrillbitContext;
@@ -24,13 +25,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Created with IntelliJ IDEA.
- * User: jaltekruse
- * Date: 6/11/13
- * Time: 5:32 PM
- * To change this template use File | Settings | File Templates.
- */
+import static org.apache.drill.exec.physical.config.ParquetScan.*;
+
 public class BasicOptimizer extends Optimizer{
 
     private DrillConfig config;
@@ -58,9 +54,9 @@ public class BasicOptimizer extends Optimizer{
                 System.out.println(pop);
                 physOps.add(pop);
             } catch (OptimizerException e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                e.printStackTrace();
             } catch (Throwable throwable) {
-                throwable.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                throwable.printStackTrace();
             }
         }
 
@@ -88,14 +84,17 @@ public class BasicOptimizer extends Optimizer{
     private class LogicalConverter extends AbstractLogicalVisitor<PhysicalOperator, Object, OptimizerException> {
 
         @Override
-        public MockScanPOP visitScan(Scan scan, Object obj) throws OptimizerException {
+        public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
             List<MockScanPOP.MockScanEntry> myObjects;
 
             try {
+              if (scan.getStorageEngine().equals("parquet")){
+                return new ParquetScan(scan.getSelection().getListWith(config, new TypeReference<ArrayList<ParquetScan.ScanEntry>>(){} ));
+              }
                 if ( scan.getStorageEngine().equals("local-logs")){
                     myObjects = scan.getSelection().getListWith(config,
-                            new TypeReference<ArrayList<MockScanPOP.MockScanEntry>>() {
-                    });
+                      new TypeReference<ArrayList<MockScanPOP.MockScanEntry>>() {
+                      });
                 }
                 else{
                     myObjects = new ArrayList<>();

@@ -26,11 +26,7 @@ import org.apache.drill.exec.physical.base.AbstractPhysicalVisitor;
 import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Scan;
-import org.apache.drill.exec.physical.config.MockScanBatchCreator;
-import org.apache.drill.exec.physical.config.MockScanPOP;
-import org.apache.drill.exec.physical.config.RandomReceiver;
-import org.apache.drill.exec.physical.config.Screen;
-import org.apache.drill.exec.physical.config.SingleSender;
+import org.apache.drill.exec.physical.config.*;
 import org.apache.drill.exec.record.RecordBatch;
 
 import com.google.common.base.Preconditions;
@@ -40,6 +36,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ImplCreator.class);
 
   private MockScanBatchCreator msc = new MockScanBatchCreator();
+  private ParquetScanBatchCreator parquetScan = new ParquetScanBatchCreator();
   private ScreenCreator sc = new ScreenCreator();
   private RandomReceiverCreator rrc = new RandomReceiverCreator();
   private SingleSenderCreator ssc = new SingleSenderCreator();
@@ -59,7 +56,11 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     
     if(scan instanceof MockScanPOP){
       return msc.getBatch(context, (MockScanPOP) scan, Collections.<RecordBatch> emptyList());
-    }else{
+    }
+    else if (scan instanceof  ParquetScan){
+      return parquetScan.getBatch(context, (ParquetScan) scan,  Collections.<RecordBatch> emptyList());
+    }
+    else{
       return super.visitScan(scan, context);  
     }
     

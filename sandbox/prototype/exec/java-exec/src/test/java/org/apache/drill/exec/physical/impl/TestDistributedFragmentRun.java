@@ -36,7 +36,7 @@ import com.google.common.io.Files;
 
 public class TestDistributedFragmentRun extends PopUnitTestBase{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestDistributedFragmentRun.class);
-  /*
+
   
   @Test 
   public void oneBitOneExchangeOneEntryRun() throws Exception{
@@ -94,6 +94,26 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
     }
 
   @Test
+  public void testParquetFullEngine() throws Exception{
+    RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
+
+    try(Drillbit bit1 = new Drillbit(CONFIG, serviceSet); DrillClient client = new DrillClient(CONFIG, serviceSet.getCoordinator());){
+      bit1.run();
+      client.connect();
+      List<QueryResultBatch> results = client.runQuery(QueryType.LOGICAL, Files.toString(FileUtils.getResourceAsFile("/parquet_scan_screen.json"), Charsets.UTF_8));
+      int count = 0;
+      for(QueryResultBatch b : results){
+        count += b.getHeader().getRowCount();
+      }
+      assertEquals(30000, count);
+    }
+
+
+  }
+
+
+
+  @Test
     public void twoBitOneExchangeTwoEntryRun() throws Exception{
       RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
@@ -111,5 +131,5 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
 
 
   }
-  */
+
 }
