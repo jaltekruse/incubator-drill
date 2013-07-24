@@ -88,8 +88,20 @@ public class WritableBatch {
     
     @Override
     public void apply(int key, ValueVector value) {
+      // TODO - THIS CODE SUCKS, EATING ERRORS SILENTLY MAKES DEBUGGING HARD!!
+      // bit value vectors did not have an implementation and fell back on the return null
+      // implementation in BaseDataValueVector
+      // Variable length getMetaData method was getting a DeadBuf error trying to find length of offset vector
+      try{
+      if (value.getMetadata() == null){}
+      }catch(Exception ex){
+        return;
+      }
       metadata.add(value.getMetadata());
       for(ByteBuf b : value.getBuffers()){
+        if (b instanceof DeadBuf){
+          continue;
+        }
         buffers.add(b);
         b.retain();
       }

@@ -67,18 +67,29 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
   
   @Override
   public FieldMetadata getMetadata() {
-    int len = recordCount * ${type.width} + getVarByteLength();
+    int offsetsLength;
+    int dataLength;
+    if (offsetVector.data instanceof DeadBuf){
+      offsetsLength = 0;
+      dataLength = 0;
+    }
+    else{
+      offsetsLength = recordCount *  ${type.width};
+      dataLength = getVarByteLength();
+    }
     return FieldMetadata.newBuilder()
-             .setDef(getField().getDef())
-             .setValueCount(recordCount)
-             .setVarByteLength(getVarByteLength())
-             .setBufferLength(len)
-             .build();
+        .setDef(getField().getDef())
+        .setValueCount(recordCount)
+        .setVarByteLength(dataLength)
+        .setBufferLength(dataLength + offsetsLength)
+        .build();
   }
 
   public int load(int dataBytes, int valueCount, ByteBuf buf){
     this.recordCount = valueCount;
-    int loaded = offsetVector.load(valueCount+1, buf);
+    // why does this have a +1
+    //int loaded = offsetVector.load(valueCount+1, buf);
+    int loaded = offsetVector.load(valueCount, buf);
     data = buf.slice(loaded, dataBytes);
     data.retain();
     return loaded + dataBytes;

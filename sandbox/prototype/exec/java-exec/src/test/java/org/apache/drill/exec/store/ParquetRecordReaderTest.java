@@ -60,6 +60,8 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
+  private boolean VERBOSE_DEBUG = false;
+
   private String getResource(String resourceName) {
     return "resource:" + resourceName;
   }
@@ -76,7 +78,7 @@ public class ParquetRecordReaderTest {
 
     File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
     System.out.println(testFile.toPath().toString());
-    //testFile.delete();
+    testFile.delete();
 
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
@@ -94,11 +96,11 @@ public class ParquetRecordReaderTest {
         {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
         {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
         {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
-        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN},
-        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4},
-        {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
+        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN}
+        //{"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4},
+        //{"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
     };
-    /*
+
     String messageSchema = "message m {";
     for (Object[] fieldInfo : fields) {
       messageSchema += " required " + fieldInfo[schemaType] + " " + fieldInfo[fieldName] + ";";
@@ -179,7 +181,7 @@ public class ParquetRecordReaderTest {
 
     w.endBlock();
     w.end(new HashMap<String, String>());
-*/
+
     //File testFile = new File("exec/java-exec/src/test/resources/testParquetFile").getAbsoluteFile();
     testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
     System.out.println(testFile.toPath().toString());
@@ -206,15 +208,21 @@ public class ParquetRecordReaderTest {
     while (pr.next() > 0) {
       int i = 0;
       for (ValueVector vv : addFields) {
-        System.out.println("\n" + (String) fields[i][fieldName]);
+        if (VERBOSE_DEBUG){
+          System.out.println("\n" + (String) fields[i][fieldName]);
+        }
         columnValCounter = valuesChecked.get(vv.getField());
         for (int j = 0; j < ((BaseDataValueVector)vv).getValueCount(); j++) {
-          System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
+          if (VERBOSE_DEBUG){
+            System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
+          }
           assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType],
               fields[i][val1 + columnValCounter % 3], (String) fields[i][fieldName] + "/");
           columnValCounter++;
         }
-        System.out.println("\n" + ((BaseDataValueVector)vv).getValueCount());
+        if (VERBOSE_DEBUG){
+          System.out.println("\n" + ((BaseDataValueVector)vv).getValueCount());
+        }
         valuesChecked.remove(vv.getField());
         valuesChecked.put(vv.getField(), columnValCounter);
         i++;

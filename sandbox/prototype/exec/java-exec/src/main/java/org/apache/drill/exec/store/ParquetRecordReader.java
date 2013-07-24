@@ -72,6 +72,9 @@ public class ParquetRecordReader implements RecordReader {
   private boolean allFieldsFixedLength;
   private int recordsPerBatch;
 
+  //TODO - this will go away when the changes with field ID removed are mreged
+  int fieldID;
+
   // used for clearing the last n bits of a byte
   private byte[] endBitMasks = {-2, -4, -8, -16, -32, -64, -128};
 
@@ -222,13 +225,13 @@ public class ParquetRecordReader implements RecordReader {
     currentRowGroupIndex = -1;
     columnStatuses = Maps.newHashMap();
     currentRowGroup = null;
+    fieldID = 0;
 
     List<ColumnDescriptor> columns = schema.getColumns();
     allFieldsFixedLength = true;
     ColumnDescriptor column = null;
     ColumnChunkMetaData columnChunkMetaData = null;
     SchemaBuilder builder = BatchSchema.newBuilder();
-    boolean fieldFixed = false;
 
     // loop to add up the length of the fixed width columns and build the schema
     for (int i = 0; i < columns.size(); ++i) {
@@ -245,10 +248,8 @@ public class ParquetRecordReader implements RecordReader {
 //          }
 //          else { } // the code below for the rest of the fixed length fields
 
-        fieldFixed = true;
         bitWidthAllFixedFields += getTypeLengthInBytes(column.getType());
       } else {
-        fieldFixed = false;
         allFieldsFixedLength = false;
       }
 
@@ -262,18 +263,21 @@ public class ParquetRecordReader implements RecordReader {
     try {
       // initialize all of the column read status objects, if their lengths are known value vectors are allocated
       int i = 0;
+      boolean fieldFixedLength = false;
       for (MaterializedField field : currentSchema) {
         column = columns.get(i);
         columnChunkMetaData = footer.getBlocks().get(0).getColumns().get(i);
         field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())), 0, 0,
             toMajorType(column.getType(), getDataMode(column)));
+        fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         if (allFieldsFixedLength) {
-          createColumnStatus(column.getType() != PrimitiveType.PrimitiveTypeName.BINARY, field, column, columnChunkMetaData, recordsPerBatch);
+          createColumnStatus(fieldFixedLength, field, column, columnChunkMetaData, recordsPerBatch);
         } else {
-          createColumnStatus(column.getType() != PrimitiveType.PrimitiveTypeName.BINARY, field, column, columnChunkMetaData, -1);
+          createColumnStatus(fieldFixedLength, field, column, columnChunkMetaData, -1);
         }
         i++;
       }
+      outputMutator.setNewSchema();
     } catch (SchemaChangeException e) {
       e.printStackTrace();
     }
@@ -327,7 +331,8 @@ public class ParquetRecordReader implements RecordReader {
       newCol.dataTypeLengthInBits = getTypeLengthInBytes(newCol.columnDescriptor.getType());
     }
     columnStatuses.put(field, newCol);
-    outputMutator.addField(0, v);
+    outputMutator.addField(fieldID, v);
+    fieldID++;
     return true;
   }
 
@@ -542,7 +547,7 @@ public class ParquetRecordReader implements RecordReader {
         }
       }
 
-      return columnStatuses.values().iterator().next().totalValuesRead;
+      return columnStatuses.values().iterator().next().valuesReadInCurrentPass;
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }

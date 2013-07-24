@@ -26,7 +26,7 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
   }
 
   private int getSizeFromCount(int valueCount) {
-    return (int) Math.ceil(valueCount / 8);
+    return (int) Math.ceil(valueCount / 8.0);
   }
   
   /**
@@ -72,6 +72,15 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
 
   public Accessor getAccessor(){
     return new Accessor();
+  }
+
+  @Override
+  public FieldMetadata getMetadata() {
+    return FieldMetadata.newBuilder()
+        .setDef(getField().getDef())
+        .setValueCount(recordCount)
+        .setBufferLength((int) Math.ceil(recordCount / 8.0))
+        .build();
   }
   
   

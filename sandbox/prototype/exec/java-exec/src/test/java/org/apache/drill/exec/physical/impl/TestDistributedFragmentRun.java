@@ -19,15 +19,22 @@ package org.apache.drill.exec.physical.impl;
 
 import static org.junit.Assert.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
+import com.carrotsearch.hppc.cursors.IntObjectCursor;
+import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.pop.PopUnitTestBase;
 import org.apache.drill.exec.proto.UserProtos.QueryType;
+import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.vector.ValueVector;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
@@ -97,21 +104,35 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
   public void testParquetFullEngine() throws Exception{
     RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
+    LogicalPlan.parse(DrillConfig.create(),  Files.toString(FileUtils.getResourceAsFile("/parquet_scan_screen.json"), Charsets.UTF_8));
+
     try(Drillbit bit1 = new Drillbit(CONFIG, serviceSet); DrillClient client = new DrillClient(CONFIG, serviceSet.getCoordinator());){
       bit1.run();
       client.connect();
       List<QueryResultBatch> results = client.runQuery(QueryType.LOGICAL, Files.toString(FileUtils.getResourceAsFile("/parquet_scan_screen.json"), Charsets.UTF_8));
       int count = 0;
+      RecordBatchLoader batchLoader = new RecordBatchLoader(bit1.getContext().getAllocator());
+      byte[] bytes;
       for(QueryResultBatch b : results){
         count += b.getHeader().getRowCount();
+        boolean schemaChanged = batchLoader.load(b.getHeader().getDef(), b.getData());
+
+        int recordCount = 0;
+        // print headers.
+        if (schemaChanged) {
+        } // do not believe any change is needed for when the schema changes, with the current mock scan use case
+
+        for (int i = 1; i < batchLoader.getRecordCount(); i++) {
+          recordCount++;
+
+          for (IntObjectCursor<ValueVector> v : batchLoader) {
+             System.out.println(v.value.getField().getName() + " " + v.value.getAccessor().getObject(i));
+          }
+        }
       }
       assertEquals(30000, count);
     }
-
-
   }
-
-
 
   @Test
     public void twoBitOneExchangeTwoEntryRun() throws Exception{
