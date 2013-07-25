@@ -17,28 +17,26 @@
  ******************************************************************************/
 package org.apache.drill.exec.compile;
 
-import java.lang.reflect.Method;
 
 
-public class TemplateClassDefinition<T, I>{
+public class TemplateClassDefinition<T>{
   
   private final Class<T> externalInterface;
   private final String templateClassName;
   private final Class<?> internalInterface;
-  private final Class<I> constructorObject;
-  
-  public TemplateClassDefinition(Class<T> externalInterface, String templateClassName, Class<?> internalInterface, Class<I> constructorObject) {
+  private final Class<?> evalReturnType;
+
+  public TemplateClassDefinition(Class<T> externalInterface, String templateClassName, Class<?> internalInterface, Class<?> evalReturnType) {
     super();
     this.externalInterface = externalInterface;
-    this.templateClassName = templateClassName; 
+    this.templateClassName = templateClassName;
     this.internalInterface = internalInterface;
-    this.constructorObject = constructorObject;
+    this.evalReturnType = evalReturnType;
   }
 
   public Class<T> getExternalInterface() {
     return externalInterface;
   }
-
   
   public Class<?> getInternalInterface() {
     return internalInterface;
@@ -48,11 +46,8 @@ public class TemplateClassDefinition<T, I>{
     return templateClassName;
   }
 
-  public Class<I> getConstructorObject() {
-    return constructorObject;
+  public Class<?> getEvalReturnType() {
+    return evalReturnType;
   }
-  
-  
-  
   
 }

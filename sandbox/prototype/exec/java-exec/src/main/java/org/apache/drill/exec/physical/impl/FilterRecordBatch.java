@@ -17,18 +17,20 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.impl;
 
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.record.BatchSchema;
-import org.apache.drill.exec.record.InvalidValueAccessor;
 import org.apache.drill.exec.record.RecordBatch;
-import org.apache.drill.exec.record.vector.SelectionVector;
+import org.apache.drill.exec.record.WritableBatch;
+import org.apache.drill.exec.record.selection.SelectionVector2;
+import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.ValueVector;
 
 public abstract class FilterRecordBatch implements RecordBatch {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FilterRecordBatch.class);
 
   private RecordBatch incoming;
-  private SelectionVector selectionVector;
+  private SelectionVector2 selectionVector;
   private BatchSchema schema;
   private FilteringRecordBatchTransformer transformer;
   private int outstanding;
@@ -57,12 +59,32 @@ public abstract class FilterRecordBatch implements RecordBatch {
     incoming.kill();
   }
 
+
   @Override
-  public <T extends ValueVector> T getValueVector(int fieldId, Class<T> clazz) throws InvalidValueAccessor {
+  public SelectionVector2 getSelectionVector2() {
     return null;
   }
 
-  abstract int applyFilter(SelectionVector vector, int count);
+  @Override
+  public SelectionVector4 getSelectionVector4() {
+    return null;
+  }
+
+  @Override
+  public TypedFieldId getValueVectorId(SchemaPath path) {
+    return null;
+  }
+
+  @Override
+  public <T extends ValueVector> T getValueVectorById(int fieldId, Class<?> vvClass) {
+    return null;
+  }
+
+  public WritableBatch getWritableBatch() {
+    return null;
+  }
+
+  abstract int applyFilter(SelectionVector2 vector, int count);
 
   /**
    * Release all assets.
@@ -77,7 +99,7 @@ public abstract class FilterRecordBatch implements RecordBatch {
       IterOutcome o = incoming.next();
       switch (o) {
       case OK_NEW_SCHEMA:
-        transformer = incoming.getContext().getFilteringExpression(null);
+        transformer = null;
         schema = transformer.getSchema();
         // fall through to ok.
       case OK:
@@ -96,10 +118,10 @@ public abstract class FilterRecordBatch implements RecordBatch {
         }
       }
 
-      // make sure the bit vector is as large as the current record batch.
-      if (selectionVector.capacity() < incoming.getRecordCount()) {
-        selectionVector.allocateNew(incoming.getRecordCount());
-      }
+//      // make sure the bit vector is as large as the current record batch.
+//      if (selectionVector.capacity() < incoming.getRecordCount()) {
+//        selectionVector.allocateNew(incoming.getRecordCount());
+//      }
 
       return null;
     }

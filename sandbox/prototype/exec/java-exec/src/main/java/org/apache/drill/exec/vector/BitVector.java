@@ -8,6 +8,7 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.UserBitShared.FieldMetadata;
 import org.apache.drill.exec.record.DeadBuf;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.record.TransferPair;
 /**
  * Bit implements a vector of bit-width values.  Elements in the vector are accessed
  * by position from the logical start of the vector.
@@ -18,6 +19,9 @@ import org.apache.drill.exec.record.MaterializedField;
  */
 public final class BitVector extends BaseDataValueVector implements FixedWidthVector{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BitVector.class);
+
+  private final Accessor accessor = new Accessor();
+  private final Mutator mutator = new Mutator();
 
   private int valueCapacity;
   
@@ -47,11 +51,15 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
   @Override
   public int load(int valueCount, ByteBuf buf){
     clear();
-    this.recordCount = valueCount;
+    this.valueCount = valueCount;
     int len = getSizeFromCount(valueCount);
     data = buf.slice(0, len);
     data.retain();
     return len;
+  }
+  
+  public void copyValue(int inIndex, int outIndex, BitVector target){
+    target.mutator.set(outIndex, this.accessor.get(inIndex));
   }
   
   @Override
@@ -78,11 +86,37 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
   public FieldMetadata getMetadata() {
     return FieldMetadata.newBuilder()
         .setDef(getField().getDef())
-        .setValueCount(recordCount)
-        .setBufferLength((int) Math.ceil(recordCount / 8.0))
+        .setValueCount(valueCount)
+        .setBufferLength((int) Math.ceil(valueCount / 8.0))
         .build();
   }
   
+  public TransferPair getTransferPair(){
+    return new TransferImpl();
+  }
+  
+  public void transferTo(BitVector target){
+    target.data = data;
+    target.data.retain();
+    target.valueCount = valueCount;
+    clear();
+  }
+  
+  private class TransferImpl implements TransferPair{
+    BitVector to;
+    
+    public TransferImpl(){
+      this.to = new BitVector(getField(), allocator);
+    }
+    
+    public BitVector getTo(){
+      return to;
+    }
+    
+    public void transfer(){
+      transferTo(to);
+    }
+  }
   
   public class Accessor extends BaseAccessor{
 
@@ -107,8 +141,8 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
       return new Boolean(get(index) != 0);
     }
     
-    public int getRecordCount() {
-      return recordCount;
+    public int getValueCount() {
+      return valueCount;
     }
     
   }
@@ -143,9 +177,9 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
       data.setByte((int) Math.floor(index/8), currentByte);
     }
 
-    public void setValueCount(int recordCount) {
-      BitVector.this.recordCount = recordCount;
-      data.writerIndex(getSizeFromCount(recordCount));
+    public void setValueCount(int valueCount) {
+      BitVector.this.valueCount = valueCount;
+      data.writerIndex(getSizeFromCount(valueCount));
     }
 
     @Override

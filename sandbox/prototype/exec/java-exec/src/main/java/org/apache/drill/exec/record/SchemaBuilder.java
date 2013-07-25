@@ -21,8 +21,9 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.drill.exec.exception.SchemaChangeException;
-
 import com.beust.jcommander.internal.Sets;
+import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
+
 import com.google.common.collect.Lists;
 
 /**
@@ -32,7 +33,7 @@ import com.google.common.collect.Lists;
 public class SchemaBuilder {
   private Set<MaterializedField> fields = Sets.newHashSet();
 
-  private BatchSchema.SelectionVectorMode selectionVectorMode;
+  private BatchSchema.SelectionVectorMode selectionVectorMode = SelectionVectorMode.NONE;
 
   SchemaBuilder() {
   }
@@ -63,7 +64,7 @@ public class SchemaBuilder {
     }
     return this;
   }
-
+  
 //  private void setTypedField(short fieldId, DataType type, boolean nullable, ValueMode mode, Class<?> valueClass)
 //      throws SchemaChangeException {
 //    MaterializedField f = new MaterializedField(fieldId, type, nullable, mode, valueClass);
@@ -78,7 +79,7 @@ public class SchemaBuilder {
 //    }
 //    fields.put(f.getFieldId(), f);
 //  }
-
+  
   public SchemaBuilder addField(MaterializedField f){
     fields.add(f);
     return this;
@@ -100,7 +101,7 @@ public class SchemaBuilder {
 //          		"not currently contain that field id.  The offending fieldId was %d", fieldId));
 //    setTypedField(fieldId, type, nullable, mode, valueClass);
 //  }
-
+  
   public SchemaBuilder removeField(MaterializedField f) throws SchemaChangeException{
     if(!fields.remove(f)) throw new SchemaChangeException("You attempted to remove an nonexistent field.");
     return this;

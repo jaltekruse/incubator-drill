@@ -124,10 +124,20 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
 
         for (int i = 1; i < batchLoader.getRecordCount(); i++) {
           recordCount++;
+          if (i % 50 == 0){
+            for (ValueVector v : batchLoader) {
+              System.out.print(v.getField().getName() + " ");
 
-          for (IntObjectCursor<ValueVector> v : batchLoader) {
-             System.out.println(v.value.getField().getName() + " " + v.value.getAccessor().getObject(i));
+            }
+            System.out.println();
           }
+
+          for (ValueVector v : batchLoader) {
+             System.out.print(v.getAccessor().getObject(i) + " ");
+          }
+          System.out.println(
+
+          );
         }
       }
       assertEquals(30000, count);

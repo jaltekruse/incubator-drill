@@ -17,15 +17,22 @@
  ******************************************************************************/
 package org.apache.drill.exec.record;
 
+import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.record.selection.SelectionVector2;
+import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.ValueVector;
 
 /**
  * A record batch contains a set of field values for a particular range of records. In the case of a record batch
  * composed of ValueVectors, ideally a batch fits within L2 cache (~256k per core). The set of value vectors do not
  * change unless the next() IterOutcome is a *_NEW_SCHEMA type.
+ * 
+ * A key thing to know is that the Iterator provided by record batch must align with the rank positions of the field ids
+ * provided utilizing getValueVectorId();
  */
-public interface RecordBatch {
+public interface RecordBatch extends Iterable<ValueVector> {
 
   /**
    * Describes the outcome of a RecordBatch being incremented forward.
@@ -35,8 +42,12 @@ public interface RecordBatch {
     OK, // A new range of records have been provided.
     OK_NEW_SCHEMA, // A full collection of records
     STOP, // Informs parent nodes that the query has terminated. In this case, a consumer can consume their QueryContext
-         // to understand the current state of things.
+          // to understand the current state of things.
     NOT_YET // used by batches that haven't received incoming data yet.
+  }
+
+  public static enum SetupOutcome {
+    OK, OK_NEW_SCHEMA, FAILED
   }
 
   /**
@@ -67,12 +78,23 @@ public interface RecordBatch {
    */
   public void kill();
 
+  public abstract SelectionVector2 getSelectionVector2();
 
-  public abstract <T extends ValueVector> T getValueVector(int fieldId, Class<T> clazz) throws InvalidValueAccessor;
+  public abstract SelectionVector4 getSelectionVector4();
 
-//  public abstract void getDictReader(int fieldId, Class<?> clazz) throws InvalidValueAccessor;
-//
-//  public abstract void getRleReader(int fieldId, Class<?> clazz) throws InvalidValueAccessor;
+  /**
+   * Get the value vector type and id for the given schema path. The TypedFieldId should store a fieldId which is the
+   * same as the ordinal position of the field within the Iterator provided this classes implementation of
+   * Iterable<ValueVector>.
+   * 
+   * @param path
+   *          The path where the vector should be located.
+   * @return The local field id associated with this vector. If no field matches this path, this will return a null
+   *         TypedFieldId
+   */
+  public abstract TypedFieldId getValueVectorId(SchemaPath path);
+
+  public abstract <T extends ValueVector> T getValueVectorById(int fieldId, Class<?> clazz);
 
   /**
    * Update the data in each Field reading interface for the next range of records. Once a RecordBatch returns an
@@ -82,11 +104,51 @@ public interface RecordBatch {
    * @return An IterOutcome describing the result of the iteration.
    */
   public IterOutcome next();
-  
+
   /**
-   * Get a writable version of this batch.  Takes over owernship of existing buffers.
+   * Get a writable version of this batch. Takes over owernship of existing buffers.
+   * 
    * @return
    */
   public WritableBatch getWritableBatch();
+
+  public static class TypedFieldId {
+    final MajorType type;
+    final int fieldId;
+
+    public TypedFieldId(MajorType type, int fieldId) {
+      super();
+      this.type = type;
+      this.fieldId = fieldId;
+    }
+
+    public MajorType getType() {
+      return type;
+    }
+
+    public int getFieldId() {
+      return fieldId;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj)
+        return true;
+      if (obj == null)
+        return false;
+      if (getClass() != obj.getClass())
+        return false;
+      TypedFieldId other = (TypedFieldId) obj;
+      if (fieldId != other.fieldId)
+        return false;
+      if (type == null) {
+        if (other.type != null)
+          return false;
+      } else if (!type.equals(other.type))
+        return false;
+      return true;
+    }
+
+  }
 
 }

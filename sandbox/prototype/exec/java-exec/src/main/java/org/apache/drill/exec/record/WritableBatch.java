@@ -65,54 +65,37 @@ public class WritableBatch {
 //    }
 //    return c.get();
 //  }
-//  
-  
-  public static WritableBatch get(int recordCount, IntObjectOpenHashMap<ValueVector> fields){
-    WritableCreator creator = new WritableCreator(recordCount);
-    fields.forEach(creator);
-    return creator.get();
-    
-  }
-  
-  private static class WritableCreator implements IntObjectProcedure<ValueVector>{
-    
+//
+
+  public static WritableBatch getBatchNoSV(int valueCount, Iterable<ValueVector> vectors) {
     List<ByteBuf> buffers = Lists.newArrayList();
     List<FieldMetadata> metadata = Lists.newArrayList();
-    private int recordCount;
-    
 
-    public WritableCreator(int recordCount) {
-      super();
-      this.recordCount = recordCount;
-    }
-    
-    @Override
-    public void apply(int key, ValueVector value) {
-      // TODO - THIS CODE SUCKS, EATING ERRORS SILENTLY MAKES DEBUGGING HARD!!
+    for (ValueVector vv : vectors) {
       // bit value vectors did not have an implementation and fell back on the return null
       // implementation in BaseDataValueVector
       // Variable length getMetaData method was getting a DeadBuf error trying to find length of offset vector
-      try{
-      if (value.getMetadata() == null){}
-      }catch(Exception ex){
-        return;
-      }
-      metadata.add(value.getMetadata());
-      for(ByteBuf b : value.getBuffers()){
+      metadata.add(vv.getMetadata());
+      for (ByteBuf b : vv.getBuffers()) {
         if (b instanceof DeadBuf){
           continue;
         }
         buffers.add(b);
         b.retain();
       }
-      value.clear();
+      // remove vv access to buffers.
+      vv.clear();
     }
 
-    public WritableBatch get(){
-      RecordBatchDef batchDef = RecordBatchDef.newBuilder().addAllField(metadata).setRecordCount(recordCount).build();
-      WritableBatch b = new WritableBatch(batchDef, buffers);
-      return b;
+    RecordBatchDef batchDef = RecordBatchDef.newBuilder().addAllField(metadata).setRecordCount(valueCount).build();
+    WritableBatch b = new WritableBatch(batchDef, buffers);
+    return b;
+  }
+
+  public static WritableBatch get(RecordBatch batch) {
+    if(batch.getSchema() != null && batch.getSchema().getSelectionVector() != BatchSchema.SelectionVectorMode.NONE) {
+      throw new UnsupportedOperationException("Only batches without selections vectors are writable.");
     }
-    
+    return getBatchNoSV(batch.getRecordCount(), batch);
   }
 }

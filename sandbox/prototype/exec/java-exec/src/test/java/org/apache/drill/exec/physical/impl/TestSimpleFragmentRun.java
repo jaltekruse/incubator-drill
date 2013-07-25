@@ -17,7 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.util.List;
 
@@ -32,7 +32,6 @@ import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.vector.ValueVector;
 import org.junit.Test;
 
-import com.carrotsearch.hppc.cursors.IntObjectCursor;
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
@@ -61,16 +60,16 @@ public class TestSimpleFragmentRun extends PopUnitTestBase {
       // print headers.
       if (schemaChanged) {
         System.out.println("\n\n========NEW SCHEMA=========\n\n");
-        for (IntObjectCursor<ValueVector> v : batchLoader) {
+        for (ValueVector value : batchLoader) {
 
           if (firstColumn) {
             firstColumn = false;
           } else {
             System.out.print("\t");
           }
-          System.out.print(v.value.getField().getName());
+          System.out.print(value.getField().getName());
           System.out.print("[");
-          System.out.print(v.value.getField().getType().getMinorType());
+          System.out.print(value.getField().getType().getMinorType());
           System.out.print("]");
         }
         System.out.println();
@@ -80,16 +79,18 @@ public class TestSimpleFragmentRun extends PopUnitTestBase {
       for (int i = 0; i < batchLoader.getRecordCount(); i++) {
         boolean first = true;
         recordCount++;
-        for (IntObjectCursor<ValueVector> v : batchLoader) {
+        for (ValueVector value : batchLoader) {
           if (first) {
             first = false;
           } else {
             System.out.print("\t");
           }
-          System.out.print(v.value.getAccessor().getObject(i));
+          System.out.print(value.getAccessor().getObject(i));
         }
         if(!first) System.out.println();
       }
+    
+  
 
     }
     logger.debug("Received results {}", results);

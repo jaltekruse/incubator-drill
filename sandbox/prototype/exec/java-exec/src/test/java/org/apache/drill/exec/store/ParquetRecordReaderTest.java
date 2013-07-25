@@ -21,6 +21,7 @@ import com.beust.jcommander.internal.Lists;
 import mockit.Expectations;
 import mockit.Injectable;
 
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -92,13 +93,13 @@ public class ParquetRecordReaderTest {
     int schemaType = 0, fieldName = 1, bitLength = 2, numPages = 3, val1 = 4, val2 = 5, val3 = 6, minorType = 7;
     // format: type, field name, uncompressed size in bits, number of pages, value1, value2, value3
     Object[][] fields = {
-        {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, SchemaDefProtos.MinorType.INT},
-        {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, SchemaDefProtos.MinorType.BIGINT},
-        {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT4},
-        {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, SchemaDefProtos.MinorType.FLOAT8},
-        {"boolean", "b", 1, 2, false, false, true, SchemaDefProtos.MinorType.BOOLEAN}
-        //{"binary", "bin", -1, 2, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4},
-        //{"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, SchemaDefProtos.MinorType.VARBINARY4}
+        {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, TypeProtos.MinorType.INT},
+        {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, TypeProtos.MinorType.BIGINT},
+        {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, TypeProtos.MinorType.FLOAT4},
+        {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, TypeProtos.MinorType.FLOAT8},
+        {"boolean", "b", 1, 2, false, false, true, TypeProtos.MinorType.BOOLEAN}
+//        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4},
+//        {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4}
     };
 
     String messageSchema = "message m {";
@@ -216,7 +217,7 @@ public class ParquetRecordReaderTest {
           if (VERBOSE_DEBUG){
             System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
           }
-          assertField(addFields.get(i), j, (SchemaDefProtos.MinorType) fields[i][minorType],
+          assertField(addFields.get(i), j, (TypeProtos.MinorType) fields[i][minorType],
               fields[i][val1 + columnValCounter % 3], (String) fields[i][fieldName] + "/");
           columnValCounter++;
         }
@@ -233,16 +234,16 @@ public class ParquetRecordReaderTest {
   }
 
   class MockOutputMutator implements OutputMutator {
-    List<Integer> removedFields = Lists.newArrayList();
+    List<MaterializedField> removedFields = Lists.newArrayList();
     List<ValueVector> addFields = Lists.newArrayList();
 
     @Override
-    public void removeField(int fieldId) throws SchemaChangeException {
-      removedFields.add(fieldId);
+    public void removeField(MaterializedField field) throws SchemaChangeException {
+      removedFields.add(field);
     }
 
     @Override
-    public void addField(int fieldId, ValueVector vector) throws SchemaChangeException {
+    public void addField(ValueVector vector) throws SchemaChangeException {
       addFields.add(vector);
     }
 
@@ -250,7 +251,7 @@ public class ParquetRecordReaderTest {
     public void setNewSchema() throws SchemaChangeException {
     }
 
-    List<Integer> getRemovedFields() {
+    List<MaterializedField> getRemovedFields() {
       return removedFields;
     }
 
@@ -259,18 +260,18 @@ public class ParquetRecordReaderTest {
     }
   }
 
-  private <T> void assertField(ValueVector valueVector, int index, SchemaDefProtos.MinorType expectedMinorType, Object value, String name) {
+  private <T> void assertField(ValueVector valueVector, int index, TypeProtos.MinorType expectedMinorType, Object value, String name) {
     assertField(valueVector, index, expectedMinorType, value, name, 0);
   }
 
-  private <T> void assertField(ValueVector valueVector, int index, SchemaDefProtos.MinorType expectedMinorType, T value, String name, int parentFieldId) {
+  private <T> void assertField(ValueVector valueVector, int index, TypeProtos.MinorType expectedMinorType, T value, String name, int parentFieldId) {
 //    UserBitShared.FieldMetadata metadata = valueVector.getMetadata();
 //    SchemaDefProtos.FieldDef def = metadata.getDef();
 //    assertEquals(expectedMinorType, def.getMajorType().getMinorType());
 //    assertEquals(name, def.getNameList().get(0).getName());
 //    assertEquals(parentFieldId, def.getParentId());
 
-    if (expectedMinorType == SchemaDefProtos.MinorType.MAP) {
+    if (expectedMinorType == TypeProtos.MinorType.MAP) {
       return;
     }
 

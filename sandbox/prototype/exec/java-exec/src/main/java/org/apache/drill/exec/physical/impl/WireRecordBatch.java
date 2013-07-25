@@ -17,6 +17,9 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.impl;
 
+import java.util.Iterator;
+
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.proto.UserBitShared.RecordBatchDef;
@@ -27,6 +30,8 @@ import org.apache.drill.exec.record.RawFragmentBatchProvider;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.WritableBatch;
+import org.apache.drill.exec.record.selection.SelectionVector2;
+import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.ValueVector;
 
 public class WireRecordBatch implements RecordBatch{
@@ -63,12 +68,32 @@ public class WireRecordBatch implements RecordBatch{
   public void kill() {
     fragProvider.kill(context);
   }
-
+  
   @Override
-  public <T extends ValueVector> T getValueVector(int fieldId, Class<T> clazz) throws InvalidValueAccessor {
-    return batchLoader.getValueVector(fieldId, clazz);
+  public Iterator<ValueVector> iterator() {
+    return batchLoader.iterator();
   }
 
+  @Override
+  public SelectionVector2 getSelectionVector2() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public SelectionVector4 getSelectionVector4() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public TypedFieldId getValueVectorId(SchemaPath path) {
+    return batchLoader.getValueVector(path);
+  }
+
+  @Override
+  public <T extends ValueVector> T getValueVectorById(int fieldId, Class<?> clazz){
+    return batchLoader.getValueVector(fieldId, clazz);
+  }
+  
   @Override
   public IterOutcome next() {
     RawFragmentBatch batch = fragProvider.getNext();

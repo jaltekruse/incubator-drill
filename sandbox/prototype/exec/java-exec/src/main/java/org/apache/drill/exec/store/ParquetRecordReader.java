@@ -21,7 +21,9 @@ import com.beust.jcommander.internal.Maps;
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -236,7 +238,7 @@ public class ParquetRecordReader implements RecordReader {
     // loop to add up the length of the fixed width columns and build the schema
     for (int i = 0; i < columns.size(); ++i) {
       column = columns.get(i);
-      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())), 0, 0,
+      MaterializedField field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath()), ExpressionPosition.UNKNOWN),
           toMajorType(column.getType(), getDataMode(column)));
 
       // sum the lengths of all of the fixed length fields
@@ -267,7 +269,7 @@ public class ParquetRecordReader implements RecordReader {
       for (MaterializedField field : currentSchema) {
         column = columns.get(i);
         columnChunkMetaData = footer.getBlocks().get(0).getColumns().get(i);
-        field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath())), 0, 0,
+        field = MaterializedField.create(new SchemaPath(toFieldName(column.getPath()), ExpressionPosition.UNKNOWN),
             toMajorType(column.getType(), getDataMode(column)));
         fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         if (allFieldsFixedLength) {
@@ -287,11 +289,11 @@ public class ParquetRecordReader implements RecordReader {
     return join(SEPERATOR, paths);
   }
 
-  private SchemaDefProtos.DataMode getDataMode(ColumnDescriptor column) {
+  private TypeProtos.DataMode getDataMode(ColumnDescriptor column) {
     if (schema.getColumnDescription(column.getPath()).getMaxDefinitionLevel() == 0) {
-      return SchemaDefProtos.DataMode.REQUIRED;
+      return TypeProtos.DataMode.REQUIRED;
     } else {
-      return SchemaDefProtos.DataMode.OPTIONAL;
+      return TypeProtos.DataMode.OPTIONAL;
     }
   }
 
@@ -313,7 +315,7 @@ public class ParquetRecordReader implements RecordReader {
    */
   private boolean createColumnStatus(boolean fixedLength, MaterializedField field, ColumnDescriptor descriptor,
                                      ColumnChunkMetaData columnChunkMetaData, int allocateSize) throws SchemaChangeException {
-    SchemaDefProtos.MajorType type = field.getType();
+    TypeProtos.MajorType type = field.getType();
     ValueVector v = TypeHelper.getNewVector(field, allocator);
     ColumnReadStatus newCol = new ColumnReadStatus();
     if (allocateSize > 1) {
@@ -331,7 +333,7 @@ public class ParquetRecordReader implements RecordReader {
       newCol.dataTypeLengthInBits = getTypeLengthInBytes(newCol.columnDescriptor.getType());
     }
     columnStatuses.put(field, newCol);
-    outputMutator.addField(fieldID, v);
+    outputMutator.addField(v);
     fieldID++;
     return true;
   }
@@ -553,34 +555,34 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
-  static SchemaDefProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName,
-                                               SchemaDefProtos.DataMode mode) {
+  static TypeProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName,
+                                               TypeProtos.DataMode mode) {
     return toMajorType(primitiveTypeName, 0, mode);
   }
 
-  static SchemaDefProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName, int length,
-                                               SchemaDefProtos.DataMode mode) {
+  static TypeProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName, int length,
+                                               TypeProtos.DataMode mode) {
     switch (primitiveTypeName) {
       case BINARY:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.VARBINARY4).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.VARBINARY4).setMode(mode).build();
       case INT64:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.BIGINT).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.BIGINT).setMode(mode).build();
       case INT32:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.INT).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.INT).setMode(mode).build();
       case BOOLEAN:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.BOOLEAN).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.BOOLEAN).setMode(mode).build();
       case FLOAT:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.FLOAT4).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FLOAT4).setMode(mode).build();
       case DOUBLE:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.FLOAT8).setMode(mode).build();
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FLOAT8).setMode(mode).build();
       // Both of these are not supported by the parquet library yet (7/3/13),
       // but they are declared here for when they are implemented
       case INT96:
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.FIXEDBINARY).setWidth(12)
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY).setWidth(12)
             .setMode(mode).build();
       case FIXED_LEN_BYTE_ARRAY:
         checkArgument(length > 0, "A length greater than zero must be provided for a FixedBinary type.");
-        return SchemaDefProtos.MajorType.newBuilder().setMinorType(SchemaDefProtos.MinorType.FIXEDBINARY)
+        return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY)
             .setWidth(length).setMode(mode).build();
       default:
         throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName);

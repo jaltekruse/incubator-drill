@@ -9,6 +9,7 @@ package org.apache.drill.exec.vector;
 import io.netty.buffer.ByteBuf;
 
 import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.proto.UserBitShared.FieldMetadata;
 import org.apache.drill.exec.record.DeadBuf;
 import org.apache.drill.exec.record.MaterializedField;
@@ -49,6 +50,8 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   public Mutator getMutator(){
     return mutator;
   }
+  
+  
 
   /**
    * Allocate a new buffer that supports setting at least the provided number of values.  May actually be sized bigger depending on underlying buffer rounding size. Must be called prior to using the ValueVector.
@@ -65,16 +68,16 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   public FieldMetadata getMetadata() {
     return FieldMetadata.newBuilder()
              .setDef(getField().getDef())
-             .setValueCount(recordCount)
-             .setBufferLength(recordCount * ${type.width})
+             .setValueCount(valueCount)
+             .setBufferLength(valueCount * ${type.width})
              .build();
   }
 
   @Override
   public int load(int valueCount, ByteBuf buf){
     clear();
-    this.recordCount = valueCount;
-    int len = recordCount * ${type.width};
+    this.valueCount = valueCount;
+    int len = valueCount * ${type.width};
     data = buf.slice(0, len);
     data.retain();
     return len;
@@ -87,10 +90,47 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
     assert metadata.getBufferLength() == loaded;
   }
   
+  public TransferPair getTransferPair(){
+    return new TransferImpl();
+  }
+  
+  public void transferTo(${minor.class}Vector target){
+    target.data = data;
+    target.data.retain();
+    target.valueCount = valueCount;
+    clear();
+  }
+  
+  private class TransferImpl implements TransferPair{
+    ${minor.class}Vector to;
+    
+    public TransferImpl(){
+      this.to = new ${minor.class}Vector(getField(), allocator);
+    }
+    
+    public ${minor.class}Vector getTo(){
+      return to;
+    }
+    
+    public void transfer(){
+      transferTo(to);
+    }
+  }
+  
+  public void copyValue(int inIndex, int outIndex, ${minor.class}Vector v){
+    <#if (type.width > 8)>
+    data.getBytes(inIndex * ${type.width}, v.data, outIndex * ${type.width}, ${type.width});
+    <#else> <#-- type.width <= 8 -->
+    data.set${(minor.javaType!type.javaType)?cap_first}(outIndex * ${type.width}, 
+        data.get${(minor.javaType!type.javaType)?cap_first}(inIndex * ${type.width})
+    );
+    </#if> <#-- type.width -->
+  }
+  
   public final class Accessor extends BaseValueVector.BaseAccessor{
 
-    public int getRecordCount() {
-      return recordCount;
+    public int getValueCount() {
+      return valueCount;
     }
     
     <#if (type.width > 8)>
@@ -177,10 +217,11 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
    }
   </#if> <#-- type.width -->
   
-   public void setValueCount(int recordCount) {
-     ${minor.class}Vector.this.recordCount = recordCount;
-     data.writerIndex(${type.width} * recordCount);
+   public void setValueCount(int valueCount) {
+     ${minor.class}Vector.this.valueCount = valueCount;
+     data.writerIndex(${type.width} * valueCount);
    }
+
 
 
 

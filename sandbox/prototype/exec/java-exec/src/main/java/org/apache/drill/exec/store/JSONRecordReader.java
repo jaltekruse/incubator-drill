@@ -9,19 +9,21 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.types.TypeProtos.MajorType;
+import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
-import org.apache.drill.exec.proto.SchemaDefProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.schema.DiffSchema;
 import org.apache.drill.exec.schema.Field;
-import org.apache.drill.exec.schema.IdGenerator;
 import org.apache.drill.exec.schema.ListSchema;
 import org.apache.drill.exec.schema.NamedField;
 import org.apache.drill.exec.schema.ObjectSchema;
@@ -29,6 +31,7 @@ import org.apache.drill.exec.schema.OrderedField;
 import org.apache.drill.exec.schema.RecordSchema;
 import org.apache.drill.exec.schema.SchemaIdGenerator;
 import org.apache.drill.exec.schema.json.jackson.JacksonHelper;
+import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableBitVector;
 import org.apache.drill.exec.vector.NullableFloat4Vector;
 import org.apache.drill.exec.vector.NullableIntVector;
@@ -36,14 +39,14 @@ import org.apache.drill.exec.vector.NullableVarChar4Vector;
 import org.apache.drill.exec.vector.TypeHelper;
 import org.apache.drill.exec.vector.ValueVector;
 
-import com.carrotsearch.hppc.IntObjectOpenHashMap;
-import com.carrotsearch.hppc.cursors.ObjectCursor;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.Resources;
@@ -55,7 +58,7 @@ public class JSONRecordReader implements RecordReader {
 
     private final String inputPath;
 
-    private final IntObjectOpenHashMap<VectorHolder> valueVectorMap;
+    private final Map<Field, VectorHolder> valueVectorMap;
 
     private JsonParser parser;
     private SchemaIdGenerator generator;
@@ -70,7 +73,7 @@ public class JSONRecordReader implements RecordReader {
         this.inputPath = inputPath;
         this.allocator = fragmentContext.getAllocator();
         this.batchSize = batchSize;
-        valueVectorMap = new IntObjectOpenHashMap<>();
+        valueVectorMap = Maps.newHashMap();
     }
 
     public JSONRecordReader(FragmentContext fragmentContext, String inputPath) {
@@ -134,7 +137,7 @@ public class JSONRecordReader implements RecordReader {
             // Garbage collect fields never referenced in this batch
             for (Field field : Iterables.concat(currentSchema.removeUnreadFields(), removedFields)) {
                 diffSchema.addRemovedField(field);
-                outputMutator.removeField(field.getFieldId());
+                outputMutator.removeField(field.getAsMaterializedField());
             }
 
         } catch (IOException | SchemaChangeException e) {
@@ -144,8 +147,8 @@ public class JSONRecordReader implements RecordReader {
     }
 
     private void resetBatch() {
-        for (ObjectCursor<VectorHolder> holder : valueVectorMap.values()) {
-            holder.value.reset();
+        for (VectorHolder value : valueVectorMap.values()) {
+            value.reset();
         }
 
         currentSchema.resetMarkedFields();
@@ -162,9 +165,6 @@ public class JSONRecordReader implements RecordReader {
         }
     }
 
-    private SchemaIdGenerator getGenerator() {
-        return generator;
-    }
 
     private RecordSchema getCurrentSchema() {
         return currentSchema;
@@ -193,8 +193,8 @@ public class JSONRecordReader implements RecordReader {
     public static enum ReadType {
         ARRAY(END_ARRAY) {
             @Override
-            public Field createField(int parentFieldId, IdGenerator<Integer> generator, String prefixFieldName, String fieldName, SchemaDefProtos.MajorType fieldType, int index) {
-                return new OrderedField(parentFieldId, generator, fieldType, prefixFieldName, index);
+            public Field createField(RecordSchema parentSchema, String prefixFieldName, String fieldName, MajorType fieldType, int index) {
+                return new OrderedField(parentSchema, fieldType, prefixFieldName, index);
             }
 
             @Override
@@ -204,13 +204,12 @@ public class JSONRecordReader implements RecordReader {
         },
         OBJECT(END_OBJECT) {
             @Override
-            public Field createField(int parentFieldId,
-                                     IdGenerator<Integer> generator,
+            public Field createField(RecordSchema parentSchema,
                                      String prefixFieldName,
                                      String fieldName,
-                                     SchemaDefProtos.MajorType fieldType,
+                                     MajorType fieldType,
                                      int index) {
-                return new NamedField(parentFieldId, generator, prefixFieldName, fieldName, fieldType);
+                return new NamedField(parentSchema, prefixFieldName, fieldName, fieldType);
             }
 
             @Override
@@ -245,7 +244,7 @@ public class JSONRecordReader implements RecordReader {
                 }
 
                 String fieldName = parser.getCurrentName();
-                SchemaDefProtos.MajorType fieldType = JacksonHelper.getFieldType(token);
+                MajorType fieldType = JacksonHelper.getFieldType(token);
                 ReadType readType = null;
                 switch (token) {
                     case START_ARRAY:
@@ -288,7 +287,7 @@ public class JSONRecordReader implements RecordReader {
         private boolean recordData(Field parentField,
                                    JSONRecordReader.ReadType readType,
                                    JSONRecordReader reader,
-                                   SchemaDefProtos.MajorType fieldType,
+                                   MajorType fieldType,
                                    String prefixFieldName,
                                    String fieldName,
                                    int rowIndex,
@@ -297,7 +296,6 @@ public class JSONRecordReader implements RecordReader {
             Field field = currentSchema.getField(fieldName, colIndex);
             boolean isFieldFound = field != null;
             List<Field> removedFields = reader.getRemovedFields();
-            int parentFieldId = parentField == null ? 0 : parentField.getFieldId();
             if (!isFieldFound || !field.getFieldType().equals(fieldType)) {
                 if (isFieldFound) {
                     if (field.hasSchema()) {
@@ -308,8 +306,7 @@ public class JSONRecordReader implements RecordReader {
                 }
 
                 field = createField(
-                        parentFieldId,
-                        reader.getGenerator(),
+                        currentSchema,
                         prefixFieldName,
                         fieldName,
                         fieldType,
@@ -322,7 +319,7 @@ public class JSONRecordReader implements RecordReader {
 
             field.setRead(true);
 
-            VectorHolder holder = getOrCreateVectorHolder(reader, field, parentFieldId);
+            VectorHolder holder = getOrCreateVectorHolder(reader, field);
             if (readType != null) {
                 RecordSchema fieldSchema = field.getAssignedSchema();
                 reader.setCurrentSchema(fieldSchema);
@@ -350,7 +347,7 @@ public class JSONRecordReader implements RecordReader {
             return true;
         }
 
-        private static <T> boolean addValueToVector(int index, VectorHolder holder, BufferAllocator allocator, T val, SchemaDefProtos.MinorType minorType) {
+        private static <T> boolean addValueToVector(int index, VectorHolder holder, BufferAllocator allocator, T val, MinorType minorType) {
             switch (minorType) {
                 case INT: {
                     holder.incAndCheckLength(32);
@@ -396,17 +393,16 @@ public class JSONRecordReader implements RecordReader {
             }
         }
 
-        private VectorHolder getOrCreateVectorHolder(JSONRecordReader reader, Field field, int parentFieldId) throws SchemaChangeException {
-            return reader.getOrCreateVectorHolder(field, parentFieldId);
+        private VectorHolder getOrCreateVectorHolder(JSONRecordReader reader, Field field) throws SchemaChangeException {
+            return reader.getOrCreateVectorHolder(field);
         }
 
         public abstract RecordSchema createSchema() throws IOException;
 
-        public abstract Field createField(int parentFieldId,
-                                          IdGenerator<Integer> generator,
+        public abstract Field createField(RecordSchema parentSchema,
                                           String prefixFieldName,
                                           String fieldName,
-                                          SchemaDefProtos.MajorType fieldType,
+                                          MajorType fieldType,
                                           int index);
     }
 
@@ -414,20 +410,19 @@ public class JSONRecordReader implements RecordReader {
         diffSchema.recordNewField(field);
     }
 
-    private VectorHolder getOrCreateVectorHolder(Field field, int parentFieldId) throws SchemaChangeException {
-        if (!valueVectorMap.containsKey(field.getFieldId())) {
-            SchemaDefProtos.MajorType type = field.getFieldType();
-            int fieldId = field.getFieldId();
-            MaterializedField f = MaterializedField.create(new SchemaPath(field.getFieldName()), fieldId, parentFieldId, type);
-            
+    private VectorHolder getOrCreateVectorHolder(Field field) throws SchemaChangeException {
+      VectorHolder holder = valueVectorMap.get(field);
+      
+        if (holder == null) {
+            MajorType type = field.getFieldType();
+            MaterializedField f = MaterializedField.create(new SchemaPath(field.getFieldName(), ExpressionPosition.UNKNOWN), type);
             ValueVector v = TypeHelper.getNewVector(f, allocator);
-            VectorHolder holder = new VectorHolder(batchSize, v);
-            holder.allocateNew(batchSize);
-            
-            valueVectorMap.put(fieldId, holder);
-            outputMutator.addField(fieldId, v);
+            AllocationHelper.allocate(v, batchSize, 50);
+            holder = new VectorHolder(batchSize, v);
+            valueVectorMap.put(field, holder);
+            outputMutator.addField(v);
             return holder;
         }
-        return valueVectorMap.lget();
+        return holder;
     }
 }

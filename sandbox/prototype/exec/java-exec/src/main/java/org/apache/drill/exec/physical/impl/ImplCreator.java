@@ -27,6 +27,9 @@ import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Scan;
 import org.apache.drill.exec.physical.config.*;
+import org.apache.drill.exec.physical.impl.filter.FilterBatchCreator;
+import org.apache.drill.exec.physical.impl.project.ProjectBatchCreator;
+import org.apache.drill.exec.physical.impl.svremover.SVRemoverCreator;
 import org.apache.drill.exec.record.RecordBatch;
 
 import com.google.common.base.Preconditions;
@@ -40,6 +43,9 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   private ScreenCreator sc = new ScreenCreator();
   private RandomReceiverCreator rrc = new RandomReceiverCreator();
   private SingleSenderCreator ssc = new SingleSenderCreator();
+  private ProjectBatchCreator pbc = new ProjectBatchCreator();
+  private FilterBatchCreator fbc = new FilterBatchCreator();
+  private SVRemoverCreator svc = new SVRemoverCreator();
   private RootExec root = null;
   
   private ImplCreator(){}
@@ -48,7 +54,11 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     return root;
   }
   
-  
+  @Override
+  public RecordBatch visitProject(Project op, FragmentContext context) throws ExecutionSetupException {
+    return pbc.getBatch(context, op, getChildren(op, context));
+  }
+
   @Override
   public RecordBatch visitScan(Scan<?> scan, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkNotNull(scan);
@@ -66,15 +76,28 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     
   }
 
+  
+  @Override
+  public RecordBatch visitOp(PhysicalOperator op, FragmentContext context) throws ExecutionSetupException {
+    if(op instanceof SelectionVectorRemover){
+      return svc.getBatch(context, (SelectionVectorRemover) op, getChildren(op, context));
+    }else{
+      return super.visitOp(op, context);  
+    }
+  }
+
   @Override
   public RecordBatch visitScreen(Screen op, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkArgument(root == null);
     root = sc.getRoot(context, op, getChildren(op, context));
     return null;
   }
+  
+  @Override
+  public RecordBatch visitFilter(Filter filter, FragmentContext context) throws ExecutionSetupException {
+    return fbc.getBatch(context, filter, getChildren(filter, context));
+  }
 
-  
-  
   @Override
   public RecordBatch visitSingleSender(SingleSender op, FragmentContext context) throws ExecutionSetupException {
     root = ssc.getRoot(context, op, getChildren(op, context));
