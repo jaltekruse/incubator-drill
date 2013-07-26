@@ -125,15 +125,17 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
         for (int i = 1; i < batchLoader.getRecordCount(); i++) {
           recordCount++;
           if (i % 50 == 0){
+            System.out.println();
             for (ValueVector v : batchLoader) {
-              System.out.print(v.getField().getName() + " ");
+              System.out.print(pad(v.getField().getName(), 20) + " ");
 
             }
+            System.out.println();
             System.out.println();
           }
 
           for (ValueVector v : batchLoader) {
-             System.out.print(v.getAccessor().getObject(i) + " ");
+             System.out.print(pad(v.getAccessor().getObject(i).toString(), 20) + " ");
           }
           System.out.println(
 
@@ -142,6 +144,21 @@ public class TestDistributedFragmentRun extends PopUnitTestBase{
       }
       assertEquals(30000, count);
     }
+  }
+
+  public String pad(String value, int length) {
+    return pad(value, length, " ");
+  }
+
+  public String pad(String value, int length, String with) {
+    StringBuilder result = new StringBuilder(length);
+    result.append(value);
+
+    while (result.length() < length) {
+      result.insert(0, with);
+    }
+
+    return result.toString();
   }
 
   @Test
