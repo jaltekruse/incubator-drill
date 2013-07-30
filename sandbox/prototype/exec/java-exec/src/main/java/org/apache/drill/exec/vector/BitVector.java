@@ -133,6 +133,7 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
       //             data.getByte((int)Math.floor(index/8)),
       //             (int)Math.pow(2, (index % 8)),
       //             data.getByte((int)Math.floor(index/8)) & (int)Math.pow(2, (index % 8)));
+      // TODO - is the floor operation necessary if integer division is being used here
       return ((data.getByte((int)Math.floor(index/8)) & (int)Math.pow(2, (index % 8))) == 0) ? 0 : 1;
     }
     

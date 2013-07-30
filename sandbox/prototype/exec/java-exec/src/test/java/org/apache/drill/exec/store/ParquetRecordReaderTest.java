@@ -57,11 +57,12 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static parquet.column.Encoding.PLAIN;
+import static parquet.column.Encoding.values;
 
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = false;
+  private boolean VERBOSE_DEBUG = true;
 
   private String getResource(String resourceName) {
     return "resource:" + resourceName;
@@ -97,7 +98,7 @@ public class ParquetRecordReaderTest {
         {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, TypeProtos.MinorType.BIGINT},
         {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, TypeProtos.MinorType.FLOAT4},
         {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, TypeProtos.MinorType.FLOAT8},
-        {"boolean", "b", 1, 2, false, false, true, TypeProtos.MinorType.BOOLEAN}
+//        {"boolean", "b", 1, 2, false, false, true, TypeProtos.MinorType.BOOLEAN}
 //        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4},
 //        {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4}
     };
@@ -117,7 +118,7 @@ public class ParquetRecordReaderTest {
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
     w.startBlock(1);
-    int numTotalVals = 30000;
+    int numTotalRecords = 30000;
     // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
     byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
     WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -129,8 +130,8 @@ public class ParquetRecordReaderTest {
       String[] path1 = {(String) fieldInfo[fieldName]};
       ColumnDescriptor c1 = schema.getColumnDescription(path1);
 
-      w.startColumn(c1, numTotalVals, codec);
-      int valsPerPage = (int) Math.ceil(numTotalVals / (float) ((int) fieldInfo[numPages]));
+      w.startColumn(c1, numTotalRecords, codec);
+      int valsPerPage = (int) Math.ceil(numTotalRecords / (float) ((int) fieldInfo[numPages]));
       byte[] bytes;
       if ((int) fieldInfo[bitLength] > 0) {
         bytes = new byte[(int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0)];
@@ -174,7 +175,7 @@ public class ParquetRecordReaderTest {
             }
 
         }
-        w.writeDataPage(numTotalVals / (int) fieldInfo[numPages], bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+        w.writeDataPage(numTotalRecords / (int) fieldInfo[numPages], bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
         currentBooleanByte = 0;
       }
       w.endColumn();
@@ -230,7 +231,9 @@ public class ParquetRecordReaderTest {
       }
       batchCounter++;
     }
-    //assertEquals(5, addFields.size());
+    for (MaterializedField f : valuesChecked.keySet()) {
+      assertEquals("Record count incorrect for column: " + f.getName(), numTotalRecords, (long) valuesChecked.get(f));
+    }
   }
 
   class MockOutputMutator implements OutputMutator {

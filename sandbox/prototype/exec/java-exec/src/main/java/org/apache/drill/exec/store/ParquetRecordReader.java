@@ -375,19 +375,20 @@ public class ParquetRecordReader implements RecordReader {
         if (columnReadStatus.pageReadStatus.bitShift == 0) {
           ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).data.writeBytes(bytes, (int) readStartInBytes, (int) readLength);
         }
-        else{ // read in individual values, because a bitshift is necessary with where the last page ended
+        else{ // read in individual values, because a bitshift is necessary with where the last page or batch ended
 
           buffer = ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).data;
-          nextByte = bytes[(int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) - 1];
-          readLengthInBits = currRecordsRead * columnReadStatus.dataTypeLengthInBits + columnReadStatus.pageReadStatus.bitShift;
-          currRecordsRead -= (8 - columnReadStatus.pageReadStatus.bitShift);
+          nextByte = bytes[(int) Math.max(0, Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) - 1)];
+          readLengthInBits = currRecordsRead + columnReadStatus.pageReadStatus.bitShift;
+          //currRecordsRead -= (8 - columnReadStatus.pageReadStatus.bitShift);
 
           int i = 0;
-          for (; i < (int) readLength; i++) {
+          for (; i <= (int) readLength; i++) {
             currentByte = nextByte;
             currentByte = (byte) (currentByte >>> columnReadStatus.pageReadStatus.bitShift);
             // mask the bits about to be added from the next byte
             currentByte = (byte) (currentByte & startBitMasks[columnReadStatus.pageReadStatus.bitShift - 1]);
+            // if we are not on the last byte
             if ((int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) + i < bytes.length) {
               // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
               nextByte = bytes[(int) Math.ceil(columnReadStatus.pageReadStatus.valuesRead / 8.0) + i];
