@@ -26,17 +26,18 @@ import org.apache.drill.exec.exception.OptimizerException;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
+import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-public class BasicOptimizer extends Optimizer{
+public class BasicOptimizer extends Optimizer {
 
   private DrillConfig config;
   private QueryContext context;
 
-  public BasicOptimizer(DrillConfig config, QueryContext context){
+  public BasicOptimizer(DrillConfig config, QueryContext context) {
     this.config = config;
     this.context = context;
   }
@@ -45,6 +46,7 @@ public class BasicOptimizer extends Optimizer{
   public void init(DrillConfig config) {
 
   }
+
 
   @Override
   public PhysicalPlan optimize(OptimizationContext context, LogicalPlan plan) {
@@ -84,7 +86,8 @@ public class BasicOptimizer extends Optimizer{
     }
   }
 
-  private class LogicalConverter extends AbstractLogicalVisitor<PhysicalOperator, Object, OptimizerException> {
+
+private class LogicalConverter extends AbstractLogicalVisitor<PhysicalOperator, Object, OptimizerException> {
 
     // storing a reference to the plan for access to other elements outside of the query graph
     // such as the storage engine configs
@@ -93,7 +96,6 @@ public class BasicOptimizer extends Optimizer{
     public LogicalConverter(LogicalPlan logicalPlan){
       this.logicalPlan = logicalPlan;
     }
-
 
     @Override
     public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
@@ -153,5 +155,4 @@ public class BasicOptimizer extends Optimizer{
     }
 
   }
-
 }

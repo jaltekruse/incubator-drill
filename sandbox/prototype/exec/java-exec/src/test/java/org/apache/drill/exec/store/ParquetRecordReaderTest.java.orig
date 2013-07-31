@@ -32,15 +32,14 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
-
+import org.apache.drill.exec.proto.SchemaDefProtos;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
-
-import org.apache.drill.exec.store.parquet.ParquetRecordReader;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
@@ -52,9 +51,7 @@ import parquet.column.page.Page;
 import parquet.column.page.PageReadStore;
 import parquet.column.page.PageReader;
 import parquet.hadoop.Footer;
-
 import parquet.hadoop.ParquetFileReader;
-
 import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.hadoop.metadata.ParquetMetadata;
@@ -71,16 +68,18 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static parquet.column.Encoding.PLAIN;
-
+import static parquet.column.Encoding.values;
 
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
   private boolean VERBOSE_DEBUG = false;
 
-
+<<<<<<< HEAD
+  long numTotalRecords = 300000;
+=======
   long numTotalRecords = 3000000;
-
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
   WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -181,6 +180,10 @@ public class ParquetRecordReaderTest {
               System.arraycopy( toByta(fieldInfo[val1 + valsWritten % 3]),
                   0, bytes, i * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
             }
+<<<<<<< HEAD
+=======
+
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
             valsWritten++;
           }
 
@@ -193,7 +196,10 @@ public class ParquetRecordReaderTest {
 
     w.endBlock();
     w.end(new HashMap<String, String>());
+<<<<<<< HEAD
     logger.debug("Finished generating parquet file.");
+=======
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
   }
 
 
@@ -212,7 +218,11 @@ public class ParquetRecordReaderTest {
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
 
-    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types", 0);
+    ParquetMetadata readFooter = ParquetFileReader.readFooter(configuration, path);
+
+    ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
+        readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
+    ParquetRecordReader pr = new ParquetRecordReader(context, parReader, readFooter);
 
     MockOutputMutator mutator = new MockOutputMutator();
     List<ValueVector> addFields = mutator.getAddFields();
@@ -439,7 +449,10 @@ public class ParquetRecordReaderTest {
   }
 
   // found at http://www.daniweb.com/software-development/java/code/216874/primitive-types-as-byte-arrays
+<<<<<<< HEAD
   // I have modified them to switch the endianess of integers and longs
+=======
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
   /* ========================= */
   /* "primitive type --> byte[] data" Methods */
   /* ========================= */
@@ -488,10 +501,17 @@ public class ParquetRecordReaderTest {
   /* ========================= */
   public static byte[] toByta(int data) {
     return new byte[]{
+<<<<<<< HEAD
         (byte) ((data >> 0) & 0xff),
         (byte) ((data >> 8) & 0xff),
         (byte) ((data >> 16) & 0xff),
         (byte) ((data >> 24) & 0xff),
+=======
+        (byte) ((data >> 24) & 0xff),
+        (byte) ((data >> 16) & 0xff),
+        (byte) ((data >> 8) & 0xff),
+        (byte) ((data >> 0) & 0xff),
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
     };
   }
 
@@ -507,6 +527,7 @@ public class ParquetRecordReaderTest {
   /* ========================= */
   public static byte[] toByta(long data) {
     return new byte[]{
+<<<<<<< HEAD
         (byte) ((data >> 0) & 0xff),
         (byte) ((data >> 8) & 0xff),
         (byte) ((data >> 16) & 0xff),
@@ -515,6 +536,16 @@ public class ParquetRecordReaderTest {
         (byte) ((data >> 40) & 0xff),
         (byte) ((data >> 48) & 0xff),
         (byte) ((data >> 56) & 0xff),
+=======
+        (byte) ((data >> 56) & 0xff),
+        (byte) ((data >> 48) & 0xff),
+        (byte) ((data >> 40) & 0xff),
+        (byte) ((data >> 32) & 0xff),
+        (byte) ((data >> 24) & 0xff),
+        (byte) ((data >> 16) & 0xff),
+        (byte) ((data >> 8) & 0xff),
+        (byte) ((data >> 0) & 0xff),
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
     };
   }
 
