@@ -63,10 +63,16 @@ public class WritableBatch {
 
     for (ValueVector vv : vectors) {
       metadata.add(vv.getMetadata());
+<<<<<<< HEAD
       
       // don't try to get the buffers if we don't have any records.  It is possible the buffers are dead buffers.
       if(recordCount == 0) continue;
       
+=======
+      if (recordCount == 0){
+        continue;
+      }
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
       for (ByteBuf b : vv.getBuffers()) {
         buffers.add(b);
         b.retain();

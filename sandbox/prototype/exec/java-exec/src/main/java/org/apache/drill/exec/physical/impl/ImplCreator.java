@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,14 +26,7 @@ import org.apache.drill.exec.physical.base.AbstractPhysicalVisitor;
 import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Scan;
-import org.apache.drill.exec.physical.config.Filter;
-import org.apache.drill.exec.physical.config.MockScanBatchCreator;
-import org.apache.drill.exec.physical.config.MockScanPOP;
-import org.apache.drill.exec.physical.config.Project;
-import org.apache.drill.exec.physical.config.RandomReceiver;
-import org.apache.drill.exec.physical.config.Screen;
-import org.apache.drill.exec.physical.config.SelectionVectorRemover;
-import org.apache.drill.exec.physical.config.SingleSender;
+import org.apache.drill.exec.physical.config.*;
 import org.apache.drill.exec.physical.impl.filter.FilterBatchCreator;
 import org.apache.drill.exec.physical.impl.project.ProjectBatchCreator;
 import org.apache.drill.exec.physical.impl.svremover.SVRemoverCreator;
@@ -46,6 +39,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ImplCreator.class);
 
   private MockScanBatchCreator msc = new MockScanBatchCreator();
+  private ParquetScanBatchCreator parquetScan = new ParquetScanBatchCreator();
   private ScreenCreator sc = new ScreenCreator();
   private RandomReceiverCreator rrc = new RandomReceiverCreator();
   private SingleSenderCreator ssc = new SingleSenderCreator();
@@ -53,13 +47,13 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   private FilterBatchCreator fbc = new FilterBatchCreator();
   private SVRemoverCreator svc = new SVRemoverCreator();
   private RootExec root = null;
-  
+
   private ImplCreator(){}
-  
+
   public RootExec getRoot(){
     return root;
   }
-  
+
   @Override
   public RecordBatch visitProject(Project op, FragmentContext context) throws ExecutionSetupException {
     return pbc.getBatch(context, op, getChildren(op, context));
@@ -69,22 +63,26 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   public RecordBatch visitScan(Scan<?> scan, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkNotNull(scan);
     Preconditions.checkNotNull(context);
-    
+
     if(scan instanceof MockScanPOP){
       return msc.getBatch(context, (MockScanPOP) scan, Collections.<RecordBatch> emptyList());
-    }else{
-      return super.visitScan(scan, context);  
     }
-    
+    else if (scan instanceof  ParquetScan){
+      return parquetScan.getBatch(context, (ParquetScan) scan,  Collections.<RecordBatch> emptyList());
+    }
+    else{
+      return super.visitScan(scan, context);
+    }
+
   }
 
-  
+
   @Override
   public RecordBatch visitOp(PhysicalOperator op, FragmentContext context) throws ExecutionSetupException {
     if(op instanceof SelectionVectorRemover){
       return svc.getBatch(context, (SelectionVectorRemover) op, getChildren(op, context));
     }else{
-      return super.visitOp(op, context);  
+      return super.visitOp(op, context);
     }
   }
 
@@ -94,7 +92,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     root = sc.getRoot(context, op, getChildren(op, context));
     return null;
   }
-  
+
   @Override
   public RecordBatch visitFilter(Filter filter, FragmentContext context) throws ExecutionSetupException {
     return fbc.getBatch(context, filter, getChildren(filter, context));
@@ -118,7 +116,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     }
     return children;
   }
-  
+
   public static RootExec getExec(FragmentContext context, FragmentRoot root) throws ExecutionSetupException{
     ImplCreator i = new ImplCreator();
     root.accept(i, context);

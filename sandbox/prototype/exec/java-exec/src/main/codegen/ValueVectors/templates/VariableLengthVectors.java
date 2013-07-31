@@ -193,6 +193,10 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     public int getValueCount() {
       return valueCount;
     }
+
+    public UInt${type.width}Vector getOffsetVector(){
+      return offsetVector;
+    }
   }
   
   /**
