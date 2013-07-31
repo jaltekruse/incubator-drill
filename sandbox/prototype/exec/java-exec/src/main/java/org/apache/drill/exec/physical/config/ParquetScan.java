@@ -24,12 +24,16 @@ import java.util.List;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntry;
+<<<<<<< HEAD
 import org.apache.drill.exec.physical.ReadEntryFromHDFS;
+=======
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
 import org.apache.drill.exec.physical.base.AbstractScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Scan;
 import org.apache.drill.exec.physical.base.Size;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
+<<<<<<< HEAD
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -84,6 +88,36 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
     @JsonCreator
     public ParquetReadEntry(@JsonProperty("path") String path,@JsonProperty("start") long start,@JsonProperty("length") long length) {
       super(path, start, length);
+=======
+import org.apache.drill.exec.vector.TypeHelper;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.base.Preconditions;
+
+@JsonTypeName("parquet-scan")
+public class ParquetScan extends AbstractScan<ParquetScan.ScanEntry> {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
+
+  private  LinkedList<ScanEntry>[] mappings;
+
+  @JsonCreator
+  public ParquetScan(@JsonProperty("entries") List<ScanEntry> readEntries) {
+    super(readEntries);
+  }
+
+  public static class ScanEntry implements ReadEntry {
+
+    private String filename;
+
+    @JsonCreator
+    public ScanEntry(@JsonProperty("filename") String filename) {
+      this.filename = filename;
+>>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
     }
 
     @Override

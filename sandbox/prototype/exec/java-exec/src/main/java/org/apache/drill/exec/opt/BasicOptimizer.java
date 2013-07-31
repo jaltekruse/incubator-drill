@@ -28,17 +28,21 @@ import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
-import org.apache.drill.exec.physical.config.*;
+import org.apache.drill.exec.physical.config.MockScanPOP;
+import org.apache.drill.exec.physical.config.MockStorePOP;
+import org.apache.drill.exec.physical.config.ParquetScan;
+import org.apache.drill.exec.physical.config.Screen;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.drill.storage.ParquetStorageEngineConfig;
 
-public class BasicOptimizer extends Optimizer {
+import static org.apache.drill.exec.physical.config.ParquetScan.*;
+
+public class BasicOptimizer extends Optimizer{
 
   private DrillConfig config;
   private QueryContext context;
 
-  public BasicOptimizer(DrillConfig config, QueryContext context) {
+  public BasicOptimizer(DrillConfig config, QueryContext context){
     this.config = config;
     this.context = context;
   }
@@ -53,10 +57,10 @@ public class BasicOptimizer extends Optimizer {
     Object obj = new Object();
     Collection<SinkOperator> roots = plan.getGraph().getRoots();
     List<PhysicalOperator> physOps = new ArrayList<PhysicalOperator>(roots.size());
-    LogicalConverter converter = new LogicalConverter(plan);
-    for (SinkOperator op : roots) {
+    LogicalConverter converter = new LogicalConverter();
+    for ( SinkOperator op : roots){
       try {
-        PhysicalOperator pop = op.accept(converter, obj);
+        PhysicalOperator pop  = op.accept(converter, obj);
         System.out.println(pop);
         physOps.add(pop);
       } catch (OptimizerException e) {
@@ -95,6 +99,7 @@ public class BasicOptimizer extends Optimizer {
     public LogicalConverter(LogicalPlan logicalPlan){
       this.logicalPlan = logicalPlan;
     }
+
 
     @Override
     public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
