@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,9 +42,9 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
 
   private List<ValueVector> vectors = Lists.newArrayList();
   private final BufferAllocator allocator;
-  private int recordCount; 
+  private int valueCount;
   private BatchSchema schema;
-  
+
   public RecordBatchLoader(BufferAllocator allocator) {
     super();
     this.allocator = allocator;
@@ -52,28 +52,28 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
 
   /**
    * Load a record batch from a single buffer.
-   * 
+   *
    * @param def
    *          The definition for the record batch.
    * @param buf
    *          The buffer that holds the data associated with the record batch
    * @return Whether or not the schema changed since the previous load.
-   * @throws SchemaChangeException 
+   * @throws SchemaChangeException
    */
   public boolean load(RecordBatchDef def, ByteBuf buf) throws SchemaChangeException {
 //    logger.debug("Loading record batch with def {} and data {}", def, buf);
-    this.recordCount = def.getRecordCount();
+    this.valueCount = def.getRecordCount();
     boolean schemaChanged = false;
 
     Map<MaterializedField, ValueVector> oldFields = Maps.newHashMap();
     for(ValueVector v : this.vectors){
       oldFields.put(v.getField(), v);
     }
-    
+
     List<ValueVector> newVectors = Lists.newArrayList();
 
     List<FieldMetadata> fields = def.getFieldList();
-    
+
     int bufOffset = 0;
     for (FieldMetadata fmd : fields) {
       FieldDef fieldDef = fmd.getDef();
@@ -82,23 +82,27 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
         newVectors.add(v);
         continue;
       }
-      
+
       // if we arrive here, we didn't have a matching vector.
       schemaChanged = true;
       MaterializedField m = new MaterializedField(fieldDef);
       v = TypeHelper.getNewVector(m, allocator);
-      v.load(fmd, buf.slice(bufOffset, fmd.getBufferLength()));
+      if (fmd.getValueCount() == 0){
+        v.clear();
+      } else {
+        v.load(fmd, buf.slice(bufOffset, fmd.getBufferLength()));
+      }
       bufOffset += fmd.getBufferLength();
       newVectors.add(v);
     }
-    
+
     if(!oldFields.isEmpty()){
       schemaChanged = true;
       for(ValueVector v : oldFields.values()){
         v.close();
       }
     }
-    
+
     // rebuild the schema.
     SchemaBuilder b = BatchSchema.newBuilder();
     for(ValueVector v : newVectors){
@@ -114,11 +118,11 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
   public TypedFieldId getValueVector(SchemaPath path) {
     for(int i =0; i < vectors.size(); i++){
       ValueVector vv = vectors.get(i);
-      if(vv.getField().matches(path)) return new TypedFieldId(vv.getField().getType(), i); 
+      if(vv.getField().matches(path)) return new TypedFieldId(vv.getField().getType(), i);
     }
     return null;
   }
-  
+
   @SuppressWarnings("unchecked")
   public <T extends ValueVector> T getValueVector(int fieldId, Class<?> clazz) {
     ValueVector v = vectors.get(fieldId);
@@ -133,12 +137,12 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
   }
 
   public int getRecordCount() {
-    return recordCount;
+    return valueCount;
   }
 
 
   public WritableBatch getWritableBatch(){
-    return WritableBatch.getBatchNoSV(recordCount, vectors);
+    return WritableBatch.getBatchNoSV(valueCount, vectors);
   }
 
   @Override
@@ -150,6 +154,6 @@ public class RecordBatchLoader implements Iterable<ValueVector>{
     return schema;
   }
 
-  
-  
+
+
 }

@@ -6,47 +6,36 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.physical.config;
+package org.apache.drill.exec.physical;
 
-import java.io.IOException;
-import java.util.Collection;
+import org.apache.drill.exec.physical.base.Size;
 
-import org.apache.drill.common.logical.data.Scan;
-import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.ReadEntry;
-import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
-import org.apache.drill.exec.store.AbstractStorageEngine;
-import org.apache.drill.exec.store.RecordReader;
+public class ReadEntryWithPath implements ReadEntry {
 
-import com.google.common.collect.ListMultimap;
+  protected String path;
 
-public class MockStorageEngine extends AbstractStorageEngine{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
-
-  @Override
-  public boolean supportsRead() {
-    return true;
+  public String getPath(){
+   return path;
   }
 
   @Override
-  public ListMultimap<ReadEntry, DrillbitEndpoint> getReadLocations(Collection<ReadEntry> entries) {
-    return null;
+  public OperatorCost getCost() {
+    throw new UnsupportedOperationException(this.getClass().getCanonicalName() + " is only for extracting path data from " +
+        "selections inside a scan node from a logical plan, it cannot be used in an executing plan and has no cost.");
   }
 
   @Override
-  public RecordReader getReader(FragmentContext context, ReadEntry readEntry) throws IOException {
-    return null;
+  public Size getSize() {
+    throw new UnsupportedOperationException(this.getClass().getCanonicalName() + " is only for extracting path data from " +
+        "selections on a scan node from a logical plan, it cannot be used in an executing plan and has no size.");
   }
-
-  
-  
 }
