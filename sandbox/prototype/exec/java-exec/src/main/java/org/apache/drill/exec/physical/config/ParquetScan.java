@@ -24,16 +24,12 @@ import java.util.List;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntry;
-<<<<<<< HEAD
 import org.apache.drill.exec.physical.ReadEntryFromHDFS;
-=======
->>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
 import org.apache.drill.exec.physical.base.AbstractScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Scan;
 import org.apache.drill.exec.physical.base.Size;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
-<<<<<<< HEAD
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -100,24 +96,56 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 
 @JsonTypeName("parquet-scan")
-public class ParquetScan extends AbstractScan<ParquetScan.ScanEntry> {
+public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
 
-  private  LinkedList<ScanEntry>[] mappings;
+  private  LinkedList<ParquetReadEntry>[] mappings;
 
   @JsonCreator
-  public ParquetScan(@JsonProperty("entries") List<ScanEntry> readEntries) {
+  public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries) {
     super(readEntries);
   }
 
-  public static class ScanEntry implements ReadEntry {
+  public static class EndpointBytes {
 
-    private String filename;
+    private DrillbitEndpoint endpoint;
+    private long bytes = 0;
+
+    public EndpointBytes(DrillbitEndpoint endpoint) {
+      super();
+      this.endpoint = endpoint;
+    }
+
+    public EndpointBytes(DrillbitEndpoint endpoint, long bytes) {
+      super();
+      this.endpoint = endpoint;
+      this.bytes = bytes;
+    }
+
+    public DrillbitEndpoint getEndpoint() {
+      return endpoint;
+    }
+
+    public void setEndpoint(DrillbitEndpoint endpoint) {
+      this.endpoint = endpoint;
+    }
+    public int getAffinity() {
+      return bytes;
+    }
+
+  }
+
+
+  public static class ParquetReadEntry implements ReadEntry {
+
+    private String path;
+    private long start;
+    private long length;
+    private EndpointBytes[] endpointBytes;
 
     @JsonCreator
     public ScanEntry(@JsonProperty("filename") String filename) {
       this.filename = filename;
->>>>>>> Parquet reader is now hooked up to the full execution engine and can go through a scan/screen. Tests have been updated to validate all of the individual values read out of parquet and sent through a scan/screen plan in the full execution engine.
     }
 
     @Override
