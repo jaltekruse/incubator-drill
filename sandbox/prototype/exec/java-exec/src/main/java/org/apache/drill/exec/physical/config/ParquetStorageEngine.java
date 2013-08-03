@@ -37,6 +37,7 @@ import com.google.common.collect.ListMultimap;
 import org.apache.drill.storage.ParquetStorageEngineConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import parquet.column.page.PageReadStore;
 import parquet.hadoop.Footer;
 import parquet.hadoop.ParquetFileReader;
@@ -47,12 +48,33 @@ import parquet.hadoop.metadata.ParquetMetadata;
 public class ParquetStorageEngine extends AbstractStorageEngine{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
 
-  DrillbitContext context;
-  ParquetStorageEngineConfig config;
+  private DrillbitContext context;
+  private Configuration configuration;
+  private FileSystem fs;
 
-  public ParquetStorageEngine(ParquetStorageEngineConfig config, DrillbitContext context){
+
+  public ParquetStorageEngine(DrillbitContext context, Configuration configuration){
     this.context = context;
-    this.config = config;
+    this.configuration = configuration;
+    try {
+      this.fs = FileSystem.get(configuration);
+    } catch (IOException ie) { /*TODO handle this */}
+  }
+
+  public ParquetStorageEngine(DrillbitContext context) {
+    new ParquetStorageEngine(context, new Configuration());
+  }
+
+  public FileSystem getFileSystem() {
+    return this.fs;
+  }
+
+  public Configuration getConfiguration() {
+    return this.configuration;
+  }
+
+  public DrillbitContext getContext() {
+    return this.context;
   }
 
   @Override
@@ -72,7 +94,6 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
       File file = new File(readEntryWithPath.getPath()).getAbsoluteFile();
 
       Path path = new Path(file.toURI());
-      Configuration configuration = new Configuration();
 
       ParquetMetadata footer = ParquetFileReader.readFooter(configuration, path);
       readEntryWithPath.getPath();
@@ -87,7 +108,7 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
 
     }
 
-    return new ParquetScan(pReadEnties);
+    return new ParquetScan(pReadEnties, this);
   }
 
   @Override

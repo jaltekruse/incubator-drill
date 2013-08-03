@@ -17,10 +17,9 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.config;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
+import com.hazelcast.core.MapEntry;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntry;
@@ -36,50 +35,47 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import org.apache.drill.exec.store.AffinityCalculator;
 import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileSystem;
 
 @JsonTypeName("parquet-scan")
 public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
 
   private  LinkedList<ParquetReadEntry>[] mappings;
+  private long totalBytes;
+  private Collection<DrillbitEndpoint> availableEndpoints;
+  private ParquetStorageEngine storageEngine;
+  private FileSystem fs;
+  private String fileName;
 
   @JsonCreator
   public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries) {
     super(readEntries);
   }
 
-  public static class EndpointBytes {
-
-    private DrillbitEndpoint endpoint;
-    private long bytes = 0;
-
-    public EndpointBytes(DrillbitEndpoint endpoint) {
-      super();
-      this.endpoint = endpoint;
+  @JsonCreator
+  public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries, ParquetStorageEngine storageEngine) {
+    super(readEntries);
+    this.storageEngine = storageEngine;
+    this.availableEndpoints = storageEngine.getContext().getBits();
+    this.fs = storageEngine.getFileSystem();
+    this.fileName = readEntries.get(0).getPath();
+    AffinityCalculator ac = new AffinityCalculator(fileName, fs, availableEndpoints);
+    for (ParquetReadEntry e : readEntries) {
+      ac.setEndpointBytes(e);
     }
+  }
 
-    public EndpointBytes(DrillbitEndpoint endpoint, long bytes) {
-      super();
-      this.endpoint = endpoint;
-      this.bytes = bytes;
-    }
-
-    public DrillbitEndpoint getEndpoint() {
-      return endpoint;
-    }
-
-    public void setEndpoint(DrillbitEndpoint endpoint) {
-      this.endpoint = endpoint;
-    }
-    public long getAffinity() {
-      return bytes;
-    }
+  public FileSystem getFileSystem() {
+    return this.fs;
   }
 
   public static class ParquetReadEntry extends ReadEntryFromHDFS {
 
-    private EndpointBytes[] endpointBytes;
+    private HashMap<DrillbitEndpoint,Long> endpointBytes;
+    private long maxBytes;
 
     @JsonCreator
     public ParquetReadEntry(@JsonProperty("path") String path,@JsonProperty("start") long start,@JsonProperty("length") long length) {
@@ -97,18 +93,45 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
       return new Size(10, 10);
     }
 
-    public EndpointBytes[] getEndpointBytes() {
+    public HashMap<DrillbitEndpoint,Long> getEndpointBytes() {
       return endpointBytes;
     }
 
-    public void setEndpointBytes(EndpointBytes[] endpointBytes) {
+    public void setEndpointBytes(HashMap<DrillbitEndpoint,Long> endpointBytes) {
       this.endpointBytes = endpointBytes;
+    }
+
+    public void setMaxBytes(long bytes) {
+      this.maxBytes = bytes;
+    }
+
+    public long getMaxBytes() {
+      return maxBytes;
+    }
+  }
+
+  private class ParquetReadEntryComparator implements Comparator<ParquetReadEntry> {
+    public int compare(ParquetReadEntry e1, ParquetReadEntry e2) {
+      if (e1.getMaxBytes() == e2.getMaxBytes()) return 0;
+      return (e1.getMaxBytes() > e2.getMaxBytes()) ? 1 : -1;
     }
   }
 
   @Override
   public List<EndpointAffinity> getOperatorAffinity() {
-    return Collections.emptyList();
+    LinkedList<EndpointAffinity> endpointAffinities = new LinkedList<>();
+    for (ParquetReadEntry entry : readEntries) {
+      for (DrillbitEndpoint d : entry.getEndpointBytes().keySet()) {
+        long bytes = entry.getEndpointBytes().get(d);
+        float affinity = bytes / totalBytes;
+        if (endpointAffinities.contains(d)) {
+          endpointAffinities.get(endpointAffinities.indexOf(d)).addAffinity(affinity);
+        } else {
+          endpointAffinities.add(new EndpointAffinity(d, affinity));
+        }
+      }
+    }
+    return endpointAffinities;
   }
 
   @SuppressWarnings("unchecked")
@@ -116,19 +139,45 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
   public void applyAssignments(List<DrillbitEndpoint> endpoints) {
     Preconditions.checkArgument(endpoints.size() <= getReadEntries().size());
 
+    Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
     mappings = new LinkedList[endpoints.size()];
+    LinkedList<ParquetReadEntry> unassigned = scanAndAssign(endpoints, getReadEntries(), 100, true);
+    LinkedList<ParquetReadEntry> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true);
+    LinkedList<ParquetReadEntry> unassigned3 = scanAndAssign(endpoints, unassigned, 25, true);
+    LinkedList<ParquetReadEntry> unassigned4 = scanAndAssign(endpoints, unassigned, 0, false);
+    assert unassigned4.size() == 0 : String.format("All readEntries should be assigned by now, but some are still unassigned");
+  }
+
+  private LinkedList<ParquetReadEntry> scanAndAssign (List<DrillbitEndpoint> endpoints, List<ParquetReadEntry> readEntries, int requiredPercentage, boolean mustContain) {
+    Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
+    LinkedList<ParquetReadEntry> unassigned = new LinkedList<>();
+
+    int maxEntries = (int) (getReadEntries().size() / endpoints.size() * 1.5);
+
+    if (maxEntries < 1) maxEntries = 1;
 
     int i =0;
-    for(ParquetReadEntry e : this.getReadEntries()){
-      if(i == endpoints.size()) i -= endpoints.size();
-      LinkedList<ParquetReadEntry> entries = mappings[i];
-      if(entries == null){
-        entries = new LinkedList<ParquetReadEntry>();
-        mappings[i] = entries;
+    for(ParquetReadEntry e : readEntries) {
+      boolean assigned = false;
+      for (int j = i; j < i + endpoints.size(); j++) {
+        DrillbitEndpoint currentEndpoint = endpoints.get(j%endpoints.size());
+        if ((e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
+                (mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) &&
+                e.getEndpointBytes().get(currentEndpoint) >= e.getMaxBytes() * requiredPercentage / 100) {
+          LinkedList<ParquetReadEntry> entries = mappings[j%endpoints.size()];
+          if(entries == null){
+            entries = new LinkedList<ParquetReadEntry>();
+            mappings[j%endpoints.size()] = entries;
+          }
+          entries.add(e);
+          assigned = true;
+          break;
+        }
       }
-      entries.add(e);
+      if (!assigned) unassigned.add(e);
       i++;
     }
+    return unassigned;
   }
 
   @Override
