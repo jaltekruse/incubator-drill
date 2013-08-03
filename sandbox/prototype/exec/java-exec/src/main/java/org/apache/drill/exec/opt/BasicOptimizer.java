@@ -23,6 +23,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.exec.exception.OptimizerException;
+import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.physical.ReadEntryWithPath;
@@ -30,6 +31,7 @@ import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.drill.storage.ParquetStorageEngineConfig;
 
 public class BasicOptimizer extends Optimizer {
 
@@ -51,7 +53,7 @@ public class BasicOptimizer extends Optimizer {
     Object obj = new Object();
     Collection<SinkOperator> roots = plan.getGraph().getRoots();
     List<PhysicalOperator> physOps = new ArrayList<PhysicalOperator>(roots.size());
-    LogicalConverter converter = new LogicalConverter();
+    LogicalConverter converter = new LogicalConverter(plan);
     for (SinkOperator op : roots) {
       try {
         PhysicalOperator pop = op.accept(converter, obj);
@@ -86,14 +88,21 @@ public class BasicOptimizer extends Optimizer {
 
   private class LogicalConverter extends AbstractLogicalVisitor<PhysicalOperator, Object, OptimizerException> {
 
+    // storing a reference to the plan for access to other elements outside of the query graph
+    // such as the storage engine configs
+    LogicalPlan logicalPlan;
+
+    public LogicalConverter(LogicalPlan logicalPlan){
+      this.logicalPlan = logicalPlan;
+    }
+
     @Override
     public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
       List<MockScanPOP.MockScanEntry> myObjects;
 
       try {
         if (scan.getStorageEngine().equals("parquet")) {
-          ParquetStorageEngine sEngine = new ParquetStorageEngine();
-          return sEngine.getPhysicalScan(scan);
+          return context.getStorageEngine(logicalPlan.getStorageEngine(scan.getStorageEngine())).getPhysicalScan(scan);
         }
         if (scan.getStorageEngine().equals("local-logs")) {
           myObjects = scan.getSelection().getListWith(config,
@@ -110,6 +119,9 @@ public class BasicOptimizer extends Optimizer {
         e.printStackTrace();
         throw new OptimizerException(
             "Error reading selection attribute of Scan node in Logical to Physical plan conversion.");
+      } catch (SetupException e) {
+        throw new OptimizerException(
+            "Storage engine not found.");
       }
 
       return new MockScanPOP("http://apache.org", myObjects);

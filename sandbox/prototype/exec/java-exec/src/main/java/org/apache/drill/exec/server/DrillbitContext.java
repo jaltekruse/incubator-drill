@@ -26,6 +26,7 @@ import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.coord.ClusterCoordinator;
+import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
@@ -80,8 +81,8 @@ public class DrillbitContext {
     return context.getAllocator();
   }
   
-  public StorageEngine getStorageEngine(StorageEngineConfig config){
-    throw new UnsupportedOperationException();
+  public StorageEngine getStorageEngine(StorageEngineConfig config) throws SetupException {
+    return storageEngineRegistry.getEngine(config);
   }
   
   public NioEventLoopGroup getBitLoopGroup(){

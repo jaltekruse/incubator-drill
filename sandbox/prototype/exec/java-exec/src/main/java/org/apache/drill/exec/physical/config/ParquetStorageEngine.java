@@ -34,6 +34,7 @@ import org.apache.drill.exec.store.AbstractStorageEngine;
 import org.apache.drill.exec.store.RecordReader;
 
 import com.google.common.collect.ListMultimap;
+import org.apache.drill.storage.ParquetStorageEngineConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import parquet.column.page.PageReadStore;
@@ -47,9 +48,11 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
 
   DrillbitContext context;
+  ParquetStorageEngineConfig config;
 
-  public ParquetStorageEngine(DrillbitContext context){
+  public ParquetStorageEngine(ParquetStorageEngineConfig config, DrillbitContext context){
     this.context = context;
+    this.config = config;
   }
 
   @Override
