@@ -35,6 +35,7 @@ import org.apache.drill.exec.store.StorageEngine;
 
 import com.google.common.base.Preconditions;
 import com.yammer.metrics.MetricRegistry;
+import org.apache.drill.exec.store.StorageEngineRegistry;
 
 public class DrillbitContext {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillbitContext.class);
@@ -46,6 +47,7 @@ public class DrillbitContext {
   private final BitCom com;
   private final DistributedCache cache;
   private final DrillbitEndpoint endpoint;
+  private final StorageEngineRegistry storageEngineRegistry;
   
   public DrillbitContext(DrillbitEndpoint endpoint, BootStrapContext context, ClusterCoordinator coord, BitCom com, DistributedCache cache) {
     super();
@@ -59,6 +61,7 @@ public class DrillbitContext {
     this.cache = cache;
     this.endpoint = endpoint;
     this.reader = new PhysicalPlanReader(context.getConfig(), context.getConfig().getMapper(), endpoint);
+    this.storageEngineRegistry = new StorageEngineRegistry(this);
   }
   
   public DrillbitEndpoint getEndpoint(){

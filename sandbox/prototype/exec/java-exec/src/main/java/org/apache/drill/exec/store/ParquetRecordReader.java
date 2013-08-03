@@ -36,6 +36,11 @@ import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.TypeHelper;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import parquet.bytes.BytesInput;
 import parquet.bytes.BytesUtils;
 import parquet.column.ColumnDescriptor;
@@ -188,18 +193,30 @@ public class ParquetRecordReader implements RecordReader {
 
 
   public ParquetRecordReader(FragmentContext fragmentContext,
-                             ParquetFileReader reader, ParquetMetadata footer) {
-    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, reader, footer);
+                             String path) throws ExecutionSetupException {
+    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path);
   }
 
 
   public ParquetRecordReader(FragmentContext fragmentContext, long batchSize,
-                             ParquetFileReader reader, ParquetMetadata footer) {
+                             String path) throws ExecutionSetupException {
     this.allocator = fragmentContext.getAllocator();
-    this.batchSize = batchSize;
-    this.footer = footer;
 
-    parquetReader = reader;
+    Path hadoopPath = new Path(path);
+    Configuration configuration = new Configuration();
+    //configuration.set("fs.default.name", "maprfs://10.10.30.52/");
+    ParquetFileReader parReader = null;
+    ParquetMetadata readFooter = null;
+    try {
+      readFooter = ParquetFileReader.readFooter(configuration, hadoopPath);
+      parReader = new ParquetFileReader(configuration, hadoopPath,
+          readFooter.getBlocks(), readFooter.getFileMetaData().getSchema().getColumns());
+    } catch (IOException e) {
+     throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + path);
+    }
+    this.batchSize = batchSize;
+    this.footer = readFooter;
+    this.parquetReader = parReader;
   }
 
   /**
