@@ -28,10 +28,7 @@ import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
 import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
-import org.apache.drill.exec.physical.config.MockScanPOP;
-import org.apache.drill.exec.physical.config.MockStorePOP;
-import org.apache.drill.exec.physical.config.ParquetScan;
-import org.apache.drill.exec.physical.config.Screen;
+import org.apache.drill.exec.physical.config.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
@@ -57,7 +54,7 @@ public class BasicOptimizer extends Optimizer{
     Object obj = new Object();
     Collection<SinkOperator> roots = plan.getGraph().getRoots();
     List<PhysicalOperator> physOps = new ArrayList<PhysicalOperator>(roots.size());
-    LogicalConverter converter = new LogicalConverter();
+    LogicalConverter converter = new LogicalConverter(plan);
     for ( SinkOperator op : roots){
       try {
         PhysicalOperator pop  = op.accept(converter, obj);
@@ -126,7 +123,7 @@ public class BasicOptimizer extends Optimizer{
             "Error reading selection attribute of Scan node in Logical to Physical plan conversion.");
       } catch (SetupException e) {
         throw new OptimizerException(
-            "Storage engine not found.");
+            "Storage engine not found: " + scan.getStorageEngine());
       }
 
       return new MockScanPOP("http://apache.org", myObjects);

@@ -17,9 +17,24 @@
  ******************************************************************************/
 package org.apache.drill.storage;
 
-public class ParquetStorageEngineConfig {
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.drill.common.logical.StorageEngineConfig;
+import org.apache.drill.common.logical.StorageEngineConfigBase;
+
+@JsonTypeName("parquet")
+public class ParquetStorageEngineConfig extends StorageEngineConfigBase {
 
   // information needed to identify an HDFS instance
-  private String name;
+  private String DFSname;
 
+  @JsonCreator
+  public ParquetStorageEngineConfig(@JsonProperty("DFSname") String DFSname) {
+    this.DFSname = DFSname;
+  }
+
+  public String getDFSname() {
+    return DFSname;
+  }
 }

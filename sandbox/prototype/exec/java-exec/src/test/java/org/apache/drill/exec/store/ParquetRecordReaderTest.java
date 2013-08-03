@@ -73,7 +73,7 @@ import static parquet.column.Encoding.values;
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = false;
+  private boolean VERBOSE_DEBUG = true;
 
   long numTotalRecords = 300000;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
@@ -211,7 +211,7 @@ public class ParquetRecordReaderTest {
 
     ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
         readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
-    ParquetRecordReader pr = new ParquetRecordReader(context, parReader, readFooter);
+    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types");
 
     MockOutputMutator mutator = new MockOutputMutator();
     List<ValueVector> addFields = mutator.getAddFields();

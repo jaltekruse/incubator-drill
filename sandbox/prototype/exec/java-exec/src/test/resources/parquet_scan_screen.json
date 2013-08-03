@@ -7,6 +7,13 @@
       info:"na"
     }
   },
+  storage:{
+    "parquet" :
+      {
+        "type":"parquet",
+        "DFSname" : ""
+      }
+  },
   query:[
     {
       @id:"1",

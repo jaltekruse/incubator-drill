@@ -84,68 +84,6 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
     @JsonCreator
     public ParquetReadEntry(@JsonProperty("path") String path,@JsonProperty("start") long start,@JsonProperty("length") long length) {
       super(path, start, length);
-=======
-import org.apache.drill.exec.vector.TypeHelper;
-
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Preconditions;
-
-@JsonTypeName("parquet-scan")
-public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
-
-  private  LinkedList<ParquetReadEntry>[] mappings;
-
-  @JsonCreator
-  public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries) {
-    super(readEntries);
-  }
-
-  public static class EndpointBytes {
-
-    private DrillbitEndpoint endpoint;
-    private long bytes = 0;
-
-    public EndpointBytes(DrillbitEndpoint endpoint) {
-      super();
-      this.endpoint = endpoint;
-    }
-
-    public EndpointBytes(DrillbitEndpoint endpoint, long bytes) {
-      super();
-      this.endpoint = endpoint;
-      this.bytes = bytes;
-    }
-
-    public DrillbitEndpoint getEndpoint() {
-      return endpoint;
-    }
-
-    public void setEndpoint(DrillbitEndpoint endpoint) {
-      this.endpoint = endpoint;
-    }
-    public int getAffinity() {
-      return bytes;
-    }
-
-  }
-
-
-  public static class ParquetReadEntry implements ReadEntry {
-
-    private String path;
-    private long start;
-    private long length;
-    private EndpointBytes[] endpointBytes;
-
-    @JsonCreator
-    public ScanEntry(@JsonProperty("filename") String filename) {
-      this.filename = filename;
     }
 
     @Override
