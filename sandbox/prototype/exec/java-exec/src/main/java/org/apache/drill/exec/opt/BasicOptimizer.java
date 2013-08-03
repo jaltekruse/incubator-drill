@@ -97,7 +97,7 @@ public class BasicOptimizer extends Optimizer{
 
     @Override
     public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
-      List<MockScanPOP.MockScanEntry> myObjects;
+      List<MockGroupScanPOP.MockScanEntry> myObjects;
 
       try {
         if (scan.getStorageEngine().equals("parquet")) {
@@ -105,25 +105,25 @@ public class BasicOptimizer extends Optimizer{
         }
         if (scan.getStorageEngine().equals("local-logs")) {
           myObjects = scan.getSelection().getListWith(config,
-              new TypeReference<ArrayList<MockScanPOP.MockScanEntry>>() {
+              new TypeReference<ArrayList<MockGroupScanPOP.MockScanEntry>>() {
               });
         } else {
           myObjects = new ArrayList<>();
-          MockScanPOP.MockColumn[] cols = {
-              new MockScanPOP.MockColumn("blah", MinorType.INT, DataMode.REQUIRED, 4, 4, 4),
-              new MockScanPOP.MockColumn("blah_2", MinorType.INT, DataMode.REQUIRED, 4, 4, 4) };
-          myObjects.add(new MockScanPOP.MockScanEntry(50, cols));
+          MockGroupScanPOP.MockColumn[] cols = {
+              new MockGroupScanPOP.MockColumn("blah", MinorType.INT, DataMode.REQUIRED, 4, 4, 4),
+              new MockGroupScanPOP.MockColumn("blah_2", MinorType.INT, DataMode.REQUIRED, 4, 4, 4) };
+          myObjects.add(new MockGroupScanPOP.MockScanEntry(50, cols));
         }
       } catch (IOException e) {
         e.printStackTrace();
         throw new OptimizerException(
-            "Error reading selection attribute of Scan node in Logical to Physical plan conversion.");
+            "Error reading selection attribute of GroupScan node in Logical to Physical plan conversion.");
       } catch (SetupException e) {
         throw new OptimizerException(
             "Storage engine not found: " + scan.getStorageEngine());
       }
 
-      return new MockScanPOP("http://apache.org", myObjects);
+      return new MockGroupScanPOP("http://apache.org", myObjects);
     }
 
     @Override

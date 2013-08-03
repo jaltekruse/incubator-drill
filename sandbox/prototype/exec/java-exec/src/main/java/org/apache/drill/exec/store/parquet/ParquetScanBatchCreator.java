@@ -33,24 +33,26 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import parquet.hadoop.metadata.ParquetMetadata;
 
-public class ParquetScanBatchCreator implements BatchCreator<ParquetScan>{
+public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanBatchCreator.class);
 
   @Override
-  public RecordBatch getBatch(FragmentContext context, ParquetScan config, List<RecordBatch> children) throws ExecutionSetupException {
+  public RecordBatch getBatch(FragmentContext context, ParquetRowGroupScan config, List<RecordBatch> children) throws ExecutionSetupException {
     Preconditions.checkArgument(children.isEmpty());
     List<RecordReader> readers = Lists.newArrayList();
     ParquetMetadata readFooter = null;
     Path path;
     Configuration configuration;
-    for(ParquetScan.RowGroupInfo e : config.getReadEntries()){
+    for(ParquetRowGroupScan.RowGroupReadEntry e : config.getRowGroupReadEntries()){
       /*
       TODO - to prevent reading the footer again in the parquet record reader (it is read earlier in the ParquetStorageEngine)
       we should add more information to the RowGroupInfo that will be populated upon the first read to
       provide the reader with all of th file meta-data it needs
       These fields will be added to the constructor below
       */
-      readers.add(new ParquetRecordReader(context, e.getPath()));
+      // TODO - change the API on the record reader and update this
+      // TODO - this also involves adding all of the fields necessary for reading the file to the RowGroupInfo and ParquetRowGroupReadEntry classes
+      //readers.add(new ParquetRecordReader(context, e.getPath()));
     }
     return new ScanBatch(context, readers.iterator());
   }
