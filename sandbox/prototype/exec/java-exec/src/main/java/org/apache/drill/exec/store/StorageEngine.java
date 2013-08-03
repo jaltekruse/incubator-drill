@@ -24,7 +24,7 @@ import java.util.List;
 import org.apache.drill.common.logical.data.Scan;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.ReadEntry;
-import org.apache.drill.exec.physical.base.AbstractScan;
+import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
 import com.google.common.collect.ListMultimap;
@@ -42,7 +42,7 @@ public interface StorageEngine {
   public List<QueryOptimizerRule> getOptimizerRules();
 
   /**
-   * Get the physical scan operator populated with a set of read entries required for the particular Scan (read) node.
+   * Get the physical scan operator populated with a set of read entries required for the particular GroupScan (read) node.
    * This is somewhat analogous to traditional MapReduce. The difference is, this is the most granular split paradigm.
    * 
    * @param scan
@@ -50,7 +50,7 @@ public interface StorageEngine {
    * @return
    * @throws IOException
    */
-  public AbstractScan getPhysicalScan(Scan scan) throws IOException;
+  public AbstractGroupScan getPhysicalScan(Scan scan) throws IOException;
 
   /**
    * Get the set of Drillbit endpoints that are available for each read entry. Note that it is possible for a read entry

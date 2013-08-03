@@ -22,10 +22,7 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.base.AbstractPhysicalVisitor;
-import org.apache.drill.exec.physical.base.FragmentRoot;
-import org.apache.drill.exec.physical.base.PhysicalOperator;
-import org.apache.drill.exec.physical.base.Scan;
+import org.apache.drill.exec.physical.base.*;
 import org.apache.drill.exec.physical.config.*;
 import org.apache.drill.exec.physical.impl.filter.FilterBatchCreator;
 import org.apache.drill.exec.physical.impl.project.ProjectBatchCreator;
@@ -34,7 +31,7 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import org.apache.drill.exec.store.parquet.ParquetScan;
+import org.apache.drill.exec.store.parquet.ParquetRowGroupScan;
 import org.apache.drill.exec.store.parquet.ParquetScanBatchCreator;
 
 public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentContext, ExecutionSetupException>{
@@ -62,18 +59,18 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   }
 
   @Override
-  public RecordBatch visitScan(Scan<?> scan, FragmentContext context) throws ExecutionSetupException {
-    Preconditions.checkNotNull(scan);
+  public RecordBatch visitSubScan(SubScan<?> subScan, FragmentContext context) throws ExecutionSetupException {
+    Preconditions.checkNotNull(subScan);
     Preconditions.checkNotNull(context);
 
-    if(scan instanceof MockScanPOP){
-      return msc.getBatch(context, (MockScanPOP) scan, Collections.<RecordBatch> emptyList());
+    if(subScan instanceof MockGroupScanPOP){
+      return msc.getBatch(context, (MockGroupScanPOP) subScan, Collections.<RecordBatch> emptyList());
     }
-    else if (scan instanceof ParquetScan){
-      return parquetScan.getBatch(context, (ParquetScan) scan,  Collections.<RecordBatch> emptyList());
+    else if (subScan instanceof ParquetRowGroupScan){
+      return parquetScan.getBatch(context, (ParquetRowGroupScan) subScan,  Collections.<RecordBatch> emptyList());
     }
     else{
-      return super.visitScan(scan, context);
+      return super.visitSubScan(subScan, context);
     }
 
   }

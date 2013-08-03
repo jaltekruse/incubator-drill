@@ -17,33 +17,20 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.base;
 
-import java.util.Iterator;
 import java.util.List;
 
-import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntry;
+import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.Iterators;
 
-public abstract class AbstractScan extends AbstractBase implements Scan{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractScan.class);
+public interface GroupScan<R extends ReadEntry> extends Scan, HasAffinity{
 
-  
-  @Override
-  public Iterator<PhysicalOperator> iterator() {
-    return Iterators.emptyIterator();
-  }
+  @JsonProperty("entries")
+  public abstract List<R> getReadEntries();
 
-  @Override
-  public boolean isExecutable() {
-    return true;
-  }
+  public abstract void applyAssignments(List<DrillbitEndpoint> endpoints);
 
-  @Override
-  public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E{
-    return physicalVisitor.visitScan(this, value);
-  }
+  public abstract GroupScan<?> getSpecificScan(int minorFragmentId);
 
 }

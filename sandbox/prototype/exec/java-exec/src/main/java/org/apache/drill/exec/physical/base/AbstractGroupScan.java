@@ -17,25 +17,29 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.base;
 
-import org.apache.drill.common.graph.GraphVisitor;
-import org.apache.drill.exec.physical.OperatorCost;
+import java.util.Iterator;
 
-public abstract class AbstractBase implements PhysicalOperator{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractBase.class);
+import org.apache.drill.exec.physical.ReadEntry;
 
-  @Override
-  public void accept(GraphVisitor<PhysicalOperator> visitor) {
-    visitor.enter(this);
-    if(this.iterator() == null) throw new IllegalArgumentException("Null iterator for pop." + this);
-    for(PhysicalOperator o : this){
-      o.accept(visitor);  
-    }
-    visitor.leave(this);
-  }
+import com.google.common.collect.Iterators;
+
+public abstract class AbstractGroupScan<R extends ReadEntry> extends AbstractBase implements GroupScan<R> {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractGroupScan.class);
+
   
+  @Override
+  public Iterator<PhysicalOperator> iterator() {
+    return Iterators.emptyIterator();
+  }
+
   @Override
   public boolean isExecutable() {
     return true;
   }
-  
+
+  @Override
+  public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E{
+    return physicalVisitor.visitGroupScan(this, value);
+  }
+
 }

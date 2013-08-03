@@ -35,9 +35,9 @@ import org.apache.drill.exec.store.AbstractStorageEngine;
 import org.apache.drill.exec.store.RecordReader;
 
 import com.google.common.collect.ListMultimap;
-import org.apache.drill.storage.ParquetStorageEngineConfig;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.FileSystem;
 import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
@@ -46,12 +46,33 @@ import parquet.hadoop.metadata.ParquetMetadata;
 public class ParquetStorageEngine extends AbstractStorageEngine{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
 
-  DrillbitContext context;
-  ParquetStorageEngineConfig config;
+  private DrillbitContext context;
+  private Configuration configuration;
+  private FileSystem fs;
 
-  public ParquetStorageEngine(ParquetStorageEngineConfig config, DrillbitContext context){
+
+  public ParquetStorageEngine(DrillbitContext context, Configuration configuration){
     this.context = context;
-    this.config = config;
+    this.configuration = configuration;
+    try {
+      this.fs = FileSystem.get(configuration);
+    } catch (IOException ie) { /*TODO handle this */}
+  }
+
+  public ParquetStorageEngine(DrillbitContext context) {
+    new ParquetStorageEngine(context, new Configuration());
+  }
+
+  public FileSystem getFileSystem() {
+    return this.fs;
+  }
+
+  public Configuration getConfiguration() {
+    return this.configuration;
+  }
+
+  public DrillbitContext getContext() {
+    return this.context;
   }
 
   @Override
@@ -60,10 +81,10 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
   }
 
   @Override
-  public ParquetScan getPhysicalScan(Scan scan) throws IOException {
+  public ParquetGroupScan getPhysicalScan(Scan scan) throws IOException {
     ArrayList<ReadEntryWithPath> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
         new TypeReference<ArrayList<ReadEntryWithPath>>() {});
-    ArrayList<ParquetScan.RowGroupInfo> pReadEnties = new ArrayList();
+    ArrayList<ParquetGroupScan.RowGroupInfo> pReadEnties = new ArrayList();
     long start = 0, end = 0;
     ColumnChunkMetaData columnChunkMetaData;
     for (ReadEntryWithPath readEntryWithPath : readEntries){
@@ -71,7 +92,6 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
       File file = new File(readEntryWithPath.getPath()).getAbsoluteFile();
 
       Path path = new Path(file.toURI());
-      Configuration configuration = new Configuration();
 
       ParquetMetadata footer = ParquetFileReader.readFooter(configuration, path);
       readEntryWithPath.getPath();
@@ -81,12 +101,12 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
         columnChunkMetaData = rowGroup.getColumns().iterator().next();
         start = Math.min(columnChunkMetaData.getDictionaryPageOffset(), columnChunkMetaData.getFirstDataPageOffset());
 
-        pReadEnties.add(new ParquetScan.RowGroupInfo(readEntryWithPath.getPath(), start, end));
+        pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, end));
       }
 
     }
 
-    return new ParquetScan(pReadEnties);
+    return new ParquetGroupScan(pReadEnties, this);
   }
 
   @Override
