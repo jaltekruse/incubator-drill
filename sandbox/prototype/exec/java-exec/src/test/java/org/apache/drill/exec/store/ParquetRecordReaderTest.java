@@ -73,7 +73,7 @@ import static parquet.column.Encoding.values;
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = true;
+  private boolean VERBOSE_DEBUG = false;
 
   long numTotalRecords = 300000;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }

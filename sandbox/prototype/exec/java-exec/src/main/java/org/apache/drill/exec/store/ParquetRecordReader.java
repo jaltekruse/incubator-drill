@@ -54,6 +54,7 @@ import parquet.schema.MessageType;
 import parquet.schema.PrimitiveType;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -209,8 +210,11 @@ public class ParquetRecordReader implements RecordReader {
     ParquetMetadata readFooter = null;
     try {
       readFooter = ParquetFileReader.readFooter(configuration, hadoopPath);
+      // TODO - determine the row group number when the footer is read and individual read entries are created
+      // pass it through the read entry object and set it here
+      int rowGroupToRead = 0;
       parReader = new ParquetFileReader(configuration, hadoopPath,
-          readFooter.getBlocks(), readFooter.getFileMetaData().getSchema().getColumns());
+          Arrays.asList(readFooter.getBlocks().get(rowGroupToRead)), readFooter.getFileMetaData().getSchema().getColumns());
     } catch (IOException e) {
      throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + path);
     }
@@ -545,7 +549,7 @@ public class ParquetRecordReader implements RecordReader {
         // cannot find more information on this right now, will keep looking
       }
 
-      if (currentRowGroup == null || firstColumnStatus.totalValuesRead == firstColumnStatus.columnChunkMetaData.getValueCount()) {
+      if (currentRowGroup == null ) {
         currentRowGroup = parquetReader.readNextRowGroup();
         if (currentRowGroup == null) {
           return 0;
@@ -553,21 +557,13 @@ public class ParquetRecordReader implements RecordReader {
         currentRowGroupIndex++;
       }
 
-      // at the start of a read, and at the beginning of this loop, every column will have read in the same number of values
-      while (currentRowGroup != null && firstColumnStatus.valuesReadInCurrentPass < recordsToRead) {
-
         if (allFieldsFixedLength) {
           readAllFixedFields(recordsToRead, firstColumnStatus);
         } else { // variable length columns
           readFields(recordsToRead, firstColumnStatus);
         }
 
-        if (columnStatuses.values().iterator().next().pageReadStatus.currentPage == null) {
-          break;
-        }
-      }
-
-      return columnStatuses.values().iterator().next().valuesReadInCurrentPass;
+      return firstColumnStatus.valuesReadInCurrentPass;
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }
