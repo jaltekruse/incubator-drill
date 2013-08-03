@@ -43,7 +43,7 @@ public class StorageEngineRegistry {
   }
   
   @SuppressWarnings("unchecked")
-  public void setup(DrillConfig config){
+  private void setup(DrillConfig config){
     Collection<Class<? extends StorageEngine>> engines = PathScanner.scanForImplementations(StorageEngine.class, config.getStringList(ExecConstants.STORAGE_ENGINE_SCAN_PACKAGES));
     logger.debug("Loading storage engines {}", engines);
     for(Class<? extends StorageEngine> engine: engines){

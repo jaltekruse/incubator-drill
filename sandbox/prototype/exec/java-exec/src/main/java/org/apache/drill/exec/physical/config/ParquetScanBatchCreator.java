@@ -34,6 +34,9 @@ import org.apache.drill.exec.store.RecordReader;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.metadata.ParquetMetadata;
@@ -44,26 +47,18 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetScan>{
   @Override
   public RecordBatch getBatch(FragmentContext context, ParquetScan config, List<RecordBatch> children) throws ExecutionSetupException {
     Preconditions.checkArgument(children.isEmpty());
-    List<ParquetScan.ParquetReadEntry> entries = config.getReadEntries();
     List<RecordReader> readers = Lists.newArrayList();
     ParquetMetadata readFooter = null;
     Path path;
     Configuration configuration;
-    for(ParquetScan.ParquetReadEntry e : entries){
-      File file = new File(e.getPath()).getAbsoluteFile();
-
-      path = new Path(file.toURI());
-      configuration = new Configuration();
-
-      try {
-        readFooter = ParquetFileReader.readFooter(configuration, path);
-        //readFooter.getBlocks().iterator().next().
-        ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
-            readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
-        readers.add(new ParquetRecordReader(context, parReader, readFooter));
-      } catch (IOException e1) {
-        throw new ExecutionSetupException("Error opening parquet file or setting up reader.");
-      }
+    for(ParquetScan.ParquetReadEntry e : config.getReadEntries()){
+      /*
+      TODO - to prevent reading the footer again in the parquet record reader (it is read earlier in the ParquetStorageEngine)
+      we should add more information to the ParquetReadEntry that will be populated upon the first read to
+      provide the reader with all of th file meta-data it needs
+      These fields will be added to the constructor below
+      */
+      readers.add(new ParquetRecordReader(context, e.getPath()));
     }
     return new ScanBatch(context, readers.iterator());
   }

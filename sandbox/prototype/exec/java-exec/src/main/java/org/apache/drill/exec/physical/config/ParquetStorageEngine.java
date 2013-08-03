@@ -29,6 +29,7 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
+import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStorageEngine;
 import org.apache.drill.exec.store.RecordReader;
 
@@ -44,6 +45,12 @@ import parquet.hadoop.metadata.ParquetMetadata;
 
 public class ParquetStorageEngine extends AbstractStorageEngine{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
+
+  DrillbitContext context;
+
+  public ParquetStorageEngine(DrillbitContext context){
+    this.context = context;
+  }
 
   @Override
   public boolean supportsRead() {
