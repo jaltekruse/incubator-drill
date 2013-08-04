@@ -4,6 +4,7 @@ package org.apache.drill.exec.store;
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
 import org.apache.drill.exec.store.parquet.ParquetGroupScan;
+
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
@@ -70,11 +71,13 @@ public class AffinityCalculator {
       }
     }
     HashMap<DrillbitEndpoint,Long> ebs = new HashMap();
-    for (Map.Entry<String,Long> hostEntry : hostMap.entrySet()) {
-      String host = hostEntry.getKey();
-      Long bytes = hostEntry.getValue();
-      ebs.put(getDrillBitEndpoint(host), bytes);
-    }
+    try {
+      for (Map.Entry<String,Long> hostEntry : hostMap.entrySet()) {
+        String host = hostEntry.getKey();
+        Long bytes = hostEntry.getValue();
+        ebs.put(getDrillBitEndpoint(host), bytes);
+      }
+    } catch (NullPointerException n) {}
     entry.setEndpointBytes(ebs);
   }
 

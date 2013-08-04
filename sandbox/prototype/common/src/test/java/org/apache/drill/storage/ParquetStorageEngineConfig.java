@@ -23,11 +23,14 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.common.logical.StorageEngineConfigBase;
 
+import java.util.HashMap;
+
 @JsonTypeName("parquet")
 public class ParquetStorageEngineConfig extends StorageEngineConfigBase {
 
   // information needed to identify an HDFS instance
   private String DFSname;
+  private HashMap<String,String> map;
 
   @JsonCreator
   public ParquetStorageEngineConfig(@JsonProperty("DFSname") String DFSname) {
@@ -53,5 +56,12 @@ public class ParquetStorageEngineConfig extends StorageEngineConfigBase {
   @Override
   public int hashCode() {
     return DFSname != null ? DFSname.hashCode() : 0;
+  }
+  public void set(String key, String value) {
+    map.put(key, value);
+  }
+
+  public String get(String key) {
+    return map.get(key);
   }
 }

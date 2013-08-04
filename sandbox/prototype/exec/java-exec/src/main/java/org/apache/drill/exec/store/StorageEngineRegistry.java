@@ -36,10 +36,10 @@ public class StorageEngineRegistry {
   private Map<Object, Constructor<? extends StorageEngine>> availableEngines = new HashMap<Object, Constructor<? extends StorageEngine>>();
   private Map<StorageEngineConfig, StorageEngine> activeEngines = new HashMap<StorageEngineConfig, StorageEngine>();
 
-  private DrillbitContext context;
-  public StorageEngineRegistry(DrillbitContext context){
-    this.context = context;
-    setup(context.getConfig());
+  private DrillConfig config;
+  public StorageEngineRegistry(DrillConfig config){
+    setup(config);
+    this.config = config;
   }
   
   @SuppressWarnings("unchecked")
@@ -69,7 +69,7 @@ public class StorageEngineRegistry {
     Constructor<? extends StorageEngine> c = availableEngines.get(engineConfig.getClass());
     if(c == null) throw new SetupException(String.format("Failure finding StorageEngine constructor for config %s", engineConfig));
     try {
-      return c.newInstance(engineConfig, context);
+      return c.newInstance(engineConfig, config);
     } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
       Throwable t = e instanceof InvocationTargetException ? ((InvocationTargetException)e).getTargetException() : e;
       if(t instanceof SetupException) throw ((SetupException) t);

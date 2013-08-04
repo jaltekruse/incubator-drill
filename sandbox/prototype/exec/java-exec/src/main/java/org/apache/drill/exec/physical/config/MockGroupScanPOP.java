@@ -191,9 +191,9 @@ public class MockGroupScanPOP extends AbstractGroupScan<MockGroupScanPOP.MockSca
   }
 
   @Override
-  public GroupScan<?> getSpecificScan(int minorFragmentId) {
+  public SubScan getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
-    return new MockGroupScanPOP(url, mappings[minorFragmentId]);
+    return new MockSubScanPOP(url, mappings[minorFragmentId]);
   }
 
   @Override

@@ -45,7 +45,7 @@ public class MakeFragmentsVisitor extends AbstractPhysicalVisitor<Fragment, Frag
   }
 
   @Override
-  public Fragment visitSubScan(SubScan<?> subScan, Fragment value) throws FragmentSetupException {
+  public Fragment visitSubScan(SubScan subScan, Fragment value) throws FragmentSetupException {
     // TODO - implement this
     return super.visitOp(subScan, value);
   }

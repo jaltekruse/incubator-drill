@@ -40,7 +40,7 @@ public interface PhysicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
   
   public RETURN visitExchange(Exchange exchange, EXTRA value) throws EXCEP;
   public RETURN visitGroupScan(GroupScan<?> groupScan, EXTRA value) throws EXCEP;
-  public RETURN visitSubScan(SubScan<?> subScan, EXTRA value) throws EXCEP;
+  public RETURN visitSubScan(SubScan subScan, EXTRA value) throws EXCEP;
   public RETURN visitStore(Store store, EXTRA value) throws EXCEP;
 
   public RETURN visitFilter(Filter filter, EXTRA value) throws EXCEP;

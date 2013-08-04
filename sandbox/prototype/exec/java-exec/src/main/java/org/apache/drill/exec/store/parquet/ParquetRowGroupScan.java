@@ -26,15 +26,16 @@ import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntry;
+import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.*;
+import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.store.StorageEngineRegistry;
 
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 // Class containing information for reading a single parquet row group form HDFS
 @JsonTypeName("parquet-row-group-scan")
-public class ParquetRowGroupScan implements SubScan<ParquetRowGroupScan.RowGroupReadEntry> {
+public class ParquetRowGroupScan extends AbstractBase implements SubScan {
 
   private StorageEngineConfig engineCofig;
   private ParquetStorageEngine parquetStorageEngine;
@@ -42,7 +43,7 @@ public class ParquetRowGroupScan implements SubScan<ParquetRowGroupScan.RowGroup
 
   @JsonCreator
   public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry, @JsonProperty StorageEngineConfig engineConfig,
-                             @JsonProperty List<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
+                             @JsonProperty LinkedList<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
     parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
     this.rowGroupReadEntries = rowGroupReadEntries;
   }
@@ -77,25 +78,32 @@ public class ParquetRowGroupScan implements SubScan<ParquetRowGroupScan.RowGroup
   }
 
   @Override
-  public void accept(GraphVisitor<PhysicalOperator> visitor) {
-  
-  }
-
-  @Override
   public Iterator<PhysicalOperator> iterator() {
     return null;
   }
 
-  public static class RowGroupReadEntry implements ReadEntry{
+  public static class RowGroupReadEntry extends ReadEntryFromHDFS {
+
+
+    @parquet.org.codehaus.jackson.annotate.JsonCreator
+    public RowGroupReadEntry(@JsonProperty("path") String path, @JsonProperty("start") long start, @JsonProperty("length") long length) {
+      super(path, start, length);
+    }
 
     @Override
     public OperatorCost getCost() {
-      return null; 
+      return new OperatorCost(1, 2, 1, 1);
     }
 
     @Override
     public Size getSize() {
-      return null; 
+      // TODO - these values are wrong, I cannot know these until after I read a file
+      return new Size(10, 10);
+    }
+
+    public RowGroupReadEntry getRowGroupReadEntry() {
+      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength());
     }
   }
+
 }

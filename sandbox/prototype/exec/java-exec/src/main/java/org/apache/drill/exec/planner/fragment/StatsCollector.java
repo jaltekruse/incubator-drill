@@ -79,7 +79,7 @@ public class StatsCollector {
     }
 
     @Override
-    public Void visitSubScan(SubScan<?> subScan, Wrapper value) throws RuntimeException {
+    public Void visitSubScan(SubScan subScan, Wrapper value) throws RuntimeException {
       // TODO - implement this
       return super.visitOp(subScan, value);
     }
