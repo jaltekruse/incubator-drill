@@ -3,12 +3,9 @@ package org.apache.drill.exec.store;
 
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
-import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.config.ParquetScan;
-import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.hadoop.fs.BlockLocation;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -50,7 +47,7 @@ public class AffinityCalculator {
    *
    * @param entry
    */
-  public void setEndpointBytes(ParquetScan.ParquetReadEntry entry) {
+  public void setEndpointBytes(ParquetScan.RowGroupInfo entry) {
     HashMap<String,Long> hostMap = null;
     long start = entry.getStart();
     long end = start + entry.getLength();
@@ -73,11 +70,13 @@ public class AffinityCalculator {
       }
     }
     HashMap<DrillbitEndpoint,Long> ebs = new HashMap();
-    for (Map.Entry<String,Long> hostEntry : hostMap.entrySet()) {
-      String host = hostEntry.getKey();
-      Long bytes = hostEntry.getValue();
-      ebs.put(getDrillBitEndpoint(host), bytes);
-    }
+    try {
+      for (Map.Entry<String,Long> hostEntry : hostMap.entrySet()) {
+        String host = hostEntry.getKey();
+        Long bytes = hostEntry.getValue();
+        ebs.put(getDrillBitEndpoint(host), bytes);
+      }
+    } catch (NullPointerException n) {}
     entry.setEndpointBytes(ebs);
   }
 

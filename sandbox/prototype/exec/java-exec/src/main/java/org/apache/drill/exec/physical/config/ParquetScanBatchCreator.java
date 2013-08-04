@@ -17,14 +17,10 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.config;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.config.MockScanPOP.MockScanEntry;
 import org.apache.drill.exec.physical.impl.BatchCreator;
 import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.RecordBatch;
@@ -34,11 +30,7 @@ import org.apache.drill.exec.store.RecordReader;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.metadata.ParquetMetadata;
 
 public class ParquetScanBatchCreator implements BatchCreator<ParquetScan>{
@@ -51,10 +43,10 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetScan>{
     ParquetMetadata readFooter = null;
     Path path;
     Configuration configuration;
-    for(ParquetScan.ParquetReadEntry e : config.getReadEntries()){
+    for(ParquetScan.RowGroupInfo e : config.getReadEntries()){
       /*
       TODO - to prevent reading the footer again in the parquet record reader (it is read earlier in the ParquetStorageEngine)
-      we should add more information to the ParquetReadEntry that will be populated upon the first read to
+      we should add more information to the RowGroupInfo that will be populated upon the first read to
       provide the reader with all of th file meta-data it needs
       These fields will be added to the constructor below
       */

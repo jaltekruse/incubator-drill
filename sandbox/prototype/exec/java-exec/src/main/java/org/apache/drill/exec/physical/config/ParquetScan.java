@@ -19,10 +19,8 @@ package org.apache.drill.exec.physical.config;
 
 import java.util.*;
 
-import com.hazelcast.core.MapEntry;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
-import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.AbstractScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
@@ -36,49 +34,61 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import org.apache.drill.exec.store.AffinityCalculator;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileSystem;
 
+import static org.apache.drill.exec.physical.config.ParquetRowGroupScan.*;
+
 @JsonTypeName("parquet-scan")
-public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
+public class ParquetScan extends AbstractScan<ParquetScan.RowGroupInfo> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
 
-  private  LinkedList<ParquetReadEntry>[] mappings;
+  private  LinkedList<ParquetRowGroupReadEntry>[] mappings;
   private long totalBytes;
   private Collection<DrillbitEndpoint> availableEndpoints;
   private ParquetStorageEngine storageEngine;
   private FileSystem fs;
   private String fileName;
-
+  private LinkedList<RowGroupInfo> rowGroups;
+// TODO we should not be using RowGroupInfo to construct ParquetScan, should we?
   @JsonCreator
-  public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries) {
+  public ParquetScan(@JsonProperty("entries") List<RowGroupInfo> readEntries) {
     super(readEntries);
   }
 
-  @JsonCreator
-  public ParquetScan(@JsonProperty("entries") List<ParquetReadEntry> readEntries, ParquetStorageEngine storageEngine) {
+  public LinkedList<RowGroupInfo> getRowGroups() {
+    return this.rowGroups;
+  }
+
+  public void setRowGroups(LinkedList<RowGroupInfo> rowGroups) {
+    this.rowGroups = rowGroups;
+  }
+
+  public ParquetScan(@JsonProperty("entries") List<RowGroupInfo> readEntries, ParquetStorageEngine storageEngine) {
     super(readEntries);
     this.storageEngine = storageEngine;
     this.availableEndpoints = storageEngine.getContext().getBits();
     this.fs = storageEngine.getFileSystem();
     this.fileName = readEntries.get(0).getPath();
     AffinityCalculator ac = new AffinityCalculator(fileName, fs, availableEndpoints);
-    for (ParquetReadEntry e : readEntries) {
+    for (RowGroupInfo e : readEntries) {
       ac.setEndpointBytes(e);
     }
   }
 
-  public FileSystem getFileSystem() {
-    return this.fs;
+//TODO remove this
+  @Override
+  @JsonIgnore
+  public List<RowGroupInfo> getReadEntries() {
+    return super.getReadEntries();
   }
 
-  public static class ParquetReadEntry extends ReadEntryFromHDFS {
+  public static class RowGroupInfo extends ReadEntryFromHDFS {
 
     private HashMap<DrillbitEndpoint,Long> endpointBytes;
     private long maxBytes;
 
     @JsonCreator
-    public ParquetReadEntry(@JsonProperty("path") String path,@JsonProperty("start") long start,@JsonProperty("length") long length) {
+    public RowGroupInfo(@JsonProperty("path") String path, @JsonProperty("start") long start, @JsonProperty("length") long length) {
       super(path, start, length);
     }
 
@@ -108,10 +118,14 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
     public long getMaxBytes() {
       return maxBytes;
     }
+
+    public ParquetRowGroupReadEntry getRowGroupReadEntry() {
+      return new ParquetRowGroupReadEntry(this.getPath(), this.getStart(), this.getLength());
+    }
   }
 
-  private class ParquetReadEntryComparator implements Comparator<ParquetReadEntry> {
-    public int compare(ParquetReadEntry e1, ParquetReadEntry e2) {
+  private class ParquetReadEntryComparator implements Comparator<RowGroupInfo> {
+    public int compare(RowGroupInfo e1, RowGroupInfo e2) {
       if (e1.getMaxBytes() == e2.getMaxBytes()) return 0;
       return (e1.getMaxBytes() > e2.getMaxBytes()) ? 1 : -1;
     }
@@ -120,7 +134,7 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
   @Override
   public List<EndpointAffinity> getOperatorAffinity() {
     LinkedList<EndpointAffinity> endpointAffinities = new LinkedList<>();
-    for (ParquetReadEntry entry : readEntries) {
+    for (RowGroupInfo entry : readEntries) {
       for (DrillbitEndpoint d : entry.getEndpointBytes().keySet()) {
         long bytes = entry.getEndpointBytes().get(d);
         float affinity = bytes / totalBytes;
@@ -141,35 +155,35 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
 
     Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
     mappings = new LinkedList[endpoints.size()];
-    LinkedList<ParquetReadEntry> unassigned = scanAndAssign(endpoints, getReadEntries(), 100, true);
-    LinkedList<ParquetReadEntry> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true);
-    LinkedList<ParquetReadEntry> unassigned3 = scanAndAssign(endpoints, unassigned, 25, true);
-    LinkedList<ParquetReadEntry> unassigned4 = scanAndAssign(endpoints, unassigned, 0, false);
+    LinkedList<RowGroupInfo> unassigned = scanAndAssign(endpoints, getReadEntries(), 100, true);
+    LinkedList<RowGroupInfo> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true);
+    LinkedList<RowGroupInfo> unassigned3 = scanAndAssign(endpoints, unassigned2, 25, true);
+    LinkedList<RowGroupInfo> unassigned4 = scanAndAssign(endpoints, unassigned3, 0, false);
     assert unassigned4.size() == 0 : String.format("All readEntries should be assigned by now, but some are still unassigned");
   }
 
-  private LinkedList<ParquetReadEntry> scanAndAssign (List<DrillbitEndpoint> endpoints, List<ParquetReadEntry> readEntries, int requiredPercentage, boolean mustContain) {
+  private LinkedList<RowGroupInfo> scanAndAssign (List<DrillbitEndpoint> endpoints, List<RowGroupInfo> rowGroups, int requiredPercentage, boolean mustContain) {
     Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
-    LinkedList<ParquetReadEntry> unassigned = new LinkedList<>();
+    LinkedList<RowGroupInfo> unassigned = new LinkedList<>();
 
-    int maxEntries = (int) (getReadEntries().size() / endpoints.size() * 1.5);
+    int maxEntries = (int) (getRowGroups().size() / endpoints.size() * 1.5);
 
     if (maxEntries < 1) maxEntries = 1;
 
     int i =0;
-    for(ParquetReadEntry e : readEntries) {
+    for(RowGroupInfo e : rowGroups) {
       boolean assigned = false;
       for (int j = i; j < i + endpoints.size(); j++) {
         DrillbitEndpoint currentEndpoint = endpoints.get(j%endpoints.size());
         if ((e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
                 (mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) &&
                 e.getEndpointBytes().get(currentEndpoint) >= e.getMaxBytes() * requiredPercentage / 100) {
-          LinkedList<ParquetReadEntry> entries = mappings[j%endpoints.size()];
+          LinkedList<ParquetRowGroupScan.ParquetRowGroupReadEntry> entries = mappings[j%endpoints.size()];
           if(entries == null){
-            entries = new LinkedList<ParquetReadEntry>();
+            entries = new LinkedList<ParquetRowGroupScan.ParquetRowGroupReadEntry>();
             mappings[j%endpoints.size()] = entries;
           }
-          entries.add(e);
+          entries.add(e.getRowGroupReadEntry());
           assigned = true;
           break;
         }
@@ -183,7 +197,7 @@ public class ParquetScan extends AbstractScan<ParquetScan.ParquetReadEntry> {
   @Override
   public Scan<?> getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
-    return new ParquetScan(mappings[minorFragmentId]);
+    return new ParquetRowGroupScan(mappings[minorFragmentId]);
   }
 
   @Override

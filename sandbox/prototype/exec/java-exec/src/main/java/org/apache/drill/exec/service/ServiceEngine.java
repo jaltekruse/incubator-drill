@@ -44,7 +44,7 @@ public class ServiceEngine implements Closeable{
   private final UserServer userServer;
   private final BitCom bitCom;
   private final DrillConfig config;
-  boolean useIP = false;
+  boolean useIP = true;
   
   public ServiceEngine(BitComHandler bitComWorker, UserWorker userWorker, BootStrapContext context){
     this.userServer = new UserServer(context.getAllocator().getUnderlyingAllocator(), new NioEventLoopGroup(1, new NamedThreadFactory("UserServer-")), userWorker);
