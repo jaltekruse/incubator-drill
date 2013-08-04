@@ -34,6 +34,8 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.drill.exec.store.parquet.ParquetScan;
+import org.apache.drill.exec.store.parquet.ParquetScanBatchCreator;
 
 public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentContext, ExecutionSetupException>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ImplCreator.class);
@@ -67,7 +69,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     if(scan instanceof MockScanPOP){
       return msc.getBatch(context, (MockScanPOP) scan, Collections.<RecordBatch> emptyList());
     }
-    else if (scan instanceof  ParquetScan){
+    else if (scan instanceof ParquetScan){
       return parquetScan.getBatch(context, (ParquetScan) scan,  Collections.<RecordBatch> emptyList());
     }
     else{

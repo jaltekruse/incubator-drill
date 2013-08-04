@@ -27,30 +27,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Iterators;
 
-public abstract class AbstractScan<R extends ReadEntry> extends AbstractBase implements Scan<R>{
+public abstract class AbstractScan extends AbstractBase implements Scan{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractScan.class);
-  
-  protected final List<R> readEntries;
-  private final OperatorCost cost;
-  private final Size size;
-  
-  public AbstractScan(List<R> readEntries) {
-    this.readEntries = readEntries;
-    OperatorCost cost = new OperatorCost(0,0,0,0);
-    Size size = new Size(0,0);
-    for(R r : readEntries){
-      cost = cost.add(r.getCost());
-      size = size.add(r.getSize());
-    }
-    this.cost = cost;
-    this.size = size;
-  }
 
-  @Override
-  @JsonProperty("entries")
-  public List<R> getReadEntries() {
-    return readEntries;
-  }
   
   @Override
   public Iterator<PhysicalOperator> iterator() {
@@ -67,18 +46,4 @@ public abstract class AbstractScan<R extends ReadEntry> extends AbstractBase imp
     return physicalVisitor.visitScan(this, value);
   }
 
-  @Override
-  public OperatorCost getCost() {
-    return cost;
-  }
-
-  @Override
-  public Size getSize() {
-    return size;
-  }
-  
-  
-  
-  
-  
 }

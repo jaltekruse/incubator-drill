@@ -47,11 +47,22 @@ public class MockScanPOP extends AbstractScan<MockScanPOP.MockScanEntry> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockScanPOP.class);
 
   private final String url;
+  protected final List<MockScanEntry> readEntries;
+  private final OperatorCost cost;
+  private final Size size;
   private  LinkedList<MockScanEntry>[] mappings;
 
   @JsonCreator
   public MockScanPOP(@JsonProperty("url") String url, @JsonProperty("entries") List<MockScanEntry> readEntries) {
-    super(readEntries);
+    this.readEntries = readEntries;
+    OperatorCost cost = new OperatorCost(0,0,0,0);
+    Size size = new Size(0,0);
+    for(MockScanEntry r : readEntries){
+      cost = cost.add(r.getCost());
+      size = size.add(r.getSize());
+    }
+    this.cost = cost;
+    this.size = size;
     this.url = url;
   }
 
@@ -59,6 +70,11 @@ public class MockScanPOP extends AbstractScan<MockScanPOP.MockScanEntry> {
     return url;
   }
 
+  @Override
+  @JsonProperty("entries")
+  public List<MockScanEntry> getReadEntries() {
+    return readEntries;
+  }
   
   public static class MockScanEntry implements ReadEntry {
 

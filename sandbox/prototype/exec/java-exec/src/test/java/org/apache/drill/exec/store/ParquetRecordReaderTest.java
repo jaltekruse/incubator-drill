@@ -32,14 +32,13 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
-import org.apache.drill.exec.proto.SchemaDefProtos;
-import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.store.parquet.ParquetRecordReader;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
@@ -51,7 +50,6 @@ import parquet.column.page.Page;
 import parquet.column.page.PageReadStore;
 import parquet.column.page.PageReader;
 import parquet.hadoop.Footer;
-import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.hadoop.metadata.ParquetMetadata;
@@ -68,7 +66,6 @@ import java.util.Map;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static parquet.column.Encoding.PLAIN;
-import static parquet.column.Encoding.values;
 
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
@@ -207,10 +204,6 @@ public class ParquetRecordReaderTest {
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
 
-    ParquetMetadata readFooter = ParquetFileReader.readFooter(configuration, path);
-
-    ParquetFileReader parReader = new ParquetFileReader(configuration, path, Arrays.asList(
-        readFooter.getBlocks().get(0)), readFooter.getFileMetaData().getSchema().getColumns());
     ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types");
 
     MockOutputMutator mutator = new MockOutputMutator();
