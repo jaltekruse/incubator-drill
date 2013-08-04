@@ -26,13 +26,10 @@ import org.apache.drill.exec.exception.OptimizerException;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.PhysicalPlan;
-import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.*;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-
-import static org.apache.drill.exec.physical.config.ParquetScan.*;
 
 public class BasicOptimizer extends Optimizer{
 
@@ -104,7 +101,7 @@ public class BasicOptimizer extends Optimizer{
 
       try {
         if (scan.getStorageEngine().equals("parquet")) {
-          return context.getStorageEngine(logicalPlan.getStorageEngine(scan.getStorageEngine())).getPhysicalScan(scan);
+          return context.getStorageEngine(logicalPlan.getStorageEngineConfig(scan.getStorageEngine())).getPhysicalScan(scan);
         }
         if (scan.getStorageEngine().equals("local-logs")) {
           myObjects = scan.getSelection().getListWith(config,

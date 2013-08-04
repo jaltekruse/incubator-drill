@@ -3,9 +3,7 @@ package org.apache.drill.exec.store;
 
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
-import org.apache.drill.exec.physical.EndpointAffinity;
-import org.apache.drill.exec.physical.config.ParquetScan;
-import org.apache.drill.exec.proto.CoordinationProtos;
+import org.apache.drill.exec.store.parquet.ParquetScan;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.conf.Configuration;
@@ -55,7 +53,7 @@ public class AffinityCalculator {
     blockMap = blockMapBuilder.build();
   }
 
-  public void calculate(ParquetScan.ParquetReadEntry entry) {
+  public void calculate(ParquetScan.RowGroupInfo entry) {
     HashMap<String,Long> hostMap = null;
     long start = entry.getStart();
     long end = start + entry.getLength();

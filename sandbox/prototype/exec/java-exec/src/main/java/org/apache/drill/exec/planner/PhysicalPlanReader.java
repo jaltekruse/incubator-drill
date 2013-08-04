@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.drill.exec.store.StorageEngineRegistry;
 
 public class PhysicalPlanReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PhysicalPlanReader.class);
@@ -45,7 +46,8 @@ public class PhysicalPlanReader {
   private final ObjectReader operatorReader;
   private final ObjectReader logicalPlanReader;
 
-  public PhysicalPlanReader(DrillConfig config, ObjectMapper mapper, final DrillbitEndpoint endpoint) {
+  public PhysicalPlanReader(DrillConfig config, ObjectMapper mapper, final DrillbitEndpoint endpoint,
+                            StorageEngineRegistry engineRegistry) {
 
     // Endpoint serializer/deserializer.
     SimpleModule deserModule = new SimpleModule("PhysicalOperatorModule") //
@@ -58,7 +60,8 @@ public class PhysicalPlanReader {
     mapper.registerModule(deserModule);
     mapper.registerSubtypes(PhysicalOperatorUtil.getSubTypes(config));
     InjectableValues injectables = new InjectableValues.Std() //
-        .addValue(DrillbitEndpoint.class, endpoint); //
+        .addValue(DrillbitEndpoint.class, endpoint) //
+        .addValue(StorageEngineRegistry.class, engineRegistry); //
 
     this.mapper = mapper;
     this.physicalPlanReader = mapper.reader(PhysicalPlan.class).with(injectables);
