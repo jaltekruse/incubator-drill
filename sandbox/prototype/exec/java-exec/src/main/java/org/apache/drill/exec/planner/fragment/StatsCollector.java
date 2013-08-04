@@ -72,9 +72,9 @@ public class StatsCollector {
     }
 
     @Override
-    public Void visitGroupScan(GroupScan<?> groupScan, Wrapper wrapper) {
+    public Void visitGroupScan(GroupScan groupScan, Wrapper wrapper) {
       Stats stats = wrapper.getStats();      
-      stats.addMaxWidth(groupScan.getReadEntries().size());
+      stats.addMaxWidth(groupScan.getMaxParallelizationWidth());
       return super.visitGroupScan(groupScan, wrapper);
     }
 

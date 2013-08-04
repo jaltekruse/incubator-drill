@@ -23,7 +23,7 @@ import org.apache.drill.exec.physical.ReadEntry;
 
 import com.google.common.collect.Iterators;
 
-public abstract class AbstractGroupScan<R extends ReadEntry> extends AbstractBase implements GroupScan<R> {
+public abstract class AbstractGroupScan extends AbstractBase implements GroupScan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractGroupScan.class);
 
   
@@ -34,7 +34,7 @@ public abstract class AbstractGroupScan<R extends ReadEntry> extends AbstractBas
 
   @Override
   public boolean isExecutable() {
-    return true;
+    return false;
   }
 
   @Override

@@ -96,7 +96,12 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
         // need to grab block information from HDFS
         columnChunkMetaData = rowGroup.getColumns().iterator().next();
         start = Math.min(columnChunkMetaData.getDictionaryPageOffset(), columnChunkMetaData.getFirstDataPageOffset());
-
+        // this field is not being populated correctly, but the column chunks know their sizes, just summing them for now
+        //end = start + rowGroup.getTotalByteSize();
+        end = start;
+        for (ColumnChunkMetaData col : rowGroup.getColumns()){
+          end += col.getTotalSize();
+        }
         pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, end));
       }
 

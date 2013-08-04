@@ -42,7 +42,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 
 @JsonTypeName("mock-scan")
-public class MockGroupScanPOP extends AbstractGroupScan<MockGroupScanPOP.MockScanEntry> {
+public class MockGroupScanPOP extends AbstractGroupScan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockGroupScanPOP.class);
 
   private final String url;
@@ -69,7 +69,6 @@ public class MockGroupScanPOP extends AbstractGroupScan<MockGroupScanPOP.MockSca
     return url;
   }
 
-  @Override
   @JsonProperty("entries")
   public List<MockScanEntry> getReadEntries() {
     return readEntries;
@@ -194,6 +193,11 @@ public class MockGroupScanPOP extends AbstractGroupScan<MockGroupScanPOP.MockSca
   public SubScan getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
     return new MockSubScanPOP(url, mappings[minorFragmentId]);
+  }
+
+  @Override
+  public int getMaxParallelizationWidth() {
+    return readEntries.size();
   }
 
   @Override

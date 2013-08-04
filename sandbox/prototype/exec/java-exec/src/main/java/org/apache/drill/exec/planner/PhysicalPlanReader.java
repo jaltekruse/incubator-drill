@@ -74,7 +74,7 @@ public class PhysicalPlanReader {
   // tests passing, this constructor should be removed and the tests should be updated to use the contstructor
   // that takes a storage engine registry
   public PhysicalPlanReader(DrillConfig config, ObjectMapper mapper, final DrillbitEndpoint endpoint) {
-    this(config, mapper, endpoint, new StorageEngineRegistry(config));
+    this(config, mapper, endpoint, null);
   }
 
   public String writeJson(PhysicalOperator op) throws JsonProcessingException{

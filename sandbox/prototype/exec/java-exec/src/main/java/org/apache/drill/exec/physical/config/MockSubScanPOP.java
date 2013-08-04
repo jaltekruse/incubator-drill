@@ -95,12 +95,12 @@ public class MockSubScanPOP extends AbstractBase implements SubScan {
   // will want to replace these two methods with an interface above for AbstractSubScan
   @Override
   public boolean isExecutable() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    return true;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
-  public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E{
+    return physicalVisitor.visitSubScan(this, value);
   }
   // see comment above about replacing this
 

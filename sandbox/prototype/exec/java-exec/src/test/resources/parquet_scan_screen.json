@@ -11,7 +11,7 @@
     "parquet" :
       {
         "type":"parquet",
-        "DFSname" : ""
+        "DFSname" : "test"
       }
   },
   query:[
@@ -22,7 +22,7 @@
       storageengine:"parquet",
       selection: [
         {
-            path: "/tmp/testParquetFile_many_types"
+            path: "/tmp/avro-gen-parquet"
         }
       ]
     },

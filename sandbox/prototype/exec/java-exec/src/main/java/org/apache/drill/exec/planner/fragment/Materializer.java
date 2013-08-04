@@ -50,7 +50,7 @@ public class Materializer extends AbstractPhysicalVisitor<PhysicalOperator, Mate
   }
 
   @Override
-  public PhysicalOperator visitGroupScan(GroupScan<?> groupScan, IndexedFragmentNode iNode) throws ExecutionSetupException {
+  public PhysicalOperator visitGroupScan(GroupScan groupScan, IndexedFragmentNode iNode) throws ExecutionSetupException {
     return groupScan.getSpecificScan(iNode.getMinorFragmentId());
   }
 
