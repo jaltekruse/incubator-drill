@@ -31,6 +31,6 @@ public interface GroupScan<R extends ReadEntry> extends Scan, HasAffinity{
 
   public abstract void applyAssignments(List<DrillbitEndpoint> endpoints);
 
-  public abstract GroupScan<?> getSpecificScan(int minorFragmentId);
+  public abstract SubScan getSpecificScan(int minorFragmentId);
 
 }

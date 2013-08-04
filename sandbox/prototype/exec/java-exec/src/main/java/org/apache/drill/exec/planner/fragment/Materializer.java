@@ -55,7 +55,7 @@ public class Materializer extends AbstractPhysicalVisitor<PhysicalOperator, Mate
   }
 
   @Override
-  public PhysicalOperator visitSubScan(SubScan<?> subScan, IndexedFragmentNode value) throws ExecutionSetupException {
+  public PhysicalOperator visitSubScan(SubScan subScan, IndexedFragmentNode value) throws ExecutionSetupException {
     // TODO - implement this
     return super.visitOp(subScan, value);
   }

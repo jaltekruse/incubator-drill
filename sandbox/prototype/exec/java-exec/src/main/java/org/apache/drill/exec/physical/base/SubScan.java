@@ -19,5 +19,5 @@ package org.apache.drill.exec.physical.base;
 
 import org.apache.drill.exec.physical.ReadEntry;
 
-public interface SubScan<R extends ReadEntry> extends Scan {
+public interface SubScan extends Scan {
 }

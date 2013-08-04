@@ -31,6 +31,7 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.drill.exec.store.parquet.ParquetGroupScan;
 import org.apache.drill.exec.store.parquet.ParquetRowGroupScan;
 import org.apache.drill.exec.store.parquet.ParquetScanBatchCreator;
 
@@ -59,12 +60,12 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   }
 
   @Override
-  public RecordBatch visitSubScan(SubScan<?> subScan, FragmentContext context) throws ExecutionSetupException {
+  public RecordBatch visitSubScan(SubScan subScan, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkNotNull(subScan);
     Preconditions.checkNotNull(context);
 
-    if(subScan instanceof MockGroupScanPOP){
-      return msc.getBatch(context, (MockGroupScanPOP) subScan, Collections.<RecordBatch> emptyList());
+    if(subScan instanceof MockSubScanPOP){
+      return msc.getBatch(context, (MockSubScanPOP) subScan, Collections.<RecordBatch> emptyList());
     }
     else if (subScan instanceof ParquetRowGroupScan){
       return parquetScan.getBatch(context, (ParquetRowGroupScan) subScan,  Collections.<RecordBatch> emptyList());
@@ -74,7 +75,6 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
     }
 
   }
-
 
   @Override
   public RecordBatch visitOp(PhysicalOperator op, FragmentContext context) throws ExecutionSetupException {

@@ -61,7 +61,7 @@ public class DrillbitContext {
     this.com = com;
     this.cache = cache;
     this.endpoint = endpoint;
-    this.storageEngineRegistry = new StorageEngineRegistry(this);
+    this.storageEngineRegistry = new StorageEngineRegistry(context.getConfig());
     this.reader = new PhysicalPlanReader(context.getConfig(), context.getConfig().getMapper(), endpoint, storageEngineRegistry);
   }
   

@@ -117,7 +117,7 @@ public class Wrapper {
     }
 
     @Override
-    public Void visitSubScan(SubScan<?> subScan, List<DrillbitEndpoint> value) throws PhysicalOperatorSetupException {
+    public Void visitSubScan(SubScan subScan, List<DrillbitEndpoint> value) throws PhysicalOperatorSetupException {
       // TODO - implement this
       return visitOp(subScan, value);
     }

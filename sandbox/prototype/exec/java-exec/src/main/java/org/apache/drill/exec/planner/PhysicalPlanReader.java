@@ -36,6 +36,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.StorageEngineRegistry;
 
 public class PhysicalPlanReader {
@@ -67,6 +68,13 @@ public class PhysicalPlanReader {
     this.physicalPlanReader = mapper.reader(PhysicalPlan.class).with(injectables);
     this.operatorReader = mapper.reader(PhysicalOperator.class).with(injectables);
     this.logicalPlanReader = mapper.reader(LogicalPlan.class).with(injectables);
+  }
+
+  // TODO - we do not want to storage engine registry generated here in production, this was created to keep old
+  // tests passing, this constructor should be removed and the tests should be updated to use the contstructor
+  // that takes a storage engine registry
+  public PhysicalPlanReader(DrillConfig config, ObjectMapper mapper, final DrillbitEndpoint endpoint) {
+    this(config, mapper, endpoint, new StorageEngineRegistry(config));
   }
 
   public String writeJson(PhysicalOperator op) throws JsonProcessingException{
