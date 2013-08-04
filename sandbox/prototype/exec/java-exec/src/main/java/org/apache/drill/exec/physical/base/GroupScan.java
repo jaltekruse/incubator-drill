@@ -19,18 +19,18 @@ package org.apache.drill.exec.physical.base;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-public interface GroupScan<R extends ReadEntry> extends Scan, HasAffinity{
-
-  @JsonProperty("entries")
-  public abstract List<R> getReadEntries();
+public interface GroupScan extends Scan, HasAffinity{
 
   public abstract void applyAssignments(List<DrillbitEndpoint> endpoints);
 
   public abstract SubScan getSpecificScan(int minorFragmentId);
 
+  @JsonIgnore
+  public int getMaxParallelizationWidth();
 }

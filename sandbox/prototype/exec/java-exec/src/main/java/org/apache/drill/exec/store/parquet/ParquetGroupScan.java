@@ -28,7 +28,6 @@ import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
-import org.apache.drill.exec.physical.base.GroupScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Size;
 import org.apache.drill.exec.physical.config.MockGroupScanPOP;
@@ -43,17 +42,24 @@ import parquet.org.codehaus.jackson.annotate.JsonCreator;
 
 
 @JsonTypeName("parquet-scan")
-public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGroupInfo> {
+public class ParquetGroupScan extends AbstractGroupScan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockGroupScanPOP.class);
 
+  @JsonIgnore
   private LinkedList<ParquetRowGroupScan.RowGroupReadEntry>[] mappings;
+
   private List<RowGroupInfo> rowGroupInfos;
 
+  @JsonIgnore
   private long totalBytes;
+  @JsonIgnore
   private Collection<DrillbitEndpoint> availableEndpoints;
+  @JsonIgnore
   private ParquetStorageEngine storageEngine;
+  @JsonIgnore
   private StorageEngineRegistry engineRegistry;
-  private ParquetStorageEngineConfig engineCofig;
+  private ParquetStorageEngineConfig engineConfig;
+  @JsonIgnore
   private FileSystem fs;
   private String fileName;
   private LinkedList<RowGroupInfo> rowGroups;
@@ -65,7 +71,7 @@ public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGrou
     this.storageEngine = (ParquetStorageEngine) engineRegistry.getEngine(storageEngineConfig);
     this.availableEndpoints = storageEngine.getContext().getBits();
     this.fs = storageEngine.getFileSystem();
-    this.engineCofig = storageEngineConfig;
+    this.engineConfig = storageEngineConfig;
     this.fileName = readEntries.get(0).getPath();
     this.engineRegistry = engineRegistry;
     AffinityCalculator ac = new AffinityCalculator(fileName, fs, availableEndpoints);
@@ -167,17 +173,12 @@ public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGrou
   }
 
   @Override
-  public List getReadEntries() {
-    return null;
-  }
-
-  @Override
   public void applyAssignments(List<DrillbitEndpoint> endpoints) {
-    Preconditions.checkArgument(endpoints.size() <= getReadEntries().size());
+    Preconditions.checkArgument(endpoints.size() <= rowGroupInfos.size());
 
-    Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
+    Collections.sort(rowGroupInfos, new ParquetReadEntryComparator());
     mappings = new LinkedList[endpoints.size()];
-    LinkedList<RowGroupInfo> unassigned = scanAndAssign(endpoints, getReadEntries(), 100, true);
+    LinkedList<RowGroupInfo> unassigned = scanAndAssign(endpoints, rowGroupInfos, 100, true);
     LinkedList<RowGroupInfo> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true);
     LinkedList<RowGroupInfo> unassigned3 = scanAndAssign(endpoints, unassigned2, 25, true);
     LinkedList<RowGroupInfo> unassigned4 = scanAndAssign(endpoints, unassigned3, 0, false);
@@ -185,7 +186,7 @@ public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGrou
   }
 
   private LinkedList<RowGroupInfo> scanAndAssign (List<DrillbitEndpoint> endpoints, List<RowGroupInfo> rowGroups, int requiredPercentage, boolean mustContain) {
-    Collections.sort(getReadEntries(), new ParquetReadEntryComparator());
+    Collections.sort(rowGroupInfos, new ParquetReadEntryComparator());
     LinkedList<RowGroupInfo> unassigned = new LinkedList<>();
 
     int maxEntries = (int) (rowGroupInfos.size() / endpoints.size() * 1.5);
@@ -220,7 +221,7 @@ public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGrou
   public ParquetRowGroupScan getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
     try {
-      return new ParquetRowGroupScan(engineRegistry, engineCofig, mappings[minorFragmentId]);
+      return new ParquetRowGroupScan(engineRegistry, engineConfig, mappings[minorFragmentId]);
     } catch (SetupException e) {
       e.printStackTrace(); // TODO - fix this
     }
@@ -228,13 +229,19 @@ public class ParquetGroupScan extends AbstractGroupScan<ParquetGroupScan.RowGrou
   }
 
   @Override
+  public int getMaxParallelizationWidth() {
+    return rowGroupInfos.size();
+  }
+
+  @Override
   public OperatorCost getCost() {
-    return null;
+    return new OperatorCost(1,1,1,1);
   }
 
   @Override
   public Size getSize() {
-    return null;
+    // TODO - this is wrong, need to populate correctly
+    return new Size(10,10);
   }
 
   @Override

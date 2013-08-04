@@ -111,7 +111,7 @@ public class Wrapper {
     }
 
     @Override
-    public Void visitGroupScan(GroupScan<?> groupScan, List<DrillbitEndpoint> value) throws PhysicalOperatorSetupException {
+    public Void visitGroupScan(GroupScan groupScan, List<DrillbitEndpoint> value) throws PhysicalOperatorSetupException {
       groupScan.applyAssignments(value);
       return super.visitGroupScan(groupScan, value);
     }
