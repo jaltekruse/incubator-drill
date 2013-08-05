@@ -192,13 +192,13 @@ public class ParquetRecordReader implements RecordReader {
 
 
   public ParquetRecordReader(FragmentContext fragmentContext,
-                             String path) throws ExecutionSetupException {
-    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path);
+                             String path, int rowGroupIndex) throws ExecutionSetupException {
+    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path, rowGroupIndex);
   }
 
 
   public ParquetRecordReader(FragmentContext fragmentContext, long batchSize,
-                             String path) throws ExecutionSetupException {
+                             String path, int rowGroupIndex) throws ExecutionSetupException {
     this.allocator = fragmentContext.getAllocator();
 
     Path hadoopPath = new Path(path);
@@ -208,11 +208,8 @@ public class ParquetRecordReader implements RecordReader {
     ParquetMetadata readFooter = null;
     try {
       readFooter = ParquetFileReader.readFooter(configuration, hadoopPath);
-      // TODO - determine the row group number when the footer is read and individual read entries are created
-      // pass it through the read entry object and set it here
-      int rowGroupToRead = 0;
       parReader = new ParquetFileReader(configuration, hadoopPath,
-          Arrays.asList(readFooter.getBlocks().get(rowGroupToRead)), readFooter.getFileMetaData().getSchema().getColumns());
+          Arrays.asList(readFooter.getBlocks().get(rowGroupIndex)), readFooter.getFileMetaData().getSchema().getColumns());
     } catch (IOException e) {
      throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + path);
     }

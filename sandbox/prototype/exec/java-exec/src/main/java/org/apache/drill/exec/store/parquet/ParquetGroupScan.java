@@ -65,31 +65,35 @@ public class ParquetGroupScan extends AbstractGroupScan {
   private LinkedList<RowGroupInfo> rowGroups;
 // TODO we should not be using RowGroupInfo to construct ParquetScan, should we?
   @JsonCreator
-  public ParquetGroupScan(@JsonProperty("entries") List<RowGroupInfo> readEntries,
+  public ParquetGroupScan(@JsonProperty("entries") List<RowGroupInfo> rowGroupInfos,
                           @JsonProperty("storageengine") ParquetStorageEngineConfig storageEngineConfig,
                           @JacksonInject StorageEngineRegistry engineRegistry) throws SetupException {
     this.storageEngine = (ParquetStorageEngine) engineRegistry.getEngine(storageEngineConfig);
     this.availableEndpoints = storageEngine.getContext().getBits();
     this.fs = storageEngine.getFileSystem();
     this.engineConfig = storageEngineConfig;
-    this.fileName = readEntries.get(0).getPath();
+    this.fileName = rowGroupInfos.get(0).getPath();
     this.engineRegistry = engineRegistry;
+    this.rowGroupInfos = rowGroupInfos;
     AffinityCalculator ac = new AffinityCalculator(fileName, fs, availableEndpoints);
-    for (RowGroupInfo e : readEntries) {
+    for (RowGroupInfo e : rowGroupInfos) {
       ac.setEndpointBytes(e);
+      totalBytes += e.getLength();
     }
   }
 
-  public ParquetGroupScan(@JsonProperty("entries") List<RowGroupInfo> readEntries,
+  public ParquetGroupScan(@JsonProperty("entries") List<RowGroupInfo> rowGroupInfos,
                           ParquetStorageEngine storageEngine) {
     this.storageEngine = storageEngine;
     this.availableEndpoints = storageEngine.getContext().getBits();
     this.fs = storageEngine.getFileSystem();
-    this.fileName = readEntries.get(0).getPath();
+    this.fileName = rowGroupInfos.get(0).getPath();
+    this.rowGroupInfos = rowGroupInfos;
     this.engineRegistry = engineRegistry;
     AffinityCalculator ac = new AffinityCalculator(fileName, fs, availableEndpoints);
-    for (RowGroupInfo e : readEntries) {
+    for (RowGroupInfo e : rowGroupInfos) {
       ac.setEndpointBytes(e);
+      totalBytes += e.getLength();
     }
   }
 
@@ -110,10 +114,13 @@ public class ParquetGroupScan extends AbstractGroupScan {
 
     private HashMap<DrillbitEndpoint,Long> endpointBytes;
     private long maxBytes;
+    private int rowGroupIndex;
 
     @JsonCreator
-    public RowGroupInfo(@JsonProperty("path") String path, @JsonProperty("start") long start, @JsonProperty("length") long length) {
+    public RowGroupInfo(@JsonProperty("path") String path, @JsonProperty("start") long start,
+                        @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
       super(path, start, length);
+      rowGroupIndex = rowGroupIndex;
     }
 
     @Override
@@ -144,7 +151,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
     }
 
     public ParquetRowGroupScan.RowGroupReadEntry getRowGroupReadEntry() {
-      return new ParquetRowGroupScan.RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength());
+      return new ParquetRowGroupScan.RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex);
     }
   }
 
@@ -197,6 +204,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
     for(RowGroupInfo e : rowGroups) {
       boolean assigned = false;
       for (int j = i; j < i + endpoints.size(); j++) {
+        if (e.getEndpointBytes() == null) break;
         DrillbitEndpoint currentEndpoint = endpoints.get(j%endpoints.size());
         if ((e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
                 (mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) &&
@@ -221,7 +229,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
   public ParquetRowGroupScan getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
     try {
-      return new ParquetRowGroupScan(engineRegistry, engineConfig, mappings[minorFragmentId]);
+      return new ParquetRowGroupScan(storageEngine, engineConfig, mappings[minorFragmentId]);
     } catch (SetupException e) {
       e.printStackTrace(); // TODO - fix this
     }

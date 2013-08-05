@@ -28,6 +28,7 @@ public class AffinityCalculator {
     this.fileName = fileName;
     this.endpoints = endpoints;
     buildBlockMap();
+    buildEndpointMap();
   }
 
   private void buildBlockMap() {
@@ -49,7 +50,7 @@ public class AffinityCalculator {
    * @param entry
    */
   public void setEndpointBytes(ParquetGroupScan.RowGroupInfo entry) {
-    HashMap<String,Long> hostMap = null;
+    HashMap<String,Long> hostMap = new HashMap<>();
     long start = entry.getStart();
     long end = start + entry.getLength();
     Range<Long> entryRange = Range.closedOpen(start, end);

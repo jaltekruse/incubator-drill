@@ -17,10 +17,9 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.*;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import org.apache.drill.common.graph.GraphVisitor;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.exception.SetupException;
@@ -30,6 +29,7 @@ import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.*;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.store.StorageEngineRegistry;
+import org.apache.drill.storage.ParquetStorageEngineConfig;
 
 import java.util.*;
 
@@ -45,6 +45,14 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry, @JsonProperty StorageEngineConfig engineConfig,
                              @JsonProperty LinkedList<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
     parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
+    this.rowGroupReadEntries = rowGroupReadEntries;
+  }
+
+  @JsonCreator
+  public ParquetRowGroupScan(@JsonProperty ParquetStorageEngine engine, @JsonProperty ParquetStorageEngineConfig config,
+                             @JsonProperty List<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
+    parquetStorageEngine = engine;
+    engineCofig = config;
     this.rowGroupReadEntries = rowGroupReadEntries;
   }
 
@@ -69,25 +77,35 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
 
   @Override
   public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E {
-    return null;
+    return physicalVisitor.visitSubScan(this, value);
   }
 
   @Override
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
+    Preconditions.checkArgument(children.isEmpty());
+    try {
+      return new ParquetRowGroupScan(parquetStorageEngine, (ParquetStorageEngineConfig) engineCofig, rowGroupReadEntries);
+    } catch (SetupException e) {
+      // TODO - handle this
+      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+    }
     return null;
   }
 
   @Override
   public Iterator<PhysicalOperator> iterator() {
-    return null;
+    return Iterators.emptyIterator();
   }
 
   public static class RowGroupReadEntry extends ReadEntryFromHDFS {
 
+    private int rowGroupIndex;
 
     @parquet.org.codehaus.jackson.annotate.JsonCreator
-    public RowGroupReadEntry(@JsonProperty("path") String path, @JsonProperty("start") long start, @JsonProperty("length") long length) {
+    public RowGroupReadEntry(@JsonProperty("path") String path, @JsonProperty("start") long start,
+                             @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
       super(path, start, length);
+      this.rowGroupIndex = rowGroupIndex;
     }
 
     @Override
@@ -101,8 +119,13 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
       return new Size(10, 10);
     }
 
+    @JsonIgnore
     public RowGroupReadEntry getRowGroupReadEntry() {
-      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength());
+      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex);
+    }
+
+    public int getRowGroupIndex(){
+      return rowGroupIndex;
     }
   }
 
