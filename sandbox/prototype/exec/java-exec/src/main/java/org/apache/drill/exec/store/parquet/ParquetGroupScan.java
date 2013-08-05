@@ -185,14 +185,15 @@ public class ParquetGroupScan extends AbstractGroupScan {
 
     Collections.sort(rowGroupInfos, new ParquetReadEntryComparator());
     mappings = new LinkedList[endpoints.size()];
-    LinkedList<RowGroupInfo> unassigned = scanAndAssign(endpoints, rowGroupInfos, 100, true);
-    LinkedList<RowGroupInfo> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true);
-    LinkedList<RowGroupInfo> unassigned3 = scanAndAssign(endpoints, unassigned2, 25, true);
-    LinkedList<RowGroupInfo> unassigned4 = scanAndAssign(endpoints, unassigned3, 0, false);
-    assert unassigned4.size() == 0 : String.format("All readEntries should be assigned by now, but some are still unassigned");
+    LinkedList<RowGroupInfo> unassigned = scanAndAssign(endpoints, rowGroupInfos, 100, true, false);
+    LinkedList<RowGroupInfo> unassigned2 = scanAndAssign(endpoints, unassigned, 50, true, false);
+    LinkedList<RowGroupInfo> unassigned3 = scanAndAssign(endpoints, unassigned2, 25, true, false);
+    LinkedList<RowGroupInfo> unassigned4 = scanAndAssign(endpoints, unassigned3, 0, false, false);
+    LinkedList<RowGroupInfo> unassigned5 = scanAndAssign(endpoints, unassigned4, 0, false, true);
+    assert unassigned5.size() == 0 : String.format("All readEntries should be assigned by now, but some are still unassigned");
   }
 
-  private LinkedList<RowGroupInfo> scanAndAssign (List<DrillbitEndpoint> endpoints, List<RowGroupInfo> rowGroups, int requiredPercentage, boolean mustContain) {
+  private LinkedList<RowGroupInfo> scanAndAssign (List<DrillbitEndpoint> endpoints, List<RowGroupInfo> rowGroups, int requiredPercentage, boolean mustContain, boolean assignAll) {
     Collections.sort(rowGroupInfos, new ParquetReadEntryComparator());
     LinkedList<RowGroupInfo> unassigned = new LinkedList<>();
 
@@ -204,11 +205,12 @@ public class ParquetGroupScan extends AbstractGroupScan {
     for(RowGroupInfo e : rowGroups) {
       boolean assigned = false;
       for (int j = i; j < i + endpoints.size(); j++) {
-        if (e.getEndpointBytes() == null) break;
         DrillbitEndpoint currentEndpoint = endpoints.get(j%endpoints.size());
-        if ((e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
+        if (assignAll ||
+                (e.getEndpointBytes().size() > 0 &&
+                (e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
                 (mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) &&
-                e.getEndpointBytes().get(currentEndpoint) >= e.getMaxBytes() * requiredPercentage / 100) {
+                e.getEndpointBytes().get(currentEndpoint) >= e.getMaxBytes() * requiredPercentage / 100)) {
           LinkedList<ParquetRowGroupScan.RowGroupReadEntry> entries = mappings[j%endpoints.size()];
           if(entries == null){
             entries = new LinkedList<ParquetRowGroupScan.RowGroupReadEntry>();
