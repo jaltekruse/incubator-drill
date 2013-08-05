@@ -72,7 +72,7 @@ public class ParquetRecordReaderTest {
 
   private boolean VERBOSE_DEBUG = false;
 
-  long numTotalRecords = 300000;
+  long numTotalRecords = 3000000;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
   WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -204,7 +204,7 @@ public class ParquetRecordReaderTest {
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
 
-    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types");
+    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types", 0);
 
     MockOutputMutator mutator = new MockOutputMutator();
     List<ValueVector> addFields = mutator.getAddFields();

@@ -81,7 +81,7 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
     ArrayList<ReadEntryWithPath> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
         new TypeReference<ArrayList<ReadEntryWithPath>>() {});
     ArrayList<ParquetGroupScan.RowGroupInfo> pReadEnties = new ArrayList();
-    long start = 0, end = 0;
+    long start = 0, length = 0;
     ColumnChunkMetaData columnChunkMetaData;
     for (ReadEntryWithPath readEntryWithPath : readEntries){
 
@@ -92,17 +92,19 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
       ParquetMetadata footer = ParquetFileReader.readFooter(conf, path);
       readEntryWithPath.getPath();
 
+      int i = 0;
       for (BlockMetaData rowGroup : footer.getBlocks()){
         // need to grab block information from HDFS
         columnChunkMetaData = rowGroup.getColumns().iterator().next();
         start = Math.min(columnChunkMetaData.getDictionaryPageOffset(), columnChunkMetaData.getFirstDataPageOffset());
         // this field is not being populated correctly, but the column chunks know their sizes, just summing them for now
         //end = start + rowGroup.getTotalByteSize();
-        end = start;
+        length = 0;
         for (ColumnChunkMetaData col : rowGroup.getColumns()){
-          end += col.getTotalSize();
+          length += col.getTotalSize();
         }
-        pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, end));
+        pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, length, i));
+        i++;
       }
 
     }

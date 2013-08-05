@@ -53,7 +53,7 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
       */
       // TODO - change the API on the record reader and update this
       // TODO - this also involves adding all of the fields necessary for reading the file to the RowGroupInfo and ParquetRowGroupReadEntry classes
-      //readers.add(new ParquetRecordReader(context, e.getPath()));
+      readers.add(new ParquetRecordReader(context, e.getPath(), e.getRowGroupIndex()));
     }
     return new ScanBatch(context, readers.iterator());
   }

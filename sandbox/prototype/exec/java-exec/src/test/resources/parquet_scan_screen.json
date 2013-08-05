@@ -22,7 +22,10 @@
       storageengine:"parquet",
       selection: [
         {
-            path: "/tmp/avro-gen-parquet"
+            path: "/tmp/testParquetFile_many_types"
+        },
+        {
+            path: "/tmp/testParquetFile_many_types"
         }
       ]
     },

@@ -48,7 +48,7 @@ public class PhysicalPlanReader {
   private final ObjectReader logicalPlanReader;
 
   public PhysicalPlanReader(DrillConfig config, ObjectMapper mapper, final DrillbitEndpoint endpoint,
-                            StorageEngineRegistry engineRegistry) {
+                            final StorageEngineRegistry engineRegistry) {
 
     // Endpoint serializer/deserializer.
     SimpleModule deserModule = new SimpleModule("PhysicalOperatorModule") //
