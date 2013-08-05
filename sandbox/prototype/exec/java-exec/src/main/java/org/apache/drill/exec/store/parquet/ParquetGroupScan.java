@@ -19,10 +19,7 @@ package org.apache.drill.exec.store.parquet;
 
 import java.util.*;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.annotation.*;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
@@ -38,7 +35,6 @@ import org.apache.drill.exec.store.StorageEngineRegistry;
 import org.apache.drill.exec.store.AffinityCalculator;
 import org.apache.drill.storage.ParquetStorageEngineConfig;
 import org.apache.hadoop.fs.FileSystem;
-import parquet.org.codehaus.jackson.annotate.JsonCreator;
 
 
 @JsonTypeName("parquet-scan")

@@ -58,7 +58,7 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
     this.configuration = configuration;
     try {
       conf = new Configuration();
-      conf.set("fs.name.default", configuration.getDFSname());
+      conf.set("fs.default.name", configuration.getDFSname());
       this.fs = FileSystem.get(conf);
     } catch (IOException ie) { /*TODO handle this */}
   }

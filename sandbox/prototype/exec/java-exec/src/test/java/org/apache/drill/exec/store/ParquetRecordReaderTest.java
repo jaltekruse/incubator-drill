@@ -72,7 +72,7 @@ public class ParquetRecordReaderTest {
 
   private boolean VERBOSE_DEBUG = false;
 
-  long numTotalRecords = 3000000;
+  long numTotalRecords = 30000;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
   WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -126,64 +126,66 @@ public class ParquetRecordReaderTest {
     CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
-    w.startBlock(1);
+    for (int k = 0; k < 2; k++){
+      w.startBlock(1);
 
-    for (Object[] fieldInfo : fields) {
+      for (Object[] fieldInfo : fields) {
 
-      String[] path1 = {(String) fieldInfo[fieldName]};
-      ColumnDescriptor c1 = schema.getColumnDescription(path1);
+        String[] path1 = {(String) fieldInfo[fieldName]};
+        ColumnDescriptor c1 = schema.getColumnDescription(path1);
 
-      w.startColumn(c1, numTotalRecords, codec);
-      int valsPerPage = (int) Math.ceil(numTotalRecords / (float) ((int) fieldInfo[numPages]));
-      byte[] bytes;
-      if ((int) fieldInfo[bitLength] > 0) {
-        bytes = new byte[(int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0)];
-      } else {
-        // the twelve at the end is to account for storing a 4 byte length with each value
-        int totalValLength = ((byte[]) fieldInfo[val1]).length + ((byte[]) fieldInfo[val2]).length + ((byte[]) fieldInfo[val3]).length + 12;
-        bytes = new byte[(int) Math.ceil(valsPerPage / 3 * totalValLength)];
-      }
-      int bytesPerPage = (int) (valsPerPage * ((int) fieldInfo[bitLength] / 8.0));
-      int valsWritten = 0;
-      int bytesWritten = 0;
-      for (int z = 0; z < (int) fieldInfo[numPages]; z++) {
-        bytesWritten = 0;
-        valsWritten = 0;
-        for (int i = 0; i < valsPerPage; i++) {
-          //System.out.print(i + ", " + (i % 25 == 0 ? "\n gen " + fieldInfo[fieldName] + ": " : ""));
-          if (fieldInfo[val1] instanceof Boolean) {
-
-            bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val1 + valsWritten % 3]
-                ? allBitsTrue : allBitsFalse);
-            booleanBitCounter.increment();
-            if (booleanBitCounter.val == 0) {
-              currentBooleanByte++;
-            }
-            valsWritten++;
-            if (currentBooleanByte > bytesPerPage) break;
-          } else {
-            if (fieldInfo[val1 + valsWritten % 3] instanceof byte[]){
-              System.arraycopy(toByta(Integer.reverseBytes(((byte[])fieldInfo[val1 + valsWritten % 3]).length)),
-                  0, bytes, bytesWritten, 4);
-              System.arraycopy(fieldInfo[val1 + valsWritten % 3],
-                  0, bytes, bytesWritten + 4, ((byte[])fieldInfo[val1 + valsWritten % 3]).length);
-              bytesWritten += ((byte[])fieldInfo[val1 + valsWritten % 3]).length + 4;
-            }
-            else{
-              System.arraycopy( toByta(fieldInfo[val1 + valsWritten % 3]),
-                  0, bytes, i * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
-            }
-            valsWritten++;
-          }
-
+        w.startColumn(c1, numTotalRecords, codec);
+        int valsPerPage = (int) Math.ceil(numTotalRecords / (float) ((int) fieldInfo[numPages]));
+        byte[] bytes;
+        if ((int) fieldInfo[bitLength] > 0) {
+          bytes = new byte[(int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0)];
+        } else {
+          // the twelve at the end is to account for storing a 4 byte length with each value
+          int totalValLength = ((byte[]) fieldInfo[val1]).length + ((byte[]) fieldInfo[val2]).length + ((byte[]) fieldInfo[val3]).length + 12;
+          bytes = new byte[(int) Math.ceil(valsPerPage / 3 * totalValLength)];
         }
-        w.writeDataPage((int)(numTotalRecords / (int) fieldInfo[numPages]), bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
-        currentBooleanByte = 0;
-      }
-      w.endColumn();
-    }
+        int bytesPerPage = (int) (valsPerPage * ((int) fieldInfo[bitLength] / 8.0));
+        int valsWritten = 0;
+        int bytesWritten = 0;
+        for (int z = 0; z < (int) fieldInfo[numPages]; z++) {
+          bytesWritten = 0;
+          valsWritten = 0;
+          for (int i = 0; i < valsPerPage; i++) {
+            //System.out.print(i + ", " + (i % 25 == 0 ? "\n gen " + fieldInfo[fieldName] + ": " : ""));
+            if (fieldInfo[val1] instanceof Boolean) {
 
-    w.endBlock();
+              bytes[currentBooleanByte] |= bitFields[booleanBitCounter.val] & ((boolean) fieldInfo[val1 + valsWritten % 3]
+                  ? allBitsTrue : allBitsFalse);
+              booleanBitCounter.increment();
+              if (booleanBitCounter.val == 0) {
+                currentBooleanByte++;
+              }
+              valsWritten++;
+              if (currentBooleanByte > bytesPerPage) break;
+            } else {
+              if (fieldInfo[val1 + valsWritten % 3] instanceof byte[]){
+                System.arraycopy(toByta(Integer.reverseBytes(((byte[])fieldInfo[val1 + valsWritten % 3]).length)),
+                    0, bytes, bytesWritten, 4);
+                System.arraycopy(fieldInfo[val1 + valsWritten % 3],
+                    0, bytes, bytesWritten + 4, ((byte[])fieldInfo[val1 + valsWritten % 3]).length);
+                bytesWritten += ((byte[])fieldInfo[val1 + valsWritten % 3]).length + 4;
+              }
+              else{
+                System.arraycopy( toByta(fieldInfo[val1 + valsWritten % 3]),
+                    0, bytes, i * ((int) fieldInfo[bitLength] / 8), (int) fieldInfo[bitLength] / 8);
+              }
+              valsWritten++;
+            }
+
+          }
+          w.writeDataPage((int)(numTotalRecords / (int) fieldInfo[numPages]), bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+          currentBooleanByte = 0;
+        }
+        w.endColumn();
+      }
+
+      w.endBlock();
+    }
     w.end(new HashMap<String, String>());
     logger.debug("Finished generating parquet file.");
   }

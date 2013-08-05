@@ -11,7 +11,7 @@
     "parquet" :
       {
         "type":"parquet",
-        "DFSname" : "test"
+        "DFSname" : "maprfs://10.10.30.52/"
       }
   },
   query:[
