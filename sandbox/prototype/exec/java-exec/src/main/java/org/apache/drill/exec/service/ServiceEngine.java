@@ -56,8 +56,7 @@ public class ServiceEngine implements Closeable{
     int userPort = userServer.bind(config.getInt(ExecConstants.INITIAL_USER_PORT));
     String address = useIP ?  InetAddress.getLocalHost().getHostAddress() : InetAddress.getLocalHost().getHostName();
     DrillbitEndpoint partialEndpoint = DrillbitEndpoint.newBuilder()
-        //.setAddress(address)
-        .setAddress("localhost")
+        .setAddress(address)
         .setUserPort(userPort)
         .build();
 

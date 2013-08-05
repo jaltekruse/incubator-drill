@@ -76,7 +76,8 @@ public class AffinityCalculator {
       for (Map.Entry<String,Long> hostEntry : hostMap.entrySet()) {
         String host = hostEntry.getKey();
         Long bytes = hostEntry.getValue();
-        ebs.put(getDrillBitEndpoint(host), bytes);
+        DrillbitEndpoint d = getDrillBitEndpoint(host);
+        if (d != null ) ebs.put(d, bytes);
       }
     } catch (NullPointerException n) {}
     entry.setEndpointBytes(ebs);
