@@ -23,6 +23,9 @@
       selection: [
         {
             path: "/tmp/testParquetFile_many_types"
+        },
+        {
+            path: "/tmp/testParquetFile_many_types"
         }
       ]
     },
