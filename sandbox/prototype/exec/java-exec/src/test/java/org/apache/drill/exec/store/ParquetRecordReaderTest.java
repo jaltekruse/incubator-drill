@@ -298,8 +298,8 @@ public class ParquetRecordReaderTest {
             if (VERBOSE_DEBUG){
               System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
             }
-//            assertField(vv, j, (TypeProtos.MinorType) fields[i][minorType],
-//                fields[i][val1 + columnValCounter % 3], (String) fields[i][fieldName] + "/");
+            assertField(vv, j, (TypeProtos.MinorType) fields[i][minorType],
+                fields[i][val1 + columnValCounter % 3], (String) fields[i][fieldName] + "/");
             columnValCounter++;
           }
           if (VERBOSE_DEBUG){

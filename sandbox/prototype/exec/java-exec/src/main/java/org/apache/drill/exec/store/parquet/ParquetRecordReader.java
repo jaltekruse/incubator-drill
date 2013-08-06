@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.parquet;
 import com.beust.jcommander.internal.Maps;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
+import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.ExpressionPosition;
@@ -325,12 +326,6 @@ public class ParquetRecordReader implements RecordReader {
     }
     currentSchema = builder.build();
 
-    ParquetFileReader parReader = null;
-    ParquetMetadata readFooter = null;
-    this.batchSize = batchSize;
-    this.footer = readFooter;
-    this.parquetReader = parReader;
-
     if (allFieldsFixedLength) {
       recordsPerBatch = (int) Math.min(batchSize / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
     }
@@ -363,7 +358,7 @@ public class ParquetRecordReader implements RecordReader {
       totalByteLength += crs.columnChunkMetaData.getTotalUncompressedSize();
     }
     try {
-
+      bufferWithAllData = allocator.buffer(totalByteLength);
       FileSystem fs = FileSystem.get(configuration);
       FSDataInputStream inputStream = fs.open(hadoopPath);
       bufferWithAllData.writeBytes(inputStream, (int) totalByteLength);
@@ -418,6 +413,7 @@ public class ParquetRecordReader implements RecordReader {
     newCol.isFixedLength = fixedLength;
     newCol.pageReadStatus = new PageReadStatus();
     newCol.pageReadStatus.parentColumnStatus = newCol;
+    newCol.readPositionInBuffer = Math.min(columnChunkMetaData.getFirstDataPageOffset(), columnChunkMetaData.getDictionaryPageOffset());
 
 //    ColumnReaderImpl columnReader = (ColumnReaderImpl) new ColumnReadStoreImpl(
 //        new ColumnChunkPageReadStore(totalRecords),
@@ -447,9 +443,9 @@ public class ParquetRecordReader implements RecordReader {
       if (!columnReadStatus.isFixedLength) {
         continue;
       }
-      if (columnReadStatus.pageReadStatus.pageReader == null) {
-        columnReadStatus.pageReadStatus.pageReader = currentRowGroup.getPageReader(columnReadStatus.columnDescriptor);
-      }
+//      if (columnReadStatus.pageReadStatus.pageReader == null) {
+//        columnReadStatus.pageReadStatus.pageReader = currentRowGroup.getPageReader(columnReadStatus.columnDescriptor);
+//      }
 
       do {
         // if no page has been read, or all of the records have been read out of a page, read the next one
@@ -471,7 +467,7 @@ public class ParquetRecordReader implements RecordReader {
         bytes = columnReadStatus.pageReadStatus.bytes;
         // standard read, using memory mapping
         if (columnReadStatus.pageReadStatus.bitShift == 0) {
-          ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).getData().writeBytes(columnReadStatus.inputStream, (int) readLength);
+          ((BaseDataValueVector)columnReadStatus.valueVecHolder.getValueVector()).getData().writeBytes(bytes);
         }
         else{ // read in individual values, because a bitshift is necessary with where the last page or batch ended
 
@@ -626,13 +622,13 @@ public class ParquetRecordReader implements RecordReader {
         // cannot find more information on this right now, will keep looking
       }
 
-      if (currentRowGroup == null ) {
-        //currentRowGroup = parquetReader.readNextRowGroup();
-        if (currentRowGroup == null) {
-          return 0;
-        }
-        currentRowGroupIndex++;
-      }
+//      if (currentRowGroup == null ) {
+//        //currentRowGroup = parquetReader.readNextRowGroup();
+//        if (currentRowGroup == null) {
+//          return 0;
+//        }
+//        currentRowGroupIndex++;
+//      }
 
         if (allFieldsFixedLength) {
           readAllFixedFields(recordsToRead, firstColumnStatus);
