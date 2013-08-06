@@ -239,6 +239,7 @@ public class ParquetRecordReader implements RecordReader {
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
     outputMutator = output;
+    outputMutator.removeAllFields();
     schema = footer.getFileMetaData().getSchema();
     currentRowGroupIndex = -1;
     columnStatuses = Maps.newHashMap();
