@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.parquet;
 
 import com.beust.jcommander.internal.Maps;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.ExpressionPosition;
@@ -48,15 +49,16 @@ import parquet.column.ColumnDescriptor;
 import parquet.column.ColumnReader;
 import parquet.column.ColumnWriter;
 import parquet.column.impl.ColumnReadStoreImpl;
-import parquet.column.impl.ColumnReaderImpl;
 import parquet.column.impl.ColumnWriteStoreImpl;
 import parquet.column.page.Page;
 import parquet.column.page.PageReadStore;
 import parquet.column.page.PageReader;
 import parquet.column.values.plain.PlainValuesReader;
 import parquet.example.DummyRecordConverter;
+import parquet.format.PageHeader;
 import parquet.format.Util;
-import parquet.hadoop.ColumnChunkPageReadStore;
+import parquet.format.converter.ParquetMetadataConverter;
+import parquet.hadoop.CodecFactory;
 import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
@@ -71,6 +73,7 @@ import java.util.Map;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static parquet.format.Util.readPageHeader;
 
 public class ParquetRecordReader implements RecordReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReader.class);
@@ -114,8 +117,8 @@ public class ParquetRecordReader implements RecordReader {
     // status information on the current page
     PageReadStatus pageReadStatus;
 
-    //THIS IS HOW WE NEE DOT BE READING EVERYTHING
-    ColumnReaderImpl columnReader;
+    long readPositionInBuffer;
+
     // quick reference to see if the field is fixed length (as this requires an instanceof)
     boolean isFixedLength;
     // counter for the total number of values read from one or more pages
@@ -141,32 +144,35 @@ public class ParquetRecordReader implements RecordReader {
   // TODO - not sure that this is needed, we have random access in the value vectors
   // data structure for maintaining the positions in the value vector of variable length values
   // allows for faster determination of a good cutoff point for a batch
-  private static final class ValueIndex {
-    // how frequently and index is stored
-    final int valuesPerIndex;
-    // an estimation of the average number of bytes a value takes, used to allocate space for the index
-    int dataValueLengthEstimate;
-    // the estimated percentage of a record this field takes up, for records with a single variable length column
-    // this is just dataValueLengthEstimate / (lengthAllFixedFeilds + dataValueLengthEstimate)
-    float percentageEstimate;
-    int[] index;
-
-    public ValueIndex(int valuesPerIndex, int dataValueLengthEstimate, float percentageEstimate) {
-      this.valuesPerIndex = valuesPerIndex;
-      this.dataValueLengthEstimate = dataValueLengthEstimate;
-      // based upon the total size of a vector, and the estimation of the size of this field
-      // create an array large enough to hold the expected number of indexes
-      index = new int[(int) (DEFAULT_BATCH_LENGTH_IN_BITS / 8 * percentageEstimate / valuesPerIndex)];
-    }
-
-    public void refactorIndex() {
-
-    }
-
-  }
+//  private static final class ValueIndex {
+//    // how frequently and index is stored
+//    final int valuesPerIndex;
+//    // an estimation of the average number of bytes a value takes, used to allocate space for the index
+//    int dataValueLengthEstimate;
+//    // the estimated percentage of a record this field takes up, for records with a single variable length column
+//    // this is just dataValueLengthEstimate / (lengthAllFixedFeilds + dataValueLengthEstimate)
+//    float percentageEstimate;
+//    int[] index;
+//
+//    public ValueIndex(int valuesPerIndex, int dataValueLengthEstimate, float percentageEstimate) {
+//      this.valuesPerIndex = valuesPerIndex;
+//      this.dataValueLengthEstimate = dataValueLengthEstimate;
+//      // based upon the total size of a vector, and the estimation of the size of this field
+//      // create an array large enough to hold the expected number of indexes
+//      index = new int[(int) (DEFAULT_BATCH_LENGTH_IN_BITS / 8 * percentageEstimate / valuesPerIndex)];
+//    }
+//
+//    public void refactorIndex() {
+//
+//    }
+//
+//  }
 
   // class to keep track of the read position of variable length columns
-  private static final class PageReadStatus {
+  private final class PageReadStatus {
+
+    ColumnReadStatus parentColumnStatus;
+
     // store references to the pages that have been uncompressed, but not copied to ValueVectors yet
     Page currentPage;
     // the bytes read from the current page
@@ -183,7 +189,28 @@ public class ParquetRecordReader implements RecordReader {
     int valuesRead;
 
     public boolean next() throws IOException {
-      currentPage = pageReader.readPage();
+
+      ByteBufInputStream f = new ByteBufInputStream(bufferWithAllData, (int) parentColumnStatus.readPositionInBuffer);
+      PageHeader pageHeader = readPageHeader(f);
+      Page compressedPage = new Page(
+          BytesInput.copy(BytesInput.from(f, pageHeader.compressed_page_size)),
+          pageHeader.data_page_header.num_values,
+          pageHeader.uncompressed_page_size,
+          parquetMetadataConverter.getEncoding(pageHeader.data_page_header.repetition_level_encoding),
+          parquetMetadataConverter.getEncoding(pageHeader.data_page_header.definition_level_encoding),
+          parquetMetadataConverter.getEncoding(pageHeader.data_page_header.encoding)
+      );
+      CodecFactory.BytesDecompressor decompressor = codecFactory.getDecompressor(parentColumnStatus.columnChunkMetaData.getCodec());
+
+      currentPage = new Page(
+          decompressor.decompress(compressedPage.getBytes(), compressedPage.getUncompressedSize()),
+          compressedPage.getValueCount(),
+          compressedPage.getUncompressedSize(),
+          compressedPage.getRlEncoding(),
+          compressedPage.getDlEncoding(),
+          compressedPage.getValueEncoding());
+
+      parentColumnStatus.readPositionInBuffer += pageHeader.uncompressed_page_size;
       if (currentPage == null) {
         return false;
       }
@@ -214,6 +241,8 @@ public class ParquetRecordReader implements RecordReader {
   Path hadoopPath;
   Configuration configuration;
   int rowGroupIndex;
+  private static ParquetMetadataConverter parquetMetadataConverter = new ParquetMetadataConverter();
+  private static CodecFactory codecFactory;
 
   public ParquetRecordReader(FragmentContext fragmentContext,
                              String path, int rowGroupIndex) throws ExecutionSetupException {
@@ -225,8 +254,8 @@ public class ParquetRecordReader implements RecordReader {
                              String path, int rowGroupIndex) throws ExecutionSetupException {
     this.allocator = fragmentContext.getAllocator();
 
-    Path hadoopPath = new Path(path);
-    Configuration configuration = new Configuration();
+    hadoopPath = new Path(path);
+    configuration = new Configuration();
     configuration.set("fs.default.name", "maprfs://10.10.30.52/");
     this.rowGroupIndex = rowGroupIndex;
   }
@@ -252,17 +281,18 @@ public class ParquetRecordReader implements RecordReader {
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
     outputMutator = output;
+    outputMutator.removeAllFields();
+    try {
+      footer = ParquetFileReader.readFooter(configuration, hadoopPath);
+    } catch (IOException e) {
+      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+    }
     schema = footer.getFileMetaData().getSchema();
     currentRowGroupIndex = -1;
     columnStatuses = Maps.newHashMap();
     currentRowGroup = null;
     fieldID = 0;
 
-    try {
-      footer = ParquetFileReader.readFooter(configuration, hadoopPath);
-    } catch (IOException e) {
-      e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-    }
     totalRecords = footer.getBlocks().get(rowGroupIndex).getRowCount();
 
     List<ColumnDescriptor> columns = schema.getColumns();
@@ -326,25 +356,20 @@ public class ParquetRecordReader implements RecordReader {
       e.printStackTrace();
     }
 
+
+    long offset = columnStatuses.values().iterator().next().columnChunkMetaData.getFirstDataPageOffset();
+    int totalByteLength = 0;
     for (ColumnReadStatus crs : columnStatuses.values()){
-      try {
+      totalByteLength += crs.columnChunkMetaData.getTotalUncompressedSize();
+    }
+    try {
 
-        FileSystem fs = FileSystem.get(configuration);
-        FSDataInputStream inputStream = fs.open(hadoopPath);
+      FileSystem fs = FileSystem.get(configuration);
+      FSDataInputStream inputStream = fs.open(hadoopPath);
+      bufferWithAllData.writeBytes(inputStream, (int) totalByteLength);
 
-        int totalWidthInBytes = (int)((bitWidthAllFixedFields / 8) * totalRecords);
-        bufferWithAllData = allocator.buffer(totalWidthInBytes);
-
-        parReader = new ParquetFileReader(configuration, hadoopPath,
-            Arrays.asList(readFooter.getBlocks().get(rowGroupIndex)), readFooter.getFileMetaData().getSchema().getColumns());
-
-        int recordsRead = 0;
-        while (recordsRead < columnChunkMetaData.getValueCount()){
-          bufferWithAllData.writeBytes(inputStream, Util.readPageHeader(inputStream).getData_page_header().crs.columnChunkMetaData.getFirstDataPageOffset());
-        }
-      } catch (IOException e) {
-        throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + hadoopPath.getName());
-      }
+    } catch (IOException e) {
+      throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + hadoopPath.getName());
     }
   }
 
@@ -392,6 +417,7 @@ public class ParquetRecordReader implements RecordReader {
     newCol.columnChunkMetaData = columnChunkMetaData;
     newCol.isFixedLength = fixedLength;
     newCol.pageReadStatus = new PageReadStatus();
+    newCol.pageReadStatus.parentColumnStatus = newCol;
 
 //    ColumnReaderImpl columnReader = (ColumnReaderImpl) new ColumnReadStoreImpl(
 //        new ColumnChunkPageReadStore(totalRecords),

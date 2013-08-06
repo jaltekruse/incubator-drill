@@ -70,9 +70,11 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = false;
+  private boolean VERBOSE_DEBUG = true;
 
-  long numTotalRecords = 80000000;
+  int numberRowGroups = 8;
+  long recordsPerRowGroup = 30000;
+  int numberOfFiles = 1;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
   WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -126,7 +128,7 @@ public class ParquetRecordReaderTest {
     CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
-    for (int k = 0; k < 1; k++){
+    for (int k = 0; k < numberRowGroups; k++){
       w.startBlock(1);
 
       for (Object[] fieldInfo : fields) {
@@ -134,8 +136,8 @@ public class ParquetRecordReaderTest {
         String[] path1 = {(String) fieldInfo[fieldName]};
         ColumnDescriptor c1 = schema.getColumnDescription(path1);
 
-        w.startColumn(c1, numTotalRecords, codec);
-        int valsPerPage = (int) Math.ceil(numTotalRecords / (float) ((int) fieldInfo[numPages]));
+        w.startColumn(c1, recordsPerRowGroup, codec);
+        int valsPerPage = (int) Math.ceil(recordsPerRowGroup / (float) ((int) fieldInfo[numPages]));
         byte[] bytes;
         if ((int) fieldInfo[bitLength] > 0) {
           bytes = new byte[(int) Math.ceil(valsPerPage * (int) fieldInfo[bitLength] / 8.0)];
@@ -178,7 +180,7 @@ public class ParquetRecordReaderTest {
             }
 
           }
-          w.writeDataPage((int)(numTotalRecords / (int) fieldInfo[numPages]), bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
+          w.writeDataPage((int)(recordsPerRowGroup / (int) fieldInfo[numPages]), bytes.length, BytesInput.from(bytes), PLAIN, PLAIN, PLAIN);
           currentBooleanByte = 0;
         }
         w.endColumn();
@@ -242,7 +244,7 @@ public class ParquetRecordReaderTest {
       batchCounter++;
     }
     for (MaterializedField f : valuesChecked.keySet()) {
-      assertEquals("Record count incorrect for column: " + f.getName(), numTotalRecords, (long) valuesChecked.get(f));
+      assertEquals("Record count incorrect for column: " + f.getName(), recordsPerRowGroup, (long) valuesChecked.get(f));
     }
   }
 
@@ -329,8 +331,9 @@ public class ParquetRecordReaderTest {
           }
         }
       }
+      numberOfFiles = 2;
       for (String s : valuesChecked.keySet()) {
-        assertEquals("Record count incorrect for column: " + s, numTotalRecords, (long) valuesChecked.get(s));
+        assertEquals("Record count incorrect for column: " + s, recordsPerRowGroup * numberRowGroups * numberOfFiles, (long) valuesChecked.get(s));
       }
     }
   }
@@ -362,6 +365,11 @@ public class ParquetRecordReaderTest {
     @Override
     public void addField(ValueVector vector) throws SchemaChangeException {
       addFields.add(vector);
+    }
+
+    @Override
+    public void removeAllFields() {
+      addFields.clear();
     }
 
     @Override
