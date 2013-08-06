@@ -22,7 +22,7 @@
       storageengine:"parquet",
       selection: [
         {
-            path: "/tmp/testParquetFile_many_types.small"
+            path: "/tmp/testParquetFile_many_types"
         }
       ]
     },

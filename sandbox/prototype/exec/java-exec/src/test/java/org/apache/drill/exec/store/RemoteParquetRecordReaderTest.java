@@ -69,7 +69,7 @@ import static parquet.column.Encoding.PLAIN;
 public class RemoteParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = true;
+  private boolean VERBOSE_DEBUG = false;
 
   long numTotalRecords = 3000000;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
@@ -189,7 +189,7 @@ public class RemoteParquetRecordReaderTest {
 
   @Test
   public void testParquetFullEngine() throws Exception{
-    generateParquetFile();
+    //generateParquetFile();
 
     DrillConfig config = DrillConfig.create();
 
