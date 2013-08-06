@@ -47,6 +47,8 @@ public class ParquetGroupScan extends AbstractGroupScan {
 
   @JsonIgnore
   private LinkedList<ParquetRowGroupScan.RowGroupReadEntry>[] mappings;
+  @JsonIgnore
+  private int mappingsPointer;
 
   private List<RowGroupInfo> rowGroupInfos;
 
@@ -63,7 +65,6 @@ public class ParquetGroupScan extends AbstractGroupScan {
   private FileSystem fs;
   private String fileName;
   private LinkedList<RowGroupInfo> rowGroups;
-// TODO we should not be using RowGroupInfo to construct ParquetScan, should we?
   @JsonCreator
   public ParquetGroupScan(@JsonProperty("entries") List<RowGroupInfo> rowGroupInfos,
                           @JsonProperty("storageengine") ParquetStorageEngineConfig storageEngineConfig,
@@ -120,7 +121,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
     public RowGroupInfo(@JsonProperty("path") String path, @JsonProperty("start") long start,
                         @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
       super(path, start, length);
-      rowGroupIndex = rowGroupIndex;
+      this.rowGroupIndex = rowGroupIndex;
     }
 
     @Override
@@ -164,17 +165,22 @@ public class ParquetGroupScan extends AbstractGroupScan {
 
   @Override
   public List<EndpointAffinity> getOperatorAffinity() {
-    LinkedList<EndpointAffinity> endpointAffinities = new LinkedList<>();
+    //LinkedList<EndpointAffinity> endpointAffinities = new LinkedList<>();
+    HashMap<DrillbitEndpoint,EndpointAffinity> endpointAffinitiesMap = new HashMap();
     for (RowGroupInfo entry : rowGroupInfos) {
       for (DrillbitEndpoint d : entry.getEndpointBytes().keySet()) {
         long bytes = entry.getEndpointBytes().get(d);
-        float affinity = bytes / totalBytes;
-        if (endpointAffinities.contains(d)) {
-          endpointAffinities.get(endpointAffinities.indexOf(d)).addAffinity(affinity);
+        float affinity = (float)bytes / (float)totalBytes;
+        if (endpointAffinitiesMap.containsKey(d)) {
+          endpointAffinitiesMap.get(d).addAffinity(affinity);
         } else {
-          endpointAffinities.add(new EndpointAffinity(d, affinity));
+          endpointAffinitiesMap.put(d, new EndpointAffinity(d, affinity));
         }
       }
+    }
+    LinkedList<EndpointAffinity> endpointAffinities = new LinkedList();
+    for (EndpointAffinity affinity : endpointAffinitiesMap.values()) {
+      endpointAffinities.add(affinity);
     }
     return endpointAffinities;
   }
@@ -197,32 +203,33 @@ public class ParquetGroupScan extends AbstractGroupScan {
     Collections.sort(rowGroupInfos, new ParquetReadEntryComparator());
     LinkedList<RowGroupInfo> unassigned = new LinkedList<>();
 
-    int maxEntries = (int) (rowGroupInfos.size() / endpoints.size() * 1.5);
+    int maxEntries = (int) ((float)rowGroupInfos.size() * 1.5 / endpoints.size());
 
     if (maxEntries < 1) maxEntries = 1;
 
-    int i =0;
     for(RowGroupInfo e : rowGroups) {
       boolean assigned = false;
-      for (int j = i; j < i + endpoints.size(); j++) {
+      for (int j = mappingsPointer; j < mappingsPointer + endpoints.size(); j++) {
         DrillbitEndpoint currentEndpoint = endpoints.get(j%endpoints.size());
-        if (assignAll ||
-                (e.getEndpointBytes().size() > 0 &&
-                (e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) &&
-                (mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) &&
-                e.getEndpointBytes().get(currentEndpoint) >= e.getMaxBytes() * requiredPercentage / 100)) {
-          LinkedList<ParquetRowGroupScan.RowGroupReadEntry> entries = mappings[j%endpoints.size()];
-          if(entries == null){
-            entries = new LinkedList<ParquetRowGroupScan.RowGroupReadEntry>();
-            mappings[j%endpoints.size()] = entries;
+        if (assignAll || e.getEndpointBytes().size() > 0) {
+          if (assignAll || e.getEndpointBytes().containsKey(currentEndpoint) || !mustContain) {
+            if (assignAll || mappings[j%endpoints.size()] == null || mappings[j%endpoints.size()].size() < maxEntries) {
+              if (assignAll || e.getEndpointBytes().get(currentEndpoint) != null && e.getEndpointBytes().get(currentEndpoint)  >= e.getMaxBytes() * requiredPercentage / 100) {
+                LinkedList<ParquetRowGroupScan.RowGroupReadEntry> entries = mappings[j%endpoints.size()];
+                if(entries == null){
+                  entries = new LinkedList<ParquetRowGroupScan.RowGroupReadEntry>();
+                  mappings[j%endpoints.size()] = entries;
+                }
+                entries.add(e.getRowGroupReadEntry());
+                assigned = true;
+                break;
+              }
+            }
           }
-          entries.add(e.getRowGroupReadEntry());
-          assigned = true;
-          break;
         }
       }
       if (!assigned) unassigned.add(e);
-      i++;
+      mappingsPointer++;
     }
     return unassigned;
   }
