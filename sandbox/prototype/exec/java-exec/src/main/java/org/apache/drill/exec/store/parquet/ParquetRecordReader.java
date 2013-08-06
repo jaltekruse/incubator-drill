@@ -203,7 +203,7 @@ public class ParquetRecordReader implements RecordReader {
 
     Path hadoopPath = new Path(path);
     Configuration configuration = new Configuration();
-    //configuration.set("fs.default.name", "maprfs://10.10.30.52/");
+    configuration.set("fs.default.name", "maprfs://10.10.30.52/");
     ParquetFileReader parReader = null;
     ParquetMetadata readFooter = null;
     try {

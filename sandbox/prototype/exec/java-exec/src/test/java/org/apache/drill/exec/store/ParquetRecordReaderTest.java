@@ -76,7 +76,7 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private boolean VERBOSE_DEBUG = true;
+  private boolean VERBOSE_DEBUG = false;
 
   int numberRowGroups = 8;
   long recordsPerRowGroup = 30000;
@@ -258,7 +258,7 @@ public class ParquetRecordReaderTest {
   public void testParquetFullEngine() throws Exception{
     RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
-    generateParquetFile();
+    //generateParquetFile();
 
     DrillConfig config = DrillConfig.create();
 
