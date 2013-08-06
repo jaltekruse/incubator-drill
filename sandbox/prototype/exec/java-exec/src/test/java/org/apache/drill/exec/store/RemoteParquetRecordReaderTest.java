@@ -303,6 +303,11 @@ public class RemoteParquetRecordReaderTest {
     }
 
     @Override
+    public void removeAllFields() {
+      addFields.clear();
+    }
+
+    @Override
     public void setNewSchema() throws SchemaChangeException {
     }
 
