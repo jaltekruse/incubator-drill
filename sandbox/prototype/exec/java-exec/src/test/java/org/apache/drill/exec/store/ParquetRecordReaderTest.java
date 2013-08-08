@@ -80,12 +80,11 @@ public class ParquetRecordReaderTest {
 
   @Test
   public void testMultipleRowGroupsAndReads() throws Exception {
-    testParquetFullEngine(false, "/parquet_scan_screen.json", "/tmp/testParquetFile_many_types_3", 2);
+    testParquetFullEngine(true, "/parquet_scan_screen.json", "/tmp/testParquetFile_many_types_3", 1);
   }
 
   int numberRowGroups = 8;
   long recordsPerRowGroup = 5000;
-  int numberOfFiles = 1;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
   WrapAroundCounter booleanBitCounter = new WrapAroundCounter(7);
@@ -326,7 +325,7 @@ public class ParquetRecordReaderTest {
           valuesChecked.put(vv.getField().getName(), columnValCounter);
         }
 
-        if (VERBOSE_DEBUG){
+        if (false && VERBOSE_DEBUG){
           for (i = 1; i < batchLoader.getRecordCount(); i++) {
             recordCount++;
             if (i % 50 == 0){
@@ -349,9 +348,8 @@ public class ParquetRecordReaderTest {
         }
         batchCounter++;
       }
-      numberOfFiles = 2;
       for (String s : valuesChecked.keySet()) {
-        assertEquals("Record count incorrect for column: " + s, recordsPerRowGroup * numberRowGroups * numberOfFiles, (long) valuesChecked.get(s));
+        assertEquals("Record count incorrect for column: " + s, recordsPerRowGroup * numberRowGroups * numberOfTimesRead, (long) valuesChecked.get(s));
       }
     }
   }

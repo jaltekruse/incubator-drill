@@ -91,6 +91,8 @@ public class ParquetRecordReader implements RecordReader {
 
   long totalRecords;
 
+  long rowGroupOffset;
+
 
   // used for clearing the last n bits of a byte
   private byte[] endBitMasks = {-2, -4, -8, -16, -32, -64, -128};
@@ -158,8 +160,14 @@ public class ParquetRecordReader implements RecordReader {
 
     public boolean next() throws IOException {
 
-      if (parentColumnStatus.readPositionInBuffer == parentColumnStatus.columnChunkMetaData.getFirstDataPageOffset() + parentColumnStatus.columnChunkMetaData.getTotalSize()){
-        return false;
+      if (rowGroupIndex == 0){
+        if (parentColumnStatus.readPositionInBuffer == parentColumnStatus.columnChunkMetaData.getFirstDataPageOffset() + parentColumnStatus.columnChunkMetaData.getTotalSize()){
+          return false;
+        }
+      } else {
+        if (parentColumnStatus.readPositionInBuffer + 4 == parentColumnStatus.columnChunkMetaData.getFirstDataPageOffset() + parentColumnStatus.columnChunkMetaData.getTotalSize()){
+          return false;
+        }
       }
       ByteBufInputStream f = new ByteBufInputStream(bufferWithAllData.slice((int) parentColumnStatus.readPositionInBuffer, 500));
       int before = f.available();
@@ -263,7 +271,7 @@ public class ParquetRecordReader implements RecordReader {
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
     outputMutator = output;
-    //outputMutator.removeAllFields();
+    outputMutator.removeAllFields();
 
     FileSystem fs = null;
     try {
@@ -308,6 +316,7 @@ public class ParquetRecordReader implements RecordReader {
       builder.addField(field);
     }
     currentSchema = builder.build();
+    rowGroupOffset = footer.getBlocks().get(0).getColumns().get(0).getFirstDataPageOffset();
 
     if (allFieldsFixedLength) {
       recordsPerBatch = (int) Math.min(batchSize / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
@@ -334,9 +343,13 @@ public class ParquetRecordReader implements RecordReader {
       e.printStackTrace();
     }
 
-    int totalByteLength = 4;
+    int totalByteLength = 0;
+    long start = 0;
     if (rowGroupIndex == 0){
       totalByteLength = 4;
+    }
+    else{
+      start = footer.getBlocks().get(rowGroupIndex).getColumns().get(0).getFirstDataPageOffset();
     }
     for (ColumnReadStatus crs : columnStatuses.values()){
       totalByteLength += crs.columnChunkMetaData.getTotalSize();
@@ -348,6 +361,7 @@ public class ParquetRecordReader implements RecordReader {
     try {
       bufferWithAllData = allocator.buffer(totalByteLength);
       FSDataInputStream inputStream = fs.open(hadoopPath);
+      inputStream.seek(start);
       while (totalBytesWritten < totalByteLength){
         validBytesInCurrentBuffer = (int) Math.min(bufferSize, totalByteLength - totalBytesWritten);
         inputStream.read(buffer, 0 , validBytesInCurrentBuffer);
@@ -403,17 +417,21 @@ public class ParquetRecordReader implements RecordReader {
     newCol.columnDescriptor = descriptor;
     newCol.columnChunkMetaData = columnChunkMetaData;
     newCol.isFixedLength = fixedLength;
+
     newCol.pageReadStatus = new PageReadStatus();
     newCol.pageReadStatus.parentColumnStatus = newCol;
-    newCol.readPositionInBuffer = columnChunkMetaData.getFirstDataPageOffset();
+    if (rowGroupIndex != 0){
+      newCol.readPositionInBuffer = columnChunkMetaData.getFirstDataPageOffset() - rowGroupOffset;
+    }
+    else{
+      newCol.readPositionInBuffer = columnChunkMetaData.getFirstDataPageOffset();
+    }
 
     if (newCol.columnDescriptor.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
       newCol.dataTypeLengthInBits = getTypeLengthInBytes(newCol.columnDescriptor.getType());
     }
     columnStatuses.put(field.getName(), newCol);
-    if (! outputMutator.containsField(field)){
-      outputMutator.addField(v);
-    }
+    outputMutator.addField(v);
     return true;
   }
 
