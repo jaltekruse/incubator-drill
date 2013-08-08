@@ -102,12 +102,12 @@ class RpcEncoder extends MessageToMessageEncoder<OutboundRpcMessage>{
         cos.writeRawVarint32(RAW_BODY_TAG);
         cos.writeRawVarint32(rawBodyLength);
         cos.flush(); // need to flush so that dbody goes after if cos is caching.
-        
+
         out.add(buf);
         for(ByteBuf b : msg.dBodies){
           out.add(b);
         }
-        
+
       }else{
         cos.flush();
         out.add(buf);

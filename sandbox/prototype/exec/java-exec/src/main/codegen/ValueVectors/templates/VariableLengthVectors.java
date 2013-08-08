@@ -20,11 +20,9 @@ import org.apache.drill.exec.proto.UserBitShared.FieldMetadata;
 import org.apache.drill.exec.record.DeadBuf;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.TransferPair;
-import org.mortbay.jetty.servlet.Holder;
 
 import com.google.common.base.Charsets;
 
-import antlr.collections.impl.Vector;
 
 /**
  * ${minor.class}Vector implements a vector of variable width values.  Elements in the vector
@@ -195,6 +193,10 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     
     public int getValueCount() {
       return valueCount;
+    }
+
+    public UInt${type.width}Vector getOffsetVector(){
+      return offsetVector;
     }
   }
   

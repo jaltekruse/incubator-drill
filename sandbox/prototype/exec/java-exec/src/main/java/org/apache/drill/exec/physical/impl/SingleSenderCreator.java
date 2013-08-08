@@ -54,6 +54,7 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
     
     public SingleSenderRootExec(FragmentContext context, RecordBatch batch, SingleSender config){
       this.incoming = batch;
+      assert(incoming != null);
       this.handle = context.getHandle();
       this.recMajor = config.getOppositeMajorFragmentId();
       this.tunnel = context.getCommunicator().getTunnel(config.getDestination());

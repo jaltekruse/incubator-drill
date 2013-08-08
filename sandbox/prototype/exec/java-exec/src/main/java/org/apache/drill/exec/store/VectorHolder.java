@@ -28,7 +28,7 @@ public class VectorHolder {
     private ValueVector.Mutator mutator;
     private int currentLength;
 
-    VectorHolder(int length, ValueVector vector) {
+    public VectorHolder(int length, ValueVector vector) {
         this.length = length;
         this.vector = vector;
         this.mutator = vector.getMutator();
