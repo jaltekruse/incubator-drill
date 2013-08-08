@@ -26,4 +26,5 @@ public interface OutputMutator {
   public void addField(ValueVector vector) throws SchemaChangeException ;
   public void removeAllFields();
   public void setNewSchema() throws SchemaChangeException;
+  public boolean containsField(MaterializedField field);
 }

@@ -120,7 +120,7 @@ public class BasicOptimizer extends Optimizer{
             "Error reading selection attribute of GroupScan node in Logical to Physical plan conversion.");
       } catch (SetupException e) {
         throw new OptimizerException(
-            "Storage engine not found: " + scan.getStorageEngine());
+            "Storage engine not found: " + scan.getStorageEngine(), e);
       }
 
       return new MockGroupScanPOP("http://apache.org", myObjects);

@@ -111,12 +111,15 @@ public class ParquetGroupScan extends AbstractGroupScan {
     private HashMap<DrillbitEndpoint,Long> endpointBytes;
     private long maxBytes;
     private int rowGroupIndex;
+    private String DFSname;
 
     @JsonCreator
     public RowGroupInfo(@JsonProperty("path") String path, @JsonProperty("start") long start,
-                        @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
+                        @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex,
+                        @JsonProperty("DFSname") String DFSname) {
       super(path, start, length);
-      rowGroupIndex = rowGroupIndex;
+      this.rowGroupIndex = rowGroupIndex;
+      this.DFSname = DFSname;
     }
 
     @Override
@@ -147,7 +150,11 @@ public class ParquetGroupScan extends AbstractGroupScan {
     }
 
     public ParquetRowGroupScan.RowGroupReadEntry getRowGroupReadEntry() {
-      return new ParquetRowGroupScan.RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex);
+      return new ParquetRowGroupScan.RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex, this.getDFSname());
+    }
+
+    public String getDFSname() {
+      return DFSname;
     }
   }
 

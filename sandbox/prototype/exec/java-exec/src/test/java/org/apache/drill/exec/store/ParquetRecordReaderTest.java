@@ -32,12 +32,14 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
+
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
+
 import org.apache.drill.exec.store.parquet.ParquetRecordReader;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
@@ -50,6 +52,9 @@ import parquet.column.page.Page;
 import parquet.column.page.PageReadStore;
 import parquet.column.page.PageReader;
 import parquet.hadoop.Footer;
+
+import parquet.hadoop.ParquetFileReader;
+
 import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.hadoop.metadata.ParquetMetadata;
@@ -67,13 +72,19 @@ import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static parquet.column.Encoding.PLAIN;
 
+
 public class ParquetRecordReaderTest {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
   private boolean VERBOSE_DEBUG = true;
 
+  @Test
+  public void testMultipleRowGroupsAndReads() throws Exception {
+    testParquetFullEngine(false, "/parquet_scan_screen.json", "/tmp/testParquetFile_many_types_3", 2);
+  }
+
   int numberRowGroups = 8;
-  long recordsPerRowGroup = 30000;
+  long recordsPerRowGroup = 5000;
   int numberOfFiles = 1;
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
@@ -89,10 +100,10 @@ public class ParquetRecordReaderTest {
   int schemaType = 0, fieldName = 1, bitLength = 2, numPages = 3, val1 = 4, val2 = 5, val3 = 6, minorType = 7;
   // format: type, field name, uncompressed size in bits, number of pages, value1, value2, value3
   Object[][] fields = {
-      {"int32", "integer", 32, 8, -200, 100, Integer.MAX_VALUE, TypeProtos.MinorType.INT},
-      {"int64", "bigInt", 64, 4, -5000l, 5000l, Long.MAX_VALUE, TypeProtos.MinorType.BIGINT},
-      {"float", "f", 32, 8, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, TypeProtos.MinorType.FLOAT4},
-      {"double", "d", 64, 4, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, TypeProtos.MinorType.FLOAT8},
+      {"int32", "integer", 32, 4, -200, 100, Integer.MAX_VALUE, TypeProtos.MinorType.INT},
+      {"int64", "bigInt", 64, 8, -5000l, 5000l, Long.MAX_VALUE, TypeProtos.MinorType.BIGINT},
+      {"float", "f", 32, 4, 1.74f, Float.MAX_VALUE, Float.MIN_VALUE, TypeProtos.MinorType.FLOAT4},
+      {"double", "d", 64, 8, 100.45d, Double.MAX_VALUE, Double.MIN_VALUE, TypeProtos.MinorType.FLOAT8},
 //        {"boolean", "b", 1, 2, false, false, true, TypeProtos.MinorType.BOOLEAN}
 //        {"binary", "bin", -1, 2, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4},
 //        {"binary", "bin2", -1, 4, varLen1, varLen2, varLen3, TypeProtos.MinorType.VARBINARY4}
@@ -103,8 +114,8 @@ public class ParquetRecordReaderTest {
     return "resource:" + resourceName;
   }
 
-  public void generateParquetFile() throws Exception {
-    File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
+  public void generateParquetFile(String filename) throws Exception {
+    File testFile = new File(filename).getAbsoluteFile();
     System.out.println(testFile.toPath().toString());
     testFile.delete();
 
@@ -128,10 +139,19 @@ public class ParquetRecordReaderTest {
     CompressionCodecName codec = CompressionCodecName.UNCOMPRESSED;
     ParquetFileWriter w = new ParquetFileWriter(configuration, schema, path);
     w.start();
+    HashMap<String, Integer> columnValuesWritten = new HashMap();
+    int valsWritten;
     for (int k = 0; k < numberRowGroups; k++){
       w.startBlock(1);
 
       for (Object[] fieldInfo : fields) {
+
+        if ( ! columnValuesWritten.containsKey(fieldInfo[fieldName])){
+          columnValuesWritten.put((String) fieldInfo[fieldName], 0);
+          valsWritten = 0;
+        } else {
+          valsWritten = columnValuesWritten.get(fieldInfo[fieldName]);
+        }
 
         String[] path1 = {(String) fieldInfo[fieldName]};
         ColumnDescriptor c1 = schema.getColumnDescription(path1);
@@ -147,11 +167,8 @@ public class ParquetRecordReaderTest {
           bytes = new byte[(int) Math.ceil(valsPerPage / 3 * totalValLength)];
         }
         int bytesPerPage = (int) (valsPerPage * ((int) fieldInfo[bitLength] / 8.0));
-        int valsWritten = 0;
         int bytesWritten = 0;
-        for (int z = 0; z < (int) fieldInfo[numPages]; z++) {
-          bytesWritten = 0;
-          valsWritten = 0;
+        for (int z = 0; z < (int) fieldInfo[numPages]; z++, bytesWritten = 0) {
           for (int i = 0; i < valsPerPage; i++) {
             //System.out.print(i + ", " + (i % 25 == 0 ? "\n gen " + fieldInfo[fieldName] + ": " : ""));
             if (fieldInfo[val1] instanceof Boolean) {
@@ -184,6 +201,8 @@ public class ParquetRecordReaderTest {
           currentBooleanByte = 0;
         }
         w.endColumn();
+        columnValuesWritten.remove((String) fieldInfo[fieldName]);
+        columnValuesWritten.put((String) fieldInfo[fieldName], valsWritten);
       }
 
       w.endBlock();
@@ -201,14 +220,14 @@ public class ParquetRecordReaderTest {
         returns(new DirectBufferAllocator());
       }
     };
-    generateParquetFile();
+    generateParquetFile("/tmp/testParquetFile_many_types_2");
 
     File testFile = new File("/tmp/testParquetFile_many_types").getAbsoluteFile();
 
     Path path = new Path(testFile.toURI());
     Configuration configuration = new Configuration();
 
-    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types", 0);
+    ParquetRecordReader pr = new ParquetRecordReader(context,"/tmp/testParquetFile_many_types", 0, "file:///");
 
     MockOutputMutator mutator = new MockOutputMutator();
     List<ValueVector> addFields = mutator.getAddFields();
@@ -249,19 +268,17 @@ public class ParquetRecordReaderTest {
   }
 
   @Test
-  public void testParquetFullEngine() throws Exception{
+  public void testParquetFullEngine(boolean generateNew, String plan, String filename, int numberOfTimesRead /* specified in json plan */) throws Exception{
     RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
-    //generateParquetFile();
+    if (generateNew) generateParquetFile(filename);
 
     DrillConfig config = DrillConfig.create();
-
-    LogicalPlan.parse(config , Files.toString(FileUtils.getResourceAsFile("/parquet_scan_screen.json"), Charsets.UTF_8));
 
     try(Drillbit bit1 = new Drillbit(config, serviceSet); DrillClient client = new DrillClient(config, serviceSet.getCoordinator());){
       bit1.run();
       client.connect();
-      List<QueryResultBatch> results = client.runQuery(UserProtos.QueryType.LOGICAL, Files.toString(FileUtils.getResourceAsFile("/parquet_scan_screen.json"), Charsets.UTF_8));
+      List<QueryResultBatch> results = client.runQuery(UserProtos.QueryType.LOGICAL, Files.toString(FileUtils.getResourceAsFile(plan), Charsets.UTF_8));
       int count = 0;
       RecordBatchLoader batchLoader = new RecordBatchLoader(bit1.getContext().getAllocator());
       byte[] bytes;
@@ -330,6 +347,7 @@ public class ParquetRecordReaderTest {
             );
           }
         }
+        batchCounter++;
       }
       numberOfFiles = 2;
       for (String s : valuesChecked.keySet()) {
@@ -374,6 +392,11 @@ public class ParquetRecordReaderTest {
 
     @Override
     public void setNewSchema() throws SchemaChangeException {
+    }
+
+    @Override
+    public boolean containsField(MaterializedField field) {
+      throw new UnsupportedOperationException();
     }
 
     List<MaterializedField> getRemovedFields() {

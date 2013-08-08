@@ -42,15 +42,14 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   private List<RowGroupReadEntry> rowGroupReadEntries;
 
   @JsonCreator
-  public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry, @JsonProperty StorageEngineConfig engineConfig,
-                             @JsonProperty LinkedList<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
+  public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry, @JsonProperty("engine-config") StorageEngineConfig engineConfig,
+                             @JsonProperty("read-entries") LinkedList<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
     parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
     this.rowGroupReadEntries = rowGroupReadEntries;
   }
 
-  @JsonCreator
-  public ParquetRowGroupScan(@JsonProperty ParquetStorageEngine engine, @JsonProperty ParquetStorageEngineConfig config,
-                             @JsonProperty List<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
+  public ParquetRowGroupScan( ParquetStorageEngine engine, ParquetStorageEngineConfig config,
+                              List<RowGroupReadEntry> rowGroupReadEntries) throws SetupException {
     parquetStorageEngine = engine;
     engineCofig = config;
     this.rowGroupReadEntries = rowGroupReadEntries;
@@ -100,11 +99,14 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   public static class RowGroupReadEntry extends ReadEntryFromHDFS {
 
     private int rowGroupIndex;
+    private String DFSname;
 
     @parquet.org.codehaus.jackson.annotate.JsonCreator
     public RowGroupReadEntry(@JsonProperty("path") String path, @JsonProperty("start") long start,
-                             @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
+                             @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex,
+                             @JsonProperty("DFSname") String DFSname) {
       super(path, start, length);
+      this.DFSname = DFSname;
       this.rowGroupIndex = rowGroupIndex;
     }
 
@@ -121,11 +123,15 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
 
     @JsonIgnore
     public RowGroupReadEntry getRowGroupReadEntry() {
-      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex);
+      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex, this.getDFSname());
     }
 
     public int getRowGroupIndex(){
       return rowGroupIndex;
+    }
+
+    public String getDFSname() {
+      return DFSname;
     }
   }
 

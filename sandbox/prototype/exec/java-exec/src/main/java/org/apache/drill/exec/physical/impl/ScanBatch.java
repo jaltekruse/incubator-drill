@@ -172,6 +172,11 @@ public class ScanBatch implements RecordBatch {
       ScanBatch.this.schemaChanged = true;
     }
 
+    @Override
+    public boolean containsField(MaterializedField field) {
+      return fieldVectorMap.containsKey(field);
+    }
+
   }
 
   @Override

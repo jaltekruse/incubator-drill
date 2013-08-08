@@ -60,7 +60,9 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
       conf = new Configuration();
       conf.set("fs.default.name", configuration.getDFSname());
       this.fs = FileSystem.get(conf);
-    } catch (IOException ie) { /*TODO handle this */}
+    } catch (IOException ie) {
+      ie.printStackTrace();
+    }
   }
 
   public FileSystem getFileSystem() {
@@ -103,7 +105,7 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
         for (ColumnChunkMetaData col : rowGroup.getColumns()){
           length += col.getTotalSize();
         }
-        pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, length, i));
+        pReadEnties.add(new ParquetGroupScan.RowGroupInfo(readEntryWithPath.getPath(), start, length, i, configuration.getDFSname()));
         i++;
       }
 

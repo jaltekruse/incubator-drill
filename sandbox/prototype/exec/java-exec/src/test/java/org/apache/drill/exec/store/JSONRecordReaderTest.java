@@ -59,6 +59,11 @@ public class JSONRecordReaderTest {
     public void setNewSchema() throws SchemaChangeException {
     }
 
+    @Override
+    public boolean containsField(MaterializedField field) {
+      throw new UnsupportedOperationException();
+    }
+
     List<MaterializedField> getRemovedFields() {
       return removedFields;
     }
