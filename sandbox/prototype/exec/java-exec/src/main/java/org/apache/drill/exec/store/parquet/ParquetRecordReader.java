@@ -29,6 +29,7 @@ import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
+import org.apache.drill.exec.proto.SchemaDefProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.vector.ValueVector;
@@ -256,7 +257,17 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   private static String toFieldName(String[] paths) {
-    return join(SEPERATOR, paths);
+    StringBuilder sb = new StringBuilder();
+    boolean first = true;
+    for(String np : paths){
+      if(first){
+        first = false;
+      }else{
+        sb.append(".");
+      }
+      sb.append(np);
+    }
+    return sb.toString();
   }
 
   private TypeProtos.DataMode getDataMode(ColumnDescriptor column) {

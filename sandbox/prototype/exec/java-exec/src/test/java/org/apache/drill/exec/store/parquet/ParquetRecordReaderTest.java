@@ -80,13 +80,13 @@ public class ParquetRecordReaderTest {
     File f = new File(fileName);
     if(!f.exists()) TestFileGenerator.generateParquetFile(fileName, numberRowGroups, recordsPerRowGroup);
   }
- 
+
   @Test
   public void testMultipleRowGroupsAndReads() throws Exception {
     String planName = "/parquet/parquet_scan_screen.json";
     testParquetFullEngineLocalPath(planName, fileName, 2, numberRowGroups, recordsPerRowGroup);
   }
-  
+
   @Test
   public void testMultipleRowGroupsAndReads2() throws Exception {
     String readEntries;
@@ -124,7 +124,7 @@ public class ParquetRecordReaderTest {
     private final HashMap<String, Long> valuesChecked = new HashMap<>();
     private final Map<String, FieldInfo> fields;
     private final long totalRecords;
-    
+
     ParquetResultListener(int recordsPerRowGroup, RecordBatchLoader batchLoader, int numberRowGroups, int numberOfTimesRead){
       this.batchLoader = batchLoader;
       this.fields = TestFileGenerator.getFieldMap(recordsPerRowGroup);
@@ -184,8 +184,8 @@ public class ParquetRecordReaderTest {
         valuesChecked.remove(vv.getField().getName());
         valuesChecked.put(vv.getField().getName(), columnValCounter);
       }
-      
-      
+
+
       if (VERBOSE_DEBUG){
         for (i = 0; i < batchLoader.getRecordCount(); i++) {
           if (i % 50 == 0){
@@ -212,7 +212,7 @@ public class ParquetRecordReaderTest {
         vw.release();
       }
       result.release();
-      
+
       batchCounter++;
       if(result.getHeader().getIsLastChunk()){
         for (String s : valuesChecked.keySet()) {
@@ -220,7 +220,7 @@ public class ParquetRecordReaderTest {
           assertEquals("Record count incorrect for column: " + s, totalRecords, (long) valuesChecked.get(s));
           } catch (AssertionError e) { submissionFailed(new RpcException(e)); }
         }
-        
+
         assert valuesChecked.keySet().size() > 0;
         future.set(null);
       }
@@ -236,11 +236,11 @@ public class ParquetRecordReaderTest {
     }
   }
 
-  
-  
-  
+
+
+
   public void testParquetFullEngineRemote(String plan, String filename, int numberOfTimesRead /* specified in json plan */, int numberOfRowGroups, int recordsPerRowGroup) throws Exception{
-    
+
     DrillConfig config = DrillConfig.create();
 
     checkValues = false;
@@ -252,17 +252,17 @@ public class ParquetRecordReaderTest {
       client.runQuery(UserProtos.QueryType.PHYSICAL, Files.toString(FileUtils.getResourceAsFile(plan), Charsets.UTF_8), resultListener);
       resultListener.get();
     }
-    
+
   }
-  
-  
+
+
   public void testParquetFullEngineLocalPath(String planFileName, String filename, int numberOfTimesRead /* specified in json plan */, int numberOfRowGroups, int recordsPerRowGroup) throws Exception{
     testParquetFullEngineLocalText(Files.toString(FileUtils.getResourceAsFile(planFileName), Charsets.UTF_8), filename, numberOfTimesRead, numberOfRowGroups, recordsPerRowGroup);
   }
-  
+
   //specific tests should call this method, but it is not marked as a test itself intentionally
   public void testParquetFullEngineLocalText(String planText, String filename, int numberOfTimesRead /* specified in json plan */, int numberOfRowGroups, int recordsPerRowGroup) throws Exception{
-    
+
     RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
 
     DrillConfig config = DrillConfig.create();
@@ -278,7 +278,7 @@ public class ParquetRecordReaderTest {
       System.out.println(String.format("Took %d ms to run query", watch.elapsed(TimeUnit.MILLISECONDS)));
 
     }
-    
+
   }
 
 
@@ -362,7 +362,7 @@ public class ParquetRecordReaderTest {
     if (expectedMinorType == TypeProtos.MinorType.MAP) {
       return;
     }
-    
+
     T val = (T) valueVector.getAccessor().getObject(index);
     if (val instanceof byte[]) {
       assertTrue(Arrays.equals((byte[]) value, (byte[]) val));
@@ -385,8 +385,8 @@ public class ParquetRecordReaderTest {
       assertEquals(footer.getFile().getName(), keyValueMetaData.get(footer.getFile().getName()));
     }
   }
-  
-  
+
+
   private void validateContains(MessageType schema, PageReadStore pages, String[] path, int values, BytesInput bytes)
       throws IOException {
     PageReader pageReader = pages.getPageReader(schema.getColumnDescription(path));
@@ -396,5 +396,5 @@ public class ParquetRecordReaderTest {
   }
 
 
-  
+
 }
