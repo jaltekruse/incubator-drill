@@ -1,3 +1,7 @@
+import org.apache.drill.exec.vector.NullableVectorDefinitionSetter;
+
+import java.lang.UnsupportedOperationException;
+
 <@pp.dropOutputFile />
 <#list vv.types as type>
 <#list type.minor as minor>
@@ -54,6 +58,10 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
   
   public int getBufferSize(){
     return values.getBufferSize() + bits.getBufferSize();
+  }
+
+  public ByteBuf getData(){
+    return values.getData();
   }
 
   <#if type.major == "VarLen">
@@ -241,11 +249,15 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
     public void reset(){}
   }
   
-  public final class Mutator implements ValueVector.Mutator{
+  public final class Mutator implements ValueVector.Mutator, NullableVectorDefinitionSetter{
     
     private int setCount;
     
     private Mutator(){
+    }
+
+    public void setIndexDefined(int index){
+      bits.getMutator().set(index, 1);
     }
 
     /**
