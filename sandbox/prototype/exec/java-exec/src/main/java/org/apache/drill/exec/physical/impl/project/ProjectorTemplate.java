@@ -2,8 +2,6 @@ package org.apache.drill.exec.physical.impl.project;
 
 import java.util.List;
 
-import javax.inject.Named;
-
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
@@ -13,6 +11,8 @@ import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 
 import com.google.common.collect.ImmutableList;
+
+import javax.inject.Named;
 
 public abstract class ProjectorTemplate implements Projector {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProjectorTemplate.class);

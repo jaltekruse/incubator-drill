@@ -39,6 +39,8 @@ import org.apache.drill.exec.physical.config.StreamingAggregate;
 import org.apache.drill.exec.physical.config.Union;
 import org.apache.drill.exec.physical.impl.aggregate.AggBatchCreator;
 import org.apache.drill.exec.physical.config.Union;
+import org.apache.drill.exec.physical.base.*;
+import org.apache.drill.exec.physical.config.*;
 import org.apache.drill.exec.physical.impl.filter.FilterBatchCreator;
 import org.apache.drill.exec.physical.impl.join.MergeJoinCreator;
 import org.apache.drill.exec.physical.impl.partitionsender.PartitionSenderCreator;
@@ -56,6 +58,9 @@ import org.apache.drill.exec.store.parquet.ParquetScanBatchCreator;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import org.apache.drill.exec.store.parquet.ParquetGroupScan;
+import org.apache.drill.exec.store.parquet.ParquetRowGroupScan;
+import org.apache.drill.exec.store.parquet.ParquetScanBatchCreator;
 
 /**
  * Implementation of the physical operator visitor
@@ -78,9 +83,9 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   private AggBatchCreator abc = new AggBatchCreator();
   private MergeJoinCreator mjc = new MergeJoinCreator();
   private RootExec root = null;
-  
+
   private ImplCreator(){}
-  
+
   public RootExec getRoot(){
     return root;
   }

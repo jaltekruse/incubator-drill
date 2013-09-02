@@ -103,7 +103,7 @@ public class BasicOptimizer extends Optimizer{
       this.logicalPlan = logicalPlan;
     }
 
-    
+
 
     @Override
     public PhysicalOperator visitSegment(Segment segment, Object value) throws OptimizerException {
@@ -136,10 +136,10 @@ public class BasicOptimizer extends Optimizer{
       if(!agg.getWithin().equals(segment.getName())){
         throw new OptimizerException(String.format("Currently, Drill only supports CollapsingAggregate immediately preceded by a Segment where the CollapsingAggregate works on the defined segments.  In this case, the segment has been defined based on the name %s but the collapsing aggregate is working within the field %s.", segment.getName(), agg.getWithin()));
       }
-      
+
       // a collapsing aggregate is a currently implemented as a sort followed by a streaming aggregate.
       List<OrderDef> orderDefs = Lists.newArrayList();
-      
+
       List<NamedExpression> keys = Lists.newArrayList();
       for(LogicalExpression e : segment.getExprs()){
         if( !(e instanceof SchemaPath)) throw new OptimizerException("The basic optimizer doesn't currently support collapsing aggregate where the segment value is something other than a SchemaPath.");
@@ -147,7 +147,7 @@ public class BasicOptimizer extends Optimizer{
         orderDefs.add(new OrderDef(Direction.ASC, e));
       }
       Sort sort = new Sort(segment.getInput().accept(this, value), orderDefs, false);
-      
+
       StreamingAggregate sa = new StreamingAggregate(sort, keys.toArray(new NamedExpression[keys.size()]), agg.getAggregations(), 1.0f);
       SelectionVectorRemover svm = new SelectionVectorRemover(sa);
       return svm;
@@ -164,7 +164,7 @@ public class BasicOptimizer extends Optimizer{
       }
       leftOp = new Sort(leftOp, leftOrderDefs, false);
       leftOp = new SelectionVectorRemover(leftOp);
-      
+
       PhysicalOperator rightOp = join.getRight().accept(this, value);
       List<OrderDef> rightOrderDefs = Lists.newArrayList();
       for(JoinCondition jc : join.getConditions()){
@@ -172,7 +172,7 @@ public class BasicOptimizer extends Optimizer{
       }
       rightOp = new Sort(rightOp, rightOrderDefs, false);
       rightOp = new SelectionVectorRemover(rightOp);
-      
+
       MergeJoinPOP mjp = new MergeJoinPOP(leftOp, rightOp, Arrays.asList(join.getConditions()));
       return new SelectionVectorRemover(mjp);
     }

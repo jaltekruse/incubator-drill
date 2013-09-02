@@ -55,7 +55,5 @@ public class FragmentWritableBatch{
     return header;
   }
   
-
-  
   
 }

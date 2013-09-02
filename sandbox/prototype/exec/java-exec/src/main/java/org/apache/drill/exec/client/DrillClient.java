@@ -22,7 +22,6 @@ import static org.apache.drill.exec.proto.UserProtos.QueryResultsMode.STREAM_FUL
 import static org.apache.drill.exec.proto.UserProtos.RunQuery.newBuilder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocatorL;
 import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.io.Closeable;

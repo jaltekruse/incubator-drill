@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
-  xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+    xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <artifactId>exec-parent</artifactId>
@@ -174,6 +174,11 @@
       <artifactId>jetty-util</artifactId>
       <version>6.1.26</version>
     </dependency>
+    <dependency>
+      <groupId>com.thoughtworks.paranamer</groupId>
+      <artifactId>paranamer</artifactId>
+      <version>2.3</version>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -276,13 +281,13 @@
                   </fileset>
                 </path>
                 <pathconvert pathsep=" " property="proto.files"
-                  refid="proto.path.files" />
+                             refid="proto.path.files" />
 
                 <exec executable="protoc">
                   <arg value="--java_out=${target.gen.source.path}" />
                   <arg value="--proto_path=${proto.cas.path}" />
                   <arg
-                    value="--proto_path=${project.basedir}/../../common/src/main/protobuf/" />
+                      value="--proto_path=${project.basedir}/../../common/src/main/protobuf/" />
                   <arg line="${proto.files}" />
                 </exec>
               </tasks>
@@ -364,7 +369,6 @@
       <!-- </plugin> -->
     </plugins>
   </build>
-
 
 
 </project>

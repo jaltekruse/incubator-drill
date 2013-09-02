@@ -25,7 +25,6 @@ import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStorageEngine;
 import org.apache.drill.exec.store.SchemaProvider;
-import org.apache.drill.exec.store.mock.MockGroupScanPOP.MockScanEntry;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -40,8 +39,8 @@ public class MockStorageEngine extends AbstractStorageEngine {
   @Override
   public AbstractGroupScan getPhysicalScan(Scan scan) throws IOException {
 
-    ArrayList<MockScanEntry> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
-        new TypeReference<ArrayList<MockScanEntry>>() {
+    ArrayList<MockGroupScanPOP.MockScanEntry> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
+        new TypeReference<ArrayList<MockGroupScanPOP.MockScanEntry>>() {
         });
     
     return new MockGroupScanPOP(null, readEntries);

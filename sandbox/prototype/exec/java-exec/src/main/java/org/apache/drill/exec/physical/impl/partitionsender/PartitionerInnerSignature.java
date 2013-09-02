@@ -1,11 +1,11 @@
 package org.apache.drill.exec.physical.impl.partitionsender;
 
-import javax.inject.Named;
-
 import org.apache.drill.exec.compile.sig.CodeGeneratorSignature;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.record.RecordBatch;
+
+import javax.inject.Named;
 
 public interface PartitionerInnerSignature  extends CodeGeneratorSignature{
   

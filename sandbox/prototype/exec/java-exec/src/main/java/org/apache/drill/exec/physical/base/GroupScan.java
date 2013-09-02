@@ -24,10 +24,16 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.drill.exec.physical.ReadEntry;
+import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A GroupScan operator represents all data which will be scanned by a given physical
  * plan.  It is the superset of all SubScans for the plan.
  */
+
 public interface GroupScan extends Scan, HasAffinity{
 
   public abstract void applyAssignments(List<DrillbitEndpoint> endpoints);

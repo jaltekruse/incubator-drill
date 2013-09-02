@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,8 +41,8 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
     assert children != null && children.size() == 1;
     return new SingleSenderRootExec(context, children.iterator().next(), config);
   }
-  
-  
+
+
   private static class SingleSenderRootExec implements RootExec{
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SingleSenderRootExec.class);
     private RecordBatch incoming;
@@ -51,7 +51,7 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
     private int recMajor;
     private FragmentContext context;
     private volatile boolean ok = true;
-    
+
     public SingleSenderRootExec(FragmentContext context, RecordBatch batch, SingleSender config){
       this.incoming = batch;
       assert(incoming != null);
@@ -60,32 +60,32 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
       this.tunnel = context.getCommunicator().getTunnel(config.getDestination());
       this.context = context;
     }
-    
+
     @Override
     public boolean next() {
       if(!ok){
         incoming.kill();
-        
+
         return false;
       }
       IterOutcome out = incoming.next();
       logger.debug("Outcome of sender next {}", out);
       switch(out){
-      case STOP:
-      case NONE:
-        FragmentWritableBatch b2 = new FragmentWritableBatch(true, handle.getQueryId(), handle.getMajorFragmentId(), handle.getMinorFragmentId(), recMajor, 0, incoming.getWritableBatch());
-        tunnel.sendRecordBatch(new RecordSendFailure(), context, b2);
-        return false;
+        case STOP:
+        case NONE:
+          FragmentWritableBatch b2 = new FragmentWritableBatch(true, handle.getQueryId(), handle.getMajorFragmentId(), handle.getMinorFragmentId(), recMajor, 0, incoming.getWritableBatch());
+          tunnel.sendRecordBatch(new RecordSendFailure(), context, b2);
+          return false;
 
-      case OK_NEW_SCHEMA:
-      case OK:
-        FragmentWritableBatch batch = new FragmentWritableBatch(false, handle.getQueryId(), handle.getMajorFragmentId(), handle.getMinorFragmentId(), recMajor, 0, incoming.getWritableBatch());
-        tunnel.sendRecordBatch(new RecordSendFailure(), context, batch);
-        return true;
+        case OK_NEW_SCHEMA:
+        case OK:
+          FragmentWritableBatch batch = new FragmentWritableBatch(false, handle.getQueryId(), handle.getMajorFragmentId(), handle.getMinorFragmentId(), recMajor, 0, incoming.getWritableBatch());
+          tunnel.sendRecordBatch(new RecordSendFailure(), context, batch);
+          return true;
 
-      case NOT_YET:
-      default:
-        throw new IllegalStateException();
+        case NOT_YET:
+        default:
+          throw new IllegalStateException();
       }
     }
 
@@ -93,8 +93,8 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
     public void stop() {
       ok = false;
     }
-    
-    
+
+
     private class RecordSendFailure extends BaseRpcOutcomeListener<Ack>{
 
       @Override
@@ -112,10 +112,10 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
         context.fail(new RpcException("A downstream fragment batch wasn't accepted.  This fragment thus fails."));
         stop();
       }
-      
+
     }
-    
+
   }
-  
+
 
 }

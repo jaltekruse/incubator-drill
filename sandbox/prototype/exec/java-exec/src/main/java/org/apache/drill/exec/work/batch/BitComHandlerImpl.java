@@ -49,9 +49,9 @@ import org.apache.drill.exec.work.FragmentRunner;
 import org.apache.drill.exec.work.RemoteFragmentRunnerListener;
 import org.apache.drill.exec.work.WorkManager.WorkerBee;
 import org.apache.drill.exec.work.fragment.IncomingFragmentHandler;
-import org.apache.drill.exec.work.fragment.RemoteFragmentHandler;
 
 import com.google.common.collect.Maps;
+import org.apache.drill.exec.work.fragment.RemoteFragmentHandler;
 
 public class BitComHandlerImpl implements BitComHandler {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BitComHandlerImpl.class);

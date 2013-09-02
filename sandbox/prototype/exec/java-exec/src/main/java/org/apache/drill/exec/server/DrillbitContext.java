@@ -37,6 +37,7 @@ import org.apache.drill.exec.store.StorageEngine;
 
 import com.google.common.base.Preconditions;
 import com.yammer.metrics.MetricRegistry;
+import org.apache.drill.exec.store.StorageEngineRegistry;
 
 import org.apache.drill.exec.store.StorageEngineRegistry;
 
