@@ -145,8 +145,7 @@ public class ParquetRecordReader implements RecordReader {
       recordsPerBatch = (int) Math.min(batchSize / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
     }
     try {
-      ArrayList<VarLenBinaryReader.VarLengthColumn> varLengthColumns = new ArrayList<>();
-      ArrayList<VarLenBinaryReader.NullableVarLengthColumn> nullableVarLengthColumns = new ArrayList<>();
+      ArrayList<VarLenBinaryReader.UnknownLengthColumn> varLengthColumns = new ArrayList<>();
       // initialize all of the column read status objects
       boolean fieldFixedLength = false;
       MaterializedField field;
@@ -164,11 +163,11 @@ public class ParquetRecordReader implements RecordReader {
             varLengthColumns.add(new VarLenBinaryReader.VarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
           }
           else{
-            nullableVarLengthColumns.add(new VarLenBinaryReader.NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+            varLengthColumns.add(new VarLenBinaryReader.NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
           }
         }
       }
-      varLengthReader = new VarLenBinaryReader(this, varLengthColumns, nullableVarLengthColumns);
+      varLengthReader = new VarLenBinaryReader(this, varLengthColumns);
     } catch (SchemaChangeException e) {
       throw new ExecutionSetupException(e);
     }
@@ -216,10 +215,7 @@ public class ParquetRecordReader implements RecordReader {
       for (ColumnReader crs : columnStatuses) {
         output.addField(crs.valueVecHolder.getValueVector());
       }
-      for (VarLenBinaryReader.VarLengthColumn r : varLengthReader.columns) {
-        output.addField(r.valueVecHolder.getValueVector());
-      }
-      for (VarLenBinaryReader.NullableVarLengthColumn r : varLengthReader.nullableColumns) {
+      for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns) {
         output.addField(r.valueVecHolder.getValueVector());
       }
       output.setNewSchema();
@@ -240,16 +236,10 @@ public class ParquetRecordReader implements RecordReader {
     else{
       start = rowGroupOffset;
     }
-    // TODO - the methods for get total size and get total uncompressed size seem to have the opposite results of
-    // what they should
-    // I found the bug in the mainline and made a issue for it, hopefully it will be fixed soon
     for (ColumnReader crs : columnStatuses){
       totalByteLength += crs.columnChunkMetaData.getTotalSize();
     }
-    for (VarLenBinaryReader.VarLengthColumn r : varLengthReader.columns){
-      totalByteLength += r.columnChunkMetaData.getTotalSize();
-    }
-    for (VarLenBinaryReader.NullableVarLengthColumn r : varLengthReader.nullableColumns){
+    for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns){
       totalByteLength += r.columnChunkMetaData.getTotalSize();
     }
     int bufferSize = 64*1024;
@@ -292,11 +282,7 @@ public class ParquetRecordReader implements RecordReader {
       column.valueVecHolder.reset();
       column.valuesReadInCurrentPass = 0;
     }
-    for (VarLenBinaryReader.VarLengthColumn r : varLengthReader.columns){
-      r.valueVecHolder.reset();
-      r.valuesReadInCurrentPass = 0;
-    }
-    for (VarLenBinaryReader.NullableVarLengthColumn r : varLengthReader.nullableColumns){
+    for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns){
       r.valueVecHolder.reset();
       r.valuesReadInCurrentPass = 0;
     }
@@ -355,12 +341,7 @@ public class ParquetRecordReader implements RecordReader {
         firstColumnStatus = columnStatuses.iterator().next();
       }
       else{
-        if (varLengthReader.columns.size() > 0){
-          firstColumnStatus = varLengthReader.columns.iterator().next();
-        }
-        else{
-         firstColumnStatus = varLengthReader.nullableColumns.iterator().next();
-        }
+        firstColumnStatus = varLengthReader.columns.iterator().next();
       }
 
       if (allFieldsFixedLength) {
@@ -502,6 +483,5 @@ public class ParquetRecordReader implements RecordReader {
     columnStatuses.clear();
     bufferWithAllData.release();
     varLengthReader.columns.clear();
-    varLengthReader.nullableColumns.clear();
   }
 }

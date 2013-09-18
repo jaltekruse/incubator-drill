@@ -64,7 +64,7 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  private static final boolean VERBOSE_DEBUG = false;
+  private static final boolean VERBOSE_DEBUG = true;
 
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
@@ -142,11 +142,11 @@ public class ParquetRecordReaderTest {
     HashMap<String, FieldInfo> fields = new HashMap<>();
     ParquetTestProperties props = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields);
     byte[] val = {'b'};
-//    Object[] boolVals = { val, null, null};
-//    Object[] boolVals = { null, null, null};
+    byte[] val2 = { 'b', '2'};
+    byte[] val3 = {'l', 'o', 'n', 'g', 'e', 'r', ' ', 's', 't', 'r', 'i', 'n', 'g'};
     Object[] boolVals = { val, val, val};
     props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
-    testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable.parquet", 1, props);
+    testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
   }
 
   @Test
