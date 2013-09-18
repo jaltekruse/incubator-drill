@@ -367,7 +367,7 @@ public class ParquetRecordReader implements RecordReader {
         recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
       } else {
         // arbitrary
-        recordsToRead = 4000;
+        recordsToRead = Math.min(5000, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
 
         // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
         // get too complicated

@@ -62,11 +62,9 @@ public abstract class NullableColumnReader extends ColumnReader{
       long runStart = pageReadStatus.readPosInBytes;
       int runLength = 0;
       int currentDefinitionLevel = 0;
-      int currentValueIndexInVector = totalValuesRead;
+      int currentValueIndexInVector = valuesReadInCurrentPass;
       boolean lastValueWasNull = true;
       int definitionLevelsRead;
-      // loop to find the longest run of defined values available, can be preceded by several nulls
-      while (true){
         definitionLevelsRead = 0;
         lastValueWasNull = true;
         nullsFound = 0;
@@ -74,9 +72,10 @@ public abstract class NullableColumnReader extends ColumnReader{
             || currentValueIndexInVector >= valueVecHolder.getValueVector().getValueCapacity()){
           break;
         }
+        // loop to find the longest run of defined values available, can be preceded by several nulls
         while(currentValueIndexInVector - totalValuesRead < recordsToReadInThisPass
             && currentValueIndexInVector < valueVecHolder.getValueVector().getValueCapacity()
-            && definitionLevelsRead < pageReadStatus.currentPage.getValueCount()){
+            && pageReadStatus.valuesRead + definitionLevelsRead < pageReadStatus.currentPage.getValueCount()){
           currentDefinitionLevel = pageReadStatus.definitionLevels.readInteger();
           definitionLevelsRead++;
           if ( currentDefinitionLevel < columnDescriptor.getMaxDefinitionLevel()){
@@ -119,7 +118,6 @@ public abstract class NullableColumnReader extends ColumnReader{
         } else {
           pageReadStatus.readPosInBytes = readStartInBytes + readLength;
         }
-      }
     }
     while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
     valueVecHolder.getValueVector().getMutator().setValueCount(

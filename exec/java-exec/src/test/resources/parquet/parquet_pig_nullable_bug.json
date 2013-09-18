@@ -1,0 +1,28 @@
+{
+  head : {
+    type : "APACHE_DRILL_PHYSICAL",
+    version : 1,
+    generator : {
+      type : "optiq",
+      info : "na"
+    }
+  },
+  graph : [ {
+    pop : "parquet-scan",
+    @id : 1,
+    entries : [ {
+      path : "/tmp/parquet-nullable/customer-parquet-nullable"
+    } ],
+    storageengine : {
+      type : "parquet",
+      dfsName : "file:///"
+    },
+    ref : "_MAP",
+    fragmentPointer : 0
+  },
+   {
+    pop : "screen",
+    @id : 2,
+    child : 1
+  } ]
+}
