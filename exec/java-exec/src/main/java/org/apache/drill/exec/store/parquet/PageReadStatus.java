@@ -112,6 +112,7 @@ public final class PageReadStatus {
     // TODO - would like to get this into the mainline, hopefully before alpha
     pageDataByteArray = currentPage.getBytes().toByteArray();
 
+    readPosInBytes = 0;
     if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){
       definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
       valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.VALUES);
@@ -120,7 +121,6 @@ public final class PageReadStatus {
       readPosInBytes = endOfDefinitionLevels;
     }
 
-    readPosInBytes = 0;
     valuesRead = 0;
     return true;
   }

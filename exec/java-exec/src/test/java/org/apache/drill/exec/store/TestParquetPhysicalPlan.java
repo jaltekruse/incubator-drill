@@ -19,6 +19,7 @@ package org.apache.drill.exec.store;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Stopwatch;
+import com.google.common.base.Strings;
 import com.google.common.io.Resources;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.client.DrillClient;
@@ -43,7 +44,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class TestParquetPhysicalPlan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestParquetPhysicalPlan.class);
 
-  public String fileName = "parquet/parquet_scan_filter_union_screen_physical.json";
+  public String fileName = "parquet/parquet_pig_nullable_bug_unsorted.json";
 
   @Test
   @Ignore
@@ -78,6 +79,50 @@ public class TestParquetPhysicalPlan {
       }
       client.close();
       System.out.println(String.format("Got %d total results", count));
+    }
+  }
+
+  @Test
+  @Ignore
+  public void testParseParquetPhysicalPlanNullableBug() throws Exception {
+    RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
+    DrillConfig config = DrillConfig.create();
+
+    try (Drillbit bit1 = new Drillbit(config, serviceSet); DrillClient client = new DrillClient(config, serviceSet.getCoordinator());) {
+      bit1.run();
+      client.connect();
+      List<QueryResultBatch> results = client.runQuery(UserProtos.QueryType.PHYSICAL, Resources.toString(Resources.getResource(fileName), Charsets.UTF_8));
+      RecordBatchLoader batchLoader = new RecordBatchLoader(bit1.getContext().getAllocator());
+      boolean VERBOSE_DEBUG = true;
+      int i;
+      int recordCount = 0;
+      for (QueryResultBatch b : results) {
+        boolean schemaChanged = batchLoader.load(b.getHeader().getDef(), b.getData());
+        recordCount += batchLoader.getRecordCount();
+        if (VERBOSE_DEBUG) {
+          for (i = 0; i < batchLoader.getRecordCount(); i++) {
+            recordCount++;
+            if (i % 50 == 0) {
+              System.out.println();
+              for (VectorWrapper vw : batchLoader) {
+                ValueVector v = vw.getValueVector();
+                System.out.print(Strings.padStart(v.getField().getName(), 20, ' '));
+              }
+              System.out.println();
+              System.out.println();
+            }
+
+            for (VectorWrapper vw : batchLoader) {
+              ValueVector v = vw.getValueVector();
+              System.out.print(Strings.padStart(v.getAccessor().getObject(i) + "", 20, ' '));
+            }
+            System.out.println(
+
+            );
+          }
+        }
+      }
+      logger.debug("Records read: {}", recordCount);
     }
   }
 
