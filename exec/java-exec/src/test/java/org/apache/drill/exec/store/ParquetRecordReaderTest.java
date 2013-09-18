@@ -64,7 +64,7 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  private static final boolean VERBOSE_DEBUG = true;
+  private static final boolean VERBOSE_DEBUG = false;
 
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
@@ -144,7 +144,7 @@ public class ParquetRecordReaderTest {
     byte[] val = {'b'};
     byte[] val2 = { 'b', '2'};
     byte[] val3 = {'l', 'o', 'n', 'g', 'e', 'r', ' ', 's', 't', 'r', 'i', 'n', 'g'};
-    Object[] boolVals = { val, val, val};
+    Object[] boolVals = { val, val2, val3};
     props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
   }
@@ -408,8 +408,8 @@ public class ParquetRecordReaderTest {
           if (VERBOSE_DEBUG){
             System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
           }
-//          assertField(vv, j, (TypeProtos.MinorType) currentField.type,
-//              currentField.values[columnValCounter % 3], (String) currentField.name + "/");
+          assertField(vv, j, (TypeProtos.MinorType) currentField.type,
+              currentField.values[columnValCounter % 3], (String) currentField.name + "/");
           columnValCounter++;
         }
         if (VERBOSE_DEBUG){
@@ -538,6 +538,7 @@ public class ParquetRecordReaderTest {
       int i = 0;
       FieldInfo currentField;
       HashMap<String, Integer> valuesChecked = new HashMap();
+      Object temp;
       for(QueryResultBatch b : results){
 
         count += b.getHeader().getRowCount();
@@ -591,11 +592,17 @@ public class ParquetRecordReaderTest {
 
             for (VectorWrapper vw : batchLoader) {
               ValueVector v = vw.getValueVector();
-              System.out.print(pad(v.getAccessor().getObject(i) + "", 20) + " ");
+              temp = v.getAccessor().getObject(i);
+              if (temp instanceof byte[]){
+                for (int j = 0; j < ((byte[])temp).length; j++){
+                  System.out.print((char)((byte[])temp)[j]);
+                }
+              }
+              else{
+                System.out.print(pad(temp + "", 20) + " ");
+              }
             }
-            System.out.println(
-
-            );
+            System.out.println();
           }
         }
         batchCounter++;

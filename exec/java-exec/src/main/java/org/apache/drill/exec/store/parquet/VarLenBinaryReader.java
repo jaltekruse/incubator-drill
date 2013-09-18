@@ -58,7 +58,7 @@ public class VarLenBinaryReader {
     public abstract void readRecord() throws IOException;
 
     /**
-     * Called after read loop completes, used to set vector level status, clean up extra resources
+     * Called after read loop completes, used to set vector-level status, clean up extra resources
      * if necessary.
      *
      * @param recordsReadInCurrentPass - the number or records just read
@@ -121,11 +121,11 @@ public class VarLenBinaryReader {
       tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
       // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
       tempCurrVec.getAccessor().getOffsetVector().getData().writeInt((int) bytesReadInCurrentPass +
-          dataTypeLengthInBits - 4 * (int) valuesReadInCurrentPass);
+          getCurrentRecordLength() - 4 * (int) valuesReadInCurrentPass);
       tempCurrVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes + 4,
-          dataTypeLengthInBits);
-      pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
-      bytesReadInCurrentPass += dataTypeLengthInBits + 4;
+          getCurrentRecordLength());
+      pageReadStatus.readPosInBytes += getCurrentRecordLength() + 4;
+      bytesReadInCurrentPass += getCurrentRecordLength() + 4;
       pageReadStatus.valuesRead++;
       valuesReadInCurrentPass++;
     }
@@ -181,7 +181,7 @@ public class VarLenBinaryReader {
       tempBytes = pageReadStatus.pageDataByteArray;
       if ( columnDescriptor.getMaxDefinitionLevel() > pageReadStatus.definitionLevels.readInteger()){
         currentValNull = true;
-        dataTypeLengthInBits = 0;
+        byteLengthCurrentData = 0;
         nullsRead++;
         return 0;// field is null, no length to add to data vector
       }
@@ -200,17 +200,17 @@ public class VarLenBinaryReader {
       tempCurrNullVec.getMutator().getVectorWithValues().getAccessor().getOffsetVector().getData()
           .writeInt(
               (int) bytesReadInCurrentPass  +
-                  dataTypeLengthInBits - 4 * (valuesReadInCurrentPass -
+                  getCurrentRecordLength() - 4 * (valuesReadInCurrentPass -
                   (currentValNull ? Math.max (0, nullsRead - 1) : nullsRead)));
       currentValNull = false;
-      if (dataTypeLengthInBits > 0){
+      if (getCurrentRecordLength() > 0){
         tempCurrNullVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes + 4,
-            dataTypeLengthInBits);
+            getCurrentRecordLength());
         ((NullableVarBinaryVector)valueVecHolder.getValueVector()).getMutator().setIndexDefined(valuesReadInCurrentPass);
       }
-      if (dataTypeLengthInBits > 0){
-        pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
-        bytesReadInCurrentPass += dataTypeLengthInBits + 4;
+      if (getCurrentRecordLength() > 0){
+        pageReadStatus.readPosInBytes += getCurrentRecordLength() + 4;
+        bytesReadInCurrentPass += getCurrentRecordLength() + 4;
       }
       pageReadStatus.valuesRead++;
       valuesReadInCurrentPass++;
