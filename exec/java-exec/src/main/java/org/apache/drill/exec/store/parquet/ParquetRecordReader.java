@@ -156,15 +156,34 @@ public class ParquetRecordReader implements RecordReader {
             toMajorType(column.getType(), getDataMode(column)));
         fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         ValueVector v = TypeHelper.getNewVector(field, allocator);
-        if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
-          createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v);
-        } else {
-          if (column.getMaxDefinitionLevel() == 0){// column is required
-            varLengthColumns.add(new VarLenBinaryReader.VarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+        // if the column is not repeated
+        if (column.getMaxRepetitionLevel() == 0){
+          // the column is a fixed width type
+          if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
+            createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v);
+          } else { // varible length column
+            if (column.getMaxDefinitionLevel() == 0){// column is required
+              varLengthColumns.add(new VarLenBinaryReader.VarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+            }
+            else{
+              varLengthColumns.add(new VarLenBinaryReader.NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+            }
           }
-          else{
-            varLengthColumns.add(new VarLenBinaryReader.NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+        }
+        else { // the column is repeated
+          // if the column can repeat at more than one level, it is a repeated map
+          // different repetition levels describe at what level in the schema a value repeats
+          if ( column.getMaxRepetitionLevel() > 1){
+            // TODO - implement this when it is added the the value vectors
+            throw new UnsupportedOperationException("Parquet reader cannot yet read repeated maps");
           }
+          else { // simple one-level repetition
+            if ( column.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
+              ;// TODO - add implementation for repeated bit columns
+            }
+            varLengthColumns.add(new VarLenBinaryReader.RepeatedByteAlignedColumn(this, -1, column, columnChunkMetaData, false, v));
+          }
+
         }
       }
       varLengthReader = new VarLenBinaryReader(this, varLengthColumns);

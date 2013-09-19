@@ -232,6 +232,74 @@ public class VarLenBinaryReader {
     }
   }
 
+  public static class RepeatedByteAlignedColumn extends UnknownLengthColumn {
+
+    byte[] tempBytes;
+    VarBinaryVector tempCurrVec;
+    int byteLengthCurrentData;
+
+    RepeatedByteAlignedColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v) {
+      super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v);
+    }
+
+    @Override
+    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void setup() {
+      // write the first 0 offset
+      tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
+      tempCurrVec.getAccessor().getOffsetVector().getData().writeInt(0);
+      bytesReadInCurrentPass = 0;
+      valuesReadInCurrentPass = 0;
+    }
+
+    @Override
+    public int checkNextRecord() throws IOException {
+      if (pageReadStatus.currentPage == null
+          || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        totalValuesRead += pageReadStatus.valuesRead;
+        if (!pageReadStatus.next()) {
+          return ROW_GROUP_FINISHED;
+        }
+      }
+      tempBytes = pageReadStatus.pageDataByteArray;
+
+      // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
+      byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
+          (int) pageReadStatus.readPosInBytes);
+      return byteLengthCurrentData;
+    }
+
+    @Override
+    public void readRecord() {
+      tempBytes = pageReadStatus.pageDataByteArray;
+      tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
+      // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
+      tempCurrVec.getAccessor().getOffsetVector().getData().writeInt((int) bytesReadInCurrentPass +
+          getCurrentRecordLength() - 4 * (int) valuesReadInCurrentPass);
+      tempCurrVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes + 4,
+          getCurrentRecordLength());
+      pageReadStatus.readPosInBytes += getCurrentRecordLength() + 4;
+      bytesReadInCurrentPass += getCurrentRecordLength() + 4;
+      pageReadStatus.valuesRead++;
+      valuesReadInCurrentPass++;
+    }
+
+    @Override
+    public void afterReading(long recordsReadInCurrentPass) {
+      tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
+      tempCurrVec.getMutator().setValueCount((int)recordsReadInCurrentPass);
+    }
+
+    @Override
+    public int getCurrentRecordLength() {
+      return byteLengthCurrentData;
+    }
+  }
+
   /**
    * Reads as many variable length values as possible.
    *
