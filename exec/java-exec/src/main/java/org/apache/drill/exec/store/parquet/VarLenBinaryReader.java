@@ -161,14 +161,15 @@ public class VarLenBinaryReader {
     public void readRecord() {
       valuesReadInCurrentPass = 0;
       // extra 4 for first offset that needs to be skipped
-      pageReadStatus.readPosInBytes = initialReadPos + 4;
+      pageReadStatus.readPosInBytes = initialReadPos;
       tempBytes = pageReadStatus.pageDataByteArray;
       UInt4Vector.Accessor accesor = tempCurrVec.getAccessor().getOffsetVector().getAccessor();
       tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
       for (int i = 0; i < totalValuesToRead; i++) {
+        pageReadStatus.readPosInBytes += 4;
         tempCurrVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes,
             accesor.get(valuesReadInCurrentPass + 1) - accesor.get(valuesReadInCurrentPass));
-        pageReadStatus.readPosInBytes += accesor.get(valuesReadInCurrentPass + 1) - accesor.get(valuesReadInCurrentPass) + 4;
+        pageReadStatus.readPosInBytes += accesor.get(valuesReadInCurrentPass + 1) - accesor.get(valuesReadInCurrentPass);
         valuesReadInCurrentPass++;
       }
     }

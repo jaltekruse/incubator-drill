@@ -64,7 +64,7 @@ import static parquet.column.Encoding.PLAIN;
 public class ParquetRecordReaderTest {
   org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  private static final boolean VERBOSE_DEBUG = true;
+  private static final boolean VERBOSE_DEBUG = false;
 
   // { 00000001, 00000010, 00000100, 00001000, 00010000, ... }
   byte[] bitFields = {1, 2, 4, 8, 16, 32, 64, -128};
@@ -190,7 +190,7 @@ public class ParquetRecordReaderTest {
   @Test
   public void testMultipleRowGroupsEvent() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(4, 300000, DEFAULT_BYTES_PER_PAGE, fields);
     populateFieldInfoMap(props);
     testParquetFullEngineEventBased(true, "/parquet_scan_screen.json", "/tmp/test.parquet", 1, props);
   }
@@ -672,6 +672,7 @@ public class ParquetRecordReaderTest {
 //    assertEquals(name, def.getNameList().get(0).getName());
 //    assertEquals(parentFieldId, def.getParentId());
 
+    totalValues++;
     if (expectedMinorType == TypeProtos.MinorType.MAP) {
       return;
     }
@@ -683,9 +684,14 @@ public class ParquetRecordReaderTest {
     else if (val instanceof byte[]) {
       assertTrue(Arrays.equals((byte[]) value, (byte[]) val));
     } else {
+      if ( totalValues % 30000 == 0){
+        Math.min(3,5);
+      }
       assertEquals(value, val);
     }
   }
+
+  long totalValues = 0;
 
   private class WrapAroundCounter {
 
