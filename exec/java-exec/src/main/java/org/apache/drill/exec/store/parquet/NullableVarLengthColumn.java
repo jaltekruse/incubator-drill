@@ -1,4 +1,4 @@
-/*******************************************************************************
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ */
 package org.apache.drill.exec.store.parquet;
 
 
@@ -68,21 +68,17 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
       return VarLenBinaryReader.PAGE_FINISHED;
     }
     tempBytes = pageReadStatus.pageDataByteArray;
-    try{
-      defLevelsRead++;
-      if ( columnDescriptor.getMaxDefinitionLevel() > pageReadStatus.definitionLevels.readInteger()){
-        currentValNull = true;
-        byteLengthCurrentData = 0;
-        nullsRead++;
-        return 0;// field is null, no length to add to data vector
-      }
+    defLevelsRead++;
+    if ( columnDescriptor.getMaxDefinitionLevel() > pageReadStatus.definitionLevels.readInteger()){
+      currentValNull = true;
+      byteLengthCurrentData = 0;
+      nullsRead++;
+      return 0;// field is null, no length to add to data vector
+    }
 
-      byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
-          (int) pageReadStatus.readPosInBytes);
-    }
-    catch(Exception ex){
-      Math.min(4,5);
-    }
+    byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
+        (int) pageReadStatus.readPosInBytes);
+
     return byteLengthCurrentData;
   }
 

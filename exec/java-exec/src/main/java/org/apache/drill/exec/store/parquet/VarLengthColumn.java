@@ -1,4 +1,4 @@
-/*******************************************************************************
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
+ */
 package org.apache.drill.exec.store.parquet;
 
 import org.apache.drill.exec.vector.UInt4Vector;
@@ -38,6 +38,7 @@ public class VarLengthColumn extends UnknownLengthColumn {
   // the read position is used to keep track of position in the parquet file
   // this is used to store its original value to be recalled after reading the lengths and before reading the values
   long initialReadPos;
+  int initialValuesRead;
 
   VarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v) {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v);
@@ -70,8 +71,13 @@ public class VarLengthColumn extends UnknownLengthColumn {
     }
     tempBytes = pageReadStatus.pageDataByteArray;
 
+    try{
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
         (int) pageReadStatus.readPosInBytes);
+    }
+    catch(Exception ex){
+      Math.min(3, 4);
+    }
     return byteLengthCurrentData;
   }
 
@@ -90,7 +96,7 @@ public class VarLengthColumn extends UnknownLengthColumn {
 
   @Override
   public void readRecord() {
-    valuesReadInCurrentPass = 0;
+    valuesReadInCurrentPass = initialValuesRead;
     pageReadStatus.readPosInBytes = initialReadPos;
     tempBytes = pageReadStatus.pageDataByteArray;
     UInt4Vector.Accessor accessor = tempCurrVec.getAccessor().getOffsetVector().getAccessor();
@@ -132,7 +138,8 @@ public class VarLengthColumn extends UnknownLengthColumn {
   @Override
   public int beginLoop() throws IOException {
     initialReadPos = pageReadStatus.readPosInBytes;
-    totalValuesToRead = 0;
+    initialValuesRead = valuesReadInCurrentPass;
+    //totalValuesToRead = 0;
     if (pageReadStatus.currentPage == null
         || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
       totalValuesRead += pageReadStatus.valuesRead;

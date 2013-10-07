@@ -132,7 +132,7 @@ public class ParquetRecordReaderTest {
     HashMap<String, FieldInfo> fields = new HashMap<>();
     ParquetTestProperties props = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields);
     Object[] boolVals = {true, null, null};
-    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
+    props.fields.put("a", new FieldInfo("boolean", "a", 1, true, boolVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngine(false, "/parquet_nullable.json", "/tmp/nullable.parquet", 1, props);
   }
 
@@ -145,7 +145,7 @@ public class ParquetRecordReaderTest {
     byte[] val2 = { 'b', '2'};
     byte[] val3 = {'l', 'o', 'n', 'g', 'e', 'r', ' ', 's', 't', 'r', 'i', 'n', 'g'};
     Object[] boolVals = { val, val2, val3};
-    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
+    props.fields.put("a", new FieldInfo("boolean", "a", 1, true, boolVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
   }
 
@@ -171,7 +171,7 @@ public class ParquetRecordReaderTest {
   @Test
   public void testMultipleRowGroupsAndReadsPigError() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(4, 25000, DEFAULT_BYTES_PER_PAGE, fields);
 //    populatePigTPCHCustomerFields(props);
     populatePigTPCHSupplierFields(props);
     String readEntries = "";
@@ -218,18 +218,24 @@ public class ParquetRecordReaderTest {
     String name;
     int bitLength;
     int numberOfPages;
+    boolean checkValues;
     Object[] values;
     TypeProtos.MinorType type;
 
-    FieldInfo(String parquetType, String name, int bitLength, Object[] values, TypeProtos.MinorType type, ParquetTestProperties props){
+    FieldInfo(String parquetType, String name, int bitLength, boolean checkValues, Object[] values, TypeProtos.MinorType type, ParquetTestProperties props){
       this.parquetType = parquetType;
       this.name = name;
       this.bitLength  = bitLength;
+      this.checkValues = checkValues;
       this.numberOfPages = Math.max(1, (int) Math.ceil( ((long) props.recordsPerRowGroup) * bitLength / 8.0 / props.bytesPerPage));
       this.values = values;
       // generator is designed to use 3 values
       assert values.length == 3;
       this.type = type;
+    }
+
+    FieldInfo(String parquetType, String name, int bitLength, Object[] values, TypeProtos.MinorType type, ParquetTestProperties props){
+     this(parquetType, name, bitLength, false, values, type, props);
     }
   }
 
@@ -408,8 +414,10 @@ public class ParquetRecordReaderTest {
           if (VERBOSE_DEBUG){
             System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
           }
-          assertField(vv, j, (TypeProtos.MinorType) currentField.type,
-              currentField.values[columnValCounter % 3], (String) currentField.name + "/");
+          if (currentField.checkValues){
+            assertField(vv, j, (TypeProtos.MinorType) currentField.type,
+                currentField.values[columnValCounter % 3], (String) currentField.name + "/");
+          }
           columnValCounter++;
         }
         if (VERBOSE_DEBUG){
@@ -565,8 +573,10 @@ public class ParquetRecordReaderTest {
             if (VERBOSE_DEBUG){
               System.out.print(vv.getAccessor().getObject(j) + ", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
             }
-            assertField(vv, j, currentField.type,
-                currentField.values[columnValCounter % 3], currentField.name + "/");
+            if (currentField.checkValues){
+              assertField(vv, j, currentField.type,
+                  currentField.values[columnValCounter % 3], currentField.name + "/");
+            }
             columnValCounter++;
           }
           if (VERBOSE_DEBUG){
