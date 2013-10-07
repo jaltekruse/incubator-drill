@@ -77,6 +77,10 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
     return values.getBufferSize() + bits.getBufferSize();
   }
 
+  public ${valuesName} getDataVector(){
+    return values;
+  }
+
   public ByteBuf getData(){
     return values.getData();
   }
@@ -265,6 +269,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
     }
     
     public void reset(){}
+
   }
   
   public final class Mutator implements ValueVector.Mutator, NullableVectorDefinitionSetter{

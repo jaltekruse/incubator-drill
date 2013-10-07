@@ -145,7 +145,7 @@ public class ParquetRecordReader implements RecordReader {
       recordsPerBatch = (int) Math.min(batchSize / bitWidthAllFixedFields, footer.getBlocks().get(0).getColumns().get(0).getValueCount());
     }
     try {
-      ArrayList<VarLenBinaryReader.UnknownLengthColumn> varLengthColumns = new ArrayList<>();
+      ArrayList<UnknownLengthColumn> varLengthColumns = new ArrayList<>();
       // initialize all of the column read status objects
       boolean fieldFixedLength = false;
       MaterializedField field;
@@ -163,10 +163,10 @@ public class ParquetRecordReader implements RecordReader {
             createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v);
           } else { // varible length column
             if (column.getMaxDefinitionLevel() == 0){// column is required
-              varLengthColumns.add(new VarLenBinaryReader.VarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+              varLengthColumns.add(new VarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
             }
             else{
-              varLengthColumns.add(new VarLenBinaryReader.NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
+              varLengthColumns.add(new NullableVarLengthColumn(this, -1, column, columnChunkMetaData, false, v));
             }
           }
         }
@@ -181,7 +181,7 @@ public class ParquetRecordReader implements RecordReader {
             if ( column.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
               ;// TODO - add implementation for repeated bit columns
             }
-            varLengthColumns.add(new VarLenBinaryReader.RepeatedByteAlignedColumn(this, -1, column, columnChunkMetaData, false, v));
+            varLengthColumns.add(new RepeatedByteAlignedColumn(this, -1, column, columnChunkMetaData, false, v));
           }
 
         }
@@ -234,7 +234,7 @@ public class ParquetRecordReader implements RecordReader {
       for (ColumnReader crs : columnStatuses) {
         output.addField(crs.valueVecHolder.getValueVector());
       }
-      for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns) {
+      for (UnknownLengthColumn r : varLengthReader.columns) {
         output.addField(r.valueVecHolder.getValueVector());
       }
       output.setNewSchema();
@@ -258,7 +258,7 @@ public class ParquetRecordReader implements RecordReader {
     for (ColumnReader crs : columnStatuses){
       totalByteLength += crs.columnChunkMetaData.getTotalSize();
     }
-    for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns){
+    for (UnknownLengthColumn r : varLengthReader.columns){
       totalByteLength += r.columnChunkMetaData.getTotalSize();
     }
     int bufferSize = 64*1024;
@@ -301,7 +301,7 @@ public class ParquetRecordReader implements RecordReader {
       column.valueVecHolder.reset();
       column.valuesReadInCurrentPass = 0;
     }
-    for (VarLenBinaryReader.UnknownLengthColumn r : varLengthReader.columns){
+    for (UnknownLengthColumn r : varLengthReader.columns){
       r.valueVecHolder.reset();
       r.valuesReadInCurrentPass = 0;
     }
