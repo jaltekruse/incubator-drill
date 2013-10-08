@@ -29,6 +29,7 @@ import java.io.IOException;
 // These functions are designed specifically for the variable length type available in parquet today. Unfortunately
 // it features length, value, length, value encoding of data that makes it exceedingly difficult to
 public class VarLengthColumn extends UnknownLengthColumn {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VarLengthColumn.class);
 
   byte[] tempBytes;
   VarBinaryVector tempCurrVec;
@@ -62,22 +63,13 @@ public class VarLengthColumn extends UnknownLengthColumn {
 
   @Override
   public int checkNextRecord() throws IOException {
-    if (pageReadStatus.currentPage == null
-        || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
-      totalValuesRead += pageReadStatus.valuesRead;
-      if (!pageReadStatus.next()) {
-        return VarLenBinaryReader.ROW_GROUP_FINISHED;
-      }
+    if ( pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+      return VarLenBinaryReader.PAGE_FINISHED;
     }
     tempBytes = pageReadStatus.pageDataByteArray;
 
-    try{
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
         (int) pageReadStatus.readPosInBytes);
-    }
-    catch(Exception ex){
-      Math.min(3, 4);
-    }
     return byteLengthCurrentData;
   }
 
@@ -103,6 +95,7 @@ public class VarLengthColumn extends UnknownLengthColumn {
     tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
     for (int i = 0; i < totalValuesToRead; i++) {
       pageReadStatus.readPosInBytes += 4;
+
       tempCurrVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes,
           accessor.get(valuesReadInCurrentPass + 1) - accessor.get(valuesReadInCurrentPass));
       pageReadStatus.readPosInBytes += accessor.get(valuesReadInCurrentPass + 1) - accessor.get(valuesReadInCurrentPass);
@@ -137,16 +130,18 @@ public class VarLengthColumn extends UnknownLengthColumn {
 
   @Override
   public int beginLoop() throws IOException {
-    initialReadPos = pageReadStatus.readPosInBytes;
-    initialValuesRead = valuesReadInCurrentPass;
-    //totalValuesToRead = 0;
+    totalValuesToRead = 0;
     if (pageReadStatus.currentPage == null
         || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+      if ( pageReadStatus.currentPage != null && pageReadStatus.valuesRead != pageReadStatus.currentPage.getValueCount())
+        logger.error("incorrect number of records read from variable length column");
       totalValuesRead += pageReadStatus.valuesRead;
       if (!pageReadStatus.next()) {
         return VarLenBinaryReader.ROW_GROUP_FINISHED;
       }
     }
+    initialReadPos = pageReadStatus.readPosInBytes;
+    initialValuesRead = valuesReadInCurrentPass;
     return 0;
   }
 }

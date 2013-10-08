@@ -32,6 +32,7 @@ import static parquet.format.Util.readPageHeader;
 
 // class to keep track of the read position of variable length columns
 public final class PageReadStatus {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
 
   ColumnReader parentColumnReader;
 

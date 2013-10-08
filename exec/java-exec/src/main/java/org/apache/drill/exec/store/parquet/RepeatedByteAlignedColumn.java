@@ -26,6 +26,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import java.io.IOException;
 
 public class RepeatedByteAlignedColumn extends UnknownLengthColumn {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RepeatedByteAlignedColumn.class);
 
   byte[] tempBytes;
   VarBinaryVector tempCurrVec;

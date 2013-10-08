@@ -35,6 +35,7 @@ import java.io.IOException;
  * in the next batch.
  */
 public final class NullableBitReader extends ColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NullableBitReader.class);
 
   NullableBitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                     boolean fixedLength, ValueVector v) {

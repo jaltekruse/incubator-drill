@@ -28,6 +28,8 @@ import parquet.schema.PrimitiveType;
 import java.io.IOException;
 
 public abstract class ColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ColumnReader.class);
+
   // Value Vector for this column
   VectorHolder valueVecHolder;
   // column description from the parquet library

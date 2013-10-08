@@ -17,18 +17,11 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import org.apache.drill.exec.vector.NullableVarBinaryVector;
-import org.apache.drill.exec.vector.UInt4Vector;
-import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.VarBinaryVector;
-import parquet.bytes.BytesUtils;
-import parquet.column.ColumnDescriptor;
-import parquet.hadoop.metadata.ColumnChunkMetaData;
-
 import java.io.IOException;
 import java.util.List;
 
 public class VarLenBinaryReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VarLenBinaryReader.class);
 
   ParquetRecordReader parentReader;
   final List<UnknownLengthColumn> columns;
@@ -99,13 +92,10 @@ public class VarLenBinaryReader {
       if (columns.get(0).getCountOfRecordsToRead() == 0){
         return 0;
       }
+      // the number of records to read should be the same for all columns here
       recordsReadInCurrentPass += columns.get(0).getCountOfRecordsToRead();
-      long posBefore = columns.get(0).pageReadStatus.readPosInBytes;
       for (UnknownLengthColumn col : columns) {
         col.readRecord();
-      }
-      if ( posBefore != columns.get(0).pageReadStatus.readPosInBytes){
-        Math.min(2,8);
       }
     } while (recordsReadInCurrentPass < recordsToReadInThisPass);
 

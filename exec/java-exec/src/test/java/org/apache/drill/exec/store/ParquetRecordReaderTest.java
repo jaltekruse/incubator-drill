@@ -82,7 +82,13 @@ public class ParquetRecordReaderTest {
   static Object[] binVals = { varLen3, varLen2, varLen3};
   static Object[] bin2Vals = { varLen3, varLen2, varLen1};
 
+  /**
+   * This method adds information about the mock data we write into a parquet file for testing. As the
+   * data is being read we check it against these values as well.
+   * @param props
+   */
   private void populateFieldInfoMap(ParquetTestProperties props){
+    // all of the data in the fieldInfo constructors doesn't matter because the file is generated outside the test
     props.fields.put("integer", new FieldInfo("int32", "integer", 32, intVals, TypeProtos.MinorType.INT, props));
     props.fields.put("bigInt", new FieldInfo("int64", "bigInt", 64, longVals, TypeProtos.MinorType.BIGINT, props));
     props.fields.put("f", new FieldInfo("float", "f", 32, floatVals, TypeProtos.MinorType.FLOAT4, props));
@@ -688,15 +694,16 @@ public class ParquetRecordReaderTest {
     }
 
     T val = (T) valueVector.getAccessor().getObject(index);
+    if (val == null){
+      assertTrue(value == val);
+      return;
+    }
     if (val instanceof String){
       assertEquals(value, val);
     }
     else if (val instanceof byte[]) {
       assertTrue(Arrays.equals((byte[]) value, (byte[]) val));
     } else {
-      if ( totalValues % 30000 == 0){
-        Math.min(3,5);
-      }
       assertEquals(value, val);
     }
   }

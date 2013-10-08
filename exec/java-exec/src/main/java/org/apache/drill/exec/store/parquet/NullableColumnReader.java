@@ -26,6 +26,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import java.io.IOException;
 
 public abstract class NullableColumnReader extends ColumnReader{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NullableColumnReader.class);
 
   int nullsFound;
   // used to skip nulls found

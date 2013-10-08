@@ -28,6 +28,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import java.io.IOException;
 
 public class NullableVarLengthColumn extends UnknownLengthColumn{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NullableVarLengthColumn.class);
 
   byte[] tempBytes;
   NullableVarBinaryVector tempCurrNullVec;
@@ -88,8 +89,7 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
     tempCurrNullVec.getMutator().getVectorWithValues().getAccessor().getOffsetVector().getData()
         .writeInt(
             (int) bytesReadInCurrentPass  +
-                getCurrentValueLength() - 4 * (valuesReadInCurrentPass - nullsRead
-                /*(currentValNull ? Math.max (0, nullsRead - 1) : nullsRead )*/));
+                getCurrentValueLength() - 4 * (valuesReadInCurrentPass - nullsRead));
     totalValuesToRead++;
     if (getCurrentValueLength() > 0){
       bytesReadInCurrentPass += getCurrentValueLength() + 4;
@@ -119,14 +119,6 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
       }
       valuesReadInCurrentPass++;
     }
-//    if (valuesReadInCurrentPass != valuesReadInCurrentPass){
-//      Math.min(3,2);
-//    }
-//
-//      // reached the end of a page
-//      if ( pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
-//        pageReadStatus.next();
-//      }
   }
 
   @Override

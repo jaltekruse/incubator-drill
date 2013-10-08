@@ -53,7 +53,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 
 public class ParquetStorageEngine extends AbstractStorageEngine{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetStorageEngine.class);
 
   private final DrillbitContext context;
   static final ParquetMetadataConverter parquetMetadataConverter = new ParquetMetadataConverter();

@@ -23,6 +23,7 @@ import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
 public final class BitReader extends ColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BitReader.class);
 
   byte currentByte;
   byte nextByte;

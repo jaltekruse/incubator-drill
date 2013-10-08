@@ -28,6 +28,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 @JsonTypeName("parquet")
 public class ParquetStorageEngineConfig extends StorageEngineConfigBase implements DistributedStorageEngine{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetStorageEngineConfig.class);
 
   public String getDfsName() {
     return dfsName;

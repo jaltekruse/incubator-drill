@@ -24,6 +24,7 @@ import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
 public class NullableFixedByteAlignedReader extends NullableColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NullableFixedByteAlignedReader.class);
 
   NullableFixedByteAlignedReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                          boolean fixedLength, ValueVector v) {

@@ -24,6 +24,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import java.io.IOException;
 
 public abstract class UnknownLengthColumn extends ColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UnknownLengthColumn.class);
 
   UnknownLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v) {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v);
