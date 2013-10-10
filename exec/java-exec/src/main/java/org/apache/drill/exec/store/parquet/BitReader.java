@@ -22,11 +22,14 @@ import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
-public final class BitReader extends ColumnReader {
+public final class BitReader extends ColumnReaderParquet {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BitReader.class);
 
   byte currentByte;
   byte nextByte;
+
+  // bit shift needed for the next page if the last one did not line up with a byte boundary
+  int bitShift;
 
   BitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
             boolean fixedLength, ValueVector v) {
@@ -34,54 +37,55 @@ public final class BitReader extends ColumnReader {
   }
 
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-        - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
+        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
-    readStartInBytes = pageReadStatus.readPosInBytes;
-    readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
-    readLength = (int) Math.ceil(readLengthInBits / 8.0);
+    setReadStartInBytes(getPageReadStatus().readPosInBytes);
+    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
+    setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
 
-    bytes = pageReadStatus.pageDataByteArray;
+    byte[] bytes;
+    bytes = getPageReadStatus().pageDataByteArray;
     // standard read, using memory mapping
-    if (pageReadStatus.bitShift == 0) {
-      ((BaseDataValueVector) valueVecHolder.getValueVector()).getData().writeBytes(bytes,
-          (int) readStartInBytes, (int) readLength);
+    if (bitShift == 0) {
+      ((BaseDataValueVector) getValueVecHolder().getValueVector()).getData().writeBytes(bytes,
+          (int) getReadStartInBytes(), (int) getReadLength());
     } else { // read in individual values, because a bitshift is necessary with where the last page or batch ended
 
-      vectorData = ((BaseDataValueVector) valueVecHolder.getValueVector()).getData();
-      nextByte = bytes[(int) Math.max(0, Math.ceil(pageReadStatus.valuesRead / 8.0) - 1)];
-      readLengthInBits = recordsReadInThisIteration + pageReadStatus.bitShift;
+      setVectorData(((BaseDataValueVector) getValueVecHolder().getValueVector()).getData());
+      nextByte = bytes[(int) Math.max(0, Math.ceil(getPageReadStatus().valuesRead / 8.0) - 1)];
+      setReadLengthInBits(getRecordsReadInThisIteration() + bitShift);
 
       int i = 0;
       // read individual bytes with appropriate shifting
-      for (; i < (int) readLength; i++) {
+      for (; i < (int) getReadLength(); i++) {
         currentByte = nextByte;
-        currentByte = (byte) (currentByte >>> pageReadStatus.bitShift);
+        currentByte = (byte) (currentByte >>> bitShift);
         // mask the bits about to be added from the next byte
-        currentByte = (byte) (currentByte & ParquetRecordReader.startBitMasks[pageReadStatus.bitShift - 1]);
+        currentByte = (byte) (currentByte & ParquetRecordReader.startBitMasks[bitShift - 1]);
         // if we are not on the last byte
-        if ((int) Math.ceil(pageReadStatus.valuesRead / 8.0) + i < pageReadStatus.byteLength) {
+        if ((int) Math.ceil(getPageReadStatus().valuesRead / 8.0) + i < getPageReadStatus().byteLength) {
           // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
-          nextByte = bytes[(int) Math.ceil(pageReadStatus.valuesRead / 8.0) + i];
+          nextByte = bytes[(int) Math.ceil(getPageReadStatus().valuesRead / 8.0) + i];
           currentByte = (byte) (currentByte | nextByte
-              << (8 - pageReadStatus.bitShift)
-              & ParquetRecordReader.endBitMasks[8 - pageReadStatus.bitShift - 1]);
+              << (8 - bitShift)
+              & ParquetRecordReader.endBitMasks[8 - bitShift - 1]);
         }
-        vectorData.setByte(valuesReadInCurrentPass / 8 + i, currentByte);
+        getVectorData().setByte(getValuesReadInCurrentPass() / 8 + i, currentByte);
       }
-      vectorData.setIndex(0, (valuesReadInCurrentPass / 8)
-          + (int) readLength - 1);
-      vectorData.capacity(vectorData.writerIndex() + 1);
+      getVectorData().setIndex(0, (getValuesReadInCurrentPass() / 8)
+          + (int) getReadLength() - 1);
+      getVectorData().capacity(getVectorData().writerIndex() + 1);
     }
 
     // check if the values in this page did not end on a byte boundary, store a number of bits the next page must be
     // shifted by to read all of the values into the vector without leaving space
-    if (readLengthInBits % 8 != 0) {
-      pageReadStatus.bitShift = (int) readLengthInBits % 8;
+    if (getReadLengthInBits() % 8 != 0) {
+      bitShift = (int) getReadLengthInBits() % 8;
     } else {
-      pageReadStatus.bitShift = 0;
+      bitShift = 0;
     }
   }
 }

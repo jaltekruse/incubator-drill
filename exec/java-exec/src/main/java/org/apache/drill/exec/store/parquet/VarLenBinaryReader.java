@@ -42,7 +42,7 @@ public class VarLenBinaryReader {
    * @return - the number of fixed length fields that will fit in the batch
    * @throws IOException
    */
-  public long readFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public long readFields(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) throws IOException {
 
     int lengthVarFieldsInCurrentRecordsToRead;
     recordsReadInCurrentPass = 0;

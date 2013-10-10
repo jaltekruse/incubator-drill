@@ -15,10 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store;
 
-public abstract class ColumnReader {
+import io.netty.buffer.ByteBuf;
 
-  AbstractDataStores currentSubComponent;
+public abstract class AbstractDataSource {
+
+  private int totalValues;
+
+  private int valueLength;
+
+  private int totalSizeInBytes;
+
+  private int currentValue;
+
+
+
+  // TODO - make utility methods for copying to/from all raw data sources
+  public static void copyBytes(ByteBuf src, ByteBuf dest, int start, int length){
+
+  }
+
+  public static void copyBytes(byte[] src, ByteBuf dest, int start, int length){
+
+  }
+
 
 }

@@ -17,14 +17,10 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import org.apache.drill.exec.vector.BaseDataValueVector;
-import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.NullableBitVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
-
-import java.io.IOException;
 
 /**
  * This class is used in conjunction with its superclass to read nullable bit columns in a parquet file.
@@ -34,7 +30,7 @@ import java.io.IOException;
  * because page/batch boundaries that do not land on byte boundaries require shifting of all of the values
  * in the next batch.
  */
-public final class NullableBitReader extends ColumnReader {
+public final class NullableBitReader extends ColumnReaderParquet {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NullableBitReader.class);
 
   NullableBitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
@@ -43,17 +39,17 @@ public final class NullableBitReader extends ColumnReader {
   }
 
   @Override
-  public void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  public void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-        - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
+        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
     int defLevel;
-    for (int i = 0; i < recordsReadInThisIteration; i++){
-      defLevel = pageReadStatus.definitionLevels.readInteger();
+    for (int i = 0; i < getRecordsReadInThisIteration(); i++){
+      defLevel = getPageReadStatus().definitionLevels.readInteger();
       // if the value is defined
-      if (defLevel == columnDescriptor.getMaxDefinitionLevel()){
-        ((NullableBitVector)valueVecHolder.getValueVector()).getMutator().set(i + valuesReadInCurrentPass,
-            pageReadStatus.valueReader.readBoolean() ? 1 : 0 );
+      if (defLevel == getColumnDescriptor().getMaxDefinitionLevel()){
+        ((NullableBitVector) getValueVecHolder().getValueVector()).getMutator().set(i + getValuesReadInCurrentPass(),
+            getPageReadStatus().valueReader.readBoolean() ? 1 : 0 );
       }
       // otherwise the value is skipped, because the bit vector indicating nullability is zero filled
     }

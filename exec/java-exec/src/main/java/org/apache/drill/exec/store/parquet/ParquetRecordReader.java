@@ -62,7 +62,6 @@ public class ParquetRecordReader implements RecordReader {
   // TODO - should probably find a smarter way to set this, currently 1 megabyte
   private static final int VAR_LEN_FIELD_LENGTH = 1024 * 1024 * 1;
   public static final int PARQUET_PAGE_MAX_SIZE = 1024 * 1024 * 1;
-  private static final String SEPERATOR = System.getProperty("file.separator");
 
 
   // used for clearing the last n bits of a byte
@@ -78,7 +77,7 @@ public class ParquetRecordReader implements RecordReader {
   long totalRecords;
   long rowGroupOffset;
 
-  private List<ColumnReader> columnStatuses;
+  private List<ColumnReaderParquet> columnStatuses;
   FileSystem fileSystem;
   private BufferAllocator allocator;
   private long batchSize;
@@ -231,11 +230,11 @@ public class ParquetRecordReader implements RecordReader {
     output.removeAllFields();
 
     try {
-      for (ColumnReader crs : columnStatuses) {
-        output.addField(crs.valueVecHolder.getValueVector());
+      for (ColumnReaderParquet crs : columnStatuses) {
+        output.addField(crs.getValueVecHolder().getValueVector());
       }
       for (UnknownLengthColumn r : varLengthReader.columns) {
-        output.addField(r.valueVecHolder.getValueVector());
+        output.addField(r.getValueVecHolder().getValueVector());
       }
       output.setNewSchema();
     }catch(SchemaChangeException e) {
@@ -255,11 +254,11 @@ public class ParquetRecordReader implements RecordReader {
     else{
       start = rowGroupOffset;
     }
-    for (ColumnReader crs : columnStatuses){
-      totalByteLength += crs.columnChunkMetaData.getTotalSize();
+    for (ColumnReaderParquet crs : columnStatuses){
+      totalByteLength += crs.getColumnChunkMetaData().getTotalSize();
     }
     for (UnknownLengthColumn r : varLengthReader.columns){
-      totalByteLength += r.columnChunkMetaData.getTotalSize();
+      totalByteLength += r.getColumnChunkMetaData().getTotalSize();
     }
     int bufferSize = 64*1024;
     long totalBytesWritten = 0;
@@ -297,13 +296,13 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   private void resetBatch() {
-    for (ColumnReader column : columnStatuses) {
-      column.valueVecHolder.reset();
-      column.valuesReadInCurrentPass = 0;
+    for (ColumnReaderParquet column : columnStatuses) {
+      column.getValueVecHolder().reset();
+      column.setValuesReadInCurrentPass(0);
     }
     for (UnknownLengthColumn r : varLengthReader.columns){
-      r.valueVecHolder.reset();
-      r.valuesReadInCurrentPass = 0;
+      r.getValueVecHolder().reset();
+      r.setValuesReadInCurrentPass(0);
     }
   }
 
@@ -343,9 +342,9 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
- public void readAllFixedFields(long recordsToRead, ColumnReader firstColumnStatus) throws IOException {
+ public void readAllFixedFields(long recordsToRead, ColumnReaderParquet firstColumnStatus) throws IOException {
 
-   for (ColumnReader crs : columnStatuses){
+   for (ColumnReaderParquet crs : columnStatuses){
      crs.readAllFixedFields(recordsToRead, firstColumnStatus);
    }
  }
@@ -355,7 +354,7 @@ public class ParquetRecordReader implements RecordReader {
     resetBatch();
     long recordsToRead = 0;
     try {
-      ColumnReader firstColumnStatus;
+      ColumnReaderParquet firstColumnStatus;
       if (columnStatuses.size() > 0){
         firstColumnStatus = columnStatuses.iterator().next();
       }
@@ -364,10 +363,10 @@ public class ParquetRecordReader implements RecordReader {
       }
 
       if (allFieldsFixedLength) {
-        recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
+        recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
       } else {
         // arbitrary
-        recordsToRead = Math.min(5000, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
+        recordsToRead = Math.min(5000, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
 
         // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
         // get too complicated
@@ -387,7 +386,7 @@ public class ParquetRecordReader implements RecordReader {
         readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
       }
 
-      return firstColumnStatus.valuesReadInCurrentPass;
+      return firstColumnStatus.getValuesReadInCurrentPass();
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }

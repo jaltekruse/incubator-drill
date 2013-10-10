@@ -17,12 +17,11 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
-public class FixedByteAlignedReader extends ColumnReader {
+public class FixedByteAlignedReader extends ColumnReaderParquet {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FixedByteAlignedReader.class);
 
   FixedByteAlignedReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
@@ -32,18 +31,19 @@ public class FixedByteAlignedReader extends ColumnReader {
 
   // this method is called by its superclass during a read loop
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-        - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
+        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
-    readStartInBytes = pageReadStatus.readPosInBytes;
-    readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
-    readLength = (int) Math.ceil(readLengthInBits / 8.0);
+    setReadStartInBytes(getPageReadStatus().readPosInBytes);
+    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
+    setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
 
-    bytes = pageReadStatus.pageDataByteArray;
+    byte[] bytes;
+    bytes = getPageReadStatus().pageDataByteArray;
     // vectorData is assigned by the superclass read loop method
-    vectorData.writeBytes(bytes,
-        (int) readStartInBytes, (int) readLength);
+    getVectorData().writeBytes(bytes,
+        (int) getReadStartInBytes(), (int) getReadLength());
   }
 }

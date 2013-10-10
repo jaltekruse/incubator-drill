@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import org.apache.drill.exec.vector.BaseDataValueVector;
-import org.apache.drill.exec.vector.NullableVectorDefinitionSetter;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
@@ -33,17 +31,18 @@ public class NullableFixedByteAlignedReader extends NullableColumnReader {
 
   // this method is called by its superclass during a read loop
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    recordsReadInThisIteration = recordsToReadInThisPass;
+    setRecordsReadInThisIteration(recordsToReadInThisPass);
 
-    readStartInBytes = pageReadStatus.readPosInBytes;
-    readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
-    readLength = (int) Math.ceil(readLengthInBits / 8.0);
+    setReadStartInBytes(getPageReadStatus().readPosInBytes);
+    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
+    setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
 
-    bytes = pageReadStatus.pageDataByteArray;
+    byte[] bytes;
+    bytes = getPageReadStatus().pageDataByteArray;
     // vectorData is assigned by the superclass read loop method
-    vectorData.writeBytes(bytes,
-        (int) readStartInBytes, (int) readLength);
+    getVectorData().writeBytes(bytes,
+        (int) getReadStartInBytes(), (int) getReadLength());
   }
 }

@@ -37,26 +37,26 @@ public class RepeatedByteAlignedColumn extends UnknownLengthColumn {
   }
 
   @Override
-  protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToRead, ColumnReaderParquet firstColumnStatus) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public void setup() throws IOException {
     // write the first 0 offset
-    tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
+    tempCurrVec = (VarBinaryVector) getValueVecHolder().getValueVector();
     tempCurrVec.getAccessor().getOffsetVector().getData().writeInt(0);
-    bytesReadInCurrentPass = 0;
-    valuesReadInCurrentPass = 0;
+    setBytesReadInCurrentPass(0);
+    setValuesReadInCurrentPass(0);
   }
 
   @Override
   public int checkNextRecord() throws IOException {
 
-    tempBytes = pageReadStatus.pageDataByteArray;
+    tempBytes = getPageReadStatus().pageDataByteArray;
 
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
-        (int) pageReadStatus.readPosInBytes);
+        (int) getPageReadStatus().readPosInBytes);
     return byteLengthCurrentData;
   }
 
@@ -67,21 +67,21 @@ public class RepeatedByteAlignedColumn extends UnknownLengthColumn {
 
   @Override
   public void readRecord() {
-    tempBytes = pageReadStatus.pageDataByteArray;
-    tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
-    tempCurrVec.getAccessor().getOffsetVector().getData().writeInt((int) bytesReadInCurrentPass +
-        getCurrentValueLength() - 4 * (int) valuesReadInCurrentPass);
-    tempCurrVec.getData().writeBytes(tempBytes, (int) pageReadStatus.readPosInBytes + 4,
+    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempCurrVec = (VarBinaryVector) getValueVecHolder().getValueVector();
+    tempCurrVec.getAccessor().getOffsetVector().getData().writeInt((int) getBytesReadInCurrentPass() +
+        getCurrentValueLength() - 4 * (int) getValuesReadInCurrentPass());
+    tempCurrVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().readPosInBytes + 4,
         getCurrentValueLength());
-    pageReadStatus.readPosInBytes += getCurrentValueLength() + 4;
-    bytesReadInCurrentPass += getCurrentValueLength() + 4;
-    pageReadStatus.valuesRead++;
-    valuesReadInCurrentPass++;
+    getPageReadStatus().readPosInBytes += getCurrentValueLength() + 4;
+    setBytesReadInCurrentPass(getBytesReadInCurrentPass() + getCurrentValueLength() + 4);
+    getPageReadStatus().valuesRead++;
+    setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
   }
 
   @Override
   public void afterReading(long recordsReadInCurrentPass) {
-    tempCurrVec = (VarBinaryVector) valueVecHolder.getValueVector();
+    tempCurrVec = (VarBinaryVector) getValueVecHolder().getValueVector();
     tempCurrVec.getMutator().setValueCount((int)recordsReadInCurrentPass);
   }
 

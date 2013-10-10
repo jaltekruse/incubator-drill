@@ -15,10 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store;
 
-public abstract class ColumnReader {
+/**
+ * This class represents the overall state of a column oriented file. Examples
+ * of column major formats include Parquet, RC and ORC. During the process of
+ * reading or writing a file in one of these formats, this class represents
+ * the overall state.
+ */
+public class ColumnMajorFileDescriptor {
 
-  AbstractDataStores currentSubComponent;
 
 }

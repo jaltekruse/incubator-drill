@@ -22,7 +22,6 @@ import io.netty.buffer.ByteBufInputStream;
 import parquet.bytes.BytesInput;
 import parquet.column.ValuesType;
 import parquet.column.page.Page;
-import parquet.column.page.PageReader;
 import parquet.column.values.ValuesReader;
 import parquet.format.PageHeader;
 
@@ -34,7 +33,7 @@ import static parquet.format.Util.readPageHeader;
 public final class PageReadStatus {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
 
-  ColumnReader parentColumnReader;
+  ColumnReaderParquet parentColumnReader;
 
   // store references to the pages that have been uncompressed, but not copied to ValueVectors yet
   Page currentPage;
@@ -43,8 +42,6 @@ public final class PageReadStatus {
 
   // read position in the current page, stored in the ByteBuf in ParquetRecordReader called bufferWithAllData
   long readPosInBytes;
-  // bit shift needed for the next page if the last one did not line up with a byte boundary
-  int bitShift;
   // storage space for extra bits at the end of a page if they did not line up with a byte boundary
   // prevents the need to keep the entire last page, as these pageDataByteArray need to be added to the next batch
   //byte extraBits;
@@ -55,7 +52,7 @@ public final class PageReadStatus {
   ValuesReader definitionLevels;
   ValuesReader valueReader;
 
-  PageReadStatus(ColumnReader parentStatus, int rowGroupIndex, ByteBuf bufferWithAllData){
+  PageReadStatus(ColumnReaderParquet parentStatus, int rowGroupIndex, ByteBuf bufferWithAllData){
     this.parentColumnReader = parentStatus;
     this.rowGroupIndex = rowGroupIndex;
   }
@@ -72,24 +69,24 @@ public final class PageReadStatus {
     if (rowGroupIndex == 0) shift = 0;
     else shift = 4;
     // first ROW GROUP has a different endpoint, because there are for bytes at the beginning of the file "PAR1"
-    if (parentColumnReader.readPositionInBuffer + shift == parentColumnReader.columnChunkMetaData.getFirstDataPageOffset() + parentColumnReader.columnChunkMetaData.getTotalSize()){
+    if (parentColumnReader.getReadPositionInBuffer() + shift == parentColumnReader.getColumnChunkMetaData().getFirstDataPageOffset() + parentColumnReader.getColumnChunkMetaData().getTotalSize()){
       return false;
     }
     // TODO - in the JIRA for parquet steven put a stack trace for an error with a row group with 3 values in it
     // the Math.min with the end of the buffer should fix it but now I'm not getting results back, leaving it here for now
     // because it is needed, but there might be a problem with it
-    ByteBufInputStream f = new ByteBufInputStream(parentColumnReader.parentReader.getBufferWithAllData().slice(
-        (int) parentColumnReader.readPositionInBuffer,
-        Math.min(200, parentColumnReader.parentReader.getBufferWithAllData().capacity() - (int) parentColumnReader.readPositionInBuffer)));
+    ByteBufInputStream f = new ByteBufInputStream(parentColumnReader.getParentReader().getBufferWithAllData().slice(
+        (int) parentColumnReader.getReadPositionInBuffer(),
+        Math.min(200, parentColumnReader.getParentReader().getBufferWithAllData().capacity() - (int) parentColumnReader.getReadPositionInBuffer())));
     int before = f.available();
     PageHeader pageHeader = readPageHeader(f);
     int length = before - f.available();
-    f = new ByteBufInputStream(parentColumnReader.parentReader.getBufferWithAllData().slice(
-        (int) parentColumnReader.readPositionInBuffer + length, pageHeader.getCompressed_page_size()));
+    f = new ByteBufInputStream(parentColumnReader.getParentReader().getBufferWithAllData().slice(
+        (int) parentColumnReader.getReadPositionInBuffer() + length, pageHeader.getCompressed_page_size()));
 
-    BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+    BytesInput bytesIn = parentColumnReader.getParentReader().getCodecFactoryExposer()
         .decompress(BytesInput.from(f, pageHeader.compressed_page_size), pageHeader.getUncompressed_page_size(),
-            parentColumnReader.columnChunkMetaData.getCodec());
+            parentColumnReader.getColumnChunkMetaData().getCodec());
     currentPage = new Page(
         bytesIn,
         pageHeader.data_page_header.num_values,
@@ -99,7 +96,7 @@ public final class PageReadStatus {
         ParquetStorageEngine.parquetMetadataConverter.getEncoding(pageHeader.data_page_header.encoding)
     );
 
-    parentColumnReader.readPositionInBuffer += pageHeader.compressed_page_size + length;
+    parentColumnReader.setReadPositionInBuffer(parentColumnReader.getReadPositionInBuffer() + pageHeader.compressed_page_size + length);
     byteLength = pageHeader.uncompressed_page_size;
 
     if (currentPage == null) {
@@ -114,9 +111,9 @@ public final class PageReadStatus {
     pageDataByteArray = currentPage.getBytes().toByteArray();
 
     readPosInBytes = 0;
-    if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){
-      definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
-      valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.VALUES);
+    if (parentColumnReader.getColumnDescriptor().getMaxDefinitionLevel() != 0){
+      definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.getColumnDescriptor(), ValuesType.DEFINITION_LEVEL);
+      valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.getColumnDescriptor(), ValuesType.VALUES);
       int endOfDefinitionLevels = definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, 0);
       valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, endOfDefinitionLevels);
       readPosInBytes = endOfDefinitionLevels;
