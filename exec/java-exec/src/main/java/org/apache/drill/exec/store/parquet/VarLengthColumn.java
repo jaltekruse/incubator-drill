@@ -63,13 +63,13 @@ public class VarLengthColumn extends UnknownLengthColumn {
 
   @Override
   public int checkNextRecord() throws IOException {
-    if ( getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
+    if ( getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount()) {
       return VarLenBinaryReader.PAGE_FINISHED;
     }
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempBytes = getPageReadStatus().getPageDataByteArray();
 
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
-        (int) getPageReadStatus().readPosInBytes);
+        (int) getPageReadStatus().getReadPosInBytes());
     return byteLengthCurrentData;
   }
 
@@ -81,24 +81,24 @@ public class VarLengthColumn extends UnknownLengthColumn {
     tempCurrVec.getAccessor().getOffsetVector().getData().writeInt(length);
     totalValuesToRead++;
     setBytesReadInCurrentPass(getBytesReadInCurrentPass() + getCurrentValueLength() + 4);
-    getPageReadStatus().readPosInBytes += getCurrentValueLength() + 4;
-    getPageReadStatus().valuesRead++;
+    getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + getCurrentValueLength() + 4);
+    getPageReadStatus().setValuesRead(getPageReadStatus().getValuesRead() + 1);
     setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
   }
 
   @Override
   public void readRecord() {
     setValuesReadInCurrentPass(initialValuesRead);
-    getPageReadStatus().readPosInBytes = initialReadPos;
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    getPageReadStatus().setReadPosInBytes(initialReadPos);
+    tempBytes = getPageReadStatus().getPageDataByteArray();
     UInt4Vector.Accessor accessor = tempCurrVec.getAccessor().getOffsetVector().getAccessor();
     tempCurrVec = (VarBinaryVector) getValueVecHolder().getValueVector();
     for (int i = 0; i < totalValuesToRead; i++) {
-      getPageReadStatus().readPosInBytes += 4;
+      getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + 4);
 
-      tempCurrVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().readPosInBytes,
+      tempCurrVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().getReadPosInBytes(),
           accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass()));
-      getPageReadStatus().readPosInBytes += accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass());
+      getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass()));
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
     }
   }
@@ -131,16 +131,16 @@ public class VarLengthColumn extends UnknownLengthColumn {
   @Override
   public int beginLoop() throws IOException {
     totalValuesToRead = 0;
-    if (getPageReadStatus().currentPage == null
-        || getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
-      if ( getPageReadStatus().currentPage != null && getPageReadStatus().valuesRead != getPageReadStatus().currentPage.getValueCount())
+    if (getPageReadStatus().getCurrentPage() == null
+        || getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount()) {
+      if ( getPageReadStatus().getCurrentPage() != null && getPageReadStatus().getValuesRead() != getPageReadStatus().getCurrentPage().getValueCount())
         logger.error("incorrect number of records read from variable length column");
-      setTotalValuesRead(getTotalValuesRead() + getPageReadStatus().valuesRead);
+      setTotalValuesRead(getTotalValuesRead() + getPageReadStatus().getValuesRead());
       if (!getPageReadStatus().next()) {
         return VarLenBinaryReader.ROW_GROUP_FINISHED;
       }
     }
-    initialReadPos = getPageReadStatus().readPosInBytes;
+    initialReadPos = getPageReadStatus().getReadPosInBytes();
     initialValuesRead = getValuesReadInCurrentPass();
     return 0;
   }

@@ -48,8 +48,8 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
 
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
-      if (getPageReadStatus().currentPage == null
-          || getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
+      if (getPageReadStatus().getCurrentPage() == null
+          || getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount()) {
         if (!getPageReadStatus().next()) {
           break;
         }
@@ -60,7 +60,7 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
       // to optimize copying data out of the buffered disk stream, runs of defined values
       // are located and copied together, rather than copying individual values
 
-      long runStart = getPageReadStatus().readPosInBytes;
+      long runStart = getPageReadStatus().getReadPosInBytes();
       int runLength = 0;
       int currentDefinitionLevel = 0;
       int currentValueIndexInVector = getValuesReadInCurrentPass();
@@ -76,8 +76,8 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
         // loop to find the longest run of defined values available, can be preceded by several nulls
         while(currentValueIndexInVector - getTotalValuesRead() < recordsToReadInThisPass
             && currentValueIndexInVector < getValueVecHolder().getValueVector().getValueCapacity()
-            && getPageReadStatus().valuesRead + definitionLevelsRead < getPageReadStatus().currentPage.getValueCount()){
-          currentDefinitionLevel = getPageReadStatus().definitionLevels.readInteger();
+            && getPageReadStatus().getValuesRead() + definitionLevelsRead < getPageReadStatus().getCurrentPage().getValueCount()){
+          currentDefinitionLevel = getPageReadStatus().getDefinitionLevels().readInteger();
           definitionLevelsRead++;
           if ( currentDefinitionLevel < getColumnDescriptor().getMaxDefinitionLevel()){
             // a run of non-null values was found, break out of this loop to do a read in the outer loop
@@ -90,7 +90,7 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
           }
           else{
             if (lastValueWasNull){
-              runStart = getPageReadStatus().readPosInBytes;
+              runStart = getPageReadStatus().getReadPosInBytes();
               runLength = 0;
               lastValueWasNull = false;
             }
@@ -99,7 +99,7 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
           }
           currentValueIndexInVector++;
         }
-        getPageReadStatus().readPosInBytes = runStart;
+        getPageReadStatus().setReadPosInBytes(runStart);
         setRecordsReadInThisIteration(runLength);
 
         readField( runLength, firstColumnStatus);
@@ -113,14 +113,14 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
         setRecordsReadInThisIteration(getRecordsReadInThisIteration() + nullsFound);
         setValuesReadInCurrentPass(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
         setTotalValuesRead(getTotalValuesRead() + (int) getRecordsReadInThisIteration());
-        getPageReadStatus().valuesRead += getRecordsReadInThisIteration();
-        if (getReadStartInBytes() + getReadLength() >= getPageReadStatus().byteLength && bitsUsed == 0) {
+        getPageReadStatus().setValuesRead(getPageReadStatus().getValuesRead() + (int) getRecordsReadInThisIteration());
+        if (getReadStartInBytes() + getReadLength() >= getPageReadStatus().getByteLength() && bitsUsed == 0) {
           getPageReadStatus().next();
         } else {
-          getPageReadStatus().readPosInBytes = getReadStartInBytes() + getReadLength();
+          getPageReadStatus().setReadPosInBytes(getReadStartInBytes() + getReadLength());
         }
     }
-    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().currentPage != null);
+    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().getCurrentPage() != null);
     getValueVecHolder().getValueVector().getMutator().setValueCount(
         getValuesReadInCurrentPass());
   }

@@ -53,10 +53,10 @@ public class RepeatedByteAlignedColumn extends UnknownLengthColumn {
   @Override
   public int checkNextRecord() throws IOException {
 
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempBytes = getPageReadStatus().getPageDataByteArray();
 
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
-        (int) getPageReadStatus().readPosInBytes);
+        (int) getPageReadStatus().getReadPosInBytes());
     return byteLengthCurrentData;
   }
 
@@ -67,15 +67,15 @@ public class RepeatedByteAlignedColumn extends UnknownLengthColumn {
 
   @Override
   public void readRecord() {
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempBytes = getPageReadStatus().getPageDataByteArray();
     tempCurrVec = (VarBinaryVector) getValueVecHolder().getValueVector();
     tempCurrVec.getAccessor().getOffsetVector().getData().writeInt((int) getBytesReadInCurrentPass() +
         getCurrentValueLength() - 4 * (int) getValuesReadInCurrentPass());
-    tempCurrVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().readPosInBytes + 4,
+    tempCurrVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().getReadPosInBytes() + 4,
         getCurrentValueLength());
-    getPageReadStatus().readPosInBytes += getCurrentValueLength() + 4;
+    getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + getCurrentValueLength() + 4);
     setBytesReadInCurrentPass(getBytesReadInCurrentPass() + getCurrentValueLength() + 4);
-    getPageReadStatus().valuesRead++;
+    getPageReadStatus().setValuesRead(getPageReadStatus().getValuesRead() + 1);
     setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
   }
 

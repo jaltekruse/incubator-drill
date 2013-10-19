@@ -17,16 +17,21 @@
  */
 package org.apache.drill.exec.store;
 
+import io.netty.buffer.ByteBuf;
+import org.apache.drill.exec.store.parquet.AbstractDataStore;
+import org.apache.drill.exec.store.parquet.PageReadStatus;
+import org.apache.drill.exec.store.parquet.VectorDataProvider;
+import org.apache.drill.exec.store.parquet.VectorDataReceiver;
 import org.apache.drill.exec.vector.*;
 
-public class VectorHolder {
+public class VectorHolder extends AbstractDataStore implements VectorDataProvider<ByteBuf>,
+VectorDataReceiver<ByteBuf>{
   private int count;
   private int groupCount;
   private int length;
   private ValueVector vector;
   private int currentLength;
 
-  
   public VectorHolder(int length, ValueVector vector) {
     this.length = length;
     this.vector = vector;
@@ -88,5 +93,61 @@ public class VectorHolder {
 
   public void allocateNew(int valueLength, int repeatedPerTop) {
     AllocationHelper.allocate(vector, valueLength, 10, repeatedPerTop);
+  }
+
+  @Override
+  public ByteBuf getData() {
+    return ((BaseDataValueVector) vector).getData();
+  }
+
+  @Override
+  public int valuesLeft() {
+    return length - count;
+  }
+
+  @Override
+  public int readValues(int valuesToRead, VectorDataReceiver dest) {
+    return 0;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public ByteBuf getDataDestination() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public void receiveData(PageReadStatus source, int valuesToRead, int sourcePos) {
+    getData().writeBytes(source.getData(),
+        sourcePos, valuesToRead * source.getParentColumnReader().getDataTypeLengthInBits() / 8);
+  }
+
+  @Override
+  public void updatePositionAfterWrite(int valsWritten) {
+    count += valsWritten;
+  }
+
+  @Override
+  public boolean needNewSubComponent() {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public boolean getNextSubComponent() {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public boolean hasSubComponents() {
+    return false;
+  }
+
+  @Override
+  public AbstractDataStore getCurrentSubComponent() {
+    return null;
+  }
+
+  @Override
+  public boolean dataStoredAtThisLevel() {
+    return true;
   }
 }

@@ -65,12 +65,12 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
 
   @Override
   public int checkNextRecord() throws IOException {
-    if ( getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
+    if ( getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount()) {
       return VarLenBinaryReader.PAGE_FINISHED;
     }
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempBytes = getPageReadStatus().getPageDataByteArray();
     defLevelsRead++;
-    if ( getColumnDescriptor().getMaxDefinitionLevel() > getPageReadStatus().definitionLevels.readInteger()){
+    if ( getColumnDescriptor().getMaxDefinitionLevel() > getPageReadStatus().getDefinitionLevels().readInteger()){
       currentValNull = true;
       byteLengthCurrentData = 0;
       nullsRead++;
@@ -78,7 +78,7 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
     }
 
     byteLengthCurrentData = BytesUtils.readIntLittleEndian(tempBytes,
-        (int) getPageReadStatus().readPosInBytes);
+        (int) getPageReadStatus().getReadPosInBytes());
 
     return byteLengthCurrentData;
   }
@@ -93,10 +93,10 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
     totalValuesToRead++;
     if (getCurrentValueLength() > 0){
       setBytesReadInCurrentPass(getBytesReadInCurrentPass() + getCurrentValueLength() + 4);
-      getPageReadStatus().readPosInBytes += getCurrentValueLength() + 4;
+      getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + getCurrentValueLength() + 4);
     }
 
-    getPageReadStatus().valuesRead++;
+    getPageReadStatus().setValuesRead(getPageReadStatus().getValuesRead() + 1);
     setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
   }
 
@@ -104,18 +104,18 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
   public void readRecord() throws IOException {
     long valuesShouldBeReading = getValuesReadInCurrentPass();
     setValuesReadInCurrentPass(initialValuesRead);
-    tempBytes = getPageReadStatus().pageDataByteArray;
+    tempBytes = getPageReadStatus().getPageDataByteArray();
     tempCurrNullVec = (NullableVarBinaryVector) getValueVecHolder().getValueVector();
-    getPageReadStatus().readPosInBytes = initialReadPos;
+    getPageReadStatus().setReadPosInBytes(initialReadPos);
     UInt4Vector.Accessor accessor = tempCurrNullVec.getDataVector().getAccessor().getOffsetVector().getAccessor();
 
     for (int i = 0; i < totalValuesToRead; i++) {
       if (accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass()) > 0){
-        getPageReadStatus().readPosInBytes += 4;
-        tempCurrNullVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().readPosInBytes,
+        getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + 4);
+        tempCurrNullVec.getData().writeBytes(tempBytes, (int) getPageReadStatus().getReadPosInBytes(),
             accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass()));
         tempCurrNullVec.getMutator().setIndexDefined(getValuesReadInCurrentPass());
-        getPageReadStatus().readPosInBytes += accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass());
+        getPageReadStatus().setReadPosInBytes(getPageReadStatus().getReadPosInBytes() + accessor.get(getValuesReadInCurrentPass() + 1) - accessor.get(getValuesReadInCurrentPass()));
       }
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + 1);
     }
@@ -147,15 +147,15 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
   @Override
   public int beginLoop() throws IOException {
     totalValuesToRead = 0;
-    if (getPageReadStatus().currentPage == null
-        || getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
-      setTotalValuesRead(getTotalValuesRead() + getPageReadStatus().valuesRead);
+    if (getPageReadStatus().getCurrentPage() == null
+        || getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount()) {
+      setTotalValuesRead(getTotalValuesRead() + getPageReadStatus().getValuesRead());
       if (!getPageReadStatus().next()) {
         return -1;
       }
       defLevelsRead = 0;
     }
-    initialReadPos = getPageReadStatus().readPosInBytes;
+    initialReadPos = getPageReadStatus().getReadPosInBytes();
     initialValuesRead = getValuesReadInCurrentPass();
     return 0;
   }

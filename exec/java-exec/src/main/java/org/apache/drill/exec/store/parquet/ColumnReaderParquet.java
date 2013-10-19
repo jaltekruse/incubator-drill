@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.parquet;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.exec.store.VectorHolder;
+import org.apache.drill.exec.store.reader_writer.AbstractDataStores;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
@@ -89,9 +90,8 @@ public abstract class ColumnReaderParquet {
     setVectorData(((BaseValueVector) getValueVecHolder().getValueVector()).getData());
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
-      if (getPageReadStatus().currentPage == null
-          || getPageReadStatus().valuesRead == getPageReadStatus().currentPage.getValueCount()) {
-        if (!getPageReadStatus().next()) {
+      if (getPageReadStatus().needNewSubComponent()){
+        if (!getPageReadStatus().getNextSubComponent()) {
           break;
         }
       }
@@ -100,10 +100,9 @@ public abstract class ColumnReaderParquet {
 
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
       setTotalValuesRead(getTotalValuesRead() + (int) getRecordsReadInThisIteration());
-      getPageReadStatus().valuesRead += getRecordsReadInThisIteration();
-        getPageReadStatus().readPosInBytes = getReadStartInBytes() + getReadLength();
+      getPageReadStatus().setReadPosInBytes(getReadStartInBytes() + getReadLength());
     }
-    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().currentPage != null);
+    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().getCurrentPage() != null);
     getValueVecHolder().getValueVector().getMutator().setValueCount(
         getValuesReadInCurrentPass());
   }

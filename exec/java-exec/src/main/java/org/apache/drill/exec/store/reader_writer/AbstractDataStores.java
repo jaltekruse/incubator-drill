@@ -15,10 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.reader_writer;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.exec.store.VectorHolder;
+import org.apache.drill.exec.store.parquet.PageReadStatus;
+import org.apache.drill.exec.store.parquet.ParquetRecordReader;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
@@ -35,7 +37,35 @@ public class AbstractDataStores {
    * attempts to encapsulate all of the functionality needed for each source/sink for
    * data.
    */
-  public static class AbstractDataStore {
+  public static abstract class AbstractDataStore {
+
+    public abstract boolean needNewSubComponent();
+    public abstract boolean getNextSubComponent();
+
+    /**
+     * Indicates whether this abstraction of a file contains other sub-components.
+     *
+     * @return - true if there are components below
+     */
+    public abstract boolean hasSubComponents();
+
+    /**
+     * Get the current sub-component of the data source representation.
+     *
+     * @return - the abstract data source below
+     */
+    public abstract AbstractDataStore getCurrentSubComponent();
+
+    /**
+     * Indicates if data is available at this level of the file. For abstractions that are just
+     * wrappers of smaller components, this will return false.
+     *
+     * Example, in parquet there are row groups, but the data is actually all contained in the
+     * pages below the row group. The row groups is a container for a number of rows and pages
+     * within rows.
+     * @return
+     */
+    public abstract boolean dataStoredAtThisLevel();
 
   }
 
@@ -61,11 +91,59 @@ public class AbstractDataStores {
     public void updatePositionAfterWrite(int valsWritten) {
       currentValue += valsWritten;
     }
+
+    @Override
+    public boolean needNewSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean getNextSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean hasSubComponents() {
+      return false;
+    }
+
+    @Override
+    public AbstractDataStore getCurrentSubComponent() {
+      return null;
+    }
+
+    @Override
+    public boolean dataStoredAtThisLevel() {
+      return true;
+    }
   }
 
   public static class ParquetRowGroupReader extends AbstractDataStore {
 
+    @Override
+    public boolean needNewSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
 
+    @Override
+    public boolean getNextSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean hasSubComponents() {
+      return true;
+    }
+
+    @Override
+    public AbstractDataStore getCurrentSubComponent() {
+      return null;
+    }
+
+    @Override
+    public boolean dataStoredAtThisLevel() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
   }
 
   public interface VectorDataReceiver<E> {
@@ -79,7 +157,7 @@ public class AbstractDataStores {
   }
 
   public interface VectorDataProvider<E> {
-    public boolean needNewSubComponent();
+
     public E getData();
     public int valuesLeft();
     //public void transferValuesToVector(ByteBuf buf, int values);
@@ -130,6 +208,30 @@ public class AbstractDataStores {
     private long recordsReadInThisIteration = 0;
 
 
+    @Override
+    public boolean needNewSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean getNextSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean hasSubComponents() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public AbstractDataStore getCurrentSubComponent() {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public boolean dataStoredAtThisLevel() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
   }
 
 
@@ -171,6 +273,11 @@ public class AbstractDataStores {
     }
 
     @Override
+    public boolean getNextSubComponent() {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     public byte[] getData() {
       return pageDataByteArray;
     }
@@ -181,6 +288,21 @@ public class AbstractDataStores {
 
     public void transferValuesToVector(Object o, int values){
       throw new RuntimeException("Data source did not define a type for the destination buffer.");
+    }
+
+    @Override
+    public boolean hasSubComponents() {
+      return false;
+    }
+
+    @Override
+    public AbstractDataStore getCurrentSubComponent() {
+      return null;
+    }
+
+    @Override
+    public boolean dataStoredAtThisLevel() {
+      return true;
     }
 
 //    public void transferValuesToVector(ByteBuf buf, int values){

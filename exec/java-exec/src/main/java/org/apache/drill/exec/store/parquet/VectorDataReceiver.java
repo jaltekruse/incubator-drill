@@ -17,8 +17,12 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet;
 
-public abstract class ColumnReader {
+public interface VectorDataReceiver<E> {
 
-  AbstractDataStores currentSubComponent;
+  public E getDataDestination();
+
+  public void receiveData(PageReadStatus source, int valuesToRead, int sourcePos);
+
+  public void updatePositionAfterWrite(int valsWritten);
 
 }

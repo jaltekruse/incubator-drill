@@ -33,17 +33,18 @@ public class FixedByteAlignedReader extends ColumnReaderParquet {
   @Override
   protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
-        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
+        - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
-    setReadStartInBytes(getPageReadStatus().readPosInBytes);
-    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
-    setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
-
-    byte[] bytes;
-    bytes = getPageReadStatus().pageDataByteArray;
-    // vectorData is assigned by the superclass read loop method
-    getVectorData().writeBytes(bytes,
-        (int) getReadStartInBytes(), (int) getReadLength());
+//    setReadStartInBytes(getPageReadStatus().getReadPosInBytes());
+//    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
+//    setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
+//
+//    byte[] bytes;
+//    bytes = getPageReadStatus().getPageDataByteArray();
+//    // vectorData is assigned by the superclass read loop method
+//    getVectorData().writeBytes(bytes,
+//        (int) getReadStartInBytes(), (int) getReadLength());
+    getPageReadStatus().readValues((int) recordsToReadInThisPass, getValueVecHolder());
   }
 }

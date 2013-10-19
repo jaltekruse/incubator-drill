@@ -39,15 +39,15 @@ public final class BitReader extends ColumnReaderParquet {
   @Override
   protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
-        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
+        - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
-    setReadStartInBytes(getPageReadStatus().readPosInBytes);
+    setReadStartInBytes(getPageReadStatus().getReadPosInBytes());
     setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
     setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
 
     byte[] bytes;
-    bytes = getPageReadStatus().pageDataByteArray;
+    bytes = getPageReadStatus().getPageDataByteArray();
     // standard read, using memory mapping
     if (bitShift == 0) {
       ((BaseDataValueVector) getValueVecHolder().getValueVector()).getData().writeBytes(bytes,
@@ -55,7 +55,7 @@ public final class BitReader extends ColumnReaderParquet {
     } else { // read in individual values, because a bitshift is necessary with where the last page or batch ended
 
       setVectorData(((BaseDataValueVector) getValueVecHolder().getValueVector()).getData());
-      nextByte = bytes[(int) Math.max(0, Math.ceil(getPageReadStatus().valuesRead / 8.0) - 1)];
+      nextByte = bytes[(int) Math.max(0, Math.ceil(getPageReadStatus().getValuesRead() / 8.0) - 1)];
       setReadLengthInBits(getRecordsReadInThisIteration() + bitShift);
 
       int i = 0;
@@ -66,9 +66,9 @@ public final class BitReader extends ColumnReaderParquet {
         // mask the bits about to be added from the next byte
         currentByte = (byte) (currentByte & ParquetRecordReader.startBitMasks[bitShift - 1]);
         // if we are not on the last byte
-        if ((int) Math.ceil(getPageReadStatus().valuesRead / 8.0) + i < getPageReadStatus().byteLength) {
+        if ((int) Math.ceil(getPageReadStatus().getValuesRead() / 8.0) + i < getPageReadStatus().getByteLength()) {
           // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
-          nextByte = bytes[(int) Math.ceil(getPageReadStatus().valuesRead / 8.0) + i];
+          nextByte = bytes[(int) Math.ceil(getPageReadStatus().getValuesRead() / 8.0) + i];
           currentByte = (byte) (currentByte | nextByte
               << (8 - bitShift)
               & ParquetRecordReader.endBitMasks[8 - bitShift - 1]);

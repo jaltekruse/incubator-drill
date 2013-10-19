@@ -35,12 +35,12 @@ public class NullableFixedByteAlignedReader extends NullableColumnReader {
 
     setRecordsReadInThisIteration(recordsToReadInThisPass);
 
-    setReadStartInBytes(getPageReadStatus().readPosInBytes);
+    setReadStartInBytes(getPageReadStatus().getReadPosInBytes());
     setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
     setReadLength((int) Math.ceil(getReadLengthInBits() / 8.0));
 
     byte[] bytes;
-    bytes = getPageReadStatus().pageDataByteArray;
+    bytes = getPageReadStatus().getPageDataByteArray();
     // vectorData is assigned by the superclass read loop method
     getVectorData().writeBytes(bytes,
         (int) getReadStartInBytes(), (int) getReadLength());

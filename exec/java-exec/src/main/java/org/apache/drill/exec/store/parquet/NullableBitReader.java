@@ -41,15 +41,15 @@ public final class NullableBitReader extends ColumnReaderParquet {
   @Override
   public void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    setRecordsReadInThisIteration(Math.min(getPageReadStatus().currentPage.getValueCount()
-        - getPageReadStatus().valuesRead, recordsToReadInThisPass - getValuesReadInCurrentPass()));
+    setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
+        - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
     int defLevel;
     for (int i = 0; i < getRecordsReadInThisIteration(); i++){
-      defLevel = getPageReadStatus().definitionLevels.readInteger();
+      defLevel = getPageReadStatus().getDefinitionLevels().readInteger();
       // if the value is defined
       if (defLevel == getColumnDescriptor().getMaxDefinitionLevel()){
         ((NullableBitVector) getValueVecHolder().getValueVector()).getMutator().set(i + getValuesReadInCurrentPass(),
-            getPageReadStatus().valueReader.readBoolean() ? 1 : 0 );
+            getPageReadStatus().getValueReader().readBoolean() ? 1 : 0 );
       }
       // otherwise the value is skipped, because the bit vector indicating nullability is zero filled
     }
