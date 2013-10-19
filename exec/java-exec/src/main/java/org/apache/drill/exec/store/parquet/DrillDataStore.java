@@ -20,13 +20,13 @@ package org.apache.drill.exec.store.parquet;
 import java.io.IOException;
 
 /**
- * An AbstractDataStore represents a storage mechanism in memory or on disk
+ * An DrillDataStore represents a storage mechanism in memory or on disk
  * that can provide data to another source or have data written into it. As
  * Drill will be concerned with reading data in many different formats, this class
  * attempts to encapsulate all of the functionality needed for each source/sink for
  * data.
  */
-public abstract class AbstractDataStore {
+public interface DrillDataStore {
 
   public abstract boolean needNewSubComponent();
   public abstract boolean getNextSubComponent() throws IOException;
@@ -43,7 +43,7 @@ public abstract class AbstractDataStore {
    *
    * @return - the abstract data source below
    */
-  public abstract AbstractDataStore getCurrentSubComponent();
+  public abstract DrillDataStore getCurrentSubComponent();
 
   /**
    * Indicates if data is available at this level of the file. For abstractions that are just
@@ -55,5 +55,9 @@ public abstract class AbstractDataStore {
    * @return
    */
   public abstract boolean dataStoredAtThisLevel();
+
+  public void updatePositionAfterWrite(int valsWritten);
+
+  public boolean finishedProcessing();
 
 }

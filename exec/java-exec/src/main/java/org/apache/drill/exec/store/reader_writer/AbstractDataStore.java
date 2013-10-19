@@ -18,7 +18,7 @@
 package org.apache.drill.exec.store.reader_writer;
 
 /**
- * An AbstractDataStore represents a storage mechanism in memory or on disk
+ * An DrillDataStore represents a storage mechanism in memory or on disk
  * that can provide data to another source or have data written into it. As
  * Drill will be concerned with reading data in many different formats, this class
  * attempts to encapsulate all of the functionality needed for each source/sink for

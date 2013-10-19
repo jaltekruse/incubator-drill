@@ -18,14 +18,13 @@
 package org.apache.drill.exec.store;
 
 import io.netty.buffer.ByteBuf;
-import org.apache.drill.exec.store.parquet.AbstractDataStore;
+import org.apache.drill.exec.store.parquet.DrillDataStore;
 import org.apache.drill.exec.store.parquet.PageReadStatus;
 import org.apache.drill.exec.store.parquet.VectorDataProvider;
 import org.apache.drill.exec.store.parquet.VectorDataReceiver;
 import org.apache.drill.exec.vector.*;
 
-public class VectorHolder extends AbstractDataStore implements VectorDataProvider<ByteBuf>,
-VectorDataReceiver<ByteBuf>{
+public class VectorHolder implements VectorDataProvider<ByteBuf>, VectorDataReceiver<ByteBuf>{
   private int count;
   private int groupCount;
   private int length;
@@ -127,6 +126,11 @@ VectorDataReceiver<ByteBuf>{
   }
 
   @Override
+  public boolean finishedProcessing() {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
   public boolean needNewSubComponent() {
     return false;  //To change body of implemented methods use File | Settings | File Templates.
   }
@@ -142,7 +146,7 @@ VectorDataReceiver<ByteBuf>{
   }
 
   @Override
-  public AbstractDataStore getCurrentSubComponent() {
+  public DrillDataStore getCurrentSubComponent() {
     return null;
   }
 

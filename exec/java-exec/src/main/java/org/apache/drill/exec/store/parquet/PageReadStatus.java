@@ -30,7 +30,7 @@ import java.io.IOException;
 import static parquet.format.Util.readPageHeader;
 
 // class to keep track of the read position of variable length columns
-public final class PageReadStatus extends AbstractDataStore implements VectorDataProvider<byte[]> {
+public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDataStore {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
 
   private ColumnReaderParquet parentColumnReader;
@@ -143,8 +143,8 @@ public final class PageReadStatus extends AbstractDataStore implements VectorDat
     int numValues = Math.min(valuesLeft(), valuesToRead);
 
     dest.receiveData(this, numValues, (int) readPosInBytes);
-    valuesRead += numValues;
     dest.updatePositionAfterWrite(numValues);
+    this.updatePositionAfterWrite(numValues);
 
     return valuesToRead - numValues;
   }
@@ -164,13 +164,24 @@ public final class PageReadStatus extends AbstractDataStore implements VectorDat
   }
 
   @Override
-  public AbstractDataStore getCurrentSubComponent() {
+  public DrillDataStore getCurrentSubComponent() {
     return this;
   }
 
   @Override
   public boolean dataStoredAtThisLevel() {
     return true;
+  }
+
+  @Override
+  public void updatePositionAfterWrite(int valsWritten) {
+    valuesRead += valsWritten;
+    //setReadPosInBytes(getReadStartInBytes() + getReadLength());
+  }
+
+  @Override
+  public boolean finishedProcessing() {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   public ColumnReaderParquet getParentColumnReader() {

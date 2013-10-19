@@ -17,12 +17,12 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet;
 
-public interface VectorDataReceiver<E> {
+public interface VectorDataReceiver<E> extends DrillDataStore {
 
   public E getDataDestination();
 
   public void receiveData(PageReadStatus source, int valuesToRead, int sourcePos);
 
-  public void updatePositionAfterWrite(int valsWritten);
+
 
 }

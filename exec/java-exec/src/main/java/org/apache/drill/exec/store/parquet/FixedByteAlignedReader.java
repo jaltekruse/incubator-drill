@@ -33,8 +33,7 @@ public class FixedByteAlignedReader extends ColumnReaderParquet {
   @Override
   protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
 
-    setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
-        - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
+    //setRecordsReadInThisIteration(Math.min(getPageReadStatus().valuesLeft(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
 //    setReadStartInBytes(getPageReadStatus().getReadPosInBytes());
 //    setReadLengthInBits(getRecordsReadInThisIteration() * getDataTypeLengthInBits());
@@ -45,6 +44,6 @@ public class FixedByteAlignedReader extends ColumnReaderParquet {
 //    // vectorData is assigned by the superclass read loop method
 //    getVectorData().writeBytes(bytes,
 //        (int) getReadStartInBytes(), (int) getReadLength());
-    getPageReadStatus().readValues((int) recordsToReadInThisPass, getValueVecHolder());
+    setRecordsReadInThisIteration( recordsToReadInThisPass - getPageReadStatus().readValues((int) recordsToReadInThisPass, getValueVecHolder()));
   }
 }

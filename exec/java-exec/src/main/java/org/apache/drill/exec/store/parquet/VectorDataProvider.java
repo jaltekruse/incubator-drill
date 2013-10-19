@@ -18,7 +18,7 @@
 package org.apache.drill.exec.store.parquet;
 
 
-public interface VectorDataProvider<E> {
+public interface VectorDataProvider<E> extends DrillDataStore {
 
   public E getData();
   public int valuesLeft();
