@@ -145,8 +145,14 @@ public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDa
     dest.receiveData(this, numValues, (int) readPosInBytes);
     dest.updatePositionAfterWrite(numValues);
     this.updatePositionAfterWrite(numValues);
+    //setReadPosInBytes(getReadStartInBytes() + getReadLength());
 
     return valuesToRead - numValues;
+  }
+
+  @Override
+  public boolean hasMoreData() {
+    return currentPage != null;
   }
 
   @Override
@@ -177,11 +183,6 @@ public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDa
   public void updatePositionAfterWrite(int valsWritten) {
     valuesRead += valsWritten;
     //setReadPosInBytes(getReadStartInBytes() + getReadLength());
-  }
-
-  @Override
-  public boolean finishedProcessing() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   public ColumnReaderParquet getParentColumnReader() {

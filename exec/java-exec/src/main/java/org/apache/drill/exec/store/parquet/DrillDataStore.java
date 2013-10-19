@@ -58,6 +58,5 @@ public interface DrillDataStore {
 
   public void updatePositionAfterWrite(int valsWritten);
 
-  public boolean finishedProcessing();
 
 }

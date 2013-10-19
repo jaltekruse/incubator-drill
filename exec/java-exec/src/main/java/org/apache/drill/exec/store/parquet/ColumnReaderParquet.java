@@ -19,7 +19,6 @@ package org.apache.drill.exec.store.parquet;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.exec.store.VectorHolder;
-import org.apache.drill.exec.store.reader_writer.AbstractDataStores;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
@@ -100,9 +99,8 @@ public abstract class ColumnReaderParquet {
 
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
       setTotalValuesRead(getTotalValuesRead() + (int) getRecordsReadInThisIteration());
-      getPageReadStatus().setReadPosInBytes(getReadStartInBytes() + getReadLength());
     }
-    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().getCurrentPage() != null);
+    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().hasMoreData());
     getValueVecHolder().getValueVector().getMutator().setValueCount(
         getValuesReadInCurrentPass());
   }

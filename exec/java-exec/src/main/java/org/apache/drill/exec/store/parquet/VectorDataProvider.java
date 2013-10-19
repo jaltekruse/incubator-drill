@@ -33,4 +33,6 @@ public interface VectorDataProvider<E> extends DrillDataStore {
    *           valuesToRead - valuesLeft() at the time the method was called
    */
   public int readValues(int valuesToRead, VectorDataReceiver dest);
+
+  public boolean hasMoreData();
 }

@@ -23,6 +23,6 @@ public interface VectorDataReceiver<E> extends DrillDataStore {
 
   public void receiveData(PageReadStatus source, int valuesToRead, int sourcePos);
 
-
+  public boolean hasMoreSpace();
 
 }

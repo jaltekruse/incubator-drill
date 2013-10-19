@@ -110,6 +110,11 @@ public class VectorHolder implements VectorDataProvider<ByteBuf>, VectorDataRece
   }
 
   @Override
+  public boolean hasMoreData() {
+    return valuesLeft() == 0;
+  }
+
+  @Override
   public ByteBuf getDataDestination() {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
@@ -121,13 +126,13 @@ public class VectorHolder implements VectorDataProvider<ByteBuf>, VectorDataRece
   }
 
   @Override
-  public void updatePositionAfterWrite(int valsWritten) {
-    count += valsWritten;
+  public boolean hasMoreSpace() {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
-  public boolean finishedProcessing() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+  public void updatePositionAfterWrite(int valsWritten) {
+    count += valsWritten;
   }
 
   @Override
