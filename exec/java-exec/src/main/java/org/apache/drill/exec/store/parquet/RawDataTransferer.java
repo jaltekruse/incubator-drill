@@ -17,22 +17,24 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet;
 
+public class RawDataTransferer {
 
-public interface VectorDataProvider<E> extends DrillDataStore {
+  void transferValues(VectorDataProviders.ByteArrayBackedProvider src,
+                      VectorDataReceivers.ByteArrayBackedReceiver dest,
+                      int valuesToRead){
 
-  public E getData();
-  public int valuesLeft();
-  //public void transferValuesToVector(ByteBuf buf, int values);
+  }
 
-  /**
-   * Method to read the specified number of values out of this part of the file.
-   *
-   * @param valuesToRead - the number of values to read
-   * @param dest - the destination of the data
-   * @return - the number of records that still need to be read in the next part of the file.
-   *           valuesToRead - valuesLeft() at the time the method was called
-   */
-  public int readValues(int valuesToRead, VectorDataReceiver dest);
+  void transferValues(VectorDataProviders.ByteBufBackedProvider src,
+                      VectorDataReceivers.ByteArrayBackedReceiver dest,
+                      int valuesToRead){
 
-  public boolean hasMoreData();
+  }
+
+
+  void transferValues(VectorDataProviders.ByteArrayBackedProvider src,
+                      VectorDataReceivers.ByteBufBackedReceiver dest,
+                      int valuesToRead){
+
+  }
 }

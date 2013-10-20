@@ -31,7 +31,7 @@ public abstract class ColumnReaderParquet {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ColumnReaderParquet.class);
 
   // Value Vector for this column
-  private VectorHolder valueVecHolder;
+  private FixedByteAlignedVector valueVecHolder;
   // column description from the parquet library
   private ColumnDescriptor columnDescriptor;
   // metadata of the column, from the parquet library
@@ -64,8 +64,8 @@ public abstract class ColumnReaderParquet {
   ColumnReaderParquet(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                       boolean fixedLength, ValueVector v){
     this.setParentReader(parentReader);
-    if (allocateSize > 1) setValueVecHolder(new VectorHolder(allocateSize, v));
-    else setValueVecHolder(new VectorHolder(5000, v));
+    if (allocateSize > 1) setValueVecHolder(new FixedByteAlignedVector(allocateSize, v));
+    else setValueVecHolder(new FixedByteAlignedVector(5000, v));
 
     setColumnDescriptor(descriptor);
     this.setColumnChunkMetaData(columnChunkMetaData);
@@ -107,11 +107,11 @@ public abstract class ColumnReaderParquet {
 
   protected abstract void readField(long recordsToRead, ColumnReaderParquet firstColumnStatus);
 
-  public VectorHolder getValueVecHolder() {
+  public FixedByteAlignedVector getValueVecHolder() {
     return valueVecHolder;
   }
 
-  public void setValueVecHolder(VectorHolder valueVecHolder) {
+  public void setValueVecHolder(FixedByteAlignedVector valueVecHolder) {
     this.valueVecHolder = valueVecHolder;
   }
 
@@ -132,6 +132,7 @@ public abstract class ColumnReaderParquet {
   }
 
   public PageReadStatus getPageReadStatus() {
+//  public VectorDataProviders.ByteArrayBackedProvider getPageReadStatus() {
     return pageReadStatus;
   }
 

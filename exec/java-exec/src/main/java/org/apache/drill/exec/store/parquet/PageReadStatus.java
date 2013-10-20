@@ -30,7 +30,7 @@ import java.io.IOException;
 import static parquet.format.Util.readPageHeader;
 
 // class to keep track of the read position of variable length columns
-public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDataStore {
+public final class PageReadStatus implements VectorDataProviders.ByteArrayBackedProvider, DrillDataStore {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
 
   private ColumnReaderParquet parentColumnReader;
@@ -139,7 +139,16 @@ public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDa
    * @param valuesToRead
    * @return
    */
-  public int readValues(int valuesToRead, VectorDataReceiver dest){
+  public int readValues(int valuesToRead, VectorDataReceivers.ByteBufBackedReceiver dest){
+    return readValuesHelper(valuesToRead, dest);
+  }
+
+  @Override
+  public int readValues(int valuesToRead, VectorDataReceivers.ByteArrayBackedReceiver dest) {
+    return readValuesHelper(valuesToRead, dest);
+  }
+
+  public int readValuesHelper(int valuesToRead, VectorDataReceivers.VectorDataReceiver dest ){
     int numValues = Math.min(valuesLeft(), valuesToRead);
 
     dest.receiveData(this, numValues, (int) readPosInBytes);
@@ -156,7 +165,7 @@ public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDa
   }
 
   @Override
-  public byte[] getData() {
+  public byte[] getDataSource() {
     return pageDataByteArray;
   }
 
@@ -183,6 +192,16 @@ public final class PageReadStatus implements VectorDataProvider<byte[]>, DrillDa
   public void updatePositionAfterWrite(int valsWritten) {
     valuesRead += valsWritten;
     //setReadPosInBytes(getReadStartInBytes() + getReadLength());
+  }
+
+  @Override
+  public int getTypeLengthInBytes() throws UnsupportedOperationException {
+    return getParentColumnReader().getDataTypeLengthInBits() / 8;
+  }
+
+  @Override
+  public int getTypeLengthInBits() throws UnsupportedOperationException {
+    return getParentColumnReader().getDataTypeLengthInBits();
   }
 
   public ColumnReaderParquet getParentColumnReader() {

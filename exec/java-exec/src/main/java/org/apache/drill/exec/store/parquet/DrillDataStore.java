@@ -58,5 +58,19 @@ public interface DrillDataStore {
 
   public void updatePositionAfterWrite(int valsWritten);
 
+  /**
+   * The length of each defined value in bytes.
+   *
+   * @return - if positive, the length in bytes
+   * @throws - if the data in this source is not fixed length
+   */
+  public int getTypeLengthInBytes() throws UnsupportedOperationException;
+
+  /**
+   * The length of each defined value in bits.
+   * @return
+   * @throws UnsupportedOperationException
+   */
+  public int getTypeLengthInBits() throws UnsupportedOperationException;
 
 }

@@ -17,12 +17,28 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet;
 
-public interface VectorDataReceiver<E> extends DrillDataStore {
+import io.netty.buffer.ByteBuf;
 
-  public E getDataDestination();
+public class VectorDataReceivers {
 
-  public void receiveData(PageReadStatus source, int valuesToRead, int sourcePos);
+  public interface VectorDataReceiver<E> extends DrillDataStore{
 
-  public boolean hasMoreSpace();
+    public E getDataDestination();
+
+    public void receiveData(VectorDataProviders.ByteArrayBackedProvider source, int valuesToRead, int sourcePos);
+
+    public void receiveData(VectorDataProviders.ByteBufBackedProvider source, int valuesToRead, int sourcePos);
+
+    public boolean hasMoreSpace();
+
+  }
+
+  public interface ByteArrayBackedReceiver extends VectorDataReceiver<byte[]> {
+
+  }
+
+  public interface ByteBufBackedReceiver extends VectorDataReceiver<ByteBuf> {
+
+  }
 
 }
