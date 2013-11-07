@@ -27,7 +27,7 @@ import parquet.schema.PrimitiveType;
 
 import java.io.IOException;
 
-public abstract class ColumnReaderParquet {
+public abstract class ColumnReaderParquet implements DrillDataStore<VectorDataProviders.ByteArrayBackedProvider> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ColumnReaderParquet.class);
 
   // Value Vector for this column
@@ -89,8 +89,8 @@ public abstract class ColumnReaderParquet {
     setVectorData(((BaseValueVector) getValueVecHolder().getValueVector()).getData());
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
-      if (getPageReadStatus().needNewSubComponent()){
-        if (!getPageReadStatus().getNextSubComponent()) {
+      if (needNewSubComponent()){
+        if (!getNextSubComponent()) {
           break;
         }
       }
@@ -100,7 +100,7 @@ public abstract class ColumnReaderParquet {
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
       setTotalValuesRead(getTotalValuesRead() + (int) getRecordsReadInThisIteration());
     }
-    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getPageReadStatus().hasMoreData());
+    while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getCurrentSubComponent().valuesLeft() > 0);
     getValueVecHolder().getValueVector().getMutator().setValueCount(
         getValuesReadInCurrentPass());
   }
@@ -235,4 +235,46 @@ public abstract class ColumnReaderParquet {
   public void setRecordsReadInThisIteration(long recordsReadInThisIteration) {
     this.recordsReadInThisIteration = recordsReadInThisIteration;
   }
+
+    @Override
+    public boolean needNewSubComponent() {
+      // if no page has been read, or all of the records have been read out of a page, read the next one
+      return getPageReadStatus().getCurrentPage() == null ||
+          getPageReadStatus().getValuesRead() == getPageReadStatus().getCurrentPage().getValueCount();
+    }
+
+    @Override
+    public boolean getNextSubComponent() throws IOException {
+      return getPageReadStatus().next();
+    }
+
+    @Override
+    public boolean hasSubComponents() {
+      return true;
+    }
+
+    @Override
+    public VectorDataProviders.ByteArrayBackedProvider getCurrentSubComponent() {
+      return getPageReadStatus();
+    }
+
+    @Override
+    public boolean dataStoredAtThisLevel() {
+        return false;
+    }
+
+    @Override
+    public void updatePositionAfterWrite(int valsWritten) {
+        //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public int getTypeLengthInBytes() throws UnsupportedOperationException {
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public int getTypeLengthInBits() throws UnsupportedOperationException {
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
+    }
 }

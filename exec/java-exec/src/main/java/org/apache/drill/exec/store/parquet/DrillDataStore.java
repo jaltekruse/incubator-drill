@@ -26,7 +26,7 @@ import java.io.IOException;
  * attempts to encapsulate all of the functionality needed for each source/sink for
  * data.
  */
-public interface DrillDataStore {
+public interface DrillDataStore<SUB_COMP extends DrillDataStore> {
 
   public abstract boolean needNewSubComponent();
   public abstract boolean getNextSubComponent() throws IOException;
@@ -43,7 +43,7 @@ public interface DrillDataStore {
    *
    * @return - the abstract data source below
    */
-  public abstract DrillDataStore getCurrentSubComponent();
+  public abstract SUB_COMP getCurrentSubComponent();
 
   /**
    * Indicates if data is available at this level of the file. For abstractions that are just

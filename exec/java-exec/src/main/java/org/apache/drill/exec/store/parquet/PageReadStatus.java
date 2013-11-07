@@ -30,7 +30,7 @@ import java.io.IOException;
 import static parquet.format.Util.readPageHeader;
 
 // class to keep track of the read position of variable length columns
-public final class PageReadStatus implements VectorDataProviders.ByteArrayBackedProvider, DrillDataStore {
+public final class PageReadStatus implements VectorDataProviders.ByteArrayBackedProvider {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
 
   private ColumnReaderParquet parentColumnReader;
@@ -125,13 +125,12 @@ public final class PageReadStatus implements VectorDataProviders.ByteArrayBacked
 
   @Override
   public boolean needNewSubComponent() {
-    // if no page has been read, or all of the records have been read out of a page, read the next one
-    return getCurrentPage() == null || getValuesRead() == getCurrentPage().getValueCount();
+    return false;
   }
 
   @Override
   public boolean getNextSubComponent() throws IOException {
-    return next();
+    return false;
   }
 
   /**
@@ -175,7 +174,7 @@ public final class PageReadStatus implements VectorDataProviders.ByteArrayBacked
 
   @Override
   public boolean hasSubComponents() {
-    return true;
+    return false;
   }
 
   @Override

@@ -44,6 +44,6 @@ public class FixedByteAlignedReader extends ColumnReaderParquet {
 //    // vectorData is assigned by the superclass read loop method
 //    getVectorData().writeBytes(bytes,
 //        (int) getReadStartInBytes(), (int) getReadLength());
-    setRecordsReadInThisIteration( recordsToReadInThisPass - getPageReadStatus().readValues((int) recordsToReadInThisPass, getValueVecHolder()));
+    setRecordsReadInThisIteration( recordsToReadInThisPass - getCurrentSubComponent().readValues((int) recordsToReadInThisPass, getValueVecHolder()));
   }
 }
