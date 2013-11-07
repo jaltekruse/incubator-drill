@@ -48,7 +48,7 @@ public class NullableVarLengthColumn extends UnknownLengthColumn{
   }
 
   @Override
-  protected void readField(long recordsToRead, ColumnReaderParquet firstColumnStatus) {
+  protected void readField(long recordsToRead) {
     throw new UnsupportedOperationException();
   }
 

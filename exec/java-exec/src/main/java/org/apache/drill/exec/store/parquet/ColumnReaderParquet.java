@@ -18,7 +18,6 @@
 package org.apache.drill.exec.store.parquet;
 
 import io.netty.buffer.ByteBuf;
-import org.apache.drill.exec.store.VectorHolder;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
@@ -81,7 +80,7 @@ public abstract class ColumnReaderParquet implements DrillDataStore<VectorDataPr
     }
   }
 
-  public void readAllFixedFields(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) throws IOException {
+  public int readValues(int recordsToReadInThisPass, VectorDataReceivers.ByteBufBackedReceiver dest) throws IOException {
     setReadStartInBytes(0);
     setReadLength(0);
     setReadLengthInBits(0);
@@ -95,7 +94,7 @@ public abstract class ColumnReaderParquet implements DrillDataStore<VectorDataPr
         }
       }
 
-      readField( recordsToReadInThisPass, firstColumnStatus);
+      readField( recordsToReadInThisPass);
 
       setValuesReadInCurrentPass(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
       setTotalValuesRead(getTotalValuesRead() + (int) getRecordsReadInThisIteration());
@@ -103,9 +102,10 @@ public abstract class ColumnReaderParquet implements DrillDataStore<VectorDataPr
     while (getValuesReadInCurrentPass() < recordsToReadInThisPass && getCurrentSubComponent().valuesLeft() > 0);
     getValueVecHolder().getValueVector().getMutator().setValueCount(
         getValuesReadInCurrentPass());
+    return (int) (getColumnChunkMetaData().getValueCount() - getTotalValuesRead());
   }
 
-  protected abstract void readField(long recordsToRead, ColumnReaderParquet firstColumnStatus);
+  protected abstract void readField(long recordsToRead);
 
   public FixedByteAlignedVector getValueVecHolder() {
     return valueVecHolder;
@@ -132,7 +132,6 @@ public abstract class ColumnReaderParquet implements DrillDataStore<VectorDataPr
   }
 
   public PageReadStatus getPageReadStatus() {
-//  public VectorDataProviders.ByteArrayBackedProvider getPageReadStatus() {
     return pageReadStatus;
   }
 

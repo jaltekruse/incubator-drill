@@ -39,7 +39,7 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v);
   }
 
-  public void readAllFixedFields(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) throws IOException {
+  public void readValues(long recordsToReadInThisPass) throws IOException {
     setReadStartInBytes(0);
     setReadLength(0);
     setReadLengthInBits(0);
@@ -102,7 +102,7 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
         getPageReadStatus().setReadPosInBytes(runStart);
         setRecordsReadInThisIteration(runLength);
 
-        readField( runLength, firstColumnStatus);
+        readField( runLength);
         int writerIndex = ((BaseValueVector) getValueVecHolder().getValueVector()).getData().writerIndex();
         if ( getDataTypeLengthInBits() > 8  || (getDataTypeLengthInBits() < 8 && getTotalValuesRead() + runLength % 8 == 0)){
           ((BaseValueVector) getValueVecHolder().getValueVector()).getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * getDataTypeLengthInBits() / 8.0));
@@ -125,5 +125,5 @@ public abstract class NullableColumnReader extends ColumnReaderParquet {
         getValuesReadInCurrentPass());
   }
 
-  protected abstract void readField(long recordsToRead, ColumnReaderParquet firstColumnStatus);
+  protected abstract void readField(long recordsToRead);
 }

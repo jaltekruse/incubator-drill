@@ -37,7 +37,7 @@ public final class BitReader extends ColumnReaderParquet {
   }
 
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass) {
 
     setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
         - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));

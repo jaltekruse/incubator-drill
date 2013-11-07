@@ -342,17 +342,17 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
- public void readAllFixedFields(long recordsToRead, ColumnReaderParquet firstColumnStatus) throws IOException {
+ public void readAllFixedFields(int recordsToRead, ColumnReaderParquet firstColumnStatus) throws IOException {
 
    for (ColumnReaderParquet crs : columnStatuses){
-     crs.readAllFixedFields(recordsToRead, firstColumnStatus);
+     crs.readValues(recordsToRead, crs.getValueVecHolder());
    }
  }
 
   @Override
   public int next() {
     resetBatch();
-    long recordsToRead = 0;
+    int recordsToRead = 0;
     try {
       ColumnReaderParquet firstColumnStatus;
       if (columnStatuses.size() > 0){
@@ -363,10 +363,10 @@ public class ParquetRecordReader implements RecordReader {
       }
 
       if (allFieldsFixedLength) {
-        recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
+        recordsToRead = (int) Math.min(recordsPerBatch, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
       } else {
         // arbitrary
-        recordsToRead = Math.min(5000, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
+        recordsToRead = (int) Math.min(5000, firstColumnStatus.getColumnChunkMetaData().getValueCount() - firstColumnStatus.getTotalValuesRead());
 
         // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
         // get too complicated
@@ -382,7 +382,7 @@ public class ParquetRecordReader implements RecordReader {
       if (allFieldsFixedLength) {
         readAllFixedFields(recordsToRead, firstColumnStatus);
       } else { // variable length columns
-        long fixedRecordsToRead = varLengthReader.readFields(recordsToRead, firstColumnStatus);
+        int fixedRecordsToRead = (int) varLengthReader.readFields(recordsToRead, firstColumnStatus);
         readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
       }
 

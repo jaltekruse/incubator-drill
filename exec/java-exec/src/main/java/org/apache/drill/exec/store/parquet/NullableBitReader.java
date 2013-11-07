@@ -39,7 +39,7 @@ public final class NullableBitReader extends ColumnReaderParquet {
   }
 
   @Override
-  public void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
+  public void readField(long recordsToReadInThisPass) {
 
     setRecordsReadInThisIteration(Math.min(getPageReadStatus().getCurrentPage().getValueCount()
         - getPageReadStatus().getValuesRead(), recordsToReadInThisPass - getValuesReadInCurrentPass()));

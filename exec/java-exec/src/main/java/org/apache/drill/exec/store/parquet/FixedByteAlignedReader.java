@@ -31,7 +31,7 @@ public class FixedByteAlignedReader extends ColumnReaderParquet {
 
   // this method is called by its superclass during a read loop
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReaderParquet firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass) {
 
     //setRecordsReadInThisIteration(Math.min(getPageReadStatus().valuesLeft(), recordsToReadInThisPass - getValuesReadInCurrentPass()));
 
