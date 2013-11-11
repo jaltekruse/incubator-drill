@@ -26,17 +26,7 @@ import org.apache.drill.exec.physical.base.AbstractPhysicalVisitor;
 import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.SubScan;
-import org.apache.drill.exec.physical.config.Filter;
-import org.apache.drill.exec.physical.config.HashPartitionSender;
-import org.apache.drill.exec.physical.config.MergeJoinPOP;
-import org.apache.drill.exec.physical.config.Project;
-import org.apache.drill.exec.physical.config.RandomReceiver;
-import org.apache.drill.exec.physical.config.Screen;
-import org.apache.drill.exec.physical.config.SelectionVectorRemover;
-import org.apache.drill.exec.physical.config.SingleSender;
-import org.apache.drill.exec.physical.config.Sort;
-import org.apache.drill.exec.physical.config.StreamingAggregate;
-import org.apache.drill.exec.physical.config.Union;
+import org.apache.drill.exec.physical.config.*;
 import org.apache.drill.exec.physical.impl.aggregate.AggBatchCreator;
 import org.apache.drill.exec.physical.config.Union;
 import org.apache.drill.exec.physical.impl.filter.FilterBatchCreator;
@@ -47,6 +37,7 @@ import org.apache.drill.exec.physical.impl.sort.SortBatchCreator;
 import org.apache.drill.exec.physical.impl.svremover.SVRemoverCreator;
 import org.apache.drill.exec.physical.impl.union.UnionBatchCreator;
 import org.apache.drill.exec.record.RecordBatch;
+import org.apache.drill.exec.store.csv.CSVWriter;
 import org.apache.drill.exec.store.json.JSONScanBatchCreator;
 import org.apache.drill.exec.store.json.JSONSubScan;
 import org.apache.drill.exec.store.mock.MockScanBatchCreator;
@@ -77,6 +68,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   private SortBatchCreator sbc = new SortBatchCreator();
   private AggBatchCreator abc = new AggBatchCreator();
   private MergeJoinCreator mjc = new MergeJoinCreator();
+  private CSVWriter writer = new CSVWriter();
   private RootExec root = null;
   
   private ImplCreator(){}
@@ -130,6 +122,13 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   public RecordBatch visitScreen(Screen op, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkArgument(root == null);
     root = sc.getRoot(context, op, getChildren(op, context));
+    return null;
+  }
+
+  @Override
+  public RecordBatch visitStore(org.apache.drill.exec.physical.base.Store op, FragmentContext context) throws ExecutionSetupException {
+    Preconditions.checkArgument(root == null);
+    root = writer.getRoot(context, op, getChildren(op, context));
     return null;
   }
 
