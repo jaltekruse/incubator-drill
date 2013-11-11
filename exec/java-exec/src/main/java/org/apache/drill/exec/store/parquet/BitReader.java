@@ -80,7 +80,6 @@ public final class BitReader extends ColumnReaderParquet {
       getVectorData().capacity(getVectorData().writerIndex() + 1);
     }
 
-    // move this when I finish the writer interface, it is redundant, being done to make test pass for now
     getPageReadStatus().setValuesRead(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
 
     // check if the values in this page did not end on a byte boundary, store a number of bits the next page must be

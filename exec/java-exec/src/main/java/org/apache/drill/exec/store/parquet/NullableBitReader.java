@@ -53,6 +53,8 @@ public final class NullableBitReader extends ColumnReaderParquet {
       }
       // otherwise the value is skipped, because the bit vector indicating nullability is zero filled
     }
+    getPageReadStatus().setValuesRead(getValuesReadInCurrentPass() + (int) getRecordsReadInThisIteration());
   }
+
 
 }
