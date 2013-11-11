@@ -208,6 +208,9 @@ public class BasicOptimizer extends Optimizer{
       if (!store.iterator().hasNext()) {
         throw new OptimizerException("Store node in logical plan does not have a child.");
       }
+      if (store.getStorageEngine().equals("csv")){
+        return new org.apache.drill.exec.physical.config.Store(store.iterator().next().accept(this, obj), context.getCurrentEndpoint());
+      }
       return new Screen(store.iterator().next().accept(this, obj), context.getCurrentEndpoint());
     }
 

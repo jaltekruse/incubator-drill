@@ -41,6 +41,7 @@ import org.apache.drill.exec.physical.impl.union.UnionBatchCreator;
 import org.apache.drill.exec.physical.impl.validate.IteratorValidatorCreator;
 import org.apache.drill.exec.physical.impl.validate.IteratorValidatorInjector;
 import org.apache.drill.exec.record.RecordBatch;
+import org.apache.drill.exec.store.csv.CSVWriter;
 import org.apache.drill.exec.store.json.JSONScanBatchCreator;
 import org.apache.drill.exec.store.json.JSONSubScan;
 import org.apache.drill.exec.store.mock.MockScanBatchCreator;
@@ -75,6 +76,7 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   private AggBatchCreator abc = new AggBatchCreator();
   private MergeJoinCreator mjc = new MergeJoinCreator();
   private IteratorValidatorCreator ivc = new IteratorValidatorCreator();
+  private CSVWriter writer = new CSVWriter();
   private RootExec root = null;
   private TraceBatchCreator tbc = new TraceBatchCreator();
 
@@ -138,6 +140,13 @@ public class ImplCreator extends AbstractPhysicalVisitor<RecordBatch, FragmentCo
   public RecordBatch visitScreen(Screen op, FragmentContext context) throws ExecutionSetupException {
     Preconditions.checkArgument(root == null);
     root = sc.getRoot(context, op, getChildren(op, context));
+    return null;
+  }
+
+  @Override
+  public RecordBatch visitStore(org.apache.drill.exec.physical.base.Store op, FragmentContext context) throws ExecutionSetupException {
+    Preconditions.checkArgument(root == null);
+    root = writer.getRoot(context, op, getChildren(op, context));
     return null;
   }
 
