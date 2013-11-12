@@ -33,6 +33,7 @@ import org.apache.drill.exec.proto.UserBitShared.RecordBatchDef;
 import org.apache.drill.exec.proto.UserProtos.QueryResult;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.RecordBatch.IterOutcome;
+import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.BaseRpcOutcomeListener;
 import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.user.UserServer.UserClientConnection;
@@ -43,38 +44,19 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
-public class CSVWriter implements RootCreator<Store> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CSVWriter.class);
-
-
- public static final String HADOOP_DEFAULT_NAME = "fs.default.name";
-  final CSVStorageEngineConfig configuration;
-  final FileSystem fs;
-  final Configuration conf;
-
-  public CSVWriter(CSVStorageEngineConfig configuration, DrillConfig config){
-    this.configuration = configuration;
-    try {
-      this.conf = new Configuration();
-      this.conf.set("fs.classpath.impl", ClassPathFileSystem.class.getName());
-      this.conf.set(HADOOP_DEFAULT_NAME, configuration.getDfsName());
-      logger.debug("{}: {}",HADOOP_DEFAULT_NAME, configuration.getDfsName());
-      this.fs = FileSystem.get(conf);
-    } catch (IOException ie) {
-      throw new RuntimeException("Error setting up filesystem", ie);
-    }
-  }
+public class CSVWriterCreator implements RootCreator<Store> {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CSVWriterCreator.class);
 
   @Override
   public RootExec getRoot(FragmentContext context, Store config, List<RecordBatch> children) {
     Preconditions.checkNotNull(children);
     Preconditions.checkArgument(children.size() == 1);
-    return new StoreRoot(context, children.iterator().next());
+    return new CSVWriterRoot(context, children.iterator().next());
   }
 
 
-  static class StoreRoot implements RootExec{
-    static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StoreRoot.class);
+  static class CSVWriterRoot implements RootExec{
+    static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CSVWriterRoot.class);
     volatile boolean ok = true;
 
     final RecordBatch incoming;
@@ -82,7 +64,7 @@ public class CSVWriter implements RootCreator<Store> {
     final UserClientConnection connection;
     private RecordMaterializer materializer;
 
-    public StoreRoot(FragmentContext context, RecordBatch incoming){
+    public CSVWriterRoot(FragmentContext context, RecordBatch incoming){
       assert context.getConnection() != null : "A screen root should only be run on the driving node which is connected directly to the client.  As such, this should always be true.";
 
       this.context = context;
@@ -141,6 +123,9 @@ public class CSVWriter implements RootCreator<Store> {
           context.batchesCompleted.inc(1);
           context.recordsCompleted.inc(incoming.getRecordCount());
           QueryWritableBatch batch = materializer.convertNext(false);
+          for (VectorWrapper<?> vw : incoming){
+            vw.getField();
+          }
           connection.sendResult(listener, batch);
           return true;
         default:
