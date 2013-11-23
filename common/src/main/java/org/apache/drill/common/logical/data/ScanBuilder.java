@@ -19,6 +19,10 @@ package org.apache.drill.common.logical.data;
 
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
+
+import java.util.List;
 
 /**
  * Builder for the scan operator
@@ -27,6 +31,9 @@ public class ScanBuilder {
   private String storageEngine;
   private JSONOptions selection;
   private FieldReference outputReference;
+  private List<SchemaPath> columns;
+  private LogicalExpression filterExpr;
+  private long recordLimit;
 
   public ScanBuilder storageEngine(String storageEngine) {
     this.storageEngine = storageEngine;
@@ -44,6 +51,6 @@ public class ScanBuilder {
   }
 
   public Scan build() {
-    return new Scan(storageEngine, selection, outputReference);
+    return new Scan(storageEngine, selection, outputReference, columns, filterExpr, recordLimit);
   }
 }

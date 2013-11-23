@@ -17,11 +17,35 @@
  */
 package org.apache.drill.exec.physical.base;
 
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.ReadEntry;
+
+import java.util.List;
 
 /**
  * A SubScan operator represents the data scanned by a particular major/minor fragment.  This is in contrast to
  * a GroupScan operator, which represents all data scanned by a physical plan.
  */
 public interface SubScan extends Scan {
+
+  /**
+   * Return the list of columns that will be scanned by this <code>GroupScan</code>.
+   * @return - list of columns to be scanned
+   */
+  public List<SchemaPath> getColumns();
+
+  /**
+   * Return the number of records to scan.
+   *  Note: unlike other fields like columns and filterExpr, this will differ from the group scan
+   *        to allow parallelization
+   * @return - number of records to read
+   */
+  public long getRecordLimit();
+
+  /**
+   * Grab the filter applied to this scan operation.
+   * @return - logical expression (no type information associated with columns) to be applied during read
+   */
+  public LogicalExpression getFilterExpr();
 }

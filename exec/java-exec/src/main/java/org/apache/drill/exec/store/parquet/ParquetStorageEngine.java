@@ -99,7 +99,8 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
     ArrayList<ReadEntryWithPath> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
         new TypeReference<ArrayList<ReadEntryWithPath>>() {});
 
-    return new ParquetGroupScan(readEntries, this, scan.getOutputReference());
+    return new ParquetGroupScan(readEntries, this, scan.getOutputReference(), scan.getColumns(), scan.getFilterExpr(),
+        scan.getRecordLimit());
   }
 
   @Override

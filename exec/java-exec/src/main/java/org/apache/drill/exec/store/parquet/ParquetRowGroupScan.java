@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.physical.OperatorCost;
@@ -51,22 +53,41 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   private final ParquetStorageEngine parquetStorageEngine;
   private final List<RowGroupReadEntry> rowGroupReadEntries;
   private final FieldReference ref;
+  private final long recordLimit;
+  private final List<SchemaPath> columns;
+  private final LogicalExpression filterExpr;
 
   @JsonCreator
-  public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry, @JsonProperty("engineConfig") StorageEngineConfig engineConfig,
-                             @JsonProperty("rowGroupReadEntries") LinkedList<RowGroupReadEntry> rowGroupReadEntries, @JsonProperty("ref") FieldReference ref) throws ExecutionSetupException {
+  public ParquetRowGroupScan(@JacksonInject StorageEngineRegistry registry,
+                             @JsonProperty("engineConfig") StorageEngineConfig engineConfig,
+                             @JsonProperty("rowGroupReadEntries") LinkedList<RowGroupReadEntry> rowGroupReadEntries,
+                             @JsonProperty("ref") FieldReference ref,
+                             @JsonProperty("recordLimit") long recordLimit,
+                             @JsonProperty("columns") List<SchemaPath> columns,
+                             @JsonProperty("filterExpr") LogicalExpression filterExpr
+                             ) throws ExecutionSetupException {
     parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
     this.rowGroupReadEntries = rowGroupReadEntries;
     this.engineConfig = engineConfig;
     this.ref = ref;
+    this.recordLimit = recordLimit;
+    this.columns = columns;
+    this.filterExpr = filterExpr;
   }
 
   public ParquetRowGroupScan(ParquetStorageEngine engine, ParquetStorageEngineConfig config,
-                              List<RowGroupReadEntry> rowGroupReadEntries, FieldReference ref) {
+                              List<RowGroupReadEntry> rowGroupReadEntries, FieldReference ref,
+                              long recordLimit,
+                              List<SchemaPath> columns,
+                              LogicalExpression filterExpr
+                              ) {
     parquetStorageEngine = engine;
     engineConfig = config;
     this.rowGroupReadEntries = rowGroupReadEntries;
     this.ref = ref;
+    this.recordLimit = recordLimit;
+    this.columns = columns;
+    this.filterExpr = filterExpr;
   }
 
   public List<RowGroupReadEntry> getRowGroupReadEntries() {
@@ -110,12 +131,28 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   @Override
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     Preconditions.checkArgument(children.isEmpty());
-    return new ParquetRowGroupScan(parquetStorageEngine, (ParquetStorageEngineConfig) engineConfig, rowGroupReadEntries, ref);
+    return new ParquetRowGroupScan(parquetStorageEngine, (ParquetStorageEngineConfig) engineConfig, rowGroupReadEntries,
+            ref, recordLimit, columns, filterExpr);
   }
 
   @Override
   public Iterator<PhysicalOperator> iterator() {
     return Iterators.emptyIterator();
+  }
+
+  @Override
+  public List<SchemaPath> getColumns() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public long getRecordLimit() {
+    return 0;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public LogicalExpression getFilterExpr() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   public static class RowGroupReadEntry extends ReadEntryFromHDFS {

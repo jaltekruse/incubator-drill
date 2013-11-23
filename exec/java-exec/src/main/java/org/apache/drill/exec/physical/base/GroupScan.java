@@ -20,6 +20,8 @@ package org.apache.drill.exec.physical.base;
 import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -36,4 +38,22 @@ public interface GroupScan extends Scan, HasAffinity{
 
   @JsonIgnore
   public int getMaxParallelizationWidth();
+
+  /**
+   * Return the list of columns that will be scanned by this <code>GroupScan</code>.
+   * @return - list of columns to be scanned
+   */
+  public List<SchemaPath> getColumns();
+
+  /**
+   * Return the number of records to scan.
+   * @return - number of records to read
+   */
+  public long getRecordLimit();
+
+  /**
+   * Grab the filter applied to this scan operation.
+   * @return - logical expression (no type information associated with columns) to be applied during read
+   */
+  public LogicalExpression getFilterExpr();
 }
