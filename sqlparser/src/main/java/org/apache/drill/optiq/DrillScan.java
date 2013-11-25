@@ -17,15 +17,16 @@
  */
 package org.apache.drill.optiq;
 
+import org.apache.drill.common.JSONOptions;
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.apache.drill.common.logical.data.Scan;
 import org.apache.drill.jdbc.DrillTable;
 import org.eigenbase.rel.TableAccessRelBase;
 import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.relopt.RelTraitSet;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * GroupScan of a Drill table.
@@ -44,17 +45,19 @@ public class DrillScan extends TableAccessRelBase implements DrillRel {
   @Override
   public void register(RelOptPlanner planner) {
     super.register(planner);
-    DrillOptiq.registerStandardPlannerRules(planner, drillTable.client);
+    DrillOptiq.registerStandardPlannerRules(planner);
   }
 
-  public int implement(DrillImplementor implementor) {
-    final ObjectNode node = implementor.mapper.createObjectNode();
-    node.put("op", "scan");
-    node.put("memo", "initial_scan");
-    node.put("ref", "_MAP"); // output is a record with a single field, '_MAP'
-    node.put("storageengine", drillTable.getStorageEngineName());
-    node.put("selection", implementor.mapper.convertValue(drillTable.getSelection(), JsonNode.class));
+  public LogicalOperator implement(DrillImplementor implementor) {
+    Scan.Builder builder = Scan.builder();
+    builder.storageEngine(drillTable.getStorageEngineName());
+    builder.selection(new JSONOptions(drillTable.getSelection()));
+    builder.outputReference(new FieldReference("_MAP"));
     implementor.registerSource(drillTable);
-    return implementor.add(node);
+    return builder.build();
+  }
+  
+  public static DrillScan convert(Scan scan, ConversionContext context){
+    return new DrillScan(context.getCluster(), context.getLogicalTraits(), context.getTable(scan));
   }
 }

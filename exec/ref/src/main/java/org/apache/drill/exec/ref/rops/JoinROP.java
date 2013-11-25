@@ -62,7 +62,7 @@ public class JoinROP extends ROPBase<Join> {
 
     @Override
     protected RecordIterator getIteratorInternal() {
-        return createIteratorFromJoin(config.getJointType());
+        return createIteratorFromJoin(config.getJoinType());
     }
 
     private RecordIterator createIteratorFromJoin(Join.JoinType type) {

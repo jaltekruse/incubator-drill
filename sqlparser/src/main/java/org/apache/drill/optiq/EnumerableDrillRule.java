@@ -29,15 +29,11 @@ import org.eigenbase.rel.convert.ConverterRule;
  */
 public class EnumerableDrillRule extends ConverterRule {
 
-  private final DrillClient client;
+  public static EnumerableDrillRule INSTANCE = new EnumerableDrillRule(EnumerableConvention.INSTANCE);
   
-  public static EnumerableDrillRule getInstance(DrillClient client){
-    return new EnumerableDrillRule(EnumerableConvention.INSTANCE, client);
-  }
   
-  private EnumerableDrillRule(EnumerableConvention outConvention, DrillClient client) {
+  private EnumerableDrillRule(EnumerableConvention outConvention) {
     super(RelNode.class, DrillRel.CONVENTION, outConvention, "EnumerableDrillRule." + outConvention);
-    this.client = client;
   }
 
   @Override
@@ -48,6 +44,6 @@ public class EnumerableDrillRule extends ConverterRule {
   @Override
   public RelNode convert(RelNode rel) {
     assert rel.getTraitSet().contains(DrillRel.CONVENTION);
-    return new EnumerableDrillRel(client, rel.getCluster(), rel.getTraitSet().replace(getOutConvention()), rel);
+    return new EnumerableDrillRel(rel.getCluster(), rel.getTraitSet().replace(getOutConvention()), rel);
   }
 }

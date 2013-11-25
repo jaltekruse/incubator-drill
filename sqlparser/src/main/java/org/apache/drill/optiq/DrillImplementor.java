@@ -17,20 +17,16 @@
  */
 package org.apache.drill.optiq;
 
-import java.io.IOException;
 import java.util.Set;
 
+import org.apache.drill.common.logical.LogicalPlan;
+import org.apache.drill.common.logical.LogicalPlanBuilder;
+import org.apache.drill.common.logical.PlanProperties.PlanType;
 import org.apache.drill.common.logical.data.LogicalOperator;
-import org.apache.drill.exec.ref.rse.QueueRSE.QueueOutputInfo;
+import org.apache.drill.common.logical.data.visitors.AbstractLogicalVisitor;
 import org.apache.drill.jdbc.DrillTable;
 import org.eigenbase.rel.RelNode;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.Sets;
 
 /**
@@ -40,107 +36,52 @@ public class DrillImplementor {
   
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillImplementor.class);
   
-  final ObjectMapper mapper = new ObjectMapper();
-  {
-    mapper.enable(SerializationFeature.INDENT_OUTPUT);
-    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-    mapper.configure(JsonParser.Feature.ALLOW_COMMENTS, true);
-  }
-  private final ObjectNode rootNode = mapper.createObjectNode();
-  private final ArrayNode operatorsNode;
-  private final ObjectNode sourcesNode;
   private Set<DrillTable> tables = Sets.newHashSet();
-  private final boolean isRef;
+  private LogicalPlanBuilder planBuilder = new LogicalPlanBuilder();
+  private LogicalPlan plan;
+  private final DrillParseContext context;
   
-  public DrillImplementor(boolean isRef) {
-    this.isRef = isRef;
-    final ObjectNode headNode = mapper.createObjectNode();
-    rootNode.put("head", headNode);
-    headNode.put("type", "APACHE_DRILL_LOGICAL");
-    headNode.put("version", "1");
-
-    final ObjectNode generatorNode = mapper.createObjectNode();
-    headNode.put("generator", generatorNode);
-    generatorNode.put("type", "optiq");
-    generatorNode.put("info", "na");
-
-    // TODO: populate sources based on the sources of scans that occur in
-    // the query
-    sourcesNode = mapper.createObjectNode();
-    rootNode.put("storage", sourcesNode);
-
-    if(isRef){
-      {
-        final ObjectNode sourceNode = mapper.createObjectNode();
-        sourceNode.put("type", "classpath");
-        sourcesNode.put("donuts-json", sourceNode);
-      }
-      {
-        final ObjectNode sourceNode = mapper.createObjectNode();
-        sourceNode.put("type", "queue");
-        sourcesNode.put("queue", sourceNode);
-      }
-    }
-
-
-    final ArrayNode queryNode = mapper.createArrayNode();
-    rootNode.put("query", queryNode);
-
-    this.operatorsNode = queryNode;
+  public DrillImplementor(DrillParseContext context) {
+    planBuilder.planProperties(PlanType.APACHE_DRILL_LOGICAL, 1, DrillImplementor.class.getName(), "");
+    this.context = context;
   }
   
+  public DrillParseContext getContext(){
+    return context;
+  }
+
   public void registerSource(DrillTable table){
-    if(!table.isRefEngine() && tables.add(table)){
-      sourcesNode.put(table.getStorageEngineName(), mapper.convertValue(table.getStorageEngineConfig(), JsonNode.class));  
+    if(tables.add(table)){
+      planBuilder.addStorageEngine(table.getStorageEngineName(), table.getStorageEngineConfig());
     }
   }
 
-  public int go(DrillRel root) {
-    int inputId = root.implement(this);
-
-    // Add a last node, to write to the output queue.
-    final ObjectNode writeOp = mapper.createObjectNode();
-    writeOp.put("op", "store");
-    writeOp.put("input", inputId);
-    writeOp.put("storageengine", "queue");
-    writeOp.put("memo", "output sink");
-    QueueOutputInfo output = new QueueOutputInfo();
-    output.number = 0;
-    writeOp.put("target", mapper.convertValue(output, JsonNode.class));
-    return add(writeOp);
+  public void go(DrillRel root) {
+    LogicalOperator rootLOP = root.implement(this);
+    rootLOP.accept(new AddOpsVisitor(), null);
+  }
+  
+  public LogicalPlan getPlan(){
+    if(plan == null){
+      plan = planBuilder.build();
+      planBuilder = null;
+    }
+    return plan;
   }
 
-  public int add(LogicalOperator operator, Integer inputId) {
-    return add(operator.nodeBuilder().convert(mapper, operator, inputId));
+  public LogicalOperator visitChild(DrillRel parent, int ordinal, RelNode child) {
+    return ((DrillRel) child).implement(this);
   }
-
-  public int add(ObjectNode operator) {
-    operatorsNode.add(operator);
-    final int id = operatorsNode.size();
-    operator.put("@id", id);
-    return id;
-  }
-
-  /** Returns the generated plan. */
-  public String getJsonString() {
-    String s = rootNode.toString();
-    
-    if(logger.isDebugEnabled()){
-      JsonNode node;
-      try {
-        ObjectMapper mapper = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
-        node = mapper.readValue(s, JsonNode.class);
-        logger.debug("Optiq Generated Logical Plan: {}", mapper.writeValueAsString(node));
-      } catch (IOException e) {
-        logger.error("Failure while trying to parse logical plan string of {}", s, e);
+  
+  private class AddOpsVisitor extends AbstractLogicalVisitor<Void, Void, RuntimeException> {
+    @Override
+    public Void visitOp(LogicalOperator op, Void value) throws RuntimeException {
+      planBuilder.addLogicalOperator(op);
+      for(LogicalOperator o : op){
+        o.accept(this, null);
       }
-      
+      return null;
     }
-    return s;
   }
 
-  public int visitChild(DrillRel parent, int ordinal, RelNode child) {
-    ((DrillRel) child).implement(this);
-    return operatorsNode.size();
-  }
 }

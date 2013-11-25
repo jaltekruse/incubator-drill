@@ -17,6 +17,7 @@
  */
 package org.apache.drill.optiq;
 
+import org.apache.drill.common.logical.data.LogicalOperator;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.Convention;
 
@@ -28,5 +29,5 @@ public interface DrillRel extends RelNode {
    * generating Drill logical plans. */
   Convention CONVENTION = new Convention.Impl("DRILL", DrillRel.class);
 
-  int implement(DrillImplementor implementor);
+  LogicalOperator implement(DrillImplementor implementor);
 }

@@ -17,10 +17,14 @@
  */
 package org.apache.drill.optiq;
 
-import net.hydromatic.linq4j.Ord;
+import java.math.BigDecimal;
+import java.util.List;
 
-import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.exec.work.FragmentRunnerListener;
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.expression.ValueExpressions;
+import org.apache.drill.exec.record.NullExpression;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.reltype.RelDataTypeField;
@@ -38,14 +42,15 @@ import org.eigenbase.rex.RexVisitorImpl;
 import org.eigenbase.sql.SqlSyntax;
 import org.eigenbase.sql.fun.SqlStdOperatorTable;
 
+import com.google.common.collect.Lists;
+
 /**
  * Utilities for Drill's planner.
  */
 public class DrillOptiq {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillOptiq.class);
   
-  static void registerStandardPlannerRules(RelOptPlanner planner, DrillClient client) {
-    planner.addRule(EnumerableDrillRule.getInstance(client));
+  static void registerStandardPlannerRules(RelOptPlanner planner) {
 
     // planner.addRule(DrillTableModificationConverterRule.INSTANCE);
     // planner.addRule(DrillCalcConverterRule.INSTANCE);
@@ -66,115 +71,127 @@ public class DrillOptiq {
   /**
    * Converts a tree of {@link RexNode} operators into a scalar expression in Drill syntax.
    */
-  static String toDrill(RelNode input, RexNode expr) {
-    final RexToDrill visitor = new RexToDrill(input);
-    expr.accept(visitor);
-    return visitor.buf.toString();
+  static LogicalExpression toDrill(DrillParseContext context, RelNode input, RexNode expr) {
+    final RexToDrill visitor = new RexToDrill(context, input);
+    return expr.accept(visitor);
   }
 
-  private static class RexToDrill extends RexVisitorImpl<StringBuilder> {
-    final StringBuilder buf = new StringBuilder();
+  private static class RexToDrill extends RexVisitorImpl<LogicalExpression> {
     private final RelNode input;
-
-    RexToDrill(RelNode input) {
+    private final DrillParseContext context;
+    
+    RexToDrill(DrillParseContext context, RelNode input) {
       super(true);
+      this.context = context;
       this.input = input;
     }
 
     @Override
-    public StringBuilder visitCall(RexCall call) {
+    public LogicalExpression visitInputRef(RexInputRef inputRef) {
+      final int index = inputRef.getIndex();
+      final RelDataTypeField field = input.getRowType().getFieldList().get(index);
+      return new FieldReference(field.getName());
+    }
+    
+    @Override
+    public LogicalExpression visitCall(RexCall call) {
       logger.debug("RexCall {}, {}", call);
       final SqlSyntax syntax = call.getOperator().getSyntax();
       switch (syntax) {
       case Binary:
         logger.debug("Binary");
-        buf.append("(");
-        call.getOperands().get(0).accept(this).append(" ").append(call.getOperator().getName()).append(" ");
-        return call.getOperands().get(1).accept(this).append(")");
+        LogicalExpression op1 = call.getOperands().get(0).accept(this);
+        LogicalExpression op2 = call.getOperands().get(1).accept(this);
+        context.getRegistry().createExpression(call.getOperator().getName(), Lists.newArrayList(op1, op2));
       case Function:
         logger.debug("Function");
-        buf.append(call.getOperator().getName().toLowerCase()).append("(");
-        for (Ord<RexNode> operand : Ord.zip(call.getOperands())) {
-          buf.append(operand.i > 0 ? ", " : "");
-          operand.e.accept(this);
+        List<LogicalExpression> exprs = Lists.newArrayList();
+        for(RexNode n : call.getOperands()){
+          exprs.add(n.accept(this));
         }
-        return buf.append(")");
+        context.getRegistry().createExpression(call.getOperator().getName().toLowerCase(), Lists.newArrayList(exprs));
       case Special:
         logger.debug("Special");
         switch (call.getKind()) {
         case Cast:
-          logger.debug("Cast {}", buf);
           // Ignore casts. Drill is type-less.
           logger.debug("Ignoring cast {}, {}", call.getOperands().get(0), call.getOperands().get(0).getClass());
           return call.getOperands().get(0).accept(this);
         }
+        
         if (call.getOperator() == SqlStdOperatorTable.itemOp) {
-          final RexNode left = call.getOperands().get(0);
+          SchemaPath left = (SchemaPath) call.getOperands().get(0).accept(this);
           final RexLiteral literal = (RexLiteral) call.getOperands().get(1);
-          final String field = (String) literal.getValue2();
-//          buf.append('\'');
-          final int length = buf.length();
-          left.accept(this);
-          if (buf.length() > length) {
-            // check before generating empty LHS if inputName is null
-            buf.append('.');
-          }
-          buf.append(field);
-//          buf.append('\'');
-          return buf;
+          return left.getChild((String) literal.getValue2());
         }
-        logger.debug("Not cast.");
+        
         // fall through
       default:
         throw new AssertionError("todo: implement syntax " + syntax + "(" + call + ")");
       }
     }
 
-    private StringBuilder doUnknown(Object o){
+    private LogicalExpression doUnknown(Object o){
       logger.warn("Doesn't currently support consumption of {}.", o);
-      return buf;
+      return NullExpression.INSTANCE;
     }
     @Override
-    public StringBuilder visitLocalRef(RexLocalRef localRef) {
+    public LogicalExpression visitLocalRef(RexLocalRef localRef) {
       return doUnknown(localRef);
     }
 
     @Override
-    public StringBuilder visitOver(RexOver over) {
+    public LogicalExpression visitOver(RexOver over) {
       return doUnknown(over);
     }
 
     @Override
-    public StringBuilder visitCorrelVariable(RexCorrelVariable correlVariable) {
+    public LogicalExpression visitCorrelVariable(RexCorrelVariable correlVariable) {
       return doUnknown(correlVariable);
     }
 
     @Override
-    public StringBuilder visitDynamicParam(RexDynamicParam dynamicParam) {
+    public LogicalExpression visitDynamicParam(RexDynamicParam dynamicParam) {
       return doUnknown(dynamicParam);
     }
 
     @Override
-    public StringBuilder visitRangeRef(RexRangeRef rangeRef) {
+    public LogicalExpression visitRangeRef(RexRangeRef rangeRef) {
       return doUnknown(rangeRef);
     }
 
     @Override
-    public StringBuilder visitFieldAccess(RexFieldAccess fieldAccess) {
+    public LogicalExpression visitFieldAccess(RexFieldAccess fieldAccess) {
       return super.visitFieldAccess(fieldAccess);
     }
 
-    @Override
-    public StringBuilder visitInputRef(RexInputRef inputRef) {
-      final int index = inputRef.getIndex();
-      final RelDataTypeField field = input.getRowType().getFieldList().get(index);
-      buf.append(field.getName());
-      return buf;
-    }
+
 
     @Override
-    public StringBuilder visitLiteral(RexLiteral literal) {
-      return buf.append(literal);
+    public LogicalExpression visitLiteral(RexLiteral literal) {
+      switch(literal.getTypeName()){
+      case BIGINT:
+        long l = ((BigDecimal) literal.getValue()).longValue();
+        return ValueExpressions.getBigInt(l);
+      case BOOLEAN:
+        return ValueExpressions.getBit(((Boolean) literal.getValue()));
+      case CHAR:
+        return ValueExpressions.getChar(((String) literal.getValue()));
+      case DOUBLE:
+        double d = ((BigDecimal) literal.getValue()).doubleValue();
+        return ValueExpressions.getFloat8(d);
+      case FLOAT:
+        float f = ((BigDecimal) literal.getValue()).floatValue();
+        return ValueExpressions.getFloat4(f);
+      case INTEGER:
+      case DECIMAL:
+        int i = ((BigDecimal) literal.getValue()).intValue();
+        return ValueExpressions.getInt(i);
+      case VARCHAR:
+        return ValueExpressions.getChar(((String) literal.getValue()));
+      default:
+        throw new UnsupportedOperationException(String.format("Unable to convert the value of %s and type %s to a Drill constant expression.", literal, literal.getTypeName()));
+      }
     }
   }
 }
