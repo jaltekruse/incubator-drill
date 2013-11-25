@@ -18,12 +18,7 @@
 package org.apache.drill.common;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
-import com.fasterxml.jackson.core.*;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.drill.common.JSONOptions.De;
 import org.apache.drill.common.JSONOptions.Se;
 import org.apache.drill.common.config.DrillConfig;
@@ -31,8 +26,16 @@ import org.apache.drill.common.exceptions.LogicalPlanParsingException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonLocation;
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.TreeNode;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
@@ -47,6 +50,11 @@ public class JSONOptions {
   
   private JsonNode root;
   private JsonLocation location;
+  private Object opaque;
+  
+  public JSONOptions(Object opaque){
+    this.opaque = opaque;
+  }
   
   public JSONOptions(JsonNode n, JsonLocation location){
     this.root = n;
@@ -111,7 +119,12 @@ public class JSONOptions {
     @Override
     public void serialize(JSONOptions value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
         JsonGenerationException {
-      jgen.writeTree(value.root);
+      if(value.opaque != null){
+        jgen.writeObject(value.opaque);
+      }else{
+        jgen.writeTree(value.root);  
+      }
+      
     }
 
   }

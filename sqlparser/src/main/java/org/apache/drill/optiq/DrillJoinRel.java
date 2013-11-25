@@ -22,6 +22,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.logical.data.Join;
+import org.apache.drill.common.logical.data.JoinCondition;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.apache.drill.common.logical.data.Project;
 import org.eigenbase.rel.InvalidRelException;
 import org.eigenbase.rel.JoinRelBase;
 import org.eigenbase.rel.JoinRelType;
@@ -30,11 +35,11 @@ import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelOptUtil;
 import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.reltype.RelDataTypeField;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.rex.RexUtil;
+import org.eigenbase.sql.fun.SqlStdOperatorTable;
 import org.eigenbase.util.Pair;
-
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Join implemented in Drill.
@@ -64,38 +69,37 @@ public class DrillJoinRel extends JoinRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
+  public LogicalOperator implement(DrillImplementor implementor) {
     final List<String> fields = getRowType().getFieldNames();
     assert isUnique(fields);
     final int leftCount = left.getRowType().getFieldCount();
     final List<String> leftFields = fields.subList(0, leftCount);
     final List<String> rightFields = fields.subList(leftCount, fields.size());
 
-    final int leftId = implementInput(implementor, 0, 0, left);
-    final int rightId = implementInput(implementor, 1, leftCount, right);
+    final LogicalOperator leftOp = implementInput(implementor, 0, 0, left);
+    final LogicalOperator rightOp = implementInput(implementor, 1, leftCount, right);
 
-    /*
-     * E.g. { op: "join", left: 2, right: 4, conditions: [ {relationship: "==", left: "deptId", right: "deptId"} ] }
-     */
-    final ObjectNode join = implementor.mapper.createObjectNode();
-    join.put("op", "join");
-    join.put("left", leftId);
-    join.put("right", rightId);
-    join.put("type", toDrill(joinType));
-    final ArrayNode conditions = implementor.mapper.createArrayNode();
-    join.put("conditions", conditions);
+    Join.Builder builder = Join.builder();
+    builder.type(joinType);
+    builder.left(leftOp);
+    builder.right(rightOp);
+    
     for (Pair<Integer, Integer> pair : Pair.zip(leftKeys, rightKeys)) {
-      final ObjectNode condition = implementor.mapper.createObjectNode();
-      condition.put("relationship", "==");
-      condition.put("left", leftFields.get(pair.left));
-      condition.put("right", rightFields.get(pair.right));
-      conditions.add(condition);
+      builder.addCondition("==", new FieldReference(leftFields.get(pair.left)), new FieldReference(rightFields.get(pair.right)));
     }
-    return implementor.add(join);
+    return builder.build();
   }
 
-  private int implementInput(DrillImplementor implementor, int i, int offset, RelNode input) {
-    final int inputId = implementor.visitChild(this, i, input);
+  /**
+   * Check to make sure that the fields of the inputs are the same as the output field names.  If not, insert a project renaming them.
+   * @param implementor
+   * @param i
+   * @param offset
+   * @param input
+   * @return
+   */
+  private LogicalOperator implementInput(DrillImplementor implementor, int i, int offset, RelNode input) {
+    final LogicalOperator inputOp = implementor.visitChild(this, i, input);
     assert uniqueFieldNames(input.getRowType());
     final List<String> fields = getRowType().getFieldNames();
     final List<String> inputFields = input.getRowType().getFieldNames();
@@ -104,28 +108,44 @@ public class DrillJoinRel extends JoinRelBase implements DrillRel {
       // Ensure that input field names are the same as output field names.
       // If there are duplicate field names on left and right, fields will get
       // lost.
-      return rename(implementor, inputId, inputFields, outputFields);
+      return rename(implementor, inputOp, inputFields, outputFields);
     } else {
-      return inputId;
+      return inputOp;
     }
   }
 
-  private int rename(DrillImplementor implementor, int inputId, List<String> inputFields, List<String> outputFields) {
-    final ObjectNode project = implementor.mapper.createObjectNode();
-    project.put("op", "project");
-    project.put("input", inputId);
-    final ArrayNode transforms = implementor.mapper.createArrayNode();
-    project.put("projections", transforms);
+  private LogicalOperator rename(DrillImplementor implementor, LogicalOperator inputOp, List<String> inputFields, List<String> outputFields) {
+    Project.Builder builder = Project.builder();
+    builder.setInput(inputOp);
     for (Pair<String, String> pair : Pair.zip(inputFields, outputFields)) {
-      final ObjectNode objectNode = implementor.mapper.createObjectNode();
-      transforms.add(objectNode);
-      objectNode.put("expr", pair.left);
-      objectNode.put("ref", "output." + pair.right);
-//      objectNode.put("ref", pair.right);
+      builder.addExpr(new FieldReference(pair.right), new FieldReference(pair.left));
     }
-    return implementor.add(project);
+    return builder.build();
   }
 
+  public static DrillJoinRel convert(Join join, ConversionContext context) throws InvalidRelException{
+    RelNode left = context.toRel(join.getLeft());
+    RelNode right = context.toRel(join.getRight());
+    
+    List<RexNode> joinConditions = new ArrayList<RexNode>();
+    // right fields appear after the LHS fields.
+    final int rightInputOffset = left.getRowType().getFieldCount();
+    for (JoinCondition condition : join.getConditions()) {
+      RelDataTypeField leftField = left.getRowType().getField(ExprHelper.getFieldName(condition.getLeft()));
+      RelDataTypeField rightField = right.getRowType().getField(ExprHelper.getFieldName(condition.getRight()));
+        joinConditions.add(
+            context.getRexBuilder().makeCall(
+                SqlStdOperatorTable.equalsOperator,
+                context.getRexBuilder().makeInputRef(leftField.getType(), leftField.getIndex()),
+                context.getRexBuilder().makeInputRef(rightField.getType(), rightInputOffset + rightField.getIndex())
+                )
+                );
+    }
+    RexNode rexCondition = RexUtil.composeConjunction(context.getRexBuilder(), joinConditions, false);
+    return new DrillJoinRel(context.getCluster(), context.getLogicalTraits(), left, right, rexCondition, join.getJoinType());
+  }
+  
+  
   /**
    * Returns whether there are any elements in common between left and right.
    */
@@ -141,18 +161,4 @@ public class DrillJoinRel extends JoinRelBase implements DrillRel {
     return new HashSet<>(list).size() == list.size();
   }
 
-  private static String toDrill(JoinRelType joinType) {
-    switch (joinType) {
-    case LEFT:
-      return "left";
-    case RIGHT:
-      return "right";
-    case INNER:
-      return "inner";
-    case FULL:
-      return "outer";
-    default:
-      throw new AssertionError(joinType);
-    }
-  }
 }

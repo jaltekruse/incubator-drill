@@ -17,14 +17,18 @@
  */
 package org.apache.drill.optiq;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
-import org.eigenbase.rel.FilterRelBase;
-import org.eigenbase.rel.RelNode;
-import org.eigenbase.relopt.*;
-import org.eigenbase.rex.RexNode;
-
 import java.util.List;
+
+import org.apache.drill.common.logical.data.Filter;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.eigenbase.rel.FilterRelBase;
+import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.RelNode;
+import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelOptCost;
+import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.relopt.RelTraitSet;
+import org.eigenbase.rex.RexNode;
 
 /**
  * Filter implemented in Drill.
@@ -46,15 +50,16 @@ public class DrillFilterRel extends FilterRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
-    final int inputId = implementor.visitChild(this, 0, getChild());
-    final ObjectNode filter = implementor.mapper.createObjectNode();
-    /*
-     * E.g. { op: "filter", expr: "donuts.ppu < 1.00" }
-     */
-    filter.put("op", "filter");
-    filter.put("input", inputId);
-    filter.put("expr", DrillOptiq.toDrill(getChild(), getCondition()));
-    return implementor.add(filter);
+  public LogicalOperator implement(DrillImplementor implementor) {
+    final LogicalOperator input = implementor.visitChild(this, 0, getChild());
+    Filter f = new Filter(DrillOptiq.toDrill(implementor.getContext(), getChild(), getCondition()));
+    f.setInput(input);
+    return f;
   }
+  
+  public static DrillFilterRel convert(Filter filter, ConversionContext context) throws InvalidRelException{
+    RelNode input = context.toRel(filter.getInput());
+    return new DrillFilterRel(context.getCluster(), context.getLogicalTraits(), input, context.toRex(filter.getExpr()));
+  }
+
 }

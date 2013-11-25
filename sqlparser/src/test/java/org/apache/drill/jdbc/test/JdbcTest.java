@@ -331,7 +331,7 @@ public class JdbcTest {
             "DEPTID=33; LASTNAME=Steinberg; DEPTID0=33; NAME=Engineering",
             "DEPTID=34; LASTNAME=Robinson; DEPTID0=34; NAME=Clerical",
             "DEPTID=34; LASTNAME=Smith; DEPTID0=34; NAME=Clerical").planContains(Join.class);
-    Assert.assertEquals(Join.JoinType.INNER, join.getJointType());
+    Assert.assertEquals(Join.JoinType.INNER, join.getJoinType());
   }
 
   @Test
@@ -345,7 +345,7 @@ public class JdbcTest {
             "DEPTID=34; LASTNAME=Robinson; DEPTID0=34; NAME=Clerical",
             "DEPTID=34; LASTNAME=Smith; DEPTID0=34; NAME=Clerical",
             "DEPTID=null; LASTNAME=John; DEPTID0=null; NAME=null").planContains(Join.class);
-    Assert.assertEquals(Join.JoinType.LEFT, join.getJointType());
+    Assert.assertEquals(Join.JoinType.LEFT, join.getJoinType());
   }
 
   /**
@@ -355,7 +355,7 @@ public class JdbcTest {
   public void testRightJoin() throws Exception {
     Join join = JdbcAssert.withModel(MODEL, "HR").sql("select * from emp right join dept on emp.deptId = dept.deptId")
         .returnsUnordered("xx").planContains(Join.class);
-    Assert.assertEquals(Join.JoinType.LEFT, join.getJointType());
+    Assert.assertEquals(Join.JoinType.LEFT, join.getJoinType());
   }
 
   @Test
@@ -370,7 +370,7 @@ public class JdbcTest {
             "DEPTID=34; LASTNAME=Smith; DEPTID0=34; NAME=Clerical",
             "DEPTID=null; LASTNAME=John; DEPTID0=null; NAME=null",
             "DEPTID=null; LASTNAME=null; DEPTID0=35; NAME=Marketing").planContains(Join.class);
-    Assert.assertEquals(Join.JoinType.OUTER, join.getJointType());
+    Assert.assertEquals(Join.JoinType.OUTER, join.getJoinType());
   }
 
   /**
@@ -389,7 +389,7 @@ public class JdbcTest {
             "DEPTID=33; LASTNAME=Steinberg; NAME=x; DEPTID0=33; NAME0=Engineering",
             "DEPTID=34; LASTNAME=Robinson; NAME=x; DEPTID0=34; NAME0=Clerical",
             "DEPTID=34; LASTNAME=Smith; NAME=x; DEPTID0=34; NAME0=Clerical").planContains(Join.class);
-    Assert.assertEquals(Join.JoinType.INNER, join.getJointType());
+    Assert.assertEquals(Join.JoinType.INNER, join.getJoinType());
   }
 
   /** Tests that one of the FoodMart tables is present. */

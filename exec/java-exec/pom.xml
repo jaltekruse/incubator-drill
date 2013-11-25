@@ -63,7 +63,7 @@
     </dependency>
     <dependency>
       <groupId>net.hydromatic</groupId>
-      <artifactId>optiq</artifactId>
+      <artifactId>optiq-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.freemarker</groupId>

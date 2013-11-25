@@ -22,6 +22,13 @@ import java.util.List;
 
 import net.hydromatic.linq4j.Ord;
 
+import org.apache.drill.common.expression.ExpressionPosition;
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.FunctionRegistry;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.ValueExpressions;
+import org.apache.drill.common.logical.data.GroupingAggregate;
+import org.apache.drill.common.logical.data.LogicalOperator;
 import org.eigenbase.rel.AggregateCall;
 import org.eigenbase.rel.AggregateRelBase;
 import org.eigenbase.rel.InvalidRelException;
@@ -30,8 +37,7 @@ import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.util.Util;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 
 /**
  * Aggregation implemented in Drill.
@@ -58,62 +64,45 @@ public class DrillAggregateRel extends AggregateRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
-    int inputId = implementor.visitChild(this, 0, getChild());
+  public LogicalOperator implement(DrillImplementor implementor) {
+
+    GroupingAggregate.Builder builder = GroupingAggregate.builder();
+    builder.setInput(implementor.visitChild(this, 0, getChild()));
     final List<String> childFields = getChild().getRowType().getFieldNames();
     final List<String> fields = getRowType().getFieldNames();
-    /*
-     * E.g. { op: "segment", ref: "segment", exprs: ["deptId"] }, { op: "collapsingaggregate", within: "segment",
-     * carryovers: ["deptId"], aggregations: [ {ref: "c", expr: "count(1)"} ] }
-     */
-    final ObjectNode segment = implementor.mapper.createObjectNode();
-    segment.put("op", "segment");
-    segment.put("input", inputId);
-    // TODO: choose different name for field if there is already a field
-    // called "segment"
-    segment.put("ref", "segment");
-    final ArrayNode exprs = implementor.mapper.createArrayNode();
-    segment.put("exprs", exprs);
-    for (int group : Util.toIter(groupSet)) {
-      exprs.add(childFields.get(group));
-    }
 
-    final int segmentId = implementor.add(segment);
-
-    final ObjectNode aggregate = implementor.mapper.createObjectNode();
-    aggregate.put("op", "collapsingaggregate");
-    aggregate.put("input", segmentId);
-    aggregate.put("within", "segment");
-    final ArrayNode carryovers = implementor.mapper.createArrayNode();
-    aggregate.put("carryovers", carryovers);
     for (int group : Util.toIter(groupSet)) {
-      carryovers.add(childFields.get(group));
+      FieldReference fr = new FieldReference(childFields.get(group), ExpressionPosition.UNKNOWN);
+      builder.addKey(fr, fr);
     }
-    final ArrayNode aggregations = implementor.mapper.createArrayNode();
-    aggregate.put("aggregations", aggregations);
+    
     for (Ord<AggregateCall> aggCall : Ord.zip(aggCalls)) {
-      final ObjectNode aggregation = implementor.mapper.createObjectNode();
-      aggregation.put("ref", fields.get(groupSet.cardinality() + aggCall.i));
-      aggregation.put("expr", toDrill(aggCall.e, childFields));
-      aggregations.add(aggregation);
+      FieldReference ref = new FieldReference(fields.get(groupSet.cardinality() + aggCall.i));
+      LogicalExpression expr = toDrill(aggCall.e, childFields, implementor);
+      builder.addExpr(ref, expr);
     }
-
-    return implementor.add(aggregate);
+    
+    return builder.build();
   }
 
-  private String toDrill(AggregateCall call, List<String> fn) {
-    final StringBuilder buf = new StringBuilder();
-    buf.append(call.getAggregation().getName().toLowerCase()).append("(");
-    for (Ord<Integer> arg : Ord.zip(call.getArgList())) {
-      if (arg.i > 0) {
-        buf.append(", ");
-      }
-      buf.append(fn.get(arg.e));
+  
+  
+  
+  private LogicalExpression toDrill(AggregateCall call, List<String> fn, DrillImplementor implementor) {
+    List<LogicalExpression> args = Lists.newArrayList();
+    for(Integer i : call.getArgList()){
+      args.add(new FieldReference(fn.get(i)));
     }
-    if (call.getArgList().isEmpty()) {
-      buf.append("1"); // dummy arg to implement COUNT(*)
-    }
-    buf.append(")");
-    return buf.toString();
+    
+    // for count(1).
+    if(args.isEmpty()) args.add(new ValueExpressions.LongExpression(1l));
+    LogicalExpression expr = implementor.getContext().getRegistry().createExpression(call.getAggregation().getName().toLowerCase(), ExpressionPosition.UNKNOWN, args);
+    return expr;
   }
+  
+  public static DrillAggregateRel convert(GroupingAggregate groupBy, ConversionContext value)
+      throws InvalidRelException {
+    throw new UnsupportedOperationException();
+  }
+
 }

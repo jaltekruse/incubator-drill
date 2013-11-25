@@ -17,13 +17,17 @@
  */
 package org.apache.drill.optiq;
 
-import org.eigenbase.rel.ValuesRelBase;
+import java.util.List;
+
+import org.apache.drill.common.logical.data.LogicalOperator;
 import org.eigenbase.rel.RelNode;
-import org.eigenbase.relopt.*;
+import org.eigenbase.rel.ValuesRelBase;
+import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelOptCost;
+import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.rex.RexLiteral;
-
-import java.util.List;
 
 /**
  * Values implemented in Drill.
@@ -46,7 +50,7 @@ public class DrillValuesRel extends ValuesRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
+  public LogicalOperator implement(DrillImplementor implementor) {
     // Update when https://issues.apache.org/jira/browse/DRILL-57 fixed
     throw new UnsupportedOperationException();
   }

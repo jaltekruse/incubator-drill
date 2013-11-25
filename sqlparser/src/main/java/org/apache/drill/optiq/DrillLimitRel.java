@@ -17,16 +17,19 @@
  */
 package org.apache.drill.optiq;
 
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.math.BigDecimal;
+import java.util.List;
+
 import org.apache.drill.common.logical.data.Limit;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.eigenbase.rel.InvalidRelException;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.SingleRel;
 import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.rex.RexLiteral;
 import org.eigenbase.rex.RexNode;
-
-import java.util.List;
+import org.eigenbase.sql.type.SqlTypeName;
 
 public class DrillLimitRel extends SingleRel implements DrillRel {
   private RexNode offset;
@@ -44,17 +47,26 @@ public class DrillLimitRel extends SingleRel implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
-    int inputId = implementor.visitChild(this, 0, getChild());
-
-
+  public LogicalOperator implement(DrillImplementor implementor) {
+    LogicalOperator inputOp = implementor.visitChild(this, 0, getChild());
+    
     // First offset to include into results (inclusive). Null implies it is starting from offset 0
     int first = offset != null ? Math.max(0, RexLiteral.intValue(offset)) : 0;
 
     // Last offset to stop including into results (exclusive), translating fetch row counts into an offset.
     // Null value implies including entire remaining result set from first offset
     Integer last = fetch != null ? Math.max(0, RexLiteral.intValue(fetch)) + first : null;
-    return implementor.add(new Limit(first, last), inputId);
+    Limit limit = new Limit(first, last);
+    limit.setInput(inputOp);
+    return limit;
   }
+  
+  public static DrillLimitRel convert(Limit limit, ConversionContext context) throws InvalidRelException{
+    RelNode input = context.toRel(limit.getInput());
+    RexNode first = context.getRexBuilder().makeExactLiteral(BigDecimal.valueOf(limit.getFirst()), context.getTypeFactory().createSqlType(SqlTypeName.INTEGER));
+    RexNode last = context.getRexBuilder().makeExactLiteral(BigDecimal.valueOf(limit.getLast()), context.getTypeFactory().createSqlType(SqlTypeName.INTEGER));
+    return new DrillLimitRel(context.getCluster(), context.getLogicalTraits(), input, first, last);
+  }
+
 
 }

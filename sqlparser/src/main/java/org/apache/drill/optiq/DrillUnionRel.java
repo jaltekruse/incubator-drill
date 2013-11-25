@@ -17,15 +17,20 @@
  */
 package org.apache.drill.optiq;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import net.hydromatic.linq4j.Ord;
-import org.eigenbase.rel.UnionRelBase;
-import org.eigenbase.rel.RelNode;
-import org.eigenbase.relopt.*;
-
-import java.util.ArrayList;
 import java.util.List;
+
+import net.hydromatic.linq4j.Ord;
+
+import org.apache.drill.common.logical.data.Limit;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.apache.drill.common.logical.data.Union;
+import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.UnionRelBase;
+import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelOptCost;
+import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.relopt.RelTraitSet;
 
 /**
  * Union implemented in Drill.
@@ -50,26 +55,16 @@ public class DrillUnionRel extends UnionRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
-    List<Integer> inputIds = new ArrayList<>();
+  public LogicalOperator implement(DrillImplementor implementor) {
+    Union.Builder builder = Union.builder();
     for (Ord<RelNode> input : Ord.zip(inputs)) {
-      inputIds.add(implementor.visitChild(this, input.i, input.e));
+      builder.addInput(implementor.visitChild(this, input.i, input.e));
     }
-/*
-    E.g. {
-      op: "union",
-      distinct: true,
-	  inputs: [2, 4]
-	}
-*/
-    final ObjectNode union = implementor.mapper.createObjectNode();
-    union.put("op", "union");
-    union.put("distinct", !all);
-    final ArrayNode inputs = implementor.mapper.createArrayNode();
-    union.put("inputs", inputs);
-    for (Integer inputId : inputIds) {
-      inputs.add(inputId);
-    }
-    return implementor.add(union);
+    builder.setDistinct(!all);
+    return builder.build();
+  }
+  
+  public static DrillUnionRel convert(Union union, ConversionContext context) throws InvalidRelException{
+    throw new UnsupportedOperationException();
   }
 }

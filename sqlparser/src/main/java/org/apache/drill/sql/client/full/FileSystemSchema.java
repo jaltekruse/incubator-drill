@@ -19,18 +19,17 @@ package org.apache.drill.sql.client.full;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import net.hydromatic.linq4j.QueryProvider;
+import net.hydromatic.linq4j.expressions.DefaultExpression;
 import net.hydromatic.linq4j.expressions.Expression;
 import net.hydromatic.optiq.Schema;
 import net.hydromatic.optiq.Table;
 import net.hydromatic.optiq.impl.java.JavaTypeFactory;
 
 import org.apache.drill.common.logical.StorageEngineConfig;
-import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.jdbc.DrillTable;
 
@@ -46,21 +45,15 @@ public class FileSystemSchema implements Schema{
   private final JavaTypeFactory typeFactory;
   private final Schema parentSchema;
   private final String name;
-  private final Expression expression;
-  private final QueryProvider queryProvider;
+  private final Expression expression = new DefaultExpression(Object.class);
   private final SchemaProvider schemaProvider;
-  private final DrillClient client;
   private final StorageEngineConfig config;
   
-  public FileSystemSchema(DrillClient client, StorageEngineConfig config, SchemaProvider schemaProvider, JavaTypeFactory typeFactory, Schema parentSchema, String name, Expression expression,
-      QueryProvider queryProvider) {
+  public FileSystemSchema(StorageEngineConfig config, SchemaProvider schemaProvider, JavaTypeFactory typeFactory, Schema parentSchema, String name) {
     super();
-    this.client = client;
     this.typeFactory = typeFactory;
     this.parentSchema = parentSchema;
     this.name = name;
-    this.expression = expression;
-    this.queryProvider = queryProvider;
     this.schemaProvider = schemaProvider;
     this.config = config;
   }
@@ -92,7 +85,7 @@ public class FileSystemSchema implements Schema{
 
   @Override
   public QueryProvider getQueryProvider() {    
-    return queryProvider;
+    throw new UnsupportedOperationException();
   }
 
 
@@ -120,7 +113,7 @@ public class FileSystemSchema implements Schema{
     Object selection = schemaProvider.getSelectionBaseOnName(name);
     if(selection == null) return null;
     
-    DrillTable table = DrillTable.createTable(client, typeFactory, this, name, null, config, selection);
+    DrillTable table = DrillTable.createTable(typeFactory, this, name, this.name, config, selection);
     info = new TableInfo(name, table);
     TableInfo oldInfo = (TableInfo) tables.putIfAbsent(name, info);
     if(oldInfo != null) return (Table<E>) oldInfo.table;
