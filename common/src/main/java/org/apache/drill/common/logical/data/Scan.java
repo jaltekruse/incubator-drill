@@ -35,13 +35,13 @@ public class Scan extends SourceOperator{
 	private final String storageEngine;
 	private final JSONOptions selection;
 	private final FieldReference outputReference;
-  private final List<SchemaPath> columns;
+  private final List<FieldReference> columns;
   private final LogicalExpression filterExpr;
   private final long recordLimit;
 	
 	@JsonCreator
   public Scan(@JsonProperty("storageengine") String storageEngine, @JsonProperty("selection") JSONOptions selection,
-              @JsonProperty("ref") FieldReference outputReference, @JsonProperty("columns") List<SchemaPath> columns,
+              @JsonProperty("ref") FieldReference outputReference, @JsonProperty("columns") List<FieldReference> columns,
               @JsonProperty("filterExpr") LogicalExpression filterExpr, @JsonProperty("recordLimit") long recordLimit) {
     super();
     this.storageEngine = storageEngine;
@@ -75,7 +75,7 @@ public class Scan extends SourceOperator{
     return new ScanBuilder();
   }
 
-  public List<SchemaPath> getColumns() {
+  public List<FieldReference> getColumns() {
     return columns;
   }
 

@@ -37,6 +37,8 @@ public abstract class ColumnReader {
   // status information on the current page
   PageReadStatus pageReadStatus;
 
+  // buffer with all of the raw data from this column chunk (the set of records of a single column in a row group)
+  ByteBuf columnChunkBuffer;
   long readPositionInBuffer;
 
   // quick reference to see if the field is fixed length (as this requires an instanceof)
@@ -106,6 +108,10 @@ public abstract class ColumnReader {
     while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
     valueVecHolder.getValueVector().getMutator().setValueCount(
         valuesReadInCurrentPass);
+  }
+
+  public void setColumnChunkBuffer(ByteBuf columnChunkBuffer) {
+    this.columnChunkBuffer = columnChunkBuffer;
   }
 
   protected abstract void readField(long recordsToRead, ColumnReader firstColumnStatus);

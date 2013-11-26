@@ -17,8 +17,10 @@
  */
 package org.apache.drill.exec.physical.base;
 
+import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.physical.ReadEntry;
 
 import java.util.List;
@@ -33,7 +35,7 @@ public interface SubScan extends Scan {
    * Return the list of columns that will be scanned by this <code>GroupScan</code>.
    * @return - list of columns to be scanned
    */
-  public List<SchemaPath> getColumns();
+  public List<FieldReference> getColumns();
 
   /**
    * Return the number of records to scan.

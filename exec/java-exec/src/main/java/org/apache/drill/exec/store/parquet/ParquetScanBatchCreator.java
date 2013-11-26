@@ -70,7 +70,10 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
                 context, e.getPath(), e.getRowGroupIndex(), rowGroupScan.getStorageEngine().getFileSystem(),
                 rowGroupScan.getStorageEngine().getCodecFactoryExposer(),
                 footers.get(e.getPath()),
-                rowGroupScan.getRef()
+                rowGroupScan.getRef(),
+                rowGroupScan.getColumns(),
+                rowGroupScan.getRecordLimit(),
+                rowGroupScan.getFilterExpr()
             )
         );
       } catch (IOException e1) {

@@ -31,7 +31,7 @@ public class ScanBuilder {
   private String storageEngine;
   private JSONOptions selection;
   private FieldReference outputReference;
-  private List<SchemaPath> columns;
+  private List<FieldReference > columns;
   private LogicalExpression filterExpr;
   private long recordLimit;
 

@@ -24,9 +24,7 @@ import java.util.List;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.LogicalExpression;
-import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StorageEngineConfig;
-import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.AbstractBase;
@@ -54,7 +52,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   private final List<RowGroupReadEntry> rowGroupReadEntries;
   private final FieldReference ref;
   private final long recordLimit;
-  private final List<SchemaPath> columns;
+  private final List<FieldReference> columns;
   private final LogicalExpression filterExpr;
 
   @JsonCreator
@@ -63,7 +61,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
                              @JsonProperty("rowGroupReadEntries") LinkedList<RowGroupReadEntry> rowGroupReadEntries,
                              @JsonProperty("ref") FieldReference ref,
                              @JsonProperty("recordLimit") long recordLimit,
-                             @JsonProperty("columns") List<SchemaPath> columns,
+                             @JsonProperty("columns") List<FieldReference> columns,
                              @JsonProperty("filterExpr") LogicalExpression filterExpr
                              ) throws ExecutionSetupException {
     parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
@@ -78,7 +76,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   public ParquetRowGroupScan(ParquetStorageEngine engine, ParquetStorageEngineConfig config,
                               List<RowGroupReadEntry> rowGroupReadEntries, FieldReference ref,
                               long recordLimit,
-                              List<SchemaPath> columns,
+                              List<FieldReference> columns,
                               LogicalExpression filterExpr
                               ) {
     parquetStorageEngine = engine;
@@ -141,18 +139,18 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   }
 
   @Override
-  public List<SchemaPath> getColumns() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  public List<FieldReference> getColumns() {
+    return columns;
   }
 
   @Override
   public long getRecordLimit() {
-    return 0;  //To change body of implemented methods use File | Settings | File Templates.
+    return recordLimit;
   }
 
   @Override
   public LogicalExpression getFilterExpr() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    return filterExpr;
   }
 
   public static class RowGroupReadEntry extends ReadEntryFromHDFS {

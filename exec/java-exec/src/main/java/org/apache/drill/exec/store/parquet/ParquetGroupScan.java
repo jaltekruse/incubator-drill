@@ -36,7 +36,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.LogicalExpression;
-import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.metrics.DrillMetrics;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
@@ -84,7 +84,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
   private Stopwatch watch = new Stopwatch();
 
   private long recordLimit;
-  private List<SchemaPath> columns;
+  private List<FieldReference> columns;
   private LogicalExpression filterExpr;
 
   public List<ReadEntryWithPath> getEntries() {
@@ -111,7 +111,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
                           @JacksonInject StorageEngineRegistry engineRegistry,
                           @JsonProperty("ref") FieldReference ref,
                           @JsonProperty("recordLimit") long recordLimit,
-                          @JsonProperty("columns") List<SchemaPath> columns,
+                          @JsonProperty("columns") List<FieldReference> columns,
                           @JsonProperty("filterExpr") LogicalExpression filterExpr
                            )throws IOException, ExecutionSetupException {
     engineRegistry.init(DrillConfig.create());
@@ -130,7 +130,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
 
   public ParquetGroupScan(ArrayList<ReadEntryWithPath> entries,
                           ParquetStorageEngine storageEngine, FieldReference ref,
-                          List<SchemaPath> columns,
+                          List<FieldReference> columns,
                           LogicalExpression filterExpr,
                           long recordLimit
   ) throws IOException {
@@ -397,7 +397,7 @@ public class ParquetGroupScan extends AbstractGroupScan {
   }
 
   @Override
-  public List<SchemaPath> getColumns() {
+  public List<FieldReference> getColumns() {
     return columns;
   }
 

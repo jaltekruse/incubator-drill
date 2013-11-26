@@ -192,6 +192,16 @@ public class ParquetRecordReaderTest {
     testParquetFullEngineEventBased(true, "/parquet_scan_screen.json", "/tmp/test.parquet", 1, props);
   }
 
+  @Test
+  public void testSelectColumnRead() throws Exception {
+    HashMap<String, FieldInfo> fields = new HashMap<>();
+    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    populateFieldInfoMap(props);
+    generateParquetFile("/tmp/test.parquet", props);
+    props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    props.fields.put("integer", new FieldInfo("int32", "integer", 32, intVals, TypeProtos.MinorType.INT, props));
+    testParquetFullEngineEventBased(true, "/parquet_selective_column_read.json", "/tmp/test.parquet", 1, props);
+  }
 
   private class ParquetTestProperties{
     int numberRowGroups;
