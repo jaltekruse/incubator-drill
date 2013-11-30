@@ -21,6 +21,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
@@ -51,9 +52,11 @@ public class MockGroupScanPOP extends AbstractGroupScan {
   private final OperatorCost cost;
   private final Size size;
   private  LinkedList<MockScanEntry>[] mappings;
+  private final List<FieldReference> columns;
 
   @JsonCreator
-  public MockGroupScanPOP(@JsonProperty("url") String url, @JsonProperty("entries") List<MockScanEntry> readEntries) {
+  public MockGroupScanPOP(@JsonProperty("url") String url, @JsonProperty("entries") List<MockScanEntry> readEntries,
+                          @JsonProperty("columns") List<FieldReference> columns) {
     this.readEntries = readEntries;
     OperatorCost cost = new OperatorCost(0,0,0,0);
     Size size = new Size(0,0);
@@ -64,6 +67,7 @@ public class MockGroupScanPOP extends AbstractGroupScan {
     this.cost = cost;
     this.size = size;
     this.url = url;
+    this.columns = columns;
   }
 
   public String getUrl() {
@@ -193,12 +197,17 @@ public class MockGroupScanPOP extends AbstractGroupScan {
   @Override
   public SubScan getSpecificScan(int minorFragmentId) {
     assert minorFragmentId < mappings.length : String.format("Mappings length [%d] should be longer than minor fragment id [%d] but it isn't.", mappings.length, minorFragmentId);
-    return new MockSubScanPOP(url, mappings[minorFragmentId]);
+    return new MockSubScanPOP(url, mappings[minorFragmentId], columns);
   }
 
   @Override
   public int getMaxParallelizationWidth() {
     return readEntries.size();
+  }
+
+  @Override
+  public List<FieldReference> getColumns() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
@@ -215,7 +224,7 @@ public class MockGroupScanPOP extends AbstractGroupScan {
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     Preconditions.checkArgument(children.isEmpty());
-    return new MockGroupScanPOP(url, readEntries);
+    return new MockGroupScanPOP(url, readEntries, columns);
 
   }
 

@@ -65,7 +65,7 @@ public class JSONStorageEngine extends AbstractStorageEngine {
   @Override
   public JSONGroupScan getPhysicalScan(Scan scan) throws IOException {
     ArrayList<ScanEntry> readEntries = scan.getSelection().getListWith(new ObjectMapper(), new TypeReference<ArrayList<ScanEntry>>() {});
-    return new JSONGroupScan(readEntries, this, scan.getOutputReference());
+    return new JSONGroupScan(readEntries, this, scan.getOutputReference(), scan.getColumns());
   }
 
   @Override

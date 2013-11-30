@@ -60,7 +60,7 @@ public class FragmentContext {
   public final Timer fragmentTime;
   private final FragmentHandle handle;
   private final UserClientConnection connection;
-  private final IncomingBuffers buffers;
+  private IncomingBuffers buffers;
   private volatile Throwable failureCause;
   private volatile boolean failed = false;
   private final FunctionImplementationRegistry funcRegistry;
@@ -68,7 +68,7 @@ public class FragmentContext {
   private final ClassTransformer transformer;
   private final BufferAllocator allocator;
   
-  public FragmentContext(DrillbitContext dbContext, FragmentHandle handle, UserClientConnection connection, IncomingBuffers buffers, FunctionImplementationRegistry funcRegistry) {
+  public FragmentContext(DrillbitContext dbContext, FragmentHandle handle, UserClientConnection connection, FunctionImplementationRegistry funcRegistry) {
     this.loader = new QueryClassLoader(true);
     this.transformer = new ClassTransformer();
     this.fragmentTime = dbContext.getMetrics().timer(METRIC_TIMER_FRAGMENT_TIME);
@@ -78,8 +78,11 @@ public class FragmentContext {
     this.context = dbContext;
     this.connection = connection;
     this.handle = handle;
+<<<<<<< HEAD
+=======
     this.allocator = dbContext.getAllocator();
     this.buffers = buffers;
+>>>>>>> Parquet files now read by column, rather than buffer an entire row group, some tests the were inadvertently broken were fixed as well.
     this.funcRegistry = funcRegistry;
   }
   
@@ -104,6 +107,10 @@ public class FragmentContext {
     this.funcRegistry = null;
     this.allocator = DirectBufferAllocator.getAllocator(config);
     
+  }
+
+  public void setBuffers(IncomingBuffers buffers) {
+    this.buffers = buffers;
   }
 
   public void fail(Throwable cause) {
