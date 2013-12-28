@@ -90,18 +90,25 @@ public class JSONRecordReader implements RecordReader {
   private BufferAllocator allocator;
   private int batchSize;
   private final FieldReference ref;
+  // TODO - this is not accessible from the reading code within the ENUM
+  // specifies a select list of columns desired for the query, to prevent reading an entire dataset
+  // for more information see the documentation in logical and physical scan operators
+  private final List<FieldReference> columns;
 
-  public JSONRecordReader(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem, int batchSize, FieldReference ref) {
+  public JSONRecordReader(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem, int batchSize,
+                          FieldReference ref, List<FieldReference> columns) {
     this.hadoopPath = new Path(inputPath);
     this.fileSystem = fileSystem;
     this.allocator = fragmentContext.getAllocator();
     this.batchSize = batchSize;
     valueVectorMap = Maps.newHashMap();
     this.ref = ref;
+    this.columns = columns;
   }
 
-  public JSONRecordReader(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem, FieldReference ref) {
-    this(fragmentContext, inputPath, fileSystem, DEFAULT_LENGTH, ref);
+  public JSONRecordReader(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem, FieldReference ref,
+                          List<FieldReference> columns) {
+    this(fragmentContext, inputPath, fileSystem, DEFAULT_LENGTH, ref, columns);
   }
 
   private JsonParser getParser() {

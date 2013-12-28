@@ -28,7 +28,9 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -58,7 +60,8 @@ public class ParquetRecordReader implements RecordReader {
   private static final int NUMBER_OF_VECTORS = 1;
   private static final long DEFAULT_BATCH_LENGTH = 256 * 1024 * NUMBER_OF_VECTORS; // 256kb
   private static final long DEFAULT_BATCH_LENGTH_IN_BITS = DEFAULT_BATCH_LENGTH * 8; // 256kb
-
+  private static final char DEFAULT_RECORDS_TO_READ_IF_NOT_FIXED_WIDTH = 32*1024;
+  
   // TODO - should probably find a smarter way to set this, currently 1 megabyte
   private static final int VAR_LEN_FIELD_LENGTH = 1024 * 1024 * 1;
   public static final int PARQUET_PAGE_MAX_SIZE = 1024 * 1024 * 1;
@@ -73,18 +76,18 @@ public class ParquetRecordReader implements RecordReader {
   private int bitWidthAllFixedFields;
   private boolean allFieldsFixedLength;
   private int recordsPerBatch;
-  private ByteBuf bufferWithAllData;
   private final FieldReference ref;
   private long totalRecords;
   private long rowGroupOffset;
 
   private List<ColumnReader> columnStatuses;
-  private FileSystem fileSystem;
-  private BufferAllocator allocator;
+  FileSystem fileSystem;
+  BufferAllocator allocator;
   private long batchSize;
-  private Path hadoopPath;
+  Path hadoopPath;
   private VarLenBinaryReader varLengthReader;
   private ParquetMetadata footer;
+  private List<FieldReference> columns;
 
   public CodecFactoryExposer getCodecFactoryExposer() {
     return codecFactoryExposer;
@@ -96,16 +99,17 @@ public class ParquetRecordReader implements RecordReader {
 
   public ParquetRecordReader(FragmentContext fragmentContext,
                              String path, int rowGroupIndex, FileSystem fs,
-                             CodecFactoryExposer codecFactoryExposer, ParquetMetadata footer, FieldReference ref) throws ExecutionSetupException {
-    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path, rowGroupIndex, fs, codecFactoryExposer, footer, ref);
+                             CodecFactoryExposer codecFactoryExposer, ParquetMetadata footer, FieldReference ref,
+                             List<FieldReference> columns) throws ExecutionSetupException {
+    this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path, rowGroupIndex, fs, codecFactoryExposer, footer, ref,
+        columns);
   }
-
 
   public ParquetRecordReader(FragmentContext fragmentContext, long batchSize,
                              String path, int rowGroupIndex, FileSystem fs,
-                             CodecFactoryExposer codecFactoryExposer, ParquetMetadata footer, FieldReference ref) throws ExecutionSetupException {
+                             CodecFactoryExposer codecFactoryExposer, ParquetMetadata footer, FieldReference ref,
+                             List<FieldReference> columns) throws ExecutionSetupException {
     this.allocator = fragmentContext.getAllocator();
-
     hadoopPath = new Path(path);
     fileSystem = fs;
     this.ref = ref;
@@ -113,10 +117,7 @@ public class ParquetRecordReader implements RecordReader {
     this.rowGroupIndex = rowGroupIndex;
     this.batchSize = batchSize;
     this.footer = footer;
-  }
-
-  public ByteBuf getBufferWithAllData() {
-    return bufferWithAllData;
+    this.columns = columns;
   }
 
   public int getRowGroupIndex() {
@@ -149,22 +150,38 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
+  private boolean fieldSelected(MaterializedField field){
+    // TODO - not sure if this is how we want to represent this
+    // for now it makes the existing tests pass, simply selecting
+    // all available data if no columns are provided
+    if (this.columns != null){
+      for (FieldReference expr : this.columns){
+        if ( field.matches(expr)){
+          return true;
+        }
+      }
+      return false;
+    }
+    return true;
+  }
+
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
     
-
     columnStatuses = new ArrayList<>();
-
     totalRecords = footer.getBlocks().get(rowGroupIndex).getRowCount();
-
     List<ColumnDescriptor> columns = footer.getFileMetaData().getSchema().getColumns();
     allFieldsFixedLength = true;
     ColumnDescriptor column;
     ColumnChunkMetaData columnChunkMetaData;
 
+    MaterializedField field;
     // loop to add up the length of the fixed width columns and build the schema
     for (int i = 0; i < columns.size(); ++i) {
       column = columns.get(i);
+      field = MaterializedField.create(toFieldName(column.getPath()),
+          toMajorType(column.getType(), getDataMode(column)));
+      if ( ! fieldSelected(field)) continue;
       // sum the lengths of all of the fixed length fields
       if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
         // There is not support for the fixed binary type yet in parquet, leaving a task here as a reminder
@@ -178,7 +195,6 @@ public class ParquetRecordReader implements RecordReader {
       } else {
         allFieldsFixedLength = false;
       }
-
     }
     rowGroupOffset = footer.getBlocks().get(rowGroupIndex).getColumns().get(0).getFirstDataPageOffset();
 
@@ -190,12 +206,14 @@ public class ParquetRecordReader implements RecordReader {
       ArrayList<VarLenBinaryReader.NullableVarLengthColumn> nullableVarLengthColumns = new ArrayList<>();
       // initialize all of the column read status objects
       boolean fieldFixedLength = false;
-      MaterializedField field;
       for (int i = 0; i < columns.size(); ++i) {
         column = columns.get(i);
         columnChunkMetaData = footer.getBlocks().get(0).getColumns().get(i);
         field = MaterializedField.create(toFieldName(column.getPath()),
             toMajorType(column.getType(), getDataMode(column)));
+        // the field was not requested to be read
+        if ( ! fieldSelected(field)) continue;
+
         fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         ValueVector v = TypeHelper.getNewVector(field, allocator);
         if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
@@ -213,10 +231,8 @@ public class ParquetRecordReader implements RecordReader {
     } catch (SchemaChangeException e) {
       throw new ExecutionSetupException(e);
     }
-    
-    
-    output.removeAllFields();
 
+    output.removeAllFields();
     try {
       for (ColumnReader crs : columnStatuses) {
         output.addField(crs.valueVecHolder.getValueVector());
@@ -232,48 +248,6 @@ public class ParquetRecordReader implements RecordReader {
       throw new ExecutionSetupException("Error setting up output mutator.", e);
     }
 
-    // the method for reading into a ByteBuf from a stream copies all of the data into a giant buffer
-    // here we do the same thing in a loop to not initialize so much on heap
-
-    // TODO - this should be replaced by an enhancement in Hadoop 2.0 that will allow reading
-    // directly into a ByteBuf passed into the reading method
-    int totalByteLength = 0;
-    long start = 0;
-    if (rowGroupIndex == 0){
-      totalByteLength = 4;
-    }
-    else{
-      start = rowGroupOffset;
-    }
-    // TODO - the methods for get total size and get total uncompressed size seem to have the opposite results of
-    // what they should
-    // I found the bug in the mainline and made a issue for it, hopefully it will be fixed soon
-    for (ColumnReader crs : columnStatuses){
-      totalByteLength += crs.columnChunkMetaData.getTotalSize();
-    }
-    for (VarLenBinaryReader.VarLengthColumn r : varLengthReader.columns){
-      totalByteLength += r.columnChunkMetaData.getTotalSize();
-    }
-    for (VarLenBinaryReader.NullableVarLengthColumn r : varLengthReader.nullableColumns){
-      totalByteLength += r.columnChunkMetaData.getTotalSize();
-    }
-    int bufferSize = 64*1024;
-    long totalBytesWritten = 0;
-    int validBytesInCurrentBuffer;
-    byte[] buffer = new byte[bufferSize];
-    
-    try (FSDataInputStream inputStream = fileSystem.open(hadoopPath)) {
-      bufferWithAllData = allocator.buffer(totalByteLength);
-      inputStream.seek(start);
-      while (totalBytesWritten < totalByteLength){
-        validBytesInCurrentBuffer = (int) Math.min(bufferSize, totalByteLength - totalBytesWritten);
-        inputStream.read(buffer, 0 , validBytesInCurrentBuffer);
-        bufferWithAllData.writeBytes(buffer, 0 , (int) validBytesInCurrentBuffer);
-        totalBytesWritten += validBytesInCurrentBuffer;
-      }
-    } catch (IOException e) {
-      throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + hadoopPath.getName());
-    }
   }
 
   private SchemaPath toFieldName(String[] paths) {
@@ -317,7 +291,7 @@ public class ParquetRecordReader implements RecordReader {
    */
   private boolean createFixedColumnReader(boolean fixedLength, ColumnDescriptor descriptor,
                                           ColumnChunkMetaData columnChunkMetaData, int allocateSize, ValueVector v)
-      throws SchemaChangeException {
+      throws SchemaChangeException, ExecutionSetupException {
     // if the column is required
     if (descriptor.getMaxDefinitionLevel() == 0){
       if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
@@ -371,8 +345,7 @@ public class ParquetRecordReader implements RecordReader {
       if (allFieldsFixedLength) {
         recordsToRead = Math.min(recordsPerBatch, firstColumnStatus.columnChunkMetaData.getValueCount() - firstColumnStatus.totalValuesRead);
       } else {
-        // arbitrary
-        recordsToRead = 4000;
+        recordsToRead = DEFAULT_RECORDS_TO_READ_IF_NOT_FIXED_WIDTH;
 
         // going to incorporate looking at length of values and copying the data into a single loop, hopefully it won't
         // get too complicated
@@ -384,7 +357,7 @@ public class ParquetRecordReader implements RecordReader {
         // cannot find more information on this right now, will keep looking
       }
 
-      logger.debug("records to read in this pass: {}", recordsToRead);
+      //logger.debug("records to read in this pass: {}", recordsToRead);
       if (allFieldsFixedLength) {
         readAllFixedFields(recordsToRead, firstColumnStatus);
       } else { // variable length columns
@@ -504,8 +477,17 @@ public class ParquetRecordReader implements RecordReader {
 
   @Override
   public void cleanup() {
+    for (ColumnReader column : columnStatuses) {
+      column.clear();
+    }
     columnStatuses.clear();
-    bufferWithAllData.release();
+
+    for (VarLenBinaryReader.VarLengthColumn r : varLengthReader.columns){
+      r.clear();
+    }
+    for (VarLenBinaryReader.NullableVarLengthColumn r : varLengthReader.nullableColumns){
+      r.clear();
+    }
     varLengthReader.columns.clear();
     varLengthReader.nullableColumns.clear();
   }

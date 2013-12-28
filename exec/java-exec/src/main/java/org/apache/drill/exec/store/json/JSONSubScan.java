@@ -46,15 +46,19 @@ public class JSONSubScan extends AbstractBase implements SubScan {
   private final Size size;
   private final JSONStorageEngine storageEngine;
   private final FieldReference ref;
+  private final List<FieldReference> columns;
 
   @JsonCreator
   public JSONSubScan(@JacksonInject StorageEngineRegistry registry,
                      @JsonProperty("engineConfig") StorageEngineConfig engineConfig,
-                     @JsonProperty("readEntries") List<JSONGroupScan.ScanEntry> readEntries, @JsonProperty("ref") FieldReference ref) throws ExecutionSetupException {
-    this(readEntries, (JSONStorageEngine) registry.getEngine(engineConfig), ref);
+                     @JsonProperty("readEntries") List<JSONGroupScan.ScanEntry> readEntries,
+                     @JsonProperty("ref") FieldReference ref,
+                     @JsonProperty("columns") List<FieldReference> columns) throws ExecutionSetupException {
+    this(readEntries, (JSONStorageEngine) registry.getEngine(engineConfig), ref, columns);
   }
   
-  JSONSubScan(List<JSONGroupScan.ScanEntry> readEntries, JSONStorageEngine engine, FieldReference ref){
+  JSONSubScan(List<JSONGroupScan.ScanEntry> readEntries, JSONStorageEngine engine, FieldReference ref,
+              List<FieldReference> columns){
     this.readEntries = readEntries;
     this.storageEngine = engine;
     OperatorCost cost = new OperatorCost(0, 0, 0, 0);
@@ -66,6 +70,7 @@ public class JSONSubScan extends AbstractBase implements SubScan {
     this.cost = cost;
     this.size = size;
     this.ref = ref;
+    this.columns = columns;
   }
   
   public FieldReference getRef() {
@@ -108,5 +113,10 @@ public class JSONSubScan extends AbstractBase implements SubScan {
   @Override
   public Iterator<PhysicalOperator> iterator() {
     return Iterators.emptyIterator();
+  }
+
+  @Override
+  public List<FieldReference> getColumns() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 }

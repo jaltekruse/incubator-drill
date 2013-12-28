@@ -62,10 +62,10 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
     this.valueCount = def.getRecordCount();
     boolean schemaChanged = schema == null;
 
-    Map<FieldDef, ValueVector> oldFields = Maps.newHashMap();
+    Map<MaterializedField, ValueVector> oldFields = Maps.newHashMap();
     for(VectorWrapper<?> w : container){
       ValueVector v = w.getValueVector();
-      oldFields.put(v.getField().getDef(), v);
+      oldFields.put(v.getField(), v);
     }
     
     VectorContainer newVectors = new VectorContainer();
@@ -76,12 +76,15 @@ public class RecordBatchLoader implements VectorAccessible, Iterable<VectorWrapp
     for (FieldMetadata fmd : fields) {
       FieldDef fieldDef = fmd.getDef();
       ValueVector v = oldFields.remove(fieldDef);
-      if(v == null) {
-        // if we arrive here, we didn't have a matching vector.
-        schemaChanged = true;
-        MaterializedField m = new MaterializedField(fieldDef);
-        v = TypeHelper.getNewVector(m, allocator);
+      if(v != null){
+        container.add(v);
+        continue;
       }
+
+      // if we arrive here, we didn't have a matching vector.
+      schemaChanged = true;
+      MaterializedField m = new MaterializedField(fieldDef);
+      v = TypeHelper.getNewVector(m, allocator);
       if (fmd.getValueCount() == 0){
         v.clear();
       } else {

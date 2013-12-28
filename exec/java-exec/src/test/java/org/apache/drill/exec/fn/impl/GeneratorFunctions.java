@@ -26,7 +26,6 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.annotations.Param;
-import org.apache.drill.exec.expr.annotations.Workspace;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
@@ -39,34 +38,15 @@ public class GeneratorFunctions {
           OutputTypeDeterminer.FIXED_BIGINT, "randomBigInt");
   public static final FunctionDefinition RANDOM_FLOAT8 = FunctionDefinition.simple("randomFloat8", new ArgumentValidators.NumericTypeAllowed(1,2, true),
           OutputTypeDeterminer.FIXED_FLOAT8, "randomFloat8");
-  public static final FunctionDefinition INCREASING_BIGINT = FunctionDefinition.simple("increasingBigInt", new ArgumentValidators.NumericTypeAllowed(1, true),
-          OutputTypeDeterminer.FIXED_BIGINT, "increasingBigInt");
 
   public static class Provider implements CallProvider {
 
     @Override
     public FunctionDefinition[] getFunctionDefintions() {
       return new FunctionDefinition[] { RANDOM_BIG_INT,
-                                        RANDOM_FLOAT8,
-                                        INCREASING_BIGINT };
+                                        RANDOM_FLOAT8 };
     }
 
-  }
-
-  @FunctionTemplate(name = "increasingBigInt", scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
-  public static class IncreasingBigInt implements DrillSimpleFunc {
-
-    @Param BigIntHolder start;
-    @Workspace long current;
-    @Output BigIntHolder out;
-
-    public void setup(RecordBatch incoming) {
-      current = 0;
-    }
-
-    public void eval() {
-      out.value = start.value + current++;
-    }
   }
 
   @FunctionTemplate(name = "randomBigInt", scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)

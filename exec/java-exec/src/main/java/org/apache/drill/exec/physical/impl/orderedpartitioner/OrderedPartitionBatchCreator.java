@@ -15,32 +15,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.json;
+package org.apache.drill.exec.physical.impl.orderedpartitioner;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
-
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.physical.config.OrderedPartitionSender;
 import org.apache.drill.exec.physical.impl.BatchCreator;
-import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.RecordBatch;
-import org.apache.drill.exec.store.RecordReader;
 
 import java.util.List;
 
-public class JSONScanBatchCreator implements BatchCreator<JSONSubScan> {
+public class OrderedPartitionBatchCreator implements BatchCreator<OrderedPartitionSender>{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(OrderedPartitionBatchCreator.class);
 
-    @Override
-    public RecordBatch getBatch(FragmentContext context, JSONSubScan config, List<RecordBatch> children) throws ExecutionSetupException {
-        Preconditions.checkArgument(children.isEmpty());
-        List<JSONGroupScan.ScanEntry> entries = config.getReadEntries();
-        List<RecordReader> readers = Lists.newArrayList();
-        for (JSONGroupScan.ScanEntry e : entries) {
-            readers.add(new JSONRecordReader(context, e.getPath(), config.getStorageEngine().getFileSystem(), config.getRef(),
-                config.getColumns()));
-        }
-
-        return new ScanBatch(context, readers.iterator());
-    }
+  @Override
+  public RecordBatch getBatch(FragmentContext context, OrderedPartitionSender config, List<RecordBatch> children) throws ExecutionSetupException {
+    Preconditions.checkArgument(children.size() == 1);
+    return new OrderedPartitionRecordBatch(config, children.iterator().next(), context);
+  }
+  
+  
 }

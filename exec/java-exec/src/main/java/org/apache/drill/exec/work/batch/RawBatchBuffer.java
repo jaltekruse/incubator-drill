@@ -21,12 +21,10 @@ import org.apache.drill.exec.record.RawFragmentBatch;
 import org.apache.drill.exec.record.RawFragmentBatchProvider;
 import org.apache.drill.exec.rpc.RemoteConnection.ConnectionThrottle;
 
-import java.io.IOException;
-
 public interface RawBatchBuffer extends RawFragmentBatchProvider{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RawBatchBuffer.class);
   
-  public void enqueue(ConnectionThrottle throttle, RawFragmentBatch batch) throws IOException;
+  public void enqueue(ConnectionThrottle throttle, RawFragmentBatch batch);
   
   /**
    * Inform the buffer that no more records are expected.

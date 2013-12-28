@@ -51,15 +51,18 @@ public class JSONGroupScan extends AbstractGroupScan {
   private final OperatorCost cost;
   private final Size size;
   private final FieldReference ref;
+  private final List<FieldReference> columns;
 
   @JsonCreator
   public JSONGroupScan(@JsonProperty("entries") List<ScanEntry> entries,
                        @JsonProperty("storageengine") JSONStorageEngineConfig storageEngineConfig,
-                       @JacksonInject StorageEngineRegistry engineRegistry, @JsonProperty("ref") FieldReference ref) throws ExecutionSetupException {
-    this(entries, (JSONStorageEngine) engineRegistry.getEngine(storageEngineConfig), ref);
+                       @JacksonInject StorageEngineRegistry engineRegistry, @JsonProperty("ref") FieldReference ref,
+                       @JsonProperty("columns") List<FieldReference> columns) throws ExecutionSetupException {
+    this(entries, (JSONStorageEngine) engineRegistry.getEngine(storageEngineConfig), ref, columns);
   }
 
-  public JSONGroupScan(List<ScanEntry> entries, JSONStorageEngine engine, FieldReference ref) {
+  public JSONGroupScan(List<ScanEntry> entries, JSONStorageEngine engine, FieldReference ref,
+                       List<FieldReference> columns) {
     this.engine = engine;
     this.readEntries = entries;
     OperatorCost cost = new OperatorCost(0, 0, 0, 0);
@@ -71,6 +74,7 @@ public class JSONGroupScan extends AbstractGroupScan {
     this.cost = cost;
     this.size = size;
     this.ref = ref;
+    this.columns = columns;
   }
   
   @SuppressWarnings("unchecked")
@@ -97,7 +101,7 @@ public class JSONGroupScan extends AbstractGroupScan {
   @Override
   public SubScan getSpecificScan(int minorFragmentId) throws ExecutionSetupException{
     checkArgument(minorFragmentId < mappings.length, "Mappings length [%s] should be longer than minor fragment id [%s] but it isn't.", mappings.length, minorFragmentId);
-    return new JSONSubScan(mappings[minorFragmentId], engine, ref);
+    return new JSONSubScan(mappings[minorFragmentId], engine, ref, columns);
   }
 
   @Override
@@ -108,7 +112,7 @@ public class JSONGroupScan extends AbstractGroupScan {
   @Override
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
-    return new JSONGroupScan(readEntries, engine, ref);
+    return new JSONGroupScan(readEntries, engine, ref, columns);
   }
 
   public static class ScanEntry implements ReadEntry {
@@ -139,6 +143,11 @@ public class JSONGroupScan extends AbstractGroupScan {
   @Override
   public int getMaxParallelizationWidth() {
     return readEntries.size();
+  }
+
+  @Override
+  public List<FieldReference> getColumns() {
+    return columns;
   }
 
   @Override

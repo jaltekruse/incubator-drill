@@ -17,11 +17,20 @@
  */
 package org.apache.drill.exec.physical.base;
 
-import org.apache.drill.exec.physical.ReadEntry;
+import org.apache.drill.common.expression.FieldReference;
+
+import java.util.List;
 
 /**
  * A SubScan operator represents the data scanned by a particular major/minor fragment.  This is in contrast to
  * a GroupScan operator, which represents all data scanned by a physical plan.
  */
 public interface SubScan extends Scan {
+
+  /**
+   * Return the list of columns that will be scanned by this <code>GroupScan</code>.
+   * @return - list of columns to be scanned
+   */
+  public List<FieldReference> getColumns();
+
 }

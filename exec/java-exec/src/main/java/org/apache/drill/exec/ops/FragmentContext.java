@@ -26,8 +26,8 @@ import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.DirectBufferAllocator;
 import org.apache.drill.exec.metrics.SingleThreadNestedCounter;
-import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 import org.apache.drill.exec.proto.ExecProtos.FragmentStatus;
@@ -39,6 +39,7 @@ import org.apache.drill.exec.work.batch.IncomingBuffers;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
+import com.google.common.annotations.VisibleForTesting;
 
 /**
  * Contextual objects required for execution of a particular fragment.  
@@ -58,14 +59,15 @@ public class FragmentContext {
   public final Timer fragmentTime;
   private final FragmentHandle handle;
   private final UserClientConnection connection;
-  private IncomingBuffers buffers;
+  private final IncomingBuffers buffers;
   private volatile Throwable failureCause;
   private volatile boolean failed = false;
   private final FunctionImplementationRegistry funcRegistry;
   private final QueryClassLoader loader;
   private final ClassTransformer transformer;
+  private final BufferAllocator allocator;
   
-  public FragmentContext(DrillbitContext dbContext, FragmentHandle handle, UserClientConnection connection, FunctionImplementationRegistry funcRegistry) {
+  public FragmentContext(DrillbitContext dbContext, FragmentHandle handle, UserClientConnection connection, IncomingBuffers buffers, FunctionImplementationRegistry funcRegistry) {
     this.loader = new QueryClassLoader(true);
     this.transformer = new ClassTransformer();
     this.fragmentTime = dbContext.getMetrics().timer(METRIC_TIMER_FRAGMENT_TIME);
@@ -75,11 +77,32 @@ public class FragmentContext {
     this.context = dbContext;
     this.connection = connection;
     this.handle = handle;
+    this.allocator = dbContext.getAllocator();
+    this.buffers = buffers;
     this.funcRegistry = funcRegistry;
   }
-
-  public void setBuffers(IncomingBuffers buffers) {
-    this.buffers = buffers;
+  
+  
+  
+  /**
+   * Alternative fragment context that simply has allocator for testing purposes where we don't want to use Junit and Mockito.
+   * @param config
+   */
+  @VisibleForTesting
+  public FragmentContext(DrillConfig config){
+    this.loader = new QueryClassLoader(true);
+    this.transformer = new ClassTransformer();
+    this.fragmentTime = null;
+    this.batchesCompleted = null;
+    this.recordsCompleted = null;
+    this.dataProcessed = null;
+    this.context = null;
+    this.connection = null;
+    this.handle = null;
+    this.buffers = null;
+    this.funcRegistry = null;
+    this.allocator = DirectBufferAllocator.getAllocator(config);
+    
   }
 
   public void fail(Throwable cause) {
@@ -102,7 +125,7 @@ public class FragmentContext {
 
   public BufferAllocator getAllocator(){
     // TODO: A local query allocator to ensure memory limits and accurately gauge memory usage.
-    return context.getAllocator();
+    return allocator;
   }
 
   public <T> T getImplementationClass(CodeGenerator<T> cg) throws ClassTransformationException, IOException{

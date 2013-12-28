@@ -17,17 +17,10 @@
  */
 package org.apache.drill.exec.work.batch;
 
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
 
-import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.exec.ExecConstants;
-import org.apache.drill.exec.exception.SetupException;
-import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.base.Receiver;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.record.RawFragmentBatch;
@@ -45,7 +38,7 @@ public abstract class AbstractFragmentCollector implements BatchCollector{
   private final AtomicInteger parentAccounter;
   private final AtomicInteger finishedStreams = new AtomicInteger();
   
-  public AbstractFragmentCollector(AtomicInteger parentAccounter, Receiver receiver, int minInputsRequired, FragmentContext context) {
+  public AbstractFragmentCollector(AtomicInteger parentAccounter, Receiver receiver, int minInputsRequired) {
     Preconditions.checkArgument(minInputsRequired > 0);
     Preconditions.checkNotNull(receiver);
     Preconditions.checkNotNull(parentAccounter);
@@ -55,15 +48,8 @@ public abstract class AbstractFragmentCollector implements BatchCollector{
     this.remainders = new AtomicIntegerArray(incoming.size());
     this.oppositeMajorFragmentId = receiver.getOppositeMajorFragmentId();
     this.buffers = new RawBatchBuffer[minInputsRequired];
-    try {
-      String bufferClassName = context.getConfig().getString(ExecConstants.SPOOLING_BUFFER_IMPL);
-      Constructor<?> bufferConstructor = Class.forName(bufferClassName).getConstructor(FragmentContext.class);
-      for(int i = 0; i < buffers.length; i++) {
-          buffers[i] = (RawBatchBuffer) bufferConstructor.newInstance(context);
-      }
-    } catch (InstantiationException | IllegalAccessException | InvocationTargetException |
-            NoSuchMethodException | ClassNotFoundException e) {
-      context.fail(e);
+    for(int i = 0; i < buffers.length; i++){
+      buffers[i] = new UnlimitedRawBatchBuffer();
     }
     if (receiver.supportsOutOfOrderExchange()) {
       this.remainingRequired = new AtomicInteger(1);
@@ -82,7 +68,7 @@ public abstract class AbstractFragmentCollector implements BatchCollector{
   
   public abstract void streamFinished(int minorFragmentId);
   
-  public boolean batchArrived(ConnectionThrottle throttle, int minorFragmentId, RawFragmentBatch batch)  throws IOException {
+  public boolean batchArrived(ConnectionThrottle throttle, int minorFragmentId, RawFragmentBatch batch) {
     boolean decremented = false;
     if (remainders.compareAndSet(minorFragmentId, 0, 1)) {
       int rem = remainingRequired.decrementAndGet();

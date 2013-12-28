@@ -19,11 +19,9 @@ package org.apache.drill.exec.record;
 
 import org.apache.drill.exec.ops.FragmentContext;
 
-import java.io.IOException;
-
 public interface RawFragmentBatchProvider {
   
-  public RawFragmentBatch getNext() throws IOException;
+  public RawFragmentBatch getNext();
   public void kill(FragmentContext context);
   
 }
