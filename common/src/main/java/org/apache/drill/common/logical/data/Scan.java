@@ -23,7 +23,11 @@ import org.apache.drill.common.expression.FieldReference;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.data.visitors.LogicalVisitor;
+
+import java.util.List;
 
 
 @JsonTypeName("scan")
@@ -31,13 +35,16 @@ public class Scan extends SourceOperator{
 	private final String storageEngine;
 	private final JSONOptions selection;
 	private final FieldReference outputReference;
-	
+  private final List<FieldReference> columns;
+
 	@JsonCreator
-  public Scan(@JsonProperty("storageengine") String storageEngine, @JsonProperty("selection") JSONOptions selection, @JsonProperty("ref") FieldReference outputReference) {
+  public Scan(@JsonProperty("storageengine") String storageEngine, @JsonProperty("selection") JSONOptions selection,
+              @JsonProperty("ref") FieldReference outputReference, @JsonProperty("columns") List<FieldReference> columns){
     super();
     this.storageEngine = storageEngine;
     this.selection = selection;
     this.outputReference = outputReference;
+    this.columns = columns;
   }
 
   @JsonProperty("storageengine")
@@ -61,6 +68,10 @@ public class Scan extends SourceOperator{
 
   public static ScanBuilder builder() {
     return new ScanBuilder();
+  }
+
+  public List<FieldReference> getColumns() {
+    return columns;
   }
 
 }

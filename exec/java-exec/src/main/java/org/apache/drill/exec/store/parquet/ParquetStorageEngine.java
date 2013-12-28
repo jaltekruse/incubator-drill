@@ -58,7 +58,6 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
   private final DrillbitContext context;
   static final ParquetMetadataConverter parquetMetadataConverter = new ParquetMetadataConverter();
   private CodecFactoryExposer codecFactoryExposer;
-  final ParquetMetadata footer;
   private final ParquetSchemaProvider schemaProvider;
   private final ParquetStorageEngineConfig engineConfig;
 
@@ -67,7 +66,6 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
     this.schemaProvider = new ParquetSchemaProvider(configuration, context.getConfig());
     codecFactoryExposer = new CodecFactoryExposer(schemaProvider.conf);
     this.engineConfig = configuration;
-    this.footer = null;
   }
 
   public Configuration getHadoopConfig() {
@@ -99,7 +97,7 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
     ArrayList<ReadEntryWithPath> readEntries = scan.getSelection().getListWith(new ObjectMapper(),
         new TypeReference<ArrayList<ReadEntryWithPath>>() {});
 
-    return new ParquetGroupScan(readEntries, this, scan.getOutputReference());
+    return new ParquetGroupScan(readEntries, this, scan.getOutputReference(), scan.getColumns());
   }
 
   @Override

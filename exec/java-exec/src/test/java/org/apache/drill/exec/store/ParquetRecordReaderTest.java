@@ -17,16 +17,27 @@
  */
 package org.apache.drill.exec.store;
 
-import com.beust.jcommander.internal.Lists;
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
-import com.google.common.util.concurrent.SettableFuture;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static parquet.column.Encoding.PLAIN;
+
+import java.io.IOException;
+import java.net.URI;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import mockit.Injectable;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.expression.ExpressionPosition;
+import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos;
@@ -39,25 +50,35 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.store.json.JsonSchemaProvider;
+import org.apache.drill.exec.store.parquet.ParquetRecordReader;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.Progressable;
 import org.junit.Ignore;
 import org.junit.Test;
 
 import parquet.bytes.BytesInput;
 import parquet.column.ColumnDescriptor;
+import parquet.hadoop.CodecFactoryExposer;
+import parquet.hadoop.Footer;
+import parquet.hadoop.ParquetFileReader;
 import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.schema.MessageType;
 import parquet.schema.MessageTypeParser;
 
-import java.util.*;
-
-import static org.junit.Assert.*;
-import static parquet.column.Encoding.PLAIN;
+import com.beust.jcommander.internal.Lists;
+import com.google.common.base.Charsets;
+import com.google.common.base.Stopwatch;
+import com.google.common.io.Files;
+import com.google.common.util.concurrent.SettableFuture;
 
 public class ParquetRecordReaderTest {
   org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
@@ -144,7 +165,7 @@ public class ParquetRecordReaderTest {
 //    Object[] boolVals = { null, null, null};
     Object[] boolVals = { val, val, val};
     props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
-    testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable.parquet", 1, props);
+    testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
   }
 
   @Test
@@ -169,7 +190,7 @@ public class ParquetRecordReaderTest {
   @Test
   public void testMultipleRowGroupsAndReadsPigError() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(5, 300000, DEFAULT_BYTES_PER_PAGE, fields);
     populatePigTPCHCustomerFields(props);
 //    populatePigTPCHSupplierFields(props);
     String readEntries = "";
@@ -192,8 +213,90 @@ public class ParquetRecordReaderTest {
     testParquetFullEngineEventBased(true, "/parquet_scan_screen.json", "/tmp/test.parquet", 1, props);
   }
 
+  /**
+   * Tests the attribute in a scan node to limit the columns read by a scan.
+   *
+   * The functionality of selecting all columns is tested in all of the other tests that leave out the attribute.
+   * @throws Exception
+   */
+  @Test
+  public void testSelectColumnRead() throws Exception {
+    HashMap<String, FieldInfo> fields = new HashMap<>();
+    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    // generate metatdata for a series of test columns, these columns are all generated in the test file
+    populateFieldInfoMap(props);
+    generateParquetFile("/tmp/test.parquet", props);
+    fields.clear();
+    // create a new object to describe the dataset expected out of the scan operation
+    // the fields added below match those requested in the plan specified in parquet_selective_column_read.json
+    // that is used below in the test query
+    props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    props.fields.put("integer", new FieldInfo("int32", "integer", 32, intVals, TypeProtos.MinorType.INT, props));
+    props.fields.put("bigInt", new FieldInfo("int64", "bigInt", 64, longVals, TypeProtos.MinorType.BIGINT, props));
+    props.fields.put("bin", new FieldInfo("binary", "bin", -1, binVals, TypeProtos.MinorType.VARBINARY, props));
+    props.fields.put("bin2", new FieldInfo("binary", "bin2", -1, bin2Vals, TypeProtos.MinorType.VARBINARY, props));
+    testParquetFullEngineEventBased(false, "/parquet_selective_column_read.json", "/tmp/test.parquet", 1, props);
+  }
 
-  private class ParquetTestProperties{
+  public static void main(String[] args) throws Exception{
+    new ParquetRecordReaderTest().testPerformance();
+  }
+  
+  @Test
+  @Ignore
+  public void testPerformance() throws Exception {
+    FragmentContext context = new FragmentContext(DrillConfig.create());
+    
+//    new NonStrictExpectations() {
+//      {
+//        context.getAllocator(); result = BufferAllocator.getAllocator(DrillConfig.create());
+//      }
+//    };
+
+    final String fileName = "/tmp/parquet_test_performance.parquet";
+    HashMap<String, FieldInfo> fields = new HashMap<>();
+    ParquetTestProperties props = new ParquetTestProperties(1, 20 * 1000 * 1000, DEFAULT_BYTES_PER_PAGE, fields);
+    populateFieldInfoMap(props);
+    //generateParquetFile(fileName, props);
+    
+    Configuration dfsConfig = new Configuration();
+    List<Footer> footers = ParquetFileReader.readFooters(dfsConfig, new Path(fileName));
+    Footer f = footers.iterator().next();
+    
+    List<FieldReference> columns = Lists.newArrayList();
+    columns.add(new FieldReference("_MAP.integer", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.bigInt", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.f", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.d", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.b", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.bin", ExpressionPosition.UNKNOWN));
+    columns.add(new FieldReference("_MAP.bin2", ExpressionPosition.UNKNOWN));
+    int totalRowCount = 0;
+    
+    FileSystem fs = new CachedSingleFileSystem(fileName);
+    for(int i = 0; i < 25; i++){
+      ParquetRecordReader rr = new ParquetRecordReader(context, 256000, fileName, 0, fs,
+          new CodecFactoryExposer(dfsConfig), f.getParquetMetadata(), new FieldReference("_MAP",
+              ExpressionPosition.UNKNOWN), columns);
+      TestOutputMutator mutator = new TestOutputMutator();
+      rr.setup(mutator);
+      Stopwatch watch = new Stopwatch();
+      watch.start();
+      
+      int rowCount = 0;
+      while ((rowCount = rr.next()) > 0) {
+        totalRowCount += rowCount;
+      }
+      System.out.println(String.format("Time completed: %s. ", watch.elapsed(TimeUnit.MILLISECONDS)));
+      rr.cleanup();
+    }
+    System.out.println(String.format("Total row count %s", totalRowCount));
+
+
+  }
+
+  
+  private class ParquetTestProperties {
     int numberRowGroups;
     int recordsPerRowGroup;
     int bytesPerPage = 1024 * 1024 * 1;
@@ -485,6 +588,8 @@ public class ParquetRecordReaderTest {
         client.runQuery(UserProtos.QueryType.LOGICAL, Files.toString(FileUtils.getResourceAsFile(plan), Charsets.UTF_8), resultListener);
       }
       resultListener.getResults();
+      // ensure the right number of columns was returned, especially important to ensure selective column read is working
+      assert resultListener.valuesChecked.keySet().size() == props.fields.keySet().size() : "Unexpected number of output columns from parquet scan,";
       for (String s : resultListener.valuesChecked.keySet()) {
         assertEquals("Record count incorrect for column: " + s,
             props.recordsPerRowGroup * props.numberRowGroups * numberOfTimesRead, (long) resultListener.valuesChecked.get(s));
@@ -601,6 +706,8 @@ public class ParquetRecordReaderTest {
         }
         batchCounter++;
       }
+      // ensure the right number of columns was returned, especially important to ensure selective column read is working
+      assert valuesChecked.keySet().size() == props.fields.keySet().size() : "Unexpected number of output columns from parquet scan,";
       for (String s : valuesChecked.keySet()) {
         assertEquals("Record count incorrect for column: " + s, props.recordsPerRowGroup * props.numberRowGroups * numberOfTimesRead, (long) valuesChecked.get(s));
       }
