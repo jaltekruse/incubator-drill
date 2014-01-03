@@ -147,6 +147,32 @@ public class ParquetRecordReaderTest {
     testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable.parquet", 1, props);
   }
 
+  /**
+   * Tests the attribute in a scan node to limit the columns read by a scan.
+   *
+   * The functionality of selecting all columns is tested in all of the other tests that leave out the attribute.
+   * @throws Exception
+   */
+  @Test
+  public void testSelectColumnRead() throws Exception {
+    HashMap<String, FieldInfo> fields = new HashMap<>();
+    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    // generate metatdata for a series of test columns, these columns are all generated in the test file
+    populateFieldInfoMap(props);
+    generateParquetFile("/tmp/test.parquet", props);
+    fields.clear();
+    // create a new object to describe the dataset expected out of the scan operation
+    // the fields added below match those requested in the plan specified in parquet_selective_column_read.json
+    // that is used below in the test query
+    props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    props.fields.put("integer", new FieldInfo("int32", "integer", 32, intVals, TypeProtos.MinorType.INT, props));
+    props.fields.put("bigInt", new FieldInfo("int64", "bigInt", 64, longVals, TypeProtos.MinorType.BIGINT, props));
+    props.fields.put("bin", new FieldInfo("binary", "bin", -1, binVals, TypeProtos.MinorType.VARBINARY, props));
+    props.fields.put("bin2", new FieldInfo("binary", "bin2", -1, bin2Vals, TypeProtos.MinorType.VARBINARY, props));
+    testParquetFullEngineEventBased(false, "/parquet_selective_column_read.json", "/tmp/test.parquet", 1, props);
+  }
+
+
   @Test
   public void testMultipleRowGroupsAndReads() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();

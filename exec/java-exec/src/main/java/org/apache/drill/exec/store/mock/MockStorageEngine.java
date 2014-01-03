@@ -44,7 +44,7 @@ public class MockStorageEngine extends AbstractStorageEngine {
         new TypeReference<ArrayList<MockScanEntry>>() {
         });
     
-    return new MockGroupScanPOP(null, readEntries);
+    return new MockGroupScanPOP(null, readEntries, scan.getColumns());
   }
 
   @Override

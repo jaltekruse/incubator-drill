@@ -21,6 +21,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.base.AbstractBase;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
@@ -44,9 +46,12 @@ public class MockSubScanPOP extends AbstractBase implements SubScan {
   private final OperatorCost cost;
   private final Size size;
   private  LinkedList<MockGroupScanPOP.MockScanEntry>[] mappings;
+  private final List<SchemaPath> columns;
 
   @JsonCreator
-  public MockSubScanPOP(@JsonProperty("url") String url, @JsonProperty("entries") List<MockGroupScanPOP.MockScanEntry> readEntries) {
+  public MockSubScanPOP(@JsonProperty("url") String url,
+                        @JsonProperty("entries") List<MockGroupScanPOP.MockScanEntry> readEntries,
+                        @JsonProperty("columns") List<SchemaPath> columns){
     this.readEntries = readEntries;
     OperatorCost cost = new OperatorCost(0,0,0,0);
     Size size = new Size(0,0);
@@ -57,6 +62,7 @@ public class MockSubScanPOP extends AbstractBase implements SubScan {
     this.cost = cost;
     this.size = size;
     this.url = url;
+    this.columns = columns;
   }
 
   public String getUrl() {
@@ -99,8 +105,16 @@ public class MockSubScanPOP extends AbstractBase implements SubScan {
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     Preconditions.checkArgument(children.isEmpty());
-    return new MockSubScanPOP(url, readEntries);
-
+    return new MockSubScanPOP(url, readEntries, columns);
   }
 
+  /**
+   * Currently unused, supposed to be a subset of columns scanned by record reader
+   * TODO - maybe impelment this, its a bit of a useless feature to include in the mock operator
+   * @return
+   */
+  @Override
+  public List<SchemaPath> getColumns() {
+    return columns;
+  }
 }
