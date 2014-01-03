@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.record;
 
+import io.netty.buffer.ByteBuf;
+
 import java.util.Iterator;
 
 import org.apache.drill.common.expression.SchemaPath;
@@ -24,6 +26,8 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.hadoop.io.Writable;
 
 public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements RecordBatch{
   final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
@@ -59,16 +63,16 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
 
   @Override
   public void kill() {
-    container.zeroVectors();
     killIncoming();
     cleanup();
   }
   
   protected abstract void killIncoming();
   
-  protected void cleanup(){
+  public void cleanup(){
+    container.clear();
   }
-  
+ 
   @Override
   public SelectionVector2 getSelectionVector2() {
     throw new UnsupportedOperationException();
@@ -92,7 +96,13 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   
   @Override
   public WritableBatch getWritableBatch() {
-    return WritableBatch.get(this);
+//    logger.debug("Getting writable batch.");
+    WritableBatch batch = WritableBatch.get(this);
+//    for(ByteBuf buf : batch.getBuffers()){
+//      logger.debug("Retain count: {} for buf {}", buf.refCnt(), buf);
+//    }
+    return batch;
+    
   }
   
   
