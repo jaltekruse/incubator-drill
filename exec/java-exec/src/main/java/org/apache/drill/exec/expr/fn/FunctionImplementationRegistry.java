@@ -27,6 +27,8 @@ import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.util.PathScanner;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.DrillFunc;
+import org.apache.drill.exec.resolver.FunctionResolver;
+import org.apache.drill.exec.resolver.FunctionResolverFactory;
 
 import com.beust.jcommander.internal.Lists;
 import com.google.common.collect.ArrayListMultimap;
@@ -50,13 +52,17 @@ public class FunctionImplementationRegistry {
     }
   }
   
+  public ArrayListMultimap<String, DrillFuncHolder> getMethods() {
+    return this.methods;
+  }
   
-  public DrillFuncHolder getFunction(FunctionCall call){
+  public DrillFuncHolder getFunction(FunctionCall call){     
     for(DrillFuncHolder h : methods.get(call.getDefinition().getName())){
       if(h.matches(call)){
         return h;
       }
     }
+    
     List<MajorType> types = Lists.newArrayList();
     for(LogicalExpression e : call.args){
       types.add(e.getMajorType());

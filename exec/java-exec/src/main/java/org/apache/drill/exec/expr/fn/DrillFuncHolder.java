@@ -24,12 +24,16 @@ import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.CodeGenerator.BlockType;
 import org.apache.drill.exec.expr.CodeGenerator.HoldingContainer;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
+import org.apache.drill.exec.record.NullExpression;
+import org.apache.drill.exec.resolver.ResolverTypePrecedence;
+import org.apache.drill.exec.resolver.TypeCastRules;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
@@ -72,7 +76,6 @@ public abstract class DrillFuncHolder {
     return imports;
   }
 
-  
   public JVar[] renderStart(CodeGenerator<?> g, HoldingContainer[] inputVariables){
     return declareWorkspaceVariables(g);
   };
@@ -148,6 +151,18 @@ public abstract class DrillFuncHolder {
     
     return true;
   }
+       
+  public MajorType getParmMajorType(int i) {
+    return this.parameters[i].type;
+  }
+  
+  public int getParmSize(){
+    return this.parameters.length;
+  }
+  
+  public NullHandling getNullHandling() {
+    return this.nullHandling ;
+  }
   
   private boolean softCompare(MajorType a, MajorType b){
     return Types.softEquals(a, b, nullHandling == NullHandling.NULL_IF_NULL);
@@ -171,6 +186,7 @@ public abstract class DrillFuncHolder {
     public String toString() {
       return "ValueReference [type=" + type + ", name=" + name + "]";
     }
+    
   }
 
   
