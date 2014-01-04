@@ -482,6 +482,39 @@ public class TypeCastRules {
     rule.add(MinorType.VARBINARY);
     rule.add(MinorType.FIXEDBINARY);
     rules.put(MinorType.VARBINARY, rule);
+    String[] allTypes = { "DECIMAL8",       "TIME",     "FLOAT4",   "SMALLINT",    "VARCHAR", "FIXED16CHAR",        "INT",   "DATETIME",  "VAR16CHAR",  "TIMESTAMP",    "TINYINT",  "FIXEDCHAR",  "DECIMAL12",      "MONEY",   "DECIMAL4", "FIXEDBINARY",       "DATE",  "VARBINARY",        "BIT",  "DECIMAL16",     "BIGINT",    "FLOAT8"};
+    ArrayList<String> listAllTypes = new ArrayList<String>(Arrays.asList(allTypes));
+    Collections.sort(listAllTypes);
+    String s = "{\n";
+    for (MinorType mt : rules.keySet()){
+      s += Strings.padStart( "\"" + mt.name() + "\"", 13, ' ') + " : [";
+      int i = 0;
+      int j = 0;
+      List<MinorType> minorTypes = new ArrayList<>();
+      minorTypes.addAll(rules.get(mt));
+      Collections.sort(minorTypes, new Comparator<MinorType>(){
+
+        @Override
+        public int compare(MinorType o1, MinorType o2) {
+          return o1.name().compareTo(o2.name());
+        }
+      });
+      for (MinorType mt2 : minorTypes){
+        while (j < allTypes.length && ! mt2.name().equals(listAllTypes.get(j))){
+          s += "               ";
+          j++;
+        }
+        s += Strings.padStart( "\"" + mt2.name() + "\"", 13, ' ');
+        if (j < rules.keySet().size() && i < minorTypes.size() - 1){
+          s+= ", ";
+        }
+        i++;
+        j++;
+      }
+      s += "],\n";
+    }
+    s += "}";
+    System.out.println(s);
   }
 
   public static boolean isCastable(MajorType from, MajorType to) {
