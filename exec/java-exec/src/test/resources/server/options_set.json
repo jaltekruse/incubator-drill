@@ -1,0 +1,27 @@
+{
+    head:{
+        type:"APACHE_DRILL_PHYSICAL",
+        version:"1",
+        generator:{
+            type:"manual"
+        },
+        options : {
+            session : {
+                "EXPLAIN_PLAN_LEVEL" : "PHYSICAL"
+            }
+        }
+    },
+	graph:[
+        {
+            @id:1,
+            pop:"option-value-reader",
+            name:"EXPLAIN_PLAN_LEVEL"
+        },
+        {
+            @id: 2,
+            child: 1,
+            pop: "screen"
+        }
+    ]
+}
+

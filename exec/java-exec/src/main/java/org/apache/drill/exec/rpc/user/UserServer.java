@@ -38,10 +38,13 @@ import org.apache.drill.exec.rpc.Response;
 import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.RpcOutcomeListener;
 import org.apache.drill.exec.rpc.data.DataProtobufLengthDecoder;
+import org.apache.drill.exec.server.DrillOptions;
 import org.apache.drill.exec.work.user.UserWorker;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
+
+import java.util.Iterator;
 
 public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnection> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UserServer.class);
@@ -101,8 +104,12 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
 
   
   public class UserClientConnection extends RemoteConnection {
+
+    DrillOptions sessionOptions;
+
     public UserClientConnection(Channel channel) {
       super(channel);
+      sessionOptions = new DrillOptions();
     }
 
     public void sendResult(RpcOutcomeListener<Ack> listener, QueryWritableBatch result){
@@ -116,6 +123,17 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
       return alloc;
     }
 
+    public void setSessionLevelOption(String name, String value){
+      sessionOptions.setOptionWithString(name, value);
+    }
+
+    public Object getSessionLevelOption(String name){
+      return sessionOptions.getOptionValue(name).getValue();
+    }
+
+    public Iterator<DrillOptions.DrillOptionValue> getSessionOptionIterator(){
+      return sessionOptions.iterator();
+    }
   }
 
   @Override

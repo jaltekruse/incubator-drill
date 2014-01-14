@@ -19,12 +19,17 @@ package org.apache.drill.exec.work.foreman;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.LogicalPlan;
+import org.apache.drill.common.logical.data.LogicalOperator;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.exception.FragmentSetupException;
 import org.apache.drill.exec.exception.OptimizerException;
 import org.apache.drill.exec.ops.QueryContext;
@@ -39,6 +44,7 @@ import org.apache.drill.exec.planner.fragment.SimpleParallelizer;
 import org.apache.drill.exec.planner.fragment.StatsCollector;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos.QueryResult;
@@ -166,6 +172,14 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
     }
   }
 
+  private Object getOptionValue(String name) {
+    Object val = initiatingClient.getSessionLevelOption(name);
+    if (val == null){
+      return context.getOptionValue(name);
+    }
+    else return val;
+  }
+
   private void parseAndRunLogicalPlan(String json) {
     
     try {
@@ -184,6 +198,28 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
   private void parseAndRunPhysicalPlan(String json) {
     try {
       PhysicalPlan plan = context.getPlanReader().readPhysicalPlan(json);
+      JSONOptions drillOptions = plan.getProperties().drillOptions;
+      if (drillOptions != null) {
+        JsonNode globalOptions = drillOptions.getRoot().get("global");
+        if (globalOptions != null) {
+          Iterator<String> fieldIter = globalOptions.fieldNames();
+          String field;
+          while (fieldIter.hasNext()) {
+            field = fieldIter.next();
+            bee.getContext().getGlobalDrillOptions().setOption(field, globalOptions.get(field).asText());
+          }
+        }
+        JsonNode sessionOptions = plan.getProperties().drillOptions.getRoot().get("session");
+        if (sessionOptions != null) {
+          Iterator<String> fieldIter = sessionOptions.fieldNames();
+          String field;
+          while (fieldIter.hasNext()) {
+            field = fieldIter.next();
+            initiatingClient.setSessionLevelOption(field, sessionOptions.get(field).asText());
+          }
+
+        }
+      }
       runPhysicalPlan(plan);
     } catch (IOException e) {
       fail("Failure while parsing physical plan.", e);
@@ -243,7 +279,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
   }
 
   private PhysicalPlan convert(LogicalPlan plan) throws OptimizerException {
-    return new BasicOptimizer(DrillConfig.create(), context).optimize(new BasicOptimizer.BasicOptimizationContext(), plan);
+    return new BasicOptimizer(DrillConfig.create(), context, initiatingClient).optimize(new BasicOptimizer.BasicOptimizationContext(), plan);
   }
 
   public QueryResult getResult(UserClientConnection connection, RequestResults req) {

@@ -17,6 +17,9 @@
  */
 package org.apache.drill.exec.cache;
 
+
+import org.apache.drill.exec.memory.BufferAllocator;
+
 import java.io.*;
 
 /**
@@ -28,4 +31,5 @@ public interface DrillSerializable {
   public void readFromStream(InputStream input) throws IOException;
   public void write(DataOutput output) throws IOException;
   public void writeToStream(OutputStream output) throws IOException;
+  public DrillSerializable newInstance(BufferAllocator allocator);
 }

@@ -190,6 +190,11 @@ public class VectorAccessibleSerializable implements DrillSerializable {
     }
   }
 
+  @Override
+  public VectorAccessibleSerializable newInstance(BufferAllocator allocator) {
+    return new VectorAccessibleSerializable(batch, sv2, allocator);
+  }
+
   public void clear() {
     if (!retain) {
       batch.clear();

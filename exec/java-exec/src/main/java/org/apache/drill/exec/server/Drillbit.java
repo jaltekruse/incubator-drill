@@ -22,6 +22,7 @@ import java.io.Closeable;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.DistributedCache;
+import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.cache.HazelCache;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.coord.ClusterCoordinator.RegistrationHandle;
@@ -93,8 +94,8 @@ public class Drillbit implements Closeable{
   public void run() throws Exception {
     coord.start(10000);
     DrillbitEndpoint md = engine.start();
-    manager.start(md, cache, engine.getController(), engine.getDataConnectionCreator(), coord);
     cache.run();
+    manager.start(md, cache, engine.getController(), engine.getDataConnectionCreator(), coord);
     handle = coord.register(md);
   }
 
