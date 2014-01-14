@@ -20,8 +20,10 @@ package org.apache.drill.exec.server;
 import java.io.Closeable;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.DistributedCache;
+import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.cache.HazelCache;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.coord.ClusterCoordinator.RegistrationHandle;
@@ -70,6 +72,8 @@ public class Drillbit implements Closeable{
   final DistributedCache cache;
   final WorkManager manager;
   final BootStrapContext context;
+  private final DistributedMultiMap<DrillOptions.DrillOption> globalOptionsCache;
+  private final DrillOptions globalOptions;
 
   private volatile RegistrationHandle handle;
 
@@ -87,6 +91,11 @@ public class Drillbit implements Closeable{
       this.coord = new ZKClusterCoordinator(config);
       this.engine = new ServiceEngine(manager.getBitComWorker(), manager.getUserWorker(), context);
       this.cache = new HazelCache(config, context.getAllocator());
+    }
+    this.globalOptionsCache = (DistributedMultiMap<DrillOptions.DrillOption>) cache.getMap(DrillOptions.DrillOption.class);
+    this.globalOptions = new DrillOptions();
+    for (DrillOptions.DrillOption opt : globalOptions){
+      globalOptionsCache.put(opt.getOptionName(), opt);
     }
   }
 

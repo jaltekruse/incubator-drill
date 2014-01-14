@@ -15,16 +15,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.cache;
+package org.apache.drill.common.config;
 
-import org.apache.drill.common.config.DrillSerializable;
+import java.io.*;
 
-import java.util.concurrent.TimeUnit;
-
-public interface DistributedMap<V> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DistributedMap.class);
-  public DrillSerializable get(String key);
-  public void put(String key, DrillSerializable value);
-  public void putIfAbsent(String key, DrillSerializable value);
-  public void putIfAbsent(String key, DrillSerializable value, long ttl, TimeUnit timeUnit);
+/**
+ * Classes that can be put in the Distributed Cache must implement this interface.
+ */
+public interface DrillSerializable {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillSerializable.class);
+  public void read(DataInput input) throws IOException;
+  public void readFromStream(InputStream input) throws IOException;
+  public void write(DataOutput output) throws IOException;
+  public void writeToStream(OutputStream output) throws IOException;
 }

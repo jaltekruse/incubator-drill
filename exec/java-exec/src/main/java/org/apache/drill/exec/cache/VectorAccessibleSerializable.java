@@ -22,6 +22,7 @@ import com.google.common.collect.Lists;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import io.netty.buffer.ByteBuf;
+import org.apache.drill.common.config.DrillSerializable;
 import org.apache.drill.common.util.DataInputInputStream;
 import org.apache.drill.common.util.DataOutputOutputStream;
 import org.apache.drill.exec.expr.TypeHelper;

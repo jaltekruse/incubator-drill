@@ -1,4 +1,4 @@
-/**
+/*******************************************************************************
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,18 +14,8 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
-package org.apache.drill.exec.cache;
+ ******************************************************************************/
+package org.apache.drill.common.logical.data;
 
-import java.io.*;
-
-/**
- * Classes that can be put in the Distributed Cache must implement this interface.
- */
-public interface DrillSerializable {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillSerializable.class);
-  public void read(DataInput input) throws IOException;
-  public void readFromStream(InputStream input) throws IOException;
-  public void write(DataOutput output) throws IOException;
-  public void writeToStream(OutputStream output) throws IOException;
+public class OptionSetter {
 }
