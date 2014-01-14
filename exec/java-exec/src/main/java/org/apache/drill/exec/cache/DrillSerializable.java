@@ -17,6 +17,9 @@
  */
 package org.apache.drill.exec.cache;
 
+
+import org.apache.drill.exec.memory.BufferAllocator;
+
 import java.io.*;
 
 /**

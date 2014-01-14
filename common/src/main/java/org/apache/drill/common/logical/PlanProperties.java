@@ -20,6 +20,7 @@ package org.apache.drill.common.logical;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.apache.drill.common.JSONOptions;
 
 /**
  * Logical plan meta properties.
@@ -30,6 +31,7 @@ public class PlanProperties {
   public PlanType type;
   public int version;
 	public Generator generator;
+  public JSONOptions drillOptions;
 
 	@JsonInclude(Include.NON_NULL)
 	public static class Generator{
@@ -44,10 +46,12 @@ public class PlanProperties {
 
   private PlanProperties(@JsonProperty("version") int version,
                          @JsonProperty("generator") Generator generator,
-                         @JsonProperty("type") PlanType type) {
+                         @JsonProperty("type") PlanType type,
+                         @JsonProperty("options") JSONOptions options) {
     this.version = version;
     this.generator = generator;
     this.type = type;
+    this.drillOptions = options;
   }
 
   public static PlanPropertiesBuilder builder() {
@@ -58,6 +62,7 @@ public class PlanProperties {
     private int version;
     private Generator generator;
     private PlanType type;
+    private JSONOptions options;
 
     public PlanPropertiesBuilder type(PlanType type) {
       this.type = type;
@@ -74,13 +79,18 @@ public class PlanProperties {
       return this;
     }
 
+    public PlanPropertiesBuilder options(JSONOptions options){
+      this.options = options;
+      return this;
+    }
+
     public PlanPropertiesBuilder generator(Generator generator) {
       this.generator = generator;
       return this;
     }
 
     public PlanProperties build() {
-      return new PlanProperties(version, generator, type);
+      return new PlanProperties(version, generator, type, options);
     }
   }
 }

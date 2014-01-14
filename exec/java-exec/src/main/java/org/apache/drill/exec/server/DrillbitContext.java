@@ -25,6 +25,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.cache.DistributedCache;
+import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.physical.impl.OperatorCreatorRegistry;
@@ -53,6 +54,7 @@ public class DrillbitContext {
   private final OperatorCreatorRegistry operatorCreatorRegistry;
   private final Controller controller;
   private final WorkEventBus workBus;
+  private final DistributedGlobalOptions globalDrillOptions;
   
   public DrillbitContext(DrillbitEndpoint endpoint, BootStrapContext context, ClusterCoordinator coord, Controller controller, DataConnectionCreator connectionsPool, DistributedCache cache, WorkEventBus workBus) {
     super();
@@ -70,12 +72,18 @@ public class DrillbitContext {
     this.storageEngineRegistry = new StorageEngineRegistry(this);
     this.reader = new PhysicalPlanReader(context.getConfig(), context.getConfig().getMapper(), endpoint, storageEngineRegistry);
     this.operatorCreatorRegistry = new OperatorCreatorRegistry(context.getConfig());
+    this.globalDrillOptions = new DistributedGlobalOptions(this.cache);
   }
   
   public WorkEventBus getWorkBus(){
     return workBus;
   }
   
+
+  public DistributedGlobalOptions getGlobalDrillOptions() {
+    return globalDrillOptions;
+  }
+
   public DrillbitEndpoint getEndpoint(){
     return endpoint;
   }
