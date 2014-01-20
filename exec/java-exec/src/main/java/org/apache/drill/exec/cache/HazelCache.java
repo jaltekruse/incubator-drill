@@ -133,8 +133,8 @@ public class HazelCache implements DistributedCache {
     return new HCCounterImpl(this.instance.getAtomicLong(name));
   }
 
-  public static class HCDistributedMapImpl<V> implements DistributedMap<V> {
-    private IMap<String, DrillSerializable> m;
+  public static class HCDistributedMapImpl<V extends DrillSerializable> implements DistributedMap<V> {
+    private IMap<String, V> m;
     private Class<V> clazz;
 
     public HCDistributedMapImpl(IMap m, Class<V> clazz) {
@@ -142,19 +142,19 @@ public class HazelCache implements DistributedCache {
       this.clazz = clazz;
     }
 
-    public DrillSerializable get(String key) {
+    public V get(String key) {
       return m.get(key);
     }
 
-    public void put(String key, DrillSerializable value) {
+    public void put(String key, V value) {
       m.put(key, value);
     }
 
-    public void putIfAbsent(String key, DrillSerializable value) {
+    public void putIfAbsent(String key, V value) {
       m.putIfAbsent(key, value);
     }
 
-    public void putIfAbsent(String key, DrillSerializable value, long ttl, TimeUnit timeunit) {
+    public void putIfAbsent(String key, V value, long ttl, TimeUnit timeunit) {
       m.putIfAbsent(key, value, ttl, timeunit);
     }
   }

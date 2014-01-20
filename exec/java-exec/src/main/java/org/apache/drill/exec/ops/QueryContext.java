@@ -41,6 +41,10 @@ public class QueryContext {
     this.queryId = queryId;
     this.drillbitContext = drllbitContext;
   }
+
+  public Object getOptionValue(String name){
+    return drillbitContext.getGlobalDrillOptions().getOption(name);
+  }
   
   public DrillbitEndpoint getCurrentEndpoint(){
     return drillbitContext.getEndpoint();

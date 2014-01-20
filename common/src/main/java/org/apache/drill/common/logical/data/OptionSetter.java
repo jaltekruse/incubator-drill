@@ -17,5 +17,43 @@
  ******************************************************************************/
 package org.apache.drill.common.logical.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
+
+@JsonTypeName("option")
 public class OptionSetter {
+
+  private String name;
+  private String value;
+  private OptionScope scope;
+
+  public static enum OptionScope {
+    SESSION, GLOBAL;
+
+    public static OptionScope resolve(String val){
+      for(OptionScope os : OptionScope.values()){
+        if(os.name().equalsIgnoreCase(val)) return os;
+      }
+      throw new ExpressionParsingException(String.format("Unable to determine join type for value '%s'.", val));
+    }
+  }
+
+  @JsonCreator
+  public OptionSetter(@JsonProperty("name") String name, @JsonProperty("value") String value) {
+    super();
+    this.name = name;
+    this.value = value;
+  }
+
+  @JsonProperty("name")
+  public String getName() {
+    return name;
+  }
+
+  @JsonProperty("value")
+  public String getValue() {
+    return value;
+  }
 }

@@ -24,79 +24,114 @@ import java.util.HashMap;
 import java.util.Iterator;
 
 /**
- * Stores a list of all available options and their expected types/values. For all strings, including names and
- * option values, case is not considered meaningful.
+ * Stores a list of all available options and their expected types/values.
+ *
+ * For all strings, including names and option values, case is not considered meaningful.
  */
-public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneable{
+public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cloneable{
 
   public static final String  QUOTED_IDENTIFIERS = "quoted_identifiers",
                               QUERY_TIMEOUT = "query_timeout",
                               EXPLAIN_PLAN_LEVEL = "explain_plan_level",
                               EXPLAIN_PLAN_FORMAT = "explain_plan_format";
 
+  private static CaseInsensitiveMap<OptionValidator> optionValidators;
+  private HashMap<String, DrillOptionValue> optionValues;
+
+  static {
+    optionValidators = new CaseInsensitiveMap();
+    // TODO - these are just example options that can be represented with the structures in this static class, they are not
+    // implemented in the execution engine yet
+
+    optionValidators.put(QUOTED_IDENTIFIERS, allowAllValuesValidator(QUOTED_IDENTIFIERS));
+    optionValidators.put(QUERY_TIMEOUT, new MinMaxValidator(QUERY_TIMEOUT, 10, Integer.MAX_VALUE));
+    optionValidators.put(EXPLAIN_PLAN_LEVEL, new EnumeratedStringValidator(EXPLAIN_PLAN_LEVEL, "PHYSICAL", "LOGICAL"));
+    optionValidators.put(EXPLAIN_PLAN_FORMAT, new EnumeratedValueValidator(EXPLAIN_PLAN_FORMAT, "TEXT", "XML", "JSON"));
+
+    // example to show the enumerated values can be used for anything that implements compareTo including integers
+    optionValidators.put("numeric_enumeration_option",
+        new EnumeratedValueValidator<Integer>("numeric_enumeration_option", 100, 200, 300, 400, 500));
+    // just and example of how a custom validator can be created using an anonymous static class
+    // creates an integer option that must be greater than 0 and and a multiple of 5
+    optionValidators.put("example_not_for_production", new OptionValidator<Integer>("example_not_for_production") {
+          @Override
+          public Integer validate(Integer value) throws Exception {
+            if (value > 0 && value % 5 == 0){
+              return value;
+            }
+            throw new Exception("Invalid value for option '" + getOptionName()
+                + "', value must be a n integer greater than 0 and a multiple of 5");
+          }
+    });
+  }
+
+  public DrillOptions(){
+    optionValues = new HashMap<>();
+  }
+
+
   @Override
-  public Iterator<DrillOption> iterator() {
-    return availableOptions.values().iterator();
+  public Iterator<DrillOptionValue> iterator() {
+    return optionValues.values().iterator();
   }
 
   public DrillOptions clone(){
     DrillOptions dOpts = new DrillOptions();
-    dOpts.availableOptions.clear();
-    for (DrillOption drillOption : this.availableOptions.values()){
-      dOpts.availableOptions.put(drillOption.optionName, drillOption.clone());
+    dOpts.optionValues.clear();
+    for (DrillOptionValue drillOptionValue : this.optionValues.values()){
+      dOpts.optionValues.put(drillOptionValue.optionName, drillOptionValue.clone());
     }
     return dOpts;
   }
 
-  public class CaseInsensitiveMap extends HashMap<String, DrillOption> {
+  private static class CaseInsensitiveMap<V> extends HashMap<String, V> {
 
-    public DrillOption put(DrillOption val){
-      super.put(val.optionName.toLowerCase(), val);
+    public V put(String s, V val){
+      super.put(s.toLowerCase(), val);
       return val;
     }
 
-    public DrillOption get(String s){
+    public V get(String s){
       return super.get(s.toLowerCase());
     }
   }
 
-  CaseInsensitiveMap availableOptions;
-
-  public DrillOptions() {
-    availableOptions = new CaseInsensitiveMap();
-    // TODO - these are just example options that can be represented with the structures in this class, they are not
-    // implemented in the execution engine yet
-
-    availableOptions.put(new BooleanOption(QUOTED_IDENTIFIERS));
-    availableOptions.put(new IntegerOption(QUERY_TIMEOUT,
-        new MinMaxValidator(QUERY_TIMEOUT, 10, Integer.MAX_VALUE)));
-    availableOptions.put(new StringEnumeratedOption(EXPLAIN_PLAN_LEVEL, "PHYSICAL", "LOGICAL"));
-    availableOptions.put(new StringEnumeratedOption(EXPLAIN_PLAN_FORMAT, "TEXT", "XML", "JSON"));
-
-    // example to show the enumerated values can be used for anything that implements compareTo including integers
-    availableOptions.put(new IntegerOption("numeric_enumeration_option",
-        new EnumeratedValueValidator<Integer>("numeric_enumeration_option", 100, 200, 300, 400, 500)));
-    // just and example of how a custom validator can be created using an anonymous class
-    // creates an integer option that must be greater than 0 and and a multiple of 5
-    availableOptions.put(new IntegerOption("example_not_for_production",
-        new OptionValidator<Integer>("example_not_for_production") {
-      @Override
-      public Integer validate(Integer value) throws Exception {
-        if (value > 0 && value % 5 == 0){
-          return value;
-        }
-        throw new Exception("Invalid value for option '" + getOptionName()
-            + "', value must be a n integer greater than 0 and a multiple of 5");
+  public static OptionValidator allowAllValuesValidator(String s) {
+    return new OptionValidator<Object>(s){
+      @Override public Object validate(Object value) throws Exception {
+        return value;
       }
-    }));
+    };
   }
 
   public void setOptionWithString(String optionName, String value) throws Exception {
-    DrillOption opt = availableOptions.get(optionName);
-    if (opt == null){
+    OptionValidator validator = optionValidators.get(optionName);
+    DrillOptionValue opt = optionValues.get(optionName);
+    if (validator == null){
       throw new Exception("invalid option optionName '" + optionName + "'");
     }
-    opt.setValue(opt.parse(value));
+    optionValues.put(optionName, DrillOptionValue.wrapBareObject(optionName, validator.validate(opt.parse(value)), this));
+  }
+
+  public Object getOptionValue(String name){
+    return optionValues.get(name);
+  }
+
+  /**
+   * Returns the DrillOptionValue object, which can be serialized and deserialized for use
+   * in the distributed cache.
+   *
+   * This method should only be used for getting options that will be placed into
+   * distributed cache, for usage of actual option values use the getOptionValue method.
+   *
+   * @param name - name of a drill option
+   * @return - serDe capable representation of a DrillObject
+   */
+  public DrillOptionValue getSerDeOptionValue(String name){
+    DrillOptionValue opt = optionValues.get(name);
+    // prevents value inside of map from being tampered with accidentally by users of this method
+    opt.clone();
+    return opt;
   }
 
   /**
@@ -105,57 +140,94 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
    * restrictions.
    * @param <E> - type of object for the option to store
    */
-  public abstract class DrillOption<E> implements Cloneable, DrillSerializable{
+  public static abstract class DrillOptionValue<E> implements Cloneable, DrillSerializable{
     String optionName;
-    E value;
-    OptionValidator<E> validator;
 
-    public DrillOption(String optionName, OptionValidator<E> validator) {
+    E value;
+    DrillOptions parentOptionList;
+
+    public DrillOptionValue(String optionName, E value, DrillOptions parentOptionList) {
       this.optionName = optionName;
-      this.validator = validator;
+      this.parentOptionList = parentOptionList;
     }
 
     public String getOptionName() {
       return optionName;
     }
 
-    public E validate(E value) throws Exception {
-      return validator.validate(value);
+    public E getValue() {
+      return value;
     }
 
-    public void setValue(E value) throws Exception {
-      value = validate(value);
+    public void setValue(E value) {
       this.value = value;
     }
 
     public abstract E parse(String s) throws Exception;
 
-    public String unparse(){
+    public String unparse(E value){
       return value.toString();
     }
 
-    public DrillOption clone(){
-      DrillOption o = newInstance();
+    public DrillOptionValue clone(){
+      DrillOptionValue o = newInstance();
       // as the validator and optionName should never be changed after creation, there
       // really isn't a need to make new copies of either in the cloned instance,
       // instead references are given to the new instance
       o.optionName = this.optionName;
       try {
-        o.setValue(this.value);
       } catch (Exception e) {
-        // should never throw an error as it is pulled from an instance of the same class
+        // should never throw an error as it is pulled from an instance of the same static class
         throw new RuntimeException(e);
       }
-      o.validator = this.validator;
       return o;
     }
 
-    public abstract DrillOption newInstance();
+    public abstract DrillOptionValue newInstance();
+
+    // This method is a bit of a hack to get around handling options as POJOs in
+    // the validators, but handling them as wrapped OptionValue objects in the actual value
+    // storage to allow them to be plugged into the distributed cache
+    private static DrillOptionValue wrapBareObject(String optionName, Object o, DrillOptions parentOptionList){
+      if (o instanceof Integer) {
+        return new IntegerOptionValue(optionName, (Integer) o, parentOptionList);
+      }
+      else if (o instanceof Double) {
+        return new DoubleOptionValue(optionName, (Double) o, parentOptionList);
+      }
+      else if (o instanceof Float) {
+        return new FloatOptionValue(optionName, (Float) o, parentOptionList);
+      }
+      else if (o instanceof Long) {
+        return new LongOptionValue(optionName, (Long) o, parentOptionList);
+      }
+      else if (o instanceof String) {
+        return new StringOptionValue(optionName, (String) o, parentOptionList);
+      }
+      else if (o instanceof Boolean) {
+        return  new BooleanOptionValue(optionName, (Boolean) o, parentOptionList);
+      }
+      else {
+        throw new RuntimeException("Unsupported type stored in Drill option file for option '" + optionName + "'");
+      }
+    }
+
+    /********************************************************************************
+     * The methods below are used to serialize and deserialize the option values for
+     * syncing them across the distributed cache.
+     *
+     * The cache stores a map, which implicitly stores the option names.
+     *
+     * The validation rules will not change while a cluster is running so they are
+     * not serialized either (some might change occasionally with major version upgrades).
+     *
+     * This only does a serDe on the values themselves.
+     ********************************************************************************/
 
     @Override
     public void read(DataInput input) throws IOException {
       try {
-        setValue(parse(input.readUTF()));
+        parentOptionList.setOptionWithString(optionName, input.readUTF());
       } catch (Exception e) {
         throw new IOException("Error reading value for attribute '" + optionName + "'");
       }
@@ -167,7 +239,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
       byte[] strBytes = new byte[len];
       input.read(strBytes);
       try {
-        setValue(parse(new String(strBytes, "UTF-8")));
+        parentOptionList.setOptionWithString(optionName, new String(strBytes, "UTF-8"));
       } catch (Exception e) {
         throw new IOException("Error reading value for attribute '" + optionName + "'");
       }
@@ -175,15 +247,19 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
 
     @Override
     public void write(DataOutput output) throws IOException {
-      output.writeUTF(unparse());
+      output.writeUTF(parentOptionList.getOptionValue(optionName).toString());
     }
 
     @Override
     public void writeToStream(OutputStream output) throws IOException {
-      String val = unparse();
+      String val = parentOptionList.getOptionValue(optionName).toString();
       output.write(val.length());
       output.write(val.getBytes("UTF-8"));
     }
+
+    /********************************************************************************
+     * End of serDe methods for the distributed cache
+     ********************************************************************************/
   }
 
   /**
@@ -191,8 +267,8 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
    *
    * @param <E>
    */
-  public static abstract class OptionValidator<E> {
-    // Stored here as well as in the option class to allow insertion of option optionName into
+  public abstract static class OptionValidator<E> {
+    // Stored here as well as in the option static class to allow insertion of option optionName into
     // the error messages produced by the validator
     private String optionName;
 
@@ -219,17 +295,12 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
   }
 
-  public static OptionValidator allowAllValuesValidator = new OptionValidator<Object>(null){
-    @Override public Object validate(Object value) throws Exception {
-      return value;
-    }
-  };
 
   /**
    * Validates against a given set of enumerated values provided at construction.
    * @param <TYPE> - type of objects provided in enumerated list and for validating later.
    */
-  public class EnumeratedValueValidator<TYPE extends Comparable> extends OptionValidator<TYPE> {
+  public static class EnumeratedValueValidator<TYPE extends Comparable> extends OptionValidator<TYPE> {
     private TYPE[] validValues;
 
     public EnumeratedValueValidator(String optionName, TYPE... validValues) {
@@ -250,7 +321,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
   }
 
-  public class MinMaxValidator<NUM extends Comparable> extends OptionValidator<NUM>{
+  public static class MinMaxValidator<NUM extends Comparable> extends OptionValidator<NUM>{
 
     boolean minSet;
     boolean maxSet;
@@ -280,10 +351,29 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
   }
 
-  public class StringOption extends DrillOption<String> {
+  public static class EnumeratedStringValidator extends EnumeratedValueValidator<String> {
 
-    public StringOption(String name, OptionValidator<String> validator) {
-      super(name, validator);
+    public EnumeratedStringValidator(String name, String value, String... validValues) {
+      super(name, validValues);
+    }
+
+    public String validate(String s) throws Exception {
+      for ( String val : super.validValues ) {
+        if (val.equalsIgnoreCase(s)){
+          return s.toLowerCase();
+        }
+      }
+
+      String validVals = StringUtils.join(super.validValues, ',');
+      throw new Exception("Value provided for option '" + getOptionName()
+          + "' is not valid, select from [" + validVals + "]");
+    }
+  }
+
+  public static class StringOptionValue extends DrillOptionValue<String> {
+
+    public StringOptionValue(String name, String value, DrillOptions parentOptionList) {
+      super(name, value, parentOptionList);
     }
 
     @Override
@@ -291,15 +381,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
       return s;
     }
 
-    public StringOption newInstance(){
-      return new StringOption(optionName, validator);
+    public StringOptionValue newInstance(){
+      return new StringOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  public class IntegerOption extends DrillOption<Integer> {
+  public static class IntegerOptionValue extends DrillOptionValue<Integer> {
 
-    public IntegerOption(String name, OptionValidator<Integer> validator) {
-      super(name, validator);
+    public IntegerOptionValue(String name, Integer value, DrillOptions parentOptionList) {
+      super(name, value, parentOptionList);
     }
 
     @Override
@@ -312,15 +402,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
 
     @Override
-    public DrillOption newInstance() {
-      return new IntegerOption(optionName, validator);
+    public DrillOptionValue newInstance() {
+      return new IntegerOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  public class DoubleOption extends DrillOption<Double> {
+  public static class DoubleOptionValue extends DrillOptionValue<Double> {
 
-    public DoubleOption(String name, OptionValidator<Double> validator) {
-      super(name, validator);
+    public DoubleOptionValue(String name, Double value, DrillOptions parentOptionList) {
+      super(name, value, parentOptionList);
     }
 
     @Override
@@ -333,15 +423,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
 
     @Override
-    public DrillOption newInstance() {
-      return new DoubleOption(optionName, validator);
+    public DrillOptionValue newInstance() {
+      return new DoubleOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  public class FloatOption extends DrillOption<Float> {
+  public static class FloatOptionValue extends DrillOptionValue<Float> {
 
-    public FloatOption(String name, OptionValidator<Float> validator) {
-      super(name, validator);
+    public FloatOptionValue(String name, Float value, DrillOptions parentOptionList) {
+      super(name, value, parentOptionList);
     }
 
     @Override
@@ -354,15 +444,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
 
     @Override
-    public DrillOption newInstance() {
-      return new FloatOption(optionName, validator);
+    public DrillOptionValue newInstance() {
+      return new FloatOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  public class LongOption extends DrillOption<Long> {
+  public static class LongOptionValue extends DrillOptionValue<Long> {
 
-    public LongOption(String name, OptionValidator<Long> validator) {
-      super(name, validator);
+    public LongOptionValue(String name, Long value, DrillOptions parentOptionList) {
+      super(name, value, parentOptionList);
     }
 
     @Override
@@ -370,20 +460,20 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
       try {
         return Long.parseLong(s);
       } catch (RuntimeException ex){
-        throw new Exception("Error parsing float value for attribute " + optionName);
+        throw new Exception("Error parsing float value for attribute '" + optionName + "'");
       }
     }
 
     @Override
-    public DrillOption newInstance() {
-      return new LongOption(optionName, validator);
+    public DrillOptionValue newInstance() {
+      return new LongOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  public class BooleanOption extends DrillOption<Boolean> {
+  public static class BooleanOptionValue extends DrillOptionValue<Boolean> {
 
-    public BooleanOption(String optionName) {
-      super(optionName, allowAllValuesValidator);
+    public BooleanOptionValue(String optionName, Boolean value, DrillOptions parentOptionList) {
+      super(optionName, value, parentOptionList);
     }
 
     @Override
@@ -397,28 +487,9 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOption>, Cloneab
     }
 
     @Override
-    public DrillOption newInstance() {
-      return new BooleanOption(optionName);
+    public DrillOptionValue newInstance() {
+      return new BooleanOptionValue(optionName, value, parentOptionList);
     }
   }
 
-  /**
-   * Same idea as general EnumeratedOption, but validator for strings is case-insensitive.
-   */
-  public class StringEnumeratedOption extends StringOption {
-    public StringEnumeratedOption(String name, String value, String... validValues) {
-      super(name, new EnumeratedValueValidator<String>(name, validValues) {
-        public String validate(String s) throws Exception {
-          for ( String val : super.validValues ) {
-            if (val.equalsIgnoreCase(s)){
-              return s.toLowerCase();
-            }
-          }
-          String validVals = StringUtils.join(super.validValues, ',');
-          throw new Exception("Value provided for option '" + getOptionName()
-              + "' is not valid, select from [" + validVals + "]");
-        }
-      });
-    }
-  }
 }

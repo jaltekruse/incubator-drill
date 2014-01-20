@@ -72,8 +72,6 @@ public class Drillbit implements Closeable{
   final DistributedCache cache;
   final WorkManager manager;
   final BootStrapContext context;
-  private final DistributedMultiMap<DrillOptions.DrillOption> globalOptionsCache;
-  private final DrillOptions globalOptions;
 
   private volatile RegistrationHandle handle;
 
@@ -92,18 +90,13 @@ public class Drillbit implements Closeable{
       this.engine = new ServiceEngine(manager.getBitComWorker(), manager.getUserWorker(), context);
       this.cache = new HazelCache(config, context.getAllocator());
     }
-    this.globalOptionsCache = (DistributedMultiMap<DrillOptions.DrillOption>) cache.getMap(DrillOptions.DrillOption.class);
-    this.globalOptions = new DrillOptions();
-    for (DrillOptions.DrillOption opt : globalOptions){
-      globalOptionsCache.put(opt.getOptionName(), opt);
-    }
   }
 
   public void run() throws Exception {
     coord.start(10000);
     DrillbitEndpoint md = engine.start();
-    manager.start(md, cache, engine.getBitCom(), coord);
     cache.run();
+    manager.start(md, cache, engine.getBitCom(), coord);
     handle = coord.register(md);
   }
 

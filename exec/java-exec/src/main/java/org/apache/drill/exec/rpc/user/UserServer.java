@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 
+import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.exec.physical.impl.materialize.QueryWritableBatch;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserProtos.BitToUserHandshake;
@@ -95,8 +96,12 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
   }
 
   public class UserClientConnection extends RemoteConnection {
+
+    DrillOptions sessionOptions;
+
     public UserClientConnection(Channel channel) {
       super(channel);
+      sessionOptions = new DrillOptions();
     }
 
     public void sendResult(RpcOutcomeListener<Ack> listener, QueryWritableBatch result){

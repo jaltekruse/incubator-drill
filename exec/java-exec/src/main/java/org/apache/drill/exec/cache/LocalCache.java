@@ -155,7 +155,7 @@ public class LocalCache implements DistributedCache {
     }
   }
 
-  public static class LocalDistributedMapImpl<V> implements DistributedMap<V> {
+  public static class LocalDistributedMapImpl<V extends DrillSerializable> implements DistributedMap<V> {
     private ConcurrentMap<String, ByteArrayDataOutput> m;
     private Class<DrillSerializable> clazz;
 
@@ -165,23 +165,23 @@ public class LocalCache implements DistributedCache {
     }
 
     @Override
-    public DrillSerializable get(String key) {
+    public V get(String key) {
       if (m.get(key) == null) return null;
-      return deserialize(m.get(key).toByteArray(), this.clazz);
+      return (V) deserialize(m.get(key).toByteArray(), this.clazz);
     }
 
     @Override
-    public void put(String key, DrillSerializable value) {
+    public void put(String key, V value) {
       m.put(key, serialize(value));
     }
 
     @Override
-    public void putIfAbsent(String key, DrillSerializable value) {
+    public void putIfAbsent(String key, V value) {
       m.putIfAbsent(key, serialize(value));
     }
 
     @Override
-    public void putIfAbsent(String key, DrillSerializable value, long ttl, TimeUnit timeUnit) {
+    public void putIfAbsent(String key, V value, long ttl, TimeUnit timeUnit) {
       m.putIfAbsent(key, serialize(value));
       logger.warn("Expiration not implemented in local map cache");
     }

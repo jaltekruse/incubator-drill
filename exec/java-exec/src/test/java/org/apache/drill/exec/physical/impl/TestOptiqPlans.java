@@ -94,7 +94,7 @@ public class TestOptiqPlans {
     QueryContext qc = new QueryContext(QueryId.getDefaultInstance(), bitContext);
     PhysicalPlanReader reader = bitContext.getPlanReader();
     LogicalPlan plan = reader.readLogicalPlan(Files.toString(FileUtils.getResourceAsFile(file), Charsets.UTF_8));
-    PhysicalPlan pp = new BasicOptimizer(DrillConfig.create(), qc).optimize(new BasicOptimizer.BasicOptimizationContext(), plan);
+    PhysicalPlan pp = new BasicOptimizer(DrillConfig.create(), qc, connection).optimize(new BasicOptimizer.BasicOptimizationContext(), plan);
     
 
     

@@ -49,6 +49,7 @@ import org.apache.drill.exec.physical.config.SelectionVectorRemover;
 import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.physical.config.Limit;
 import org.apache.drill.exec.physical.config.StreamingAggregate;
+import org.apache.drill.exec.rpc.user.UserServer;
 import org.apache.drill.exec.store.StorageEngine;
 
 import com.beust.jcommander.internal.Lists;
@@ -57,10 +58,12 @@ public class BasicOptimizer extends Optimizer{
 
   private DrillConfig config;
   private QueryContext context;
+  private UserServer.UserClientConnection userSession;
 
-  public BasicOptimizer(DrillConfig config, QueryContext context){
+  public BasicOptimizer(DrillConfig config, QueryContext context, UserServer.UserClientConnection userSession){
     this.config = config;
     this.context = context;
+    this.userSession = userSession;
   }
 
   @Override
