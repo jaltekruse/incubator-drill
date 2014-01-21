@@ -18,12 +18,10 @@
 package org.apache.drill.exec.opt;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
@@ -55,6 +53,7 @@ import org.apache.drill.exec.store.StorageEngine;
 import com.beust.jcommander.internal.Lists;
 
 public class BasicOptimizer extends Optimizer{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BasicOptimizer.class);
 
   private DrillConfig config;
   private QueryContext context;
@@ -64,6 +63,17 @@ public class BasicOptimizer extends Optimizer{
     this.config = config;
     this.context = context;
     this.userSession = userSession;
+    logCurrentOptionValues();
+  }
+
+  private void logCurrentOptionValues(){
+    Iterator<DrillOptions.DrillOptionValue> optionVals = userSession.getSessionOptionIterator();
+    DrillOptions.DrillOptionValue val = null;
+    logger.debug("SessionOptions: {\n");
+    for ( ;optionVals.hasNext(); val = optionVals.next()){
+      logger.debug(String.format("    %s : %s,\n", val.getOptionName(), val.getValue().toString()));
+    }
+    logger.debug("}");
   }
 
   @Override

@@ -18,6 +18,7 @@
 package org.apache.drill.common.config;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
 
 import java.io.*;
 import java.util.HashMap;
@@ -36,7 +37,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
                               EXPLAIN_PLAN_FORMAT = "explain_plan_format";
 
   private static CaseInsensitiveMap<OptionValidator> optionValidators;
-  private HashMap<String, DrillOptionValue> optionValues;
+  private CaseInsensitiveMap<DrillOptionValue> optionValues;
 
   static {
     optionValidators = new CaseInsensitiveMap();
@@ -55,18 +56,22 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     // creates an integer option that must be greater than 0 and and a multiple of 5
     optionValidators.put("example_not_for_production", new OptionValidator<Integer>("example_not_for_production") {
           @Override
-          public Integer validate(Integer value) throws Exception {
+          public Integer validate(Integer value) throws ExpressionParsingException {
             if (value > 0 && value % 5 == 0){
               return value;
             }
-            throw new Exception("Invalid value for option '" + getOptionName()
+            throw new ExpressionParsingException("Invalid value for option '" + getOptionName()
                 + "', value must be a n integer greater than 0 and a multiple of 5");
           }
     });
   }
 
   public DrillOptions(){
-    optionValues = new HashMap<>();
+    optionValues = new CaseInsensitiveMap<>();
+    optionValues.put(QUOTED_IDENTIFIERS, new BooleanOptionValue(QUOTED_IDENTIFIERS, this));
+    optionValues.put(EXPLAIN_PLAN_LEVEL, new StringOptionValue(EXPLAIN_PLAN_LEVEL, this));
+    optionValues.put(EXPLAIN_PLAN_FORMAT, new StringOptionValue(EXPLAIN_PLAN_FORMAT, this));
+    optionValues.put(QUERY_TIMEOUT, new IntegerOptionValue(QUERY_TIMEOUT, this));
   }
 
 
@@ -98,17 +103,17 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
   public static OptionValidator allowAllValuesValidator(String s) {
     return new OptionValidator<Object>(s){
-      @Override public Object validate(Object value) throws Exception {
+      @Override public Object validate(Object value) throws ExpressionParsingException {
         return value;
       }
     };
   }
 
-  public void setOptionWithString(String optionName, String value) throws Exception {
+  public void setOptionWithString(String optionName, String value) throws ExpressionParsingException {
     OptionValidator validator = optionValidators.get(optionName);
     DrillOptionValue opt = optionValues.get(optionName);
     if (validator == null){
-      throw new Exception("invalid option optionName '" + optionName + "'");
+      throw new ExpressionParsingException("invalid option optionName '" + optionName + "'");
     }
     optionValues.put(optionName, DrillOptionValue.wrapBareObject(optionName, validator.validate(opt.parse(value)), this));
   }
@@ -145,10 +150,19 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
     E value;
     DrillOptions parentOptionList;
+    boolean valueSet;
+
+    public DrillOptionValue(String optionName, DrillOptions parentOptionList){
+      this.optionName = optionName;
+      this.parentOptionList = parentOptionList;
+      valueSet = false;
+    }
 
     public DrillOptionValue(String optionName, E value, DrillOptions parentOptionList) {
       this.optionName = optionName;
       this.parentOptionList = parentOptionList;
+      this.value = value;
+      this.valueSet = true;
     }
 
     public String getOptionName() {
@@ -161,9 +175,10 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
     public void setValue(E value) {
       this.value = value;
+      this.valueSet = true;
     }
 
-    public abstract E parse(String s) throws Exception;
+    public abstract E parse(String s) throws ExpressionParsingException;
 
     public String unparse(E value){
       return value.toString();
@@ -176,9 +191,9 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       // instead references are given to the new instance
       o.optionName = this.optionName;
       try {
-      } catch (Exception e) {
+      } catch (ExpressionParsingException e) {
         // should never throw an error as it is pulled from an instance of the same static class
-        throw new RuntimeException(e);
+        throw new ExpressionParsingException(e);
       }
       return o;
     }
@@ -208,7 +223,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
         return  new BooleanOptionValue(optionName, (Boolean) o, parentOptionList);
       }
       else {
-        throw new RuntimeException("Unsupported type stored in Drill option file for option '" + optionName + "'");
+        throw new ExpressionParsingException("Unsupported type stored in Drill option file for option '" + optionName + "'");
       }
     }
 
@@ -228,7 +243,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     public void read(DataInput input) throws IOException {
       try {
         parentOptionList.setOptionWithString(optionName, input.readUTF());
-      } catch (Exception e) {
+      } catch (ExpressionParsingException e) {
         throw new IOException("Error reading value for attribute '" + optionName + "'");
       }
     }
@@ -240,7 +255,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       input.read(strBytes);
       try {
         parentOptionList.setOptionWithString(optionName, new String(strBytes, "UTF-8"));
-      } catch (Exception e) {
+      } catch (ExpressionParsingException e) {
         throw new IOException("Error reading value for attribute '" + optionName + "'");
       }
     }
@@ -286,9 +301,9 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
      * @return - the value requested, in its standard format to be used for representing the value within Drill
      *            Example: all lower case values for strings, to avoid ambiguities in how values are stored
      *            while allowing some flexibility for users
-     * @throws Exception - message to describe error with value, including range or list of expected values
+     * @throws ExpressionParsingException - message to describe error with value, including range or list of expected values
      */
-    public abstract E validate(E value) throws Exception;
+    public abstract E validate(E value) throws ExpressionParsingException;
 
     public String getOptionName() {
       return optionName;
@@ -309,14 +324,14 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     }
 
     @Override
-    public TYPE validate(TYPE value) throws Exception {
+    public TYPE validate(TYPE value) throws ExpressionParsingException {
       for ( TYPE val : validValues ) {
         if (val.compareTo(value) == 0){
           return value;
         }
       }
       String validVals = StringUtils.join(validValues, ',');
-      throw new Exception("Value provided for option '" + getOptionName()
+      throw new ExpressionParsingException("Value provided for option '" + getOptionName()
           + "' is not valid, select from [" + validVals + "]");
     }
   }
@@ -336,15 +351,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       maxSet = true;
     }
 
-    public NUM validate(NUM value) throws Exception {
+    public NUM validate(NUM value) throws ExpressionParsingException {
       if (minSet) {
         if (min.compareTo(value) > 0) {
-          throw new Exception("Value of option '" + getOptionName() + "' must be greater than " + min);
+          throw new ExpressionParsingException("Value of option '" + getOptionName() + "' must be greater than " + min);
         }
       }
       if (maxSet) {
         if (max.compareTo(value) < 0 ) {
-          throw new Exception("Value of option '" + getOptionName() + "' must be less than " + min);
+          throw new ExpressionParsingException("Value of option '" + getOptionName() + "' must be less than " + min);
         }
       }
       return value;
@@ -353,11 +368,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
   public static class EnumeratedStringValidator extends EnumeratedValueValidator<String> {
 
-    public EnumeratedStringValidator(String name, String value, String... validValues) {
+    public EnumeratedStringValidator(String name, String... validValues) {
       super(name, validValues);
     }
 
-    public String validate(String s) throws Exception {
+    public String validate(String s) throws ExpressionParsingException {
       for ( String val : super.validValues ) {
         if (val.equalsIgnoreCase(s)){
           return s.toLowerCase();
@@ -365,7 +380,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       }
 
       String validVals = StringUtils.join(super.validValues, ',');
-      throw new Exception("Value provided for option '" + getOptionName()
+      throw new ExpressionParsingException("Value provided for option '" + getOptionName()
           + "' is not valid, select from [" + validVals + "]");
     }
   }
@@ -374,6 +389,10 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
     public StringOptionValue(String name, String value, DrillOptions parentOptionList) {
       super(name, value, parentOptionList);
+    }
+
+    public StringOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
     }
 
     @Override
@@ -392,12 +411,16 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       super(name, value, parentOptionList);
     }
 
+    public IntegerOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
+    }
+
     @Override
-    public Integer parse(String s) throws Exception {
+    public Integer parse(String s) throws ExpressionParsingException {
       try {
         return Integer.parseInt(s);
-      } catch (RuntimeException ex){
-        throw new Exception("Error parsing integer value for attribute " + optionName);
+      } catch (ExpressionParsingException ex){
+        throw new ExpressionParsingException("Error parsing integer value for attribute " + optionName);
       }
     }
 
@@ -413,12 +436,16 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       super(name, value, parentOptionList);
     }
 
+    public DoubleOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
+    }
+
     @Override
-    public Double parse(String s) throws Exception {
+    public Double parse(String s) throws ExpressionParsingException {
       try {
         return Double.parseDouble(s);
-      } catch (RuntimeException ex){
-        throw new Exception("Error parsing double value for attribute " + optionName);
+      } catch (ExpressionParsingException ex){
+        throw new ExpressionParsingException("Error parsing double value for attribute " + optionName);
       }
     }
 
@@ -434,12 +461,16 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       super(name, value, parentOptionList);
     }
 
+    public FloatOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
+    }
+
     @Override
-    public Float parse(String s) throws Exception {
+    public Float parse(String s) throws ExpressionParsingException {
       try {
         return Float.parseFloat(s);
-      } catch (RuntimeException ex){
-        throw new Exception("Error parsing float value for attribute " + optionName);
+      } catch (ExpressionParsingException ex){
+        throw new ExpressionParsingException("Error parsing float value for attribute " + optionName);
       }
     }
 
@@ -455,12 +486,16 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       super(name, value, parentOptionList);
     }
 
+    public LongOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
+    }
+
     @Override
-    public Long parse(String s) throws Exception {
+    public Long parse(String s) throws ExpressionParsingException {
       try {
         return Long.parseLong(s);
-      } catch (RuntimeException ex){
-        throw new Exception("Error parsing float value for attribute '" + optionName + "'");
+      } catch (ExpressionParsingException ex){
+        throw new ExpressionParsingException("Error parsing float value for attribute '" + optionName + "'");
       }
     }
 
@@ -476,14 +511,18 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       super(optionName, value, parentOptionList);
     }
 
+    public BooleanOptionValue(String name, DrillOptions parentOptionList){
+      super(name, parentOptionList);
+    }
+
     @Override
-    public Boolean parse(String s) throws Exception {
+    public Boolean parse(String s) throws ExpressionParsingException {
       if (s.equalsIgnoreCase("true") || s.equalsIgnoreCase("on"))
         return true;
       else if (s.equalsIgnoreCase("false") || s.equalsIgnoreCase("off"))
         return false;
       else
-        throw new Exception("Invalid value for option '" + optionName + "' must be on or off.");
+        throw new ExpressionParsingException("Invalid value for option '" + optionName + "' must be on or off.");
     }
 
     @Override

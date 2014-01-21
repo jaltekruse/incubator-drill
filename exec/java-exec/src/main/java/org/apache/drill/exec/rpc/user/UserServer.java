@@ -41,6 +41,8 @@ import org.apache.drill.exec.work.user.UserWorker;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
 
+import java.util.Iterator;
+
 public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnection> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UserServer.class);
 
@@ -109,6 +111,17 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
       send(listener, this, RpcType.QUERY_RESULT, result.getHeader(), Ack.class, result.getBuffers());
     }
 
+    public void setSessionLevelOption(String name, String value){
+      sessionOptions.setOptionWithString(name, value);
+    }
+
+    public Object getSessionLevelOption(String name){
+      return sessionOptions.getOptionValue(name);
+    }
+
+    public Iterator<DrillOptions.DrillOptionValue> getSessionOptionIterator(){
+      return sessionOptions.iterator();
+    }
   }
 
   @Override

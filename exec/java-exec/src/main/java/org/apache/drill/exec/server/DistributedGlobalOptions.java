@@ -18,6 +18,7 @@
 package org.apache.drill.exec.server;
 
 import org.apache.drill.common.config.DrillOptions;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.cache.DistributedMap;
 
@@ -41,7 +42,7 @@ public class DistributedGlobalOptions {
     }
   }
 
-  public void setOption(String name, String value) throws Exception {
+  public void setOption(String name, String value) throws ExpressionParsingException {
     // throws and error if provided value is not valid for setting
     optionValidator.setOptionWithString(name, value);
     // some options allow for ambiguity for user input, such as allow casing insensitive string

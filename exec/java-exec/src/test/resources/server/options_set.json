@@ -1,0 +1,29 @@
+{
+    head:{
+        type:"APACHE_DRILL_LOGICAL",
+        version:"1",
+        generator:{
+            type:"manual"
+        }
+    },
+	query :[
+        {
+            @id:1,
+            op:"option",
+            name: "EXPLAIN_PLAN_LEVEL",
+            value: "PHYSICAL",
+            scope: "GLOBAL"
+        },
+
+    {
+      @id:"2",
+      input: 1,
+      op: "store",
+      memo: "output sink",
+      target: {
+        file: "console:///stdout"
+      }
+
+    }
+    ]
+}

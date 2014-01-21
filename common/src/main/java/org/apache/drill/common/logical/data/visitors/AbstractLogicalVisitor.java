@@ -107,6 +107,10 @@ public abstract class AbstractLogicalVisitor<T, X, E extends Throwable> implemen
     public T visitConstant(Constant constant, X value) throws E {
        return visitOp(constant, value);
     }
+
+    public T visitOptionSetter(OptionSetter optionSetter, X value) throws E {
+      return visitOp(optionSetter, value);
+    }
     
     
 }

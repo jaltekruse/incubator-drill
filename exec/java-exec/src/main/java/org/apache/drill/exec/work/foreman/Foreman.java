@@ -25,6 +25,8 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.LogicalPlan;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.apache.drill.common.logical.data.OptionSetter;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.exception.FragmentSetupException;
@@ -41,6 +43,7 @@ import org.apache.drill.exec.planner.fragment.SimpleParallelizer;
 import org.apache.drill.exec.planner.fragment.StatsCollector;
 import org.apache.drill.exec.proto.ExecProtos.PlanFragment;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos.QueryResult;
@@ -169,11 +172,44 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
     }
   }
 
+  private Object getOptionValue(String name) {
+    Object val = initiatingClient.getSessionLevelOption(name);
+    if (val == null){
+      return context.getOptionValue(name);
+    }
+    else return val;
+  }
+
   private void parseAndRunLogicalPlan(String json) {
     
     try {
       LogicalPlan logicalPlan = context.getPlanReader().readLogicalPlan(json);
       if(logger.isDebugEnabled()) logger.debug("Logical {}", logicalPlan.unparse(context.getConfig()));
+
+      // I'm uncertain if it makes sense to send option setting "plans" through the optimizer
+      // and implement setting the values within a physical operator, this is a hack to identify them
+      // here and stop them before sending them to the optimizer
+      LogicalOperator firstSource = logicalPlan.getGraph().getLeaves().iterator().next();
+      if (logicalPlan.getGraph().getLeaves().size() == 1
+          && firstSource instanceof OptionSetter){
+        OptionSetter set = (OptionSetter) firstSource;
+        if (set.getScope() == OptionSetter.OptionScope.GLOBAL){
+          context.setOptionValue(set.getName(), set.getValue());
+        }
+        else if (set.getScope() == OptionSetter.OptionScope.SESSION){
+          initiatingClient.setSessionLevelOption(set.getName(), set.getValue());
+        }
+        context.batchesCompleted.inc(1);
+        QueryResult header = QueryResult.newBuilder() //
+            .setQueryId(context.getHandle().getQueryId()) //
+            .setRowCount(0) //
+            .setDef(UserBitShared.RecordBatchDef.getDefaultInstance()) //
+            .setIsLastChunk(true) //
+            .build();
+        QueryWritableBatch batch = new QueryWritableBatch(header);
+        connection.sendResult(listener, batch);
+        return;
+      }
       PhysicalPlan physicalPlan = convert(logicalPlan);
       if(logger.isDebugEnabled()) logger.debug("Physical {}", context.getConfig().getMapper().writeValueAsString(physicalPlan));
       runPhysicalPlan(physicalPlan);

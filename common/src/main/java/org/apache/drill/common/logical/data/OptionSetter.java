@@ -21,13 +21,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
+import org.apache.drill.common.logical.data.visitors.LogicalVisitor;
 
 @JsonTypeName("option")
-public class OptionSetter {
+public class OptionSetter extends SourceOperator {
 
   private String name;
   private String value;
   private OptionScope scope;
+
+  @Override
+  public <T, X, E extends Throwable> T accept(LogicalVisitor<T, X, E> logicalVisitor, X value) throws E {
+    return logicalVisitor.visitOptionSetter(this, value);
+  }
 
   public static enum OptionScope {
     SESSION, GLOBAL;
@@ -36,15 +42,17 @@ public class OptionSetter {
       for(OptionScope os : OptionScope.values()){
         if(os.name().equalsIgnoreCase(val)) return os;
       }
-      throw new ExpressionParsingException(String.format("Unable to determine join type for value '%s'.", val));
+      throw new ExpressionParsingException(String.format("Unable to determine option scope for value '%s'.", val));
     }
   }
 
   @JsonCreator
-  public OptionSetter(@JsonProperty("name") String name, @JsonProperty("value") String value) {
+  public OptionSetter(@JsonProperty("name") String name, @JsonProperty("value") String value,
+                      @JsonProperty("scope") OptionScope scope) {
     super();
     this.name = name;
     this.value = value;
+    this.scope = scope;
   }
 
   @JsonProperty("name")
@@ -56,4 +64,10 @@ public class OptionSetter {
   public String getValue() {
     return value;
   }
+
+  @JsonProperty("scope")
+  public OptionScope getScope() {
+    return scope;
+  }
+
 }

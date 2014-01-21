@@ -37,6 +37,7 @@ public class ErrorHelper {
     }
 
     while (true) {
+      t.printStackTrace();
       sb.append(" < ");
       sb.append(t.getClass().getSimpleName());
       if(t.getMessage() != null){
