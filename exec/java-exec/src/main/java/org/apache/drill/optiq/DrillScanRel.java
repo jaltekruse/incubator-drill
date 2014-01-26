@@ -50,7 +50,7 @@ public class DrillScanRel extends TableAccessRelBase implements DrillRel {
     Scan.Builder builder = Scan.builder();
     builder.storageEngine(drillTable.getStorageEngineName());
     builder.selection(new JSONOptions(drillTable.getSelection()));
-    builder.outputReference(new FieldReference("_MAP"));
+    //builder.outputReference(new FieldReference("_MAP"));
     implementor.registerSource(drillTable);
     return builder.build();
   }

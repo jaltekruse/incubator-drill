@@ -94,7 +94,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project>{
     this.allocationVectors = Lists.newArrayList();
     container.clear();
     List<NamedExpression> exprs = popConfig.getExprs();
-    if(exprs.size() == 1 && exprs.get(0).getExpr() instanceof SchemaPath && "_MAP".equals(((SchemaPath)exprs.get(0).getExpr()).getPath())){
+    if(exprs.size() == 1 && exprs.get(0).getExpr() instanceof SchemaPath && "*".equals(((SchemaPath)exprs.get(0).getExpr()).getPath())){
       exprs = Lists.newArrayList();
       for(VectorWrapper<?> w : incoming){
         String name = w.getField().getName();

@@ -77,12 +77,7 @@ public class DrillTable implements Table{
 
   @Override
   public RelDataType getRowType(RelDataTypeFactory typeFactory) {
-    return typeFactory.createStructType(
-            Collections.singletonList(
-                typeFactory.createMapType(
-                    typeFactory.createSqlType(SqlTypeName.VARCHAR),
-                    typeFactory.createSqlType(SqlTypeName.ANY))),
-            Collections.singletonList("_MAP"));
+    return new RelDataTypeDrillImpl(typeFactory);
   }
 
   @Override
