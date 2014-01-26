@@ -19,23 +19,20 @@ package org.apache.drill.exec.expr;
 
 import static org.apache.drill.exec.compile.sig.GeneratorMapping.GM;
 
-import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.util.LinkedList;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
-import org.apache.drill.exec.compile.TemplateClassDefinition;
 import org.apache.drill.exec.compile.sig.CodeGeneratorArgument;
 import org.apache.drill.exec.compile.sig.CodeGeneratorMethod;
 import org.apache.drill.exec.compile.sig.GeneratorMapping;
 import org.apache.drill.exec.compile.sig.MappingSet;
 import org.apache.drill.exec.compile.sig.SignatureHolder;
 import org.apache.drill.exec.exception.SchemaChangeException;
-import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.record.TypedFieldId;
 
 import com.beust.jcommander.internal.Lists;
@@ -57,51 +54,54 @@ public class CodeGenerator<T>{
   
   public static final GeneratorMapping DEFAULT_SCALAR_MAP = GM("doSetup", "doEval", null, null);
   public static final GeneratorMapping DEFAULT_CONSTANT_MAP = GM("doSetup", "doSetup", null, null);
-  public static final MappingSet DEFAULT_MAPPING = new MappingSet("inIndex", "outIndex", DEFAULT_SCALAR_MAP, DEFAULT_SCALAR_MAP);
-
+  
   
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CodeGenerator.class);
   public static enum BlockType {SETUP, EVAL, RESET, CLEANUP};
   
-  public JDefinedClass clazz;
-  private LinkedList<JBlock>[] blocks;
-  private final TemplateClassDefinition<T> definition;
-  private JCodeModel model;
-  private int index = 0;
-  private static AtomicLong classCreator = new AtomicLong(0);
-  private String className;
-  private String fqcn;
-  private String packageName = "org.apache.drill.exec.test.generated";
   private final SignatureHolder sig;
-  private MappingSet mappings;
   private final EvaluationVisitor evaluationVisitor;
   private final Map<ValueVectorSetup, JVar> vvDeclaration = Maps.newHashMap();
+  private final Map<String, CodeGenerator<T>> innerClasses = Maps.newHashMap();
+  private final ClassGenerator<T> classGenerator;
+
+  private final JDefinedClass clazz;
+  private final LinkedList<JBlock>[] blocks;
+  private final JCodeModel model;
   
-  
-  public CodeGenerator(TemplateClassDefinition<T> definition, FunctionImplementationRegistry funcRegistry) {
-    this(DEFAULT_MAPPING, definition, funcRegistry);
+  private int index = 0;
+  private MappingSet mappings;
+
+  public static MappingSet getDefaultMapping(){
+    return new MappingSet("inIndex", "outIndex", DEFAULT_SCALAR_MAP, DEFAULT_SCALAR_MAP);
   }
+
   
   @SuppressWarnings("unchecked")
-  public CodeGenerator(MappingSet mappingSet, TemplateClassDefinition<T> definition, FunctionImplementationRegistry funcRegistry) {
-    Preconditions.checkNotNull(definition.getSignature(), "The signature for defintion %s was incorrectly initialized.", definition);
-    this.sig = definition.getSignature();
+  CodeGenerator(ClassGenerator<T> classGenerator, MappingSet mappingSet, SignatureHolder signature, EvaluationVisitor eval, JDefinedClass clazz, JCodeModel model) throws JClassAlreadyExistsException {
+    this.classGenerator = classGenerator;
+    this.clazz = clazz;
     this.mappings = mappingSet;
-    this.className = "Gen" + classCreator.incrementAndGet();
-    this.fqcn = packageName + "." + className;
-    try{
-      this.definition = definition;
-      this.model = new JCodeModel();
-      this.clazz = model._package(packageName)._class(className);
-      blocks = (LinkedList<JBlock>[]) new LinkedList[sig.size()];
-      for(int i =0; i < sig.size(); i++){
-        blocks[i] = Lists.newLinkedList();
-      }
-      this.evaluationVisitor = new EvaluationVisitor(funcRegistry);
-      rotateBlock();
-    } catch (JClassAlreadyExistsException e) {
-      throw new IllegalStateException(e);
+    this.sig = signature;
+    this.evaluationVisitor = eval;
+    this.model = model;
+    blocks = (LinkedList<JBlock>[]) new LinkedList[sig.size()];
+    for(int i =0; i < sig.size(); i++){
+      blocks[i] = Lists.newLinkedList();
     }
+    rotateBlock();
+    
+    for(SignatureHolder child : signature.getChildHolders()){
+      String innerClassName = child.getSignatureClass().getSimpleName();
+      JDefinedClass innerClazz = clazz._class(Modifier.FINAL + Modifier.PRIVATE, innerClassName);
+      innerClasses.put(innerClassName, new CodeGenerator<>(classGenerator, mappingSet, child, eval, innerClazz, model));
+    }
+  }
+
+  public CodeGenerator<T> getInnerGenerator(String name){
+    CodeGenerator<T> inner = innerClasses.get(name);
+    Preconditions.checkNotNull(inner);
+    return inner;
   }
   
   public MappingSet getMappingSet(){
@@ -112,6 +112,10 @@ public class CodeGenerator<T>{
     this.mappings = mappings;
   }
   
+  public ClassGenerator<T> getClassGenerator() {
+    return classGenerator;
+  }
+
   private GeneratorMapping getCurrentMapping(){
     return mappings.getCurrentMapping();
   }
@@ -196,15 +200,9 @@ public class CodeGenerator<T>{
     }
   }
   
-  public String getMaterializedClassName(){
-    return fqcn;
-  }
-    
-  public TemplateClassDefinition<T> getDefinition() {
-    return definition;
-  }
 
-  public String generate() throws IOException{
+    
+  void flushCode(){
     int i =0;
     for(CodeGeneratorMethod method : sig){
       JMethod m = clazz.method(JMod.PUBLIC, model._ref(method.getReturnType()), method.getMethodName());
@@ -222,9 +220,9 @@ public class CodeGenerator<T>{
       
     }
     
-    SingleClassStringWriter w = new SingleClassStringWriter();
-    model.build(w);
-    return w.getCode().toString();
+    for(CodeGenerator<T> child : innerClasses.values()){
+      child.flushCode();
+    }
   }
   
   

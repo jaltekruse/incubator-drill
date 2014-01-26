@@ -17,7 +17,7 @@
  */
 package org.apache.drill.jdbc;
 
-import net.hydromatic.optiq.jdbc.DriverVersion;
+import net.hydromatic.avatica.DriverVersion;
 
 /**
  * Version information for Drill JDBC Driver.

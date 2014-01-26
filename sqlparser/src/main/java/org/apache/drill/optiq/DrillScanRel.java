@@ -31,22 +31,22 @@ import org.eigenbase.relopt.RelTraitSet;
 /**
  * GroupScan of a Drill table.
  */
-public class DrillScan extends TableAccessRelBase implements DrillRel {
+public class DrillScanRel extends TableAccessRelBase implements DrillRel {
   private final DrillTable drillTable;
 
   /** Creates a DrillScan. */
-  public DrillScan(RelOptCluster cluster, RelTraitSet traits, RelOptTable table) {
+  public DrillScanRel(RelOptCluster cluster, RelTraitSet traits, RelOptTable table) {
     super(cluster, traits, table);
     assert getConvention() == CONVENTION;
     this.drillTable = table.unwrap(DrillTable.class);
     assert drillTable != null;
   }
 
-  @Override
-  public void register(RelOptPlanner planner) {
-    super.register(planner);
-    DrillOptiq.registerStandardPlannerRules(planner);
-  }
+//  @Override
+//  public void register(RelOptPlanner planner) {
+//    super.register(planner);
+//    DrillOptiq.registerStandardPlannerRules(planner);
+//  }
 
   public LogicalOperator implement(DrillImplementor implementor) {
     Scan.Builder builder = Scan.builder();
@@ -57,7 +57,7 @@ public class DrillScan extends TableAccessRelBase implements DrillRel {
     return builder.build();
   }
   
-  public static DrillScan convert(Scan scan, ConversionContext context){
-    return new DrillScan(context.getCluster(), context.getLogicalTraits(), context.getTable(scan));
+  public static DrillScanRel convert(Scan scan, ConversionContext context){
+    return new DrillScanRel(context.getCluster(), context.getLogicalTraits(), context.getTable(scan));
   }
 }

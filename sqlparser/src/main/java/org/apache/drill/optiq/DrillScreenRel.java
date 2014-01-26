@@ -42,12 +42,12 @@ import org.slf4j.LoggerFactory;
  * Relational expression that converts from Drill to Enumerable. At runtime it executes a Drill query and returns the
  * results as an {@link net.hydromatic.linq4j.Enumerable}.
  */
-public class EnumerableDrillRel extends SingleRel implements EnumerableRel, DrillRel {
-  private static final Logger logger = LoggerFactory.getLogger(EnumerableDrillRel.class);
+public class DrillScreenRel extends SingleRel implements DrillRel {
+  private static final Logger logger = LoggerFactory.getLogger(DrillScreenRel.class);
 
   private PhysType physType;
 
-  public EnumerableDrillRel(RelOptCluster cluster, RelTraitSet traitSet, RelNode input) {
+  public DrillScreenRel(RelOptCluster cluster, RelTraitSet traitSet, RelNode input) {
     super(cluster, traitSet, input);
     assert getConvention() instanceof EnumerableConvention;
     assert input.getConvention() == DrillRel.CONVENTION;
@@ -65,11 +65,7 @@ public class EnumerableDrillRel extends SingleRel implements EnumerableRel, Dril
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
-    return new EnumerableDrillRel(getCluster(), traitSet, sole(inputs));
-  }
-
-  public Result implement(EnumerableRelImplementor implementor, Prefer pref) {
-    throw new UnsupportedOperationException();
+    return new DrillScreenRel(getCluster(), traitSet, sole(inputs));
   }
   
   @Override

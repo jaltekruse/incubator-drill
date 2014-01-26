@@ -1,5 +1,6 @@
 package org.apache.drill.optiq;
 
+import java.util.List;
 import java.util.Map;
 
 import net.hydromatic.optiq.prepare.Prepare;
@@ -23,6 +24,7 @@ import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.relopt.RelOptTable.ToRelContext;
 import org.eigenbase.relopt.RelTraitSet;
+import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.rex.RexBuilder;
 import org.eigenbase.rex.RexNode;
@@ -48,10 +50,6 @@ public class ConversionContext implements ToRelContext {
     return cluster;
   }
 
-  @Override
-  public Prepare getPreparingStmt() {
-    return prepare;
-  }
 
   private FieldList getFieldList(Scan scan) {
     assert scanFieldLists.containsKey(scan);
@@ -87,12 +85,16 @@ public class ConversionContext implements ToRelContext {
     return null;
   }
   
+  @Override
+  public RelNode expandView(RelDataType rowType, String queryString, List<String> schemaPath) {
+    throw new UnsupportedOperationException();
+  }
   
   private static class ConverterVisitor extends AbstractLogicalVisitor<RelNode, ConversionContext, InvalidRelException>{
 
     @Override
     public RelNode visitScan(Scan scan, ConversionContext context){
-      return DrillScan.convert(scan, context);
+      return DrillScanRel.convert(scan, context);
     }
 
     @Override
@@ -132,4 +134,7 @@ public class ConversionContext implements ToRelContext {
     }
     
   }
+
+
+
 }

@@ -21,10 +21,10 @@ import java.util.BitSet;
 import java.util.List;
 
 import net.hydromatic.linq4j.Ord;
+import net.hydromatic.optiq.util.BitSets;
 
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FieldReference;
-import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.ValueExpressions;
 import org.apache.drill.common.logical.data.GroupingAggregate;
@@ -35,7 +35,6 @@ import org.eigenbase.rel.InvalidRelException;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelTraitSet;
-import org.eigenbase.util.Util;
 
 import com.google.common.collect.Lists;
 
@@ -71,7 +70,7 @@ public class DrillAggregateRel extends AggregateRelBase implements DrillRel {
     final List<String> childFields = getChild().getRowType().getFieldNames();
     final List<String> fields = getRowType().getFieldNames();
 
-    for (int group : Util.toIter(groupSet)) {
+    for (int group : BitSets.toIter(groupSet)) {
       FieldReference fr = new FieldReference(childFields.get(group), ExpressionPosition.UNKNOWN);
       builder.addKey(fr, fr);
     }

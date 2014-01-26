@@ -19,39 +19,31 @@ package org.apache.drill.sql.client.full;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Set;
 
-import net.hydromatic.linq4j.QueryProvider;
 import net.hydromatic.linq4j.expressions.DefaultExpression;
 import net.hydromatic.linq4j.expressions.Expression;
 import net.hydromatic.optiq.Schema;
-import net.hydromatic.optiq.Table;
-import net.hydromatic.optiq.impl.java.JavaTypeFactory;
+import net.hydromatic.optiq.SchemaPlus;
+import net.hydromatic.optiq.TableFunction;
 
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.jdbc.DrillTable;
 
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multimap;
-
-public class FileSystemSchema implements Schema{
+public class FileSystemSchema implements Schema, ExpandingConcurrentMap.MapValueFactory<String, DrillTable>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FileSystemSchema.class);
   
-  private ConcurrentMap<String, TableInSchema> tables = Maps.newConcurrentMap();
-
-  private final JavaTypeFactory typeFactory;
-  private final Schema parentSchema;
+  private ExpandingConcurrentMap<String, DrillTable> tables = new ExpandingConcurrentMap<String, DrillTable>(this);
+  
+  private final SchemaPlus parentSchema;
   private final String name;
   private final Expression expression = new DefaultExpression(Object.class);
   private final SchemaProvider schemaProvider;
   private final StorageEngineConfig config;
   
-  public FileSystemSchema(StorageEngineConfig config, SchemaProvider schemaProvider, JavaTypeFactory typeFactory, Schema parentSchema, String name) {
+  public FileSystemSchema(StorageEngineConfig config, SchemaProvider schemaProvider, SchemaPlus parentSchema, String name) {
     super();
-    this.typeFactory = typeFactory;
     this.parentSchema = parentSchema;
     this.name = name;
     this.schemaProvider = schemaProvider;
@@ -61,16 +53,6 @@ public class FileSystemSchema implements Schema{
   @Override
   public Schema getSubSchema(String name) {
     return null;
-  }
-
-  @Override
-  public JavaTypeFactory getTypeFactory() {
-    return typeFactory;
-  }
-
-  @Override
-  public Schema getParentSchema() {
-    return parentSchema;
   }
 
   @Override
@@ -84,64 +66,52 @@ public class FileSystemSchema implements Schema{
   }
 
   @Override
-  public QueryProvider getQueryProvider() {    
-    throw new UnsupportedOperationException();
-  }
-
-
-  @Override
-  public Collection<TableFunctionInSchema> getTableFunctions(String name) {
+  public Collection<TableFunction> getTableFunctions(String name) {
     return Collections.emptyList();
   }
   
   @Override
-  public Multimap<String, TableFunctionInSchema> getTableFunctions() {
-    return ArrayListMultimap.create();
+  public SchemaPlus getParentSchema() {
+    return parentSchema;
   }
 
   @Override
-  public Collection<String> getSubSchemaNames() {
-    return Collections.EMPTY_LIST;
+  public Set<String> getTableNames() {
+    return tables.keySet();
+  }
+
+  @Override
+  public Set<String> getTableFunctionNames() {
+    return Collections.emptySet();
+  }
+
+  @Override
+  public Set<String> getSubSchemaNames() {
+    return Collections.emptySet();
+  }
+
+  @Override
+  public boolean isMutable() {
+    return true;
   }
   
-  @SuppressWarnings("unchecked")
   @Override
-  public <E> Table<E> getTable(String name, Class<E> elementType) {
-    if( !elementType.isAssignableFrom(DrillTable.class)) throw new UnsupportedOperationException();
-    TableInfo info = (TableInfo) tables.get(name);
-    if(info != null) return (Table<E>) info.table;
+  public DrillTable getTable(String name) {
+    return tables.get(name);
+  }
+
+  @Override
+  public DrillTable create(String key) {
     Object selection = schemaProvider.getSelectionBaseOnName(name);
     if(selection == null) return null;
     
-    DrillTable table = DrillTable.createTable(typeFactory, this, name, this.name, config, selection);
-    info = new TableInfo(name, table);
-    TableInfo oldInfo = (TableInfo) tables.putIfAbsent(name, info);
-    if(oldInfo != null) return (Table<E>) oldInfo.table;
-    return (Table<E>) table;
+    return new DrillTable(name, this.name, selection, config);
   }
 
   @Override
-  public Map<String, TableInSchema> getTables() {
-    return this.tables;
+  public void destroy(DrillTable value) {
   }
+
   
-  private class TableInfo extends TableInSchema{
-    
-    final DrillTable table;
-
-    public TableInfo(String name, DrillTable table) {
-      super(FileSystemSchema.this, name, TableType.TABLE);
-      this.table = table;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <E> Table<E> getTable(Class<E> elementType) {
-      if( !elementType.isAssignableFrom(DrillTable.class)) throw new UnsupportedOperationException();
-      return (Table<E>) table;
-    }
-    
-    
-  }
   
 }

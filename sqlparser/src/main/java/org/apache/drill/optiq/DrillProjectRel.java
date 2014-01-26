@@ -52,15 +52,10 @@ import com.google.common.collect.Lists;
 public class DrillProjectRel extends ProjectRelBase implements DrillRel {
   protected DrillProjectRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, List<RexNode> exps,
       RelDataType rowType) {
-    super(cluster, traits, child, exps, rowType, Flags.Boxed, Collections.<RelCollation> emptyList());
+    super(cluster, traits, child, exps, rowType, Flags.Boxed);
     assert getConvention() == CONVENTION;
   }
 
-  public DrillProjectRel(RelOptCluster cluster, RelTraitSet traits, RelNode child, List<RexNode> exps,
-      RelDataType rowType, int flags, List<RelCollation> collationList) {
-    super(cluster, traits, child, exps, rowType, flags, collationList);
-
-  }
 
   @Override
   public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {

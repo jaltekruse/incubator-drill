@@ -25,7 +25,7 @@ import org.eigenbase.rel.RelNode;
 import org.eigenbase.rel.convert.ConverterRule;
 
 /**
- * Rule that converts any Drill relational expression to enumerable format by adding a {@link EnumerableDrillRel}.
+ * Rule that converts any Drill relational expression to enumerable format by adding a {@link DrillScreenRel}.
  */
 public class EnumerableDrillRule extends ConverterRule {
 
@@ -44,6 +44,6 @@ public class EnumerableDrillRule extends ConverterRule {
   @Override
   public RelNode convert(RelNode rel) {
     assert rel.getTraitSet().contains(DrillRel.CONVENTION);
-    return new EnumerableDrillRel(rel.getCluster(), rel.getTraitSet().replace(getOutConvention()), rel);
+    return new DrillScreenRel(rel.getCluster(), rel.getTraitSet().replace(getOutConvention()), rel);
   }
 }

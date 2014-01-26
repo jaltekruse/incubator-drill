@@ -24,6 +24,6 @@ import org.codehaus.commons.compiler.CompileException;
 
 interface ClassCompiler {
 
-  public abstract byte[] getClassByteCode(String className, String sourcecode) throws CompileException, IOException, ClassNotFoundException, ClassTransformationException ;
+  public abstract byte[][] getClassByteCode(String className, String sourcecode) throws CompileException, IOException, ClassNotFoundException, ClassTransformationException ;
 
 }

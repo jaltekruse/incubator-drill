@@ -114,9 +114,9 @@ public class ExpressionTest {
       assertEquals(0, error.getErrorCount());
     }
 
-    CodeGenerator<Projector> cg = new CodeGenerator<Projector>(Projector.TEMPLATE_DEFINITION, new FunctionImplementationRegistry(DrillConfig.create()));
+    CodeGenerator<Projector> cg = ClassGenerator.get(Projector.TEMPLATE_DEFINITION, new FunctionImplementationRegistry(DrillConfig.create())).getRoot();
     cg.addExpr(new ValueVectorWriteExpression(new TypedFieldId(materializedExpr.getMajorType(), -1), materializedExpr));
-    return cg.generate();
+    return cg.getClassGenerator().generate();
   }
 
   @AfterClass

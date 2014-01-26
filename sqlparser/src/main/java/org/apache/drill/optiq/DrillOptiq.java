@@ -112,12 +112,12 @@ public class DrillOptiq {
         context.getRegistry().createExpression(call.getOperator().getName().toLowerCase(), Lists.newArrayList(exprs));
       case Special:
         logger.debug("Special");
-        switch (call.getKind()) {
-        case Cast:
-          // Ignore casts. Drill is type-less.
-          logger.debug("Ignoring cast {}, {}", call.getOperands().get(0), call.getOperands().get(0).getClass());
-          return call.getOperands().get(0).accept(this);
-        }
+//        switch (call.getKind()) {
+//        case Cast:
+//          // Ignore casts. Drill is type-less.
+//          logger.debug("Ignoring cast {}, {}", call.getOperands().get(0), call.getOperands().get(0).getClass());
+//          return call.getOperands().get(0).accept(this);
+//        }
         
         if (call.getOperator() == SqlStdOperatorTable.itemOp) {
           SchemaPath left = (SchemaPath) call.getOperands().get(0).accept(this);

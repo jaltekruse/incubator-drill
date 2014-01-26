@@ -17,19 +17,18 @@
  */
 package org.apache.drill.jdbc;
 
+import net.hydromatic.avatica.DriverVersion;
+import net.hydromatic.avatica.Handler;
+import net.hydromatic.avatica.UnregisteredDriver.JdbcVersion;
 import net.hydromatic.linq4j.function.Function0;
-import net.hydromatic.optiq.jdbc.DriverVersion;
-import net.hydromatic.optiq.jdbc.Handler;
-import net.hydromatic.optiq.jdbc.OptiqPrepare;
-import net.hydromatic.optiq.jdbc.UnregisteredDriver;
 
+import org.apache.drill.client.jdbc.OptiqPrepare;
 import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.optiq.DrillPrepareImpl;
 
 /**
  * JDBC driver for Apache Drill.
  */
-public class Driver extends UnregisteredDriver {
+public class Driver extends net.hydromatic.avatica.UnregisteredDriver {
   public static final String CONNECT_STRING_PREFIX = "jdbc:drill:";
 
   private volatile DrillHandler handler;
@@ -46,16 +45,19 @@ public class Driver extends UnregisteredDriver {
     return new DrillDriverVersion();
   }
 
-  @Override
-  protected Function0<OptiqPrepare> createPrepareFactory() {
-    return new Function0<OptiqPrepare>() {
-      @Override
-      public OptiqPrepare apply() {
-        return new DrillPrepareImpl(Driver.this);
-      }
-    };
-  }
+  
 
+  protected String getFactoryClassName(JdbcVersion jdbcVersion) {
+    switch (jdbcVersion) {
+    case JDBC_30:
+      return "net.hydromatic.avatica.AvaticaFactoryJdbc3Impl";
+    case JDBC_40:
+      return "net.hydromatic.avatica.AvaticaJdbc40Factory";
+    case JDBC_41:
+    default:
+      return "net.hydromatic.avatica.AvaticaJdbc41Factory";
+    }
+  }
   public DrillClient getClient(){
     return handler.getClient();
   }

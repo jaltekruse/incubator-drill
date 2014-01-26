@@ -64,9 +64,9 @@ public class QueryClassLoader extends URLClassLoader {
     }
   }
 
-  public byte[] getClassByteCode(final String className, final String sourcecode) throws CompileException, IOException,
+  public byte[][] getClassByteCode(final String className, final String sourcecode) throws CompileException, IOException,
       ClassNotFoundException, ClassTransformationException {
-    byte[] bc = classCompiler.getClassByteCode(className, sourcecode);
+    byte[][] bc = classCompiler.getClassByteCode(className, sourcecode);
     return bc;
 
   }

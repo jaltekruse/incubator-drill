@@ -201,6 +201,10 @@ public abstract class BasicClient<T extends EnumLite, R extends RemoteConnection
 
   }
 
+  public void setAutoRead(boolean enableAutoRead){
+    connection.setAutoRead(enableAutoRead);
+  }
+  
   public void close() {
     logger.debug("Closing client");
     connection.getChannel().close();

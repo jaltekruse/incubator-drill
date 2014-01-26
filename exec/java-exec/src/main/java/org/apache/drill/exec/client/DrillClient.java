@@ -21,8 +21,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static org.apache.drill.exec.proto.UserProtos.QueryResultsMode.STREAM_FULL;
 import static org.apache.drill.exec.proto.UserProtos.RunQuery.newBuilder;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.PooledByteBufAllocatorL;
 import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.io.Closeable;
@@ -40,8 +38,13 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.proto.UserProtos.QueryType;
-import org.apache.drill.exec.rpc.*;
 import org.apache.drill.exec.rpc.BasicClientWithConnection.ServerConnection;
+import org.apache.drill.exec.rpc.ChannelClosedException;
+import org.apache.drill.exec.rpc.DrillRpcFuture;
+import org.apache.drill.exec.rpc.NamedThreadFactory;
+import org.apache.drill.exec.rpc.RpcConnectionHandler;
+import org.apache.drill.exec.rpc.RpcException;
+import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserClient;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
@@ -52,7 +55,7 @@ import com.google.common.util.concurrent.SettableFuture;
 /**
  * Thin wrapper around a UserClient that handles connect/close and transforms String into ByteBuf
  */
-public class DrillClient implements Closeable{
+public class DrillClient implements Closeable, ConnectionThrottle{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillClient.class);
   
   DrillConfig config;
@@ -86,6 +89,11 @@ public class DrillClient implements Closeable{
     return config;
   }
   
+  @Override
+  public void setAutoRead(boolean enableAutoRead) {
+    client.setAutoRead(enableAutoRead);
+  }
+
   /**
    * Connects the client to a Drillbit server
    *
@@ -217,7 +225,7 @@ public class DrillClient implements Closeable{
     }
 
     @Override
-    public void resultArrived(QueryResultBatch result) {
+    public void resultArrived(QueryResultBatch result, ConnectionThrottle throttle) {
 //      logger.debug("Result arrived.  Is Last Chunk: {}.  Full Result: {}", result.getHeader().getIsLastChunk(), result);
       results.add(result);
       if(result.getHeader().getIsLastChunk()){
