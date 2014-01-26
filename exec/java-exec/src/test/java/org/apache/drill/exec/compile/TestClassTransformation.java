@@ -20,8 +20,8 @@ package org.apache.drill.exec.compile;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.compile.sig.GeneratorMapping;
 import org.apache.drill.exec.compile.sig.MappingSet;
-import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
+import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.junit.Test;
 
@@ -41,18 +41,18 @@ public class TestClassTransformation {
     
     ClassTransformer ct = new ClassTransformer();
     QueryClassLoader loader = new QueryClassLoader(true);
-    ClassGenerator<ExampleInner> cg = ClassGenerator.get(template, new FunctionImplementationRegistry(DrillConfig.create()));
+    CodeGenerator<ExampleInner> cg = CodeGenerator.get(template, new FunctionImplementationRegistry(DrillConfig.create()));
     
-    CodeGenerator<ExampleInner> root = cg.getRoot();
+    ClassGenerator<ExampleInner> root = cg.getRoot();
     root.setMappingSet(new MappingSet(new GeneratorMapping("doOutside", null, null, null)));
     root.getSetupBlock().directStatement("System.out.println(\"outside\");");
     
     
-    CodeGenerator<ExampleInner> inner = root.getInnerGenerator("TheInnerClass");
+    ClassGenerator<ExampleInner> inner = root.getInnerGenerator("TheInnerClass");
     inner.setMappingSet(new MappingSet(new GeneratorMapping("doInside", null, null, null)));
     inner.getSetupBlock().directStatement("System.out.println(\"inside\");");
 
-    CodeGenerator<ExampleInner> doubleInner = inner.getInnerGenerator("DoubleInner");
+    ClassGenerator<ExampleInner> doubleInner = inner.getInnerGenerator("DoubleInner");
     doubleInner.setMappingSet(new MappingSet(new GeneratorMapping("doDouble", null, null, null)));
     doubleInner.getSetupBlock().directStatement("System.out.println(\"double\");");
 

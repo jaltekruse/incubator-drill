@@ -34,7 +34,7 @@ public class DrillJoinRule extends RelOptRule {
 
   private DrillJoinRule() {
     super(
-        RelOptRule.some(JoinRel.class, Convention.NONE, RelOptRule.any(RelNode.class), RelOptRule.any(RelNode.class)),
+        RelOptHelper.some(JoinRel.class, Convention.NONE, RelOptHelper.any(RelNode.class), RelOptHelper.any(RelNode.class)),
         "DrillJoinRule");
   }
 

@@ -4,8 +4,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import net.hydromatic.linq4j.expressions.DefaultExpression;
-import net.hydromatic.linq4j.expressions.Expression;
 import net.hydromatic.linq4j.function.Function1;
 import net.hydromatic.optiq.Schema;
 import net.hydromatic.optiq.SchemaPlus;
@@ -15,8 +13,6 @@ import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.exec.store.SchemaProviderRegistry;
-import org.apache.drill.jdbc.StorageEngines;
-import org.apache.drill.sql.client.full.FileSystemSchema;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

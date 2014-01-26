@@ -35,9 +35,11 @@ import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.coord.ZKClusterCoordinator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
+import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.proto.UserProtos.QueryType;
+import org.apache.drill.exec.proto.UserProtos.RpcType;
 import org.apache.drill.exec.rpc.BasicClientWithConnection.ServerConnection;
 import org.apache.drill.exec.rpc.ChannelClosedException;
 import org.apache.drill.exec.rpc.DrillRpcFuture;
@@ -94,17 +96,23 @@ public class DrillClient implements Closeable, ConnectionThrottle{
     client.setAutoRead(enableAutoRead);
   }
 
+  
+  
   /**
    * Connects the client to a Drillbit server
    *
    * @throws IOException
    */
-  public synchronized void connect() throws RpcException {
+  public void connect() throws RpcException {
+    connect((String) null);
+  }
+    
+  public synchronized void connect(String connect) throws RpcException {
     if (connected) return;
 
     if (clusterCoordinator == null) {
       try {
-        this.clusterCoordinator = new ZKClusterCoordinator(this.config);
+        this.clusterCoordinator = new ZKClusterCoordinator(this.config, connect);
         this.clusterCoordinator.start(10000);
       } catch (Exception e) {
         throw new RpcException("Failure setting up ZK for client.", e);
@@ -179,6 +187,11 @@ public class DrillClient implements Closeable, ConnectionThrottle{
     client.submitQuery(listener,query);
     return listener.getResults();
   }
+  
+  public void cancelQuery(QueryId id){
+    client.send(RpcType.CANCEL_QUERY, id, Ack.class);
+  }
+  
   
   /**
    * Submits a Logical plan for direct execution (bypasses parsing)

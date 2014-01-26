@@ -41,7 +41,7 @@ public class QueryClassLoader extends URLClassLoader {
     if (useJanino) {
       this.classCompiler = new JaninoClassCompiler(this);
     } else {
-      this.classCompiler = new JDKClassCompiler();
+      throw new UnsupportedOperationException("Drill no longer supports using the JDK class compiler.");
     }
   }
 

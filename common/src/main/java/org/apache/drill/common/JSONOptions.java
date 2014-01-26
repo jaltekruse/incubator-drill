@@ -18,6 +18,7 @@
 package org.apache.drill.common;
 
 import java.io.IOException;
+import java.lang.reflect.ParameterizedType;
 
 import org.apache.drill.common.JSONOptions.De;
 import org.apache.drill.common.JSONOptions.Se;
@@ -61,8 +62,17 @@ public class JSONOptions {
     this.location = location;
   }
   
+  @SuppressWarnings("unchecked")
   public <T> T getWith(DrillConfig config, Class<T> c){
     try {
+      if(opaque != null){
+        if (opaque.getClass().equals(c)){
+          return (T) opaque;
+        }else{
+          throw new IllegalArgumentException(String.format("Attmpted to retrieve a option with type of %s.  However, the JSON options carried an opaque value of type %s.", c.getName(), opaque.getClass().getName()));
+        }
+      }
+      
       //logger.debug("Read tree {}", root);
       return config.getMapper().treeToValue(root, c);
     } catch (JsonProcessingException e) {
@@ -71,11 +81,20 @@ public class JSONOptions {
   }
 
   public <T> T getListWith(DrillConfig config, TypeReference<T> t) throws IOException {
-      ObjectMapper mapper = config.getMapper();
-      return mapper.treeAsTokens(root).readValueAs(t);
+    return getListWith(config.getMapper(), t);
   }
 
+  @SuppressWarnings("unchecked")
   public <T> T getListWith(ObjectMapper mapper, TypeReference<T> t) throws IOException {
+    if(opaque != null){
+      ParameterizedType pt = (ParameterizedType) t.getType();
+      if ( pt.getRawType().equals(opaque.getClass())){
+        return (T) opaque;
+      }else{
+        throw new IOException(String.format("Attmpted to retrieve a list with type of %s.  However, the JSON options carried an opaque value of type %s.", t.getType(), opaque.getClass().getName()));
+      }
+    }
+    if(root == null) return null;
     return mapper.treeAsTokens(root).readValueAs(t);
   }
   

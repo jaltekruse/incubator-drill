@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.sql.client.full;
+package org.apache.drill.optiq;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -29,7 +29,6 @@ import net.hydromatic.optiq.TableFunction;
 
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.store.SchemaProvider;
-import org.apache.drill.jdbc.DrillTable;
 
 public class FileSystemSchema implements Schema, ExpandingConcurrentMap.MapValueFactory<String, DrillTable>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FileSystemSchema.class);
@@ -102,7 +101,7 @@ public class FileSystemSchema implements Schema, ExpandingConcurrentMap.MapValue
 
   @Override
   public DrillTable create(String key) {
-    Object selection = schemaProvider.getSelectionBaseOnName(name);
+    Object selection = schemaProvider.getSelectionBaseOnName(key);
     if(selection == null) return null;
     
     return new DrillTable(name, this.name, selection, config);

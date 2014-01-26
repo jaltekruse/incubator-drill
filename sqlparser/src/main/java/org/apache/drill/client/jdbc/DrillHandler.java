@@ -8,7 +8,7 @@ import net.hydromatic.avatica.Handler;
 import net.hydromatic.avatica.Handler.ResultSink;
 
 import org.apache.drill.exec.rpc.RpcException;
-import org.apache.drill.sql.client.full.FileSystemSchema;
+import org.apache.drill.optiq.FileSystemSchema;
 
 public class DrillHandler implements Handler {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillHandler.class);

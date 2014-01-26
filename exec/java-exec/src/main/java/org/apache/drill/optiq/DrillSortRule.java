@@ -28,7 +28,7 @@ public class DrillSortRule extends RelOptRule {
   public static final RelOptRule INSTANCE = new DrillSortRule();
 
   private DrillSortRule() {
-    super(RelOptRule.some(SortRel.class, Convention.NONE, RelOptRule.any(RelNode.class)), "DrillSortRule");
+    super(RelOptHelper.some(SortRel.class, Convention.NONE, RelOptHelper.any(RelNode.class)), "DrillSortRule");
   }
 
   @Override

@@ -22,8 +22,6 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.drill.common.logical.data.Order;
-import org.apache.drill.common.logical.data.Order.Direction;
-import org.apache.drill.common.logical.data.Order.NullCollation;
 import org.apache.drill.common.logical.data.Order.Ordering;
 import org.apache.drill.exec.ref.RecordIterator;
 import org.apache.drill.exec.ref.RecordPointer;
@@ -34,6 +32,7 @@ import org.apache.drill.exec.ref.values.DataValue;
 import org.apache.drill.exec.ref.values.ScalarValues;
 import org.apache.hadoop.util.IndexedSortable;
 import org.apache.hadoop.util.QuickSort;
+import org.eigenbase.rel.RelFieldCollation.NullDirection;
 
 public class OrderROP extends AbstractBlockingOperator<Order> {
 
@@ -62,7 +61,7 @@ public class OrderROP extends AbstractBlockingOperator<Order> {
 
     for (int i = 0; i < orderings.length; i++) {
       defs[i] = new SortDefinition(builder.getBasicEvaluator(inputRecord, orderings[i].getExpr()),
-          orderings[i].getDirection() == Direction.ASC, orderings[i].getNullCollation() == NullCollation.NULLS_LAST);
+          orderings[i].getDirection() == org.eigenbase.rel.RelFieldCollation.Direction.Ascending, orderings[i].getNullDirection() == NullDirection.LAST);
     }
   }
 

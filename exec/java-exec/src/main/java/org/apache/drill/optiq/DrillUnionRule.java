@@ -17,26 +17,32 @@
  */
 package org.apache.drill.optiq;
 
-import org.eigenbase.rel.FilterRel;
+import org.eigenbase.rel.UnionRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.*;
 
-/**
- * Rule that converts a {@link org.eigenbase.rel.FilterRel} to a Drill "filter" operation.
- */
-public class DrillFilterRule extends RelOptRule {
-  public static final RelOptRule INSTANCE = new DrillFilterRule();
+import java.util.ArrayList;
+import java.util.List;
 
-  private DrillFilterRule() {
-    super(RelOptRule.some(FilterRel.class, Convention.NONE, RelOptRule.any(RelNode.class)), "DrillFilterRule");
+/**
+ * Rule that converts a {@link UnionRel} to a {@link DrillUnionRel}, implemented by a "union" operation.
+ */
+public class DrillUnionRule extends RelOptRule {
+  public static final RelOptRule INSTANCE = new DrillUnionRule();
+
+  private DrillUnionRule() {
+    super(RelOptHelper.any(UnionRel.class, Convention.NONE), "DrillUnionRule");
   }
 
   @Override
   public void onMatch(RelOptRuleCall call) {
-    final FilterRel filter = (FilterRel) call.getRels()[0];
-    final RelNode input = call.getRels()[1];
-    final RelTraitSet traits = filter.getTraitSet().plus(DrillRel.CONVENTION);
-    final RelNode convertedInput = convert(input, traits);
-    call.transformTo(new DrillFilterRel(filter.getCluster(), traits, convertedInput, filter.getCondition()));
+    final UnionRel union = (UnionRel) call.rel(0);
+    final RelTraitSet traits = union.getTraitSet().plus(DrillRel.CONVENTION);
+    final List<RelNode> convertedInputs = new ArrayList<>();
+    for (RelNode input : union.getInputs()) {
+      final RelNode convertedInput = convert(input, traits);
+      convertedInputs.add(convertedInput);
+    }
+    call.transformTo(new DrillUnionRel(union.getCluster(), traits, convertedInputs, union.all));
   }
 }

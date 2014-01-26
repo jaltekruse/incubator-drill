@@ -17,37 +17,26 @@
  */
 package org.apache.drill.optiq;
 
-import org.eigenbase.rel.AggregateRel;
-import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.FilterRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.*;
-import org.eigenbase.trace.EigenbaseTrace;
-
-import java.util.logging.Logger;
 
 /**
- * Rule that converts an {@link AggregateRel} to a {@link DrillAggregateRel}, implemented by a Drill "segment" operation
- * followed by a "collapseaggregate" operation.
+ * Rule that converts a {@link org.eigenbase.rel.FilterRel} to a Drill "filter" operation.
  */
-public class DrillAggregateRule extends RelOptRule {
-  public static final RelOptRule INSTANCE = new DrillAggregateRule();
-  protected static final Logger tracer = EigenbaseTrace.getPlannerTracer();
+public class DrillFilterRule extends RelOptRule {
+  public static final RelOptRule INSTANCE = new DrillFilterRule();
 
-  private DrillAggregateRule() {
-    super(RelOptRule.some(AggregateRel.class, Convention.NONE, RelOptRule.any(RelNode.class)), "DrillAggregateRule");
+  private DrillFilterRule() {
+    super(RelOptHelper.some(FilterRel.class, Convention.NONE, RelOptHelper.any(RelNode.class)), "DrillFilterRule");
   }
 
   @Override
   public void onMatch(RelOptRuleCall call) {
-    final AggregateRel aggregate = (AggregateRel) call.rel(0);
+    final FilterRel filter = (FilterRel) call.rel(0);
     final RelNode input = call.rel(1);
-    final RelTraitSet traits = aggregate.getTraitSet().plus(DrillRel.CONVENTION);
+    final RelTraitSet traits = filter.getTraitSet().plus(DrillRel.CONVENTION);
     final RelNode convertedInput = convert(input, traits);
-    try {
-      call.transformTo(new DrillAggregateRel(aggregate.getCluster(), traits, convertedInput, aggregate.getGroupSet(),
-          aggregate.getAggCallList()));
-    } catch (InvalidRelException e) {
-      tracer.warning(e.toString());
-    }
+    call.transformTo(new DrillFilterRel(filter.getCluster(), traits, convertedInput, filter.getCondition()));
   }
 }

@@ -26,8 +26,8 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.compile.ClassTransformer;
 import org.apache.drill.exec.compile.QueryClassLoader;
 import org.apache.drill.exec.exception.ClassTransformationException;
-import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
+import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryException;
@@ -121,6 +121,10 @@ public class FragmentContext implements Closeable {
   }
 
   public <T> T getImplementationClass(ClassGenerator<T> cg) throws ClassTransformationException, IOException {
+    return getImplementationClass(cg.getClassGenerator());
+  }
+  
+  public <T> T getImplementationClass(CodeGenerator<T> cg) throws ClassTransformationException, IOException {
     long t1 = System.nanoTime();
     
     T t = transformer.getImplementationClass(this.loader, cg.getDefinition(), cg.generate(),

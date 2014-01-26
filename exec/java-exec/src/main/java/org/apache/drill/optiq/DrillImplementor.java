@@ -24,7 +24,6 @@ import org.apache.drill.common.logical.LogicalPlanBuilder;
 import org.apache.drill.common.logical.PlanProperties.PlanType;
 import org.apache.drill.common.logical.data.LogicalOperator;
 import org.apache.drill.common.logical.data.visitors.AbstractLogicalVisitor;
-import org.apache.drill.jdbc.DrillTable;
 import org.eigenbase.rel.RelNode;
 
 import com.google.common.collect.Sets;

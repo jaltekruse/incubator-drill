@@ -83,6 +83,10 @@ public class Order extends SingleInputOperator {
       this.nulls = nullCollation;
       this.direction = direction;
     }
+    
+    public Ordering(Direction direction, LogicalExpression e) {
+      this(direction, e, NullDirection.FIRST);
+    }
 
     @JsonIgnore
     public Direction getDirection() {

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.jdbc;
+package org.apache.drill.optiq;
 
 import java.util.Collections;
 
@@ -25,8 +25,6 @@ import net.hydromatic.optiq.Statistics;
 import net.hydromatic.optiq.Table;
 
 import org.apache.drill.common.logical.StorageEngineConfig;
-import org.apache.drill.optiq.DrillRel;
-import org.apache.drill.optiq.DrillScanRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.reltype.RelDataType;

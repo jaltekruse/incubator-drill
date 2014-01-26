@@ -31,7 +31,7 @@ public class DrillProjectRule extends RelOptRule {
   public static final RelOptRule INSTANCE = new DrillProjectRule();
 
   private DrillProjectRule() {
-    super(RelOptRule.some(ProjectRel.class, Convention.NONE, RelOptRule.any(RelNode.class)), "DrillProjectRule");
+    super(RelOptHelper.some(ProjectRel.class, Convention.NONE, RelOptHelper.any(RelNode.class)), "DrillProjectRule");
   }
 
   @Override

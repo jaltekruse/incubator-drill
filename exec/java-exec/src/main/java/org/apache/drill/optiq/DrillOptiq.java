@@ -18,6 +18,7 @@
 package org.apache.drill.optiq;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.drill.common.expression.FieldReference;
@@ -102,22 +103,23 @@ public class DrillOptiq {
         logger.debug("Binary");
         LogicalExpression op1 = call.getOperands().get(0).accept(this);
         LogicalExpression op2 = call.getOperands().get(1).accept(this);
-        context.getRegistry().createExpression(call.getOperator().getName(), Lists.newArrayList(op1, op2));
+        return context.getRegistry().createExpression(call.getOperator().getName(), Lists.newArrayList(op1, op2));
       case Function:
         logger.debug("Function");
         List<LogicalExpression> exprs = Lists.newArrayList();
         for(RexNode n : call.getOperands()){
           exprs.add(n.accept(this));
         }
-        context.getRegistry().createExpression(call.getOperator().getName().toLowerCase(), Lists.newArrayList(exprs));
+        return context.getRegistry().createExpression(call.getOperator().getName().toLowerCase(), Lists.newArrayList(exprs));
       case Special:
         logger.debug("Special");
-//        switch (call.getKind()) {
-//        case Cast:
-//          // Ignore casts. Drill is type-less.
-//          logger.debug("Ignoring cast {}, {}", call.getOperands().get(0), call.getOperands().get(0).getClass());
-//          return call.getOperands().get(0).accept(this);
-//        }
+        switch(call.getKind()){
+          
+        case CAST:
+          LogicalExpression arg = call.getOperands().get(0).accept(this);
+          List<LogicalExpression> args = Collections.singletonList(arg);
+          return context.getRegistry().createExpression("castVARCHAR", args);
+        }
         
         if (call.getOperator() == SqlStdOperatorTable.itemOp) {
           SchemaPath left = (SchemaPath) call.getOperands().get(0).accept(this);

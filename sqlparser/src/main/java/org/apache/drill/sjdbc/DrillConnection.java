@@ -19,8 +19,12 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.Executor;
 
+import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.client.DrillClient;
+import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.rpc.RpcException;
+import org.apache.drill.exec.server.RemoteServiceSet;
 
 public class DrillConnection implements Connection{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConnection.class);
@@ -28,12 +32,25 @@ public class DrillConnection implements Connection{
   private final DrillClient client;
   private volatile boolean connected = false;
   private volatile String catalog;
+  private final BufferAllocator allocator;
   
-  public DrillConnection() throws RpcException{
-    this.client = new DrillClient();
-    this.client.connect();
+  public DrillConnection(DrillConfig config, String zookeeperUrl) throws SQLException{
+    this.allocator = new TopLevelAllocator();
+    
+    try{
+      if("local".equalsIgnoreCase(zookeeperUrl)){
+        RemoteServiceSet set = GlobalServiceSetReference.SETS.get();
+        if(set == null) throw new SQLException("Zookeeper URL was set to local.  However, no RemoteServiceSet was found in GlobalServiceSetReference on this thread.");
+        this.client = new DrillClient(config, set.getCoordinator());
+        this.client.connect(zookeeperUrl);
+      }else{
+        this.client = new DrillClient();
+        this.client.connect(zookeeperUrl);
+      }
+    }catch(RpcException e){
+      throw new SQLException("Failure while attempting to connect to Drill.", e);
+    }
   }
-  
   
   @Override
   public <T> T unwrap(Class<T> iface) throws SQLException {
@@ -45,6 +62,14 @@ public class DrillConnection implements Connection{
     throw new UnsupportedOperationException();
   }
 
+  BufferAllocator getAllocator(){
+    return allocator;
+  }
+  
+  DrillClient getClient(){
+    return client;
+  }
+  
   @Override
   public DrillStatement createStatement() throws SQLException {
     return new DrillStatement(this);
@@ -88,6 +113,7 @@ public class DrillConnection implements Connection{
   public void close() throws SQLException {
     client.close();
     connected = false;
+    allocator.close();
   }
 
   @Override
@@ -139,7 +165,7 @@ public class DrillConnection implements Connection{
 
   @Override
   public Statement createStatement(int resultSetType, int resultSetConcurrency) throws SQLException {
-    throw new UnsupportedOperationException();
+    return new DrillStatement(this);
   }
 
   @Override

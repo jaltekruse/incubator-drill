@@ -18,12 +18,12 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.sql.SQLWarning;
 import java.sql.SQLXML;
-import java.sql.Statement;
 import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.Calendar;
 import java.util.Map;
 
+import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
@@ -45,12 +45,16 @@ import org.apache.drill.exec.vector.accessor.TimestampAccessor;
 
 import com.google.common.base.Charsets;
 
-public abstract class AbstractDrillResultSet implements ResultSet{
+abstract class AbstractDrillResultSet implements ResultSet{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractDrillResultSet.class);
   
-  private RecordBatchLoader currentBatch;
-  private int currentColumn;
-  int currentRecord;
+  final RecordBatchLoader currentBatch;
+  private int currentColumn = 0;
+  int currentRecord = 0;
+  
+  AbstractDrillResultSet(BufferAllocator allocator){
+    currentBatch = new RecordBatchLoader(allocator);
+  }
   
   private ValueVector v(int columnIndex) throws SQLException {
     VectorWrapper<?> wrapper = currentBatch.getValueAccessorById(columnIndex, null);
@@ -83,6 +87,13 @@ public abstract class AbstractDrillResultSet implements ResultSet{
     }
   }
   
+  
+  
+  @Override
+  public int findColumn(String columnLabel) throws SQLException {
+    return findColumn0(columnLabel);
+  }
+
   @Override
   public <T> T unwrap(Class<T> iface) throws SQLException {
     return null;

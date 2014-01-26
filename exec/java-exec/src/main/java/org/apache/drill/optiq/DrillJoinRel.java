@@ -131,8 +131,8 @@ public class DrillJoinRel extends JoinRelBase implements DrillRel {
     // right fields appear after the LHS fields.
     final int rightInputOffset = left.getRowType().getFieldCount();
     for (JoinCondition condition : join.getConditions()) {
-      RelDataTypeField leftField = left.getRowType().getField(ExprHelper.getFieldName(condition.getLeft()));
-      RelDataTypeField rightField = right.getRowType().getField(ExprHelper.getFieldName(condition.getRight()));
+      RelDataTypeField leftField = left.getRowType().getField(ExprHelper.getFieldName(condition.getLeft()), true);
+      RelDataTypeField rightField = right.getRowType().getField(ExprHelper.getFieldName(condition.getRight()), true);
         joinConditions.add(
             context.getRexBuilder().makeCall(
                 SqlStdOperatorTable.equalsOperator,

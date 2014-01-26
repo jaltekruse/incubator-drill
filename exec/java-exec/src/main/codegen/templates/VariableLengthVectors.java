@@ -233,6 +233,10 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
       return valueCount;
     }
 
+    public boolean isNull(int index){
+      return false;
+    }
+    
     public UInt${type.width}Vector getOffsetVector(){
       return offsetVector;
     }

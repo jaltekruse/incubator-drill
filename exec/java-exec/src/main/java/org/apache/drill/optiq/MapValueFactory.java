@@ -1,4 +1,4 @@
-package org.apache.drill.sql.client.full;
+package org.apache.drill.optiq;
 
 public interface MapValueFactory<KEY, VALUE> {
   

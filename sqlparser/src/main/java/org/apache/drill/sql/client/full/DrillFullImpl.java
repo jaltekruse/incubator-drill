@@ -25,7 +25,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.rpc.RpcException;
-import org.apache.drill.jdbc.DrillTable;
+import org.apache.drill.optiq.DrillTable;
 
 public class DrillFullImpl<E>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillFullImpl.class);

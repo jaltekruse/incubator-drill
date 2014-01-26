@@ -1,24 +1,38 @@
 package org.apache.drill.sjdbc;
 
-import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.Properties;
 import java.util.logging.Logger;
 
+import org.apache.drill.common.config.DrillConfig;
+
 public class DrillJdbcDriver implements java.sql.Driver {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillJdbcDriver.class);
 
+  
+  static{
+    try {
+      DriverManager.registerDriver(new DrillJdbcDriver());
+    } catch (SQLException e) {
+      System.err.println("Failure while attempting to register Drill JDBC driver.");
+      e.printStackTrace(System.err);
+    }
+  }
+  
+  final DrillConfig config = DrillConfig.create();
+  
   @Override
-  public Connection connect(String url, Properties info) throws SQLException {
-    
-    return null;
+  public DrillConnection connect(String url, Properties info) throws SQLException {
+    String zookeeper = info.getProperty("zk");
+    return new DrillConnection(config, zookeeper);
   }
 
   @Override
   public boolean acceptsURL(String url) throws SQLException {
-    return false;
+    return url.startsWith("jdbc:drill:");
   }
 
   @Override
@@ -43,6 +57,6 @@ public class DrillJdbcDriver implements java.sql.Driver {
 
   @Override
   public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-    return null;
+    throw new SQLFeatureNotSupportedException();
   }
 }

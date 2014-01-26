@@ -6,6 +6,8 @@ import java.sql.SQLException;
 import java.sql.SQLWarning;
 import java.sql.Statement;
 
+import org.apache.drill.exec.proto.UserProtos.QueryType;
+
 public class DrillStatement implements Statement{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillStatement.class);
 
@@ -32,7 +34,9 @@ public class DrillStatement implements Statement{
 
   @Override
   public ResultSet executeQuery(String sql) throws SQLException {
-    return null;
+    DrillResultSet result = new DrillResultSet(connection.getClient(), this, connection.getAllocator());
+    connection.getClient().runQuery(QueryType.SQL, sql, result.listener);
+    return result;
   }
 
   @Override

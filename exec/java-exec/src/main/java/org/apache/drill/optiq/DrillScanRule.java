@@ -11,7 +11,7 @@ public class DrillScanRule  extends RelOptRule {
   public static final RelOptRule INSTANCE = new DrillScanRule();
 
   private DrillScanRule() {
-    super(RelOptRule.any(EnumerableTableAccessRel.class), "DrillTableRule");
+    super(RelOptHelper.any(EnumerableTableAccessRel.class), "DrillTableRule");
   }
 
 

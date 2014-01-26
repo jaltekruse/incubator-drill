@@ -17,32 +17,23 @@
  */
 package org.apache.drill.optiq;
 
-import org.eigenbase.rel.UnionRel;
-import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.ValuesRel;
 import org.eigenbase.relopt.*;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Rule that converts a {@link UnionRel} to a {@link DrillUnionRel}, implemented by a "union" operation.
+ * Rule that converts a {@link ValuesRel} to a Drill "values" operation.
  */
-public class DrillUnionRule extends RelOptRule {
-  public static final RelOptRule INSTANCE = new DrillUnionRule();
+public class DrillValuesRule extends RelOptRule {
+  public static final RelOptRule INSTANCE = new DrillValuesRule();
 
-  private DrillUnionRule() {
-    super(RelOptRule.any(UnionRel.class, Convention.NONE), "DrillUnionRule");
+  private DrillValuesRule() {
+    super(RelOptHelper.any(ValuesRel.class, Convention.NONE), "DrillValuesRule");
   }
 
   @Override
   public void onMatch(RelOptRuleCall call) {
-    final UnionRel union = (UnionRel) call.rel(0);
-    final RelTraitSet traits = union.getTraitSet().plus(DrillRel.CONVENTION);
-    final List<RelNode> convertedInputs = new ArrayList<>();
-    for (RelNode input : union.getInputs()) {
-      final RelNode convertedInput = convert(input, traits);
-      convertedInputs.add(convertedInput);
-    }
-    call.transformTo(new DrillUnionRel(union.getCluster(), traits, convertedInputs, union.all));
+    final ValuesRel values = (ValuesRel) call.rel(0);
+    final RelTraitSet traits = values.getTraitSet().plus(DrillRel.CONVENTION);
+    call.transformTo(new DrillValuesRel(values.getCluster(), values.getRowType(), values.getTuples(), traits));
   }
 }

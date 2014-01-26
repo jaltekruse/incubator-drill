@@ -22,15 +22,17 @@ import java.util.List;
 
 import org.apache.drill.common.expression.ErrorCollector;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
+import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.PathSegment;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
-import org.apache.drill.exec.expr.ImplicitCastBuilder;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.ValueVectorWriteExpression;
@@ -91,11 +93,18 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project>{
   protected void setupNewSchema() throws SchemaChangeException{
     this.allocationVectors = Lists.newArrayList();
     container.clear();
-    final List<NamedExpression> exprs = popConfig.getExprs();
+    List<NamedExpression> exprs = popConfig.getExprs();
+    if(exprs.size() == 1 && exprs.get(0).getExpr() instanceof SchemaPath && "_MAP".equals(((SchemaPath)exprs.get(0).getExpr()).getPath())){
+      exprs = Lists.newArrayList();
+      for(VectorWrapper<?> w : incoming){
+        String name = w.getField().getName();
+        exprs.add(new NamedExpression(new SchemaPath(name, ExpressionPosition.UNKNOWN), new FieldReference(name)));
+      }
+    }
     final ErrorCollector collector = new ErrorCollectorImpl();
     final List<TransferPair> transfers = Lists.newArrayList();
     
-    final CodeGenerator<Projector> cg = new CodeGenerator<Projector>(Projector.TEMPLATE_DEFINITION, context.getFunctionRegistry());
+    final ClassGenerator<Projector> cg = CodeGenerator.get(Projector.TEMPLATE_DEFINITION, context.getFunctionRegistry()).getRoot();
     
     for(int i = 0; i < exprs.size(); i++){
       final NamedExpression namedExpression = exprs.get(i);
@@ -130,7 +139,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project>{
     container.buildSchema(incoming.getSchema().getSelectionVectorMode());
     
     try {
-      this.projector = context.getImplementationClass(cg);
+      this.projector = context.getImplementationClass(cg.getClassGenerator());
       projector.setup(context, incoming, this, transfers);
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);

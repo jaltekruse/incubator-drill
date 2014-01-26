@@ -40,7 +40,8 @@ import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.exec.store.SchemaProviderRegistry;
-import org.apache.drill.sql.client.full.FileSystemSchema;
+import org.apache.drill.optiq.FileSystemSchema;
+import org.apache.drill.optiq.StorageEngines;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
