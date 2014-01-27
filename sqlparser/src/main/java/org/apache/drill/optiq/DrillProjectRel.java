@@ -17,16 +17,34 @@
  */
 package org.apache.drill.optiq;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
-import org.eigenbase.rel.*;
-import org.eigenbase.relopt.*;
+import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.logical.data.LogicalOperator;
+import org.apache.drill.common.logical.data.NamedExpression;
+import org.apache.drill.common.logical.data.Project;
+import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.ProjectRelBase;
+import org.eigenbase.rel.RelCollation;
+import org.eigenbase.rel.RelNode;
+import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelOptCost;
+import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.reltype.RelDataTypeField;
+import org.eigenbase.reltype.RelDataTypeFieldImpl;
+import org.eigenbase.reltype.RelRecordType;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.Pair;
 
-import java.util.*;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.Lists;
 
 /**
  * Project implemented in Drill.
@@ -59,25 +77,26 @@ public class DrillProjectRel extends ProjectRelBase implements DrillRel {
   }
 
   @Override
-  public int implement(DrillImplementor implementor) {
-    int inputId = implementor.visitChild(this, 0, getChild());
-    final ObjectNode project = implementor.mapper.createObjectNode();
-    /*
-     * E.g. { op: "project", projections: [ { ref: "output.quantity", expr: "donuts.sales"} ]
-     */
-    project.put("op", "project");
-    project.put("input", inputId);
-    final ArrayNode transforms = implementor.mapper.createArrayNode();
-    project.put("projections", transforms);
+  public LogicalOperator implement(DrillImplementor implementor) {
+    LogicalOperator inputOp = implementor.visitChild(this, 0, getChild());
+    Project.Builder builder = Project.builder();
+    builder.setInput(inputOp);
     for (Pair<RexNode, String> pair : projects()) {
-      final ObjectNode objectNode = implementor.mapper.createObjectNode();
-      transforms.add(objectNode);
-      String expr = DrillOptiq.toDrill(getChild(), pair.left);
-      objectNode.put("expr", expr);
-      String ref = "output." + pair.right;
-//      String ref = pair.right;
-      objectNode.put("ref", ref);
+      LogicalExpression expr = DrillOptiq.toDrill(implementor.getContext(), getChild(), pair.left);
+      builder.addExpr(new FieldReference("output." + pair.right), expr);
     }
-    return implementor.add(project);
+    return builder.build();
   }
+  
+  public static DrillProjectRel convert(Project project, ConversionContext context) throws InvalidRelException{
+    RelNode input = context.toRel(project.getInput());
+    List<RelDataTypeField> fields = Lists.newArrayList();
+    List<RexNode> exps = Lists.newArrayList();
+    for(NamedExpression expr : project.getSelections()){
+      fields.add(new RelDataTypeFieldImpl(expr.getRef().getPath().toString(), fields.size(), context.getTypeFactory().createSqlType(SqlTypeName.ANY) ));
+      exps.add(context.toRex(expr.getExpr()));
+    }
+    return new DrillProjectRel(context.getCluster(), context.getLogicalTraits(), input, exps, new RelRecordType(fields));
+  }
+
 }
