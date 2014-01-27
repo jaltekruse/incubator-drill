@@ -75,7 +75,6 @@
             "target": {
                 "number": 0
             },
-            "partition": null,
             "storageEngine": "queue"
         }
     ]

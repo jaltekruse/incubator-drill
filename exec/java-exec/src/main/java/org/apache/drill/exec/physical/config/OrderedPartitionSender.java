@@ -21,8 +21,8 @@ import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.logical.data.Order;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.base.*;
 import org.apache.drill.exec.proto.CoordinationProtos;
@@ -34,7 +34,7 @@ import java.util.List;
 public class OrderedPartitionSender extends AbstractSender {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(OrderedPartitionSender.class);
 
-  private final List<OrderDef> orderings;
+  private final List<Order.Ordering> orderings;
   private final FieldReference ref;
   private final List<DrillbitEndpoint> endpoints;
   private final int sendingWidth;
@@ -44,7 +44,7 @@ public class OrderedPartitionSender extends AbstractSender {
   private float completionFactor;
 
   @JsonCreator
-  public OrderedPartitionSender(@JsonProperty("orderings") List<OrderDef> orderings, @JsonProperty("ref") FieldReference ref, @JsonProperty("child") PhysicalOperator child,
+  public OrderedPartitionSender(@JsonProperty("orderings") List<Order.Ordering> orderings, @JsonProperty("ref") FieldReference ref, @JsonProperty("child") PhysicalOperator child,
                                 @JsonProperty("destinations") List<DrillbitEndpoint> endpoints, @JsonProperty("receiver-major-fragment") int oppositeMajorFragmentId,
                                 @JsonProperty("sending-fragment-width") int sendingWidth, @JsonProperty("recordsToSample") int recordsToSample,
                                 @JsonProperty("samplingFactor") int samplingFactor, @JsonProperty("completionFactor") float completionFactor) {
@@ -70,7 +70,7 @@ public class OrderedPartitionSender extends AbstractSender {
     return endpoints;
   }
 
-  public List<OrderDef> getOrderings() {
+  public List<Order.Ordering> getOrderings() {
     return orderings;
   }
 

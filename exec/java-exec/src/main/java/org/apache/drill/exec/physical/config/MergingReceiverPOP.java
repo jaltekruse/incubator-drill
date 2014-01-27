@@ -20,8 +20,8 @@ package org.apache.drill.exec.physical.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.logical.data.Order.Ordering;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.base.AbstractReceiver;
 import org.apache.drill.exec.physical.base.PhysicalVisitor;
@@ -39,12 +39,12 @@ public class MergingReceiverPOP extends AbstractReceiver{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MergingReceiverPOP.class);
 
   private final List<DrillbitEndpoint> senders;
-  private final List<OrderDef> orderings;
+  private final List<Ordering> orderings;
 
   @JsonCreator
   public MergingReceiverPOP(@JsonProperty("sender-major-fragment") int oppositeMajorFragmentId,
                             @JsonProperty("senders") List<DrillbitEndpoint> senders,
-                            @JsonProperty("orderings") List<OrderDef> orderings) {
+                            @JsonProperty("orderings") List<Ordering> orderings) {
     super(oppositeMajorFragmentId);
     this.senders = senders;
     this.orderings = orderings;
@@ -78,7 +78,7 @@ public class MergingReceiverPOP extends AbstractReceiver{
     return new Size(1,1);
   }
 
-  public List<OrderDef> getOrderings() {
+  public List<Ordering> getOrderings() {
     return orderings;
   }
 

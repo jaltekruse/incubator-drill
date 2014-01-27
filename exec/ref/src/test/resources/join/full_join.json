@@ -52,7 +52,7 @@
          op: "join",
          left: 1,
          right: 2,
-         type: "outer",
+         type: "right",
          conditions: [
             {
                relationship: "==",

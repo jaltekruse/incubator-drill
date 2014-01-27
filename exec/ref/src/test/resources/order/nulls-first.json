@@ -62,7 +62,7 @@
     "input" : 4,
     "@id" : 5,
     orderings: [
-    	{order: "asc", expr: "deptId", nullCollation: "first"}
+    	{order: "asc", expr: "deptId", nullDirection: "first"}
     ]
   },
   {
@@ -73,7 +73,6 @@
     "target" : {
       "number" : 0
     },
-    "partition" : null,
     "storageEngine" : "queue"
   } ]
 }

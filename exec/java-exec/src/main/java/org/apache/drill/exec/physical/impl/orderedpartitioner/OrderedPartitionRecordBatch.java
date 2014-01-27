@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.sun.codemodel.JConditional;
 import com.sun.codemodel.JExpr;
-import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.expression.*;
 import org.apache.drill.common.logical.data.Order;
 import org.apache.drill.common.types.TypeProtos;
@@ -41,6 +40,7 @@ import org.apache.drill.exec.physical.impl.sort.Sorter;
 import org.apache.drill.exec.record.*;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 import org.apache.drill.exec.vector.*;
+import org.eigenbase.rel.RelFieldCollation;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -218,11 +218,11 @@ public class OrderedPartitionRecordBatch extends AbstractRecordBatch<OrderedPart
     }
     containerBuilder.build(context);
 
-    List<OrderDef> orderDefs = Lists.newArrayList();
+    List<Order.Ordering> orderDefs = Lists.newArrayList();
     int i = 0;
-    for (OrderDef od : popConfig.getOrderings()) {
+    for (Order.Ordering od : popConfig.getOrderings()) {
       SchemaPath sp = new SchemaPath("f" + i++, ExpressionPosition.UNKNOWN);
-      orderDefs.add(new OrderDef(od.getDirection(), new FieldReference(sp)));
+      orderDefs.add(new Order.Ordering(od.getDirection(), new FieldReference(sp), od.getNullDirection()));
     }
 
     SelectionVector4 newSv4 = containerBuilder.getSv4();
@@ -259,13 +259,13 @@ public class OrderedPartitionRecordBatch extends AbstractRecordBatch<OrderedPart
    * @return
    * @throws SchemaChangeException
    */
-  private SampleCopier getCopier(SelectionVector4 sv4, VectorContainer incoming, VectorContainer outgoing, List<OrderDef> orderings) throws SchemaChangeException{
+  private SampleCopier getCopier(SelectionVector4 sv4, VectorContainer incoming, VectorContainer outgoing, List<Order.Ordering> orderings) throws SchemaChangeException{
     List<ValueVector> localAllocationVectors = Lists.newArrayList();
     final ErrorCollector collector = new ErrorCollectorImpl();
     final CodeGenerator<SampleCopier> cg = new CodeGenerator<SampleCopier>(SampleCopier.TEMPLATE_DEFINITION, context.getFunctionRegistry());
 
     int i = 0;
-    for(OrderDef od : orderings) {
+    for(Order.Ordering od : orderings) {
       final LogicalExpression expr = ExpressionTreeMaterializer.materialize(od.getExpr(), incoming, collector);
       SchemaPath schemaPath = new SchemaPath("f" + i++, ExpressionPosition.UNKNOWN);
       TypeProtos.MajorType.Builder builder = TypeProtos.MajorType.newBuilder().mergeFrom(expr.getMajorType()).clearMode().setMode(TypeProtos.DataMode.REQUIRED);
@@ -425,7 +425,7 @@ public class OrderedPartitionRecordBatch extends AbstractRecordBatch<OrderedPart
     cg.setMappingSet(mainMapping);
 
     int count = 0;
-    for(OrderDef od : popConfig.getOrderings()){
+    for(Order.Ordering od : popConfig.getOrderings()){
       final LogicalExpression expr = ExpressionTreeMaterializer.materialize(od.getExpr(), batch, collector);
       if(collector.hasErrors()) throw new SchemaChangeException("Failure while materializing expression. " + collector.toErrorString());
       cg.setMappingSet(incomingMapping);
@@ -438,7 +438,7 @@ public class OrderedPartitionRecordBatch extends AbstractRecordBatch<OrderedPart
       CodeGenerator.HoldingContainer out = cg.addExpr(f, false);
       JConditional jc = cg.getEvalBlock()._if(out.getValue().ne(JExpr.lit(0)));
 
-      if(od.getDirection() == Order.Direction.ASC){
+      if(od.getDirection() == RelFieldCollation.Direction.Ascending){
         jc._then()._return(out.getValue());
       }else{
         jc._then()._return(out.getValue().minus());

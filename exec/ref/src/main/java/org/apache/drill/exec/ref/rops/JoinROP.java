@@ -33,6 +33,7 @@ import org.apache.drill.exec.ref.eval.fn.ComparisonEvaluators;
 import org.apache.drill.exec.ref.exceptions.SetupException;
 import org.apache.drill.exec.ref.values.ComparableValue;
 import org.apache.drill.exec.ref.values.DataValue;
+import org.eigenbase.rel.JoinRelType;
 
 import java.util.List;
 
@@ -65,13 +66,13 @@ public class JoinROP extends ROPBase<Join> {
         return createIteratorFromJoin(config.getJoinType());
     }
 
-    private RecordIterator createIteratorFromJoin(Join.JoinType type) {
+    private RecordIterator createIteratorFromJoin(JoinRelType type) {
         switch (type) {
             case LEFT:
                 return new LeftIterator();
             case INNER:
                 return new InnerIterator();
-            case OUTER:
+            case RIGHT:
                 return new OuterIterator();
             default:
                 throw new UnsupportedOperationException("Type not supported: " + type);

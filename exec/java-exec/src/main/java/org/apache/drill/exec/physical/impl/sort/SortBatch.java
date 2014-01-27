@@ -20,13 +20,12 @@ package org.apache.drill.exec.physical.impl.sort;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.expression.ErrorCollector;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.LogicalExpression;
-import org.apache.drill.common.logical.data.Order.Direction;
+import org.apache.drill.common.logical.data.Order;
 import org.apache.drill.exec.compile.sig.MappingSet;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -36,7 +35,6 @@ import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.HoldingContainerExpression;
 import org.apache.drill.exec.expr.fn.impl.ComparatorFunctions;
 import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.record.*;
 import org.apache.drill.exec.record.selection.SelectionVector2;
@@ -45,6 +43,7 @@ import org.apache.drill.exec.record.selection.SelectionVector4;
 import com.google.common.collect.ImmutableList;
 import com.sun.codemodel.JConditional;
 import com.sun.codemodel.JExpr;
+import org.eigenbase.rel.RelFieldCollation;
 
 public class SortBatch extends AbstractRecordBatch<Sort> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SortBatch.class);
@@ -161,19 +160,19 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
     return createNewSorter(this.context, this.popConfig.getOrderings(), this, MAIN_MAPPING, LEFT_MAPPING, RIGHT_MAPPING);
   }
 
-  public static Sorter createNewSorter(FragmentContext context, List<OrderDef> orderings, VectorAccessible batch) throws ClassTransformationException, IOException, SchemaChangeException {
+  public static Sorter createNewSorter(FragmentContext context, List<Order.Ordering> orderings, VectorAccessible batch) throws ClassTransformationException, IOException, SchemaChangeException {
     final MappingSet mainMapping = new MappingSet( (String) null, null, CodeGenerator.DEFAULT_SCALAR_MAP, CodeGenerator.DEFAULT_SCALAR_MAP);
     final MappingSet leftMapping = new MappingSet("leftIndex", null, CodeGenerator.DEFAULT_SCALAR_MAP, CodeGenerator.DEFAULT_SCALAR_MAP);
     final MappingSet rightMapping = new MappingSet("rightIndex", null, CodeGenerator.DEFAULT_SCALAR_MAP, CodeGenerator.DEFAULT_SCALAR_MAP);
     return createNewSorter(context, orderings, batch, mainMapping, leftMapping, rightMapping);
   }
   
-  public static Sorter createNewSorter(FragmentContext context, List<OrderDef> orderings, VectorAccessible batch, MappingSet mainMapping, MappingSet leftMapping, MappingSet rightMapping)
+  public static Sorter createNewSorter(FragmentContext context, List<Order.Ordering> orderings, VectorAccessible batch, MappingSet mainMapping, MappingSet leftMapping, MappingSet rightMapping)
           throws ClassTransformationException, IOException, SchemaChangeException{
     CodeGenerator<Sorter> g = new CodeGenerator<Sorter>(Sorter.TEMPLATE_DEFINITION, context.getFunctionRegistry());
     g.setMappingSet(mainMapping);
     
-    for(OrderDef od : orderings){
+    for(Order.Ordering od : orderings){
       // first, we rewrite the evaluation stack for each side of the comparison.
       ErrorCollector collector = new ErrorCollectorImpl(); 
       final LogicalExpression expr = ExpressionTreeMaterializer.materialize(od.getExpr(), batch, collector);
@@ -190,7 +189,7 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
       JConditional jc = g.getEvalBlock()._if(out.getValue().ne(JExpr.lit(0)));
       
       //TODO: is this the right order...
-      if(od.getDirection() == Direction.ASC){
+      if(od.getDirection() == RelFieldCollation.Direction.Ascending){
         jc._then()._return(out.getValue());
       }else{
         jc._then()._return(out.getValue().minus());

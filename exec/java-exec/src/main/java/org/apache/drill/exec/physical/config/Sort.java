@@ -19,7 +19,7 @@ package org.apache.drill.exec.physical.config;
 
 import java.util.List;
 
-import org.apache.drill.common.defs.OrderDef;
+import org.apache.drill.common.logical.data.Order;
 import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.physical.base.AbstractSingle;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
@@ -35,17 +35,17 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 public class Sort extends AbstractSingle{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Sort.class);
   
-  private final List<OrderDef> orderings;
+  private final List<Order.Ordering> orderings;
   private boolean reverse = false;
   
   @JsonCreator
-  public Sort(@JsonProperty("child") PhysicalOperator child, @JsonProperty("orderings") List<OrderDef> orderings, @JsonProperty("reverse") boolean reverse) {
+  public Sort(@JsonProperty("child") PhysicalOperator child, @JsonProperty("orderings") List<Ordering> orderings, @JsonProperty("reverse") boolean reverse) {
     super(child);
     this.orderings = orderings;
     this.reverse = reverse;
   }
 
-  public List<OrderDef> getOrderings() {
+  public List<Order.Ordering> getOrderings() {
     return orderings;
   }
 
