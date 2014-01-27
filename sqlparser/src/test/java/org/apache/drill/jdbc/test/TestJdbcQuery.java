@@ -38,7 +38,7 @@ public class TestJdbcQuery {
           Stopwatch watch = new Stopwatch().start(); 
           Statement s = c.createStatement();
 //          ResultSet r = s.executeQuery("select cast(_MAP['RCOMMENT'] as varchar) from \"parquet\".\"/Users/jnadeau/region.parquet\"");
-          ResultSet r = s.executeQuery("select R_REGIONKEY, R_NAME, R_COMMENT from \"parquet\".\"/Users/jnadeau/region.parquet\"");
+          ResultSet r = s.executeQuery("select R_REGIONKEY, R_NAME, R_COMMENT from parquet.`/Users/jnadeau/region.parquet`");
           boolean first = true;
           while (r.next()) {
             ResultSetMetaData md = r.getMetaData();
@@ -51,6 +51,7 @@ public class TestJdbcQuery {
               first = false;
             }
 
+           
             for (int i = 0; i < md.getColumnCount(); i++) {
               System.out.print(r.getObject(i));
               System.out.print('\t');

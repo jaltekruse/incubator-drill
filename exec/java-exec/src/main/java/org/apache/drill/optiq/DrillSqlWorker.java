@@ -1,5 +1,6 @@
 package org.apache.drill.optiq;
 
+import net.hydromatic.optiq.jdbc.ConnectionConfig;
 import net.hydromatic.optiq.tools.Frameworks;
 import net.hydromatic.optiq.tools.Planner;
 import net.hydromatic.optiq.tools.RelConversionException;
@@ -30,7 +31,7 @@ public class DrillSqlWorker {
     this.registry = new FunctionRegistry(config);
     String enginesData = Resources.toString(Resources.getResource("storage-engines.json"), Charsets.UTF_8);
     this.engines = config.getMapper().readValue(enginesData, StorageEngines.class);
-    this.planner = Frameworks.getPlanner(new DrillSchemaFactory(engines, config), SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
+    this.planner = Frameworks.getPlanner(ConnectionConfig.Lex.MYSQL, new DrillSchemaFactory(engines, config), SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
     
   }
 
@@ -54,8 +55,8 @@ public class DrillSqlWorker {
     
   }
   private void x() throws Exception {
-    String sqlAgg = "select _MAP['a'] as a, count(1) from \"parquet\".\"table1\" group by _MAP['a']";
-    String sql = "select _MAP['a'] as a from \"parquet\".\"table1\"";
+    String sqlAgg = "select a, count(1) from parquet.`/Users/jnadeau/region.parquet` group by a";
+    String sql = "select * from parquet.`/Users/jnadeau/region.parquet`";
 
     
     System.out.println(sql);
