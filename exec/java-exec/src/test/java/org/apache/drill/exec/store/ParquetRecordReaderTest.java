@@ -34,6 +34,7 @@ import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.RpcException;
+import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
@@ -368,7 +369,7 @@ public class ParquetRecordReaderTest {
     }
 
     @Override
-    public void resultArrived(QueryResultBatch result) {
+    public void resultArrived(QueryResultBatch result, ConnectionThrottle connectionThrottle) {
       logger.debug("result arrived in test batch listener.");
       if(result.getHeader().getIsLastChunk()){
         future.set(null);

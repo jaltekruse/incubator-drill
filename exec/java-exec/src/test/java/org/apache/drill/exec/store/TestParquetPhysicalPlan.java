@@ -28,6 +28,7 @@ import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.RpcException;
+import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
@@ -93,7 +94,7 @@ public class TestParquetPhysicalPlan {
     }
 
     @Override
-    public void resultArrived(QueryResultBatch result) {
+    public void resultArrived(QueryResultBatch result, ConnectionThrottle connectionThrottle) {
       int rows = result.getHeader().getRowCount();
       System.out.println(String.format("Result batch arrived. Number of records: %d", rows));
       count.addAndGet(rows);

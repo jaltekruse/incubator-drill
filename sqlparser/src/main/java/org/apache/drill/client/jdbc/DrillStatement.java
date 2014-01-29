@@ -29,10 +29,10 @@ public abstract class DrillStatement extends AvaticaStatement{
   @Override
   public boolean execute(String sql) throws SQLException {
     DrillClient client = getConnection().getDrillClient();
-    client.runQuery(QueryType.SQL, sql, this);
+    //client.runQuery(QueryType.SQL, sql, this);
     return true;
   }
-
+/*
   @Override
   public void queryIdArrived(QueryId queryId) {
     this.queryId = queryId;
@@ -47,6 +47,7 @@ public abstract class DrillStatement extends AvaticaStatement{
     QueryResult header = result.getHeader();
     if(header) 
   }
+  */
 
   
   

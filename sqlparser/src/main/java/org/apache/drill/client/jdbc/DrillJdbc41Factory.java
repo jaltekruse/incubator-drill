@@ -37,7 +37,6 @@ import net.hydromatic.avatica.AvaticaResultSet;
 import net.hydromatic.avatica.AvaticaResultSetMetaData;
 import net.hydromatic.avatica.AvaticaStatement;
 import net.hydromatic.avatica.ColumnMetaData;
-import net.hydromatic.avatica.ProvidesColumnMetaData;
 import net.hydromatic.avatica.UnregisteredDriver;
 
 /**
@@ -77,14 +76,19 @@ public class DrillJdbc41Factory extends DrillFactory {
         resultSetType, resultSetConcurrency, resultSetHoldability);
   }
 
-  
   public AvaticaResultSet newResultSet(AvaticaStatement statement, AvaticaPrepareResult prepareResult, TimeZone timeZone){
+    /*
   final AvaticaResultSetMetaData metaData = newResultSetMetaData(statement, prepareREsult.);
     return new DrillResultSet(statement, ((DrillPreparedResult) columnProvider), metaData, timeZone);
+    */
+    return null;
   }
 
-  public abstract ResultSetMetaData newResultSetMetaData(AvaticaStatement statement, List<ColumnMetaData> columnMetaDataList){
+  public ResultSetMetaData newResultSetMetaData(AvaticaStatement statement, List<ColumnMetaData> columnMetaDataList){
+    /*
     return new AvaticaResultSetMetaData(statement, null, columnProvider);
+    */
+    return null;
   }
 
   private static class DrillJdbc41Connection extends DrillConnectionImpl {
