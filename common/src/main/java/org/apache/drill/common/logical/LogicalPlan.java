@@ -84,6 +84,15 @@ public class LogicalPlan {
     return config.getMapper().writeValueAsString(this);
   }
 
+  public String toJsonStringSafe(DrillConfig config){
+    try{
+      return toJsonString(config);
+    }catch(JsonProcessingException e){
+      logger.error("Failure while trying to get JSON representation of plan.", e);
+      return "Unable to generate plan.";
+    }
+  }
+
   /** Parses a logical plan. */
   public static LogicalPlan parse(DrillConfig config, String planString) {
     ObjectMapper mapper = config.getMapper();

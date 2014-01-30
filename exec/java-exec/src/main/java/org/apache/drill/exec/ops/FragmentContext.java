@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import net.hydromatic.optiq.SchemaPlus;
+
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.compile.ClassTransformer;
 import org.apache.drill.exec.compile.QueryClassLoader;
@@ -90,6 +92,10 @@ public class FragmentContext implements Closeable {
 
   public DrillbitContext getDrillbitContext() {
     return context;
+  }
+  
+  public SchemaPlus getRootSchema(){
+    return null;
   }
 
   /**

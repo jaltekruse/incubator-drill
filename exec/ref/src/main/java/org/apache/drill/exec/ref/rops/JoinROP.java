@@ -17,10 +17,8 @@
  */
 package org.apache.drill.exec.ref.rops;
 
-import com.google.common.base.Optional;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
+import java.util.List;
+
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.logical.data.Join;
 import org.apache.drill.common.logical.data.JoinCondition;
@@ -33,8 +31,12 @@ import org.apache.drill.exec.ref.eval.fn.ComparisonEvaluators;
 import org.apache.drill.exec.ref.exceptions.SetupException;
 import org.apache.drill.exec.ref.values.ComparableValue;
 import org.apache.drill.exec.ref.values.DataValue;
+import org.eigenbase.rel.JoinRelType;
 
-import java.util.List;
+import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 public class JoinROP extends ROPBase<Join> {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(JoinROP.class);
@@ -62,16 +64,16 @@ public class JoinROP extends ROPBase<Join> {
 
     @Override
     protected RecordIterator getIteratorInternal() {
-        return createIteratorFromJoin(config.getJointType());
+        return createIteratorFromJoin(config.getJoinType());
     }
 
-    private RecordIterator createIteratorFromJoin(Join.JoinType type) {
+    private RecordIterator createIteratorFromJoin(JoinRelType type) {
         switch (type) {
             case LEFT:
                 return new LeftIterator();
             case INNER:
                 return new InnerIterator();
-            case OUTER:
+            case FULL:
                 return new OuterIterator();
             default:
                 throw new UnsupportedOperationException("Type not supported: " + type);

@@ -22,16 +22,15 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
 
+import net.hydromatic.avatica.HandlerImpl;
 import net.hydromatic.linq4j.QueryProvider;
 import net.hydromatic.linq4j.expressions.Expression;
-import net.hydromatic.optiq.MutableSchema;
 import net.hydromatic.optiq.Schema;
+import net.hydromatic.optiq.impl.MapSchema;
 import net.hydromatic.optiq.impl.java.JavaTypeFactory;
-import net.hydromatic.optiq.impl.java.MapSchema;
-import net.hydromatic.optiq.jdbc.HandlerImpl;
-import net.hydromatic.optiq.jdbc.OptiqConnection;
 import net.hydromatic.optiq.model.ModelHandler;
 
+import org.apache.drill.client.jdbc.DrillConnection;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.client.DrillClient;
@@ -41,7 +40,8 @@ import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.exec.store.SchemaProviderRegistry;
-import org.apache.drill.sql.client.full.FileSystemSchema;
+import org.apache.drill.optiq.FileSystemSchema;
+import org.apache.drill.optiq.StorageEngines;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
@@ -61,7 +61,7 @@ public class DrillHandler extends HandlerImpl {
     this.ref = ref;
   }
 
-  public void onConnectionInit(OptiqConnection connection) throws SQLException {
+  public void onConnectionInit(DrillConnection connection) throws SQLException {
     super.onConnectionInit(connection);
 
     final Properties p = connection.getProperties();
@@ -159,7 +159,7 @@ public class DrillHandler extends HandlerImpl {
   }
 
   @Override
-  public void onConnectionClose(OptiqConnection connection) throws RuntimeException {
+  public void onConnectionClose(DrillConnection connection) throws RuntimeException {
     super.onConnectionClose(connection);
     if (client != null)
       client.close();

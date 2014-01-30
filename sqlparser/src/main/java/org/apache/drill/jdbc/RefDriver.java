@@ -17,19 +17,17 @@
  */
 package org.apache.drill.jdbc;
 
-import net.hydromatic.linq4j.function.Function0;
-import net.hydromatic.optiq.jdbc.DriverVersion;
-import net.hydromatic.optiq.jdbc.Handler;
-import net.hydromatic.optiq.jdbc.OptiqPrepare;
-import net.hydromatic.optiq.jdbc.UnregisteredDriver;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.Properties;
 
-import org.apache.drill.exec.client.DrillClient;
-import org.apache.drill.optiq.DrillPrepareImpl;
+import net.hydromatic.avatica.AvaticaFactory;
+
 
 /**
  * JDBC driver for Apache Drill.
  */
-public class RefDriver extends UnregisteredDriver {
+public class RefDriver extends net.hydromatic.avatica.UnregisteredDriver {
   public static final String CONNECT_STRING_PREFIX = "jdbc:drillref:";
 
   private volatile DrillHandler handler;
@@ -42,29 +40,40 @@ public class RefDriver extends UnregisteredDriver {
     return CONNECT_STRING_PREFIX;
   }
 
-  protected DriverVersion createDriverVersion() {
+  protected DrillDriverVersion createDriverVersion() {
     return new DrillDriverVersion();
   }
 
   @Override
-  protected Function0<OptiqPrepare> createPrepareFactory() {
-    return new Function0<OptiqPrepare>() {
-      @Override
-      public OptiqPrepare apply() {
-        return new DrillPrepareImpl(null);
-      }
-    };
+  protected AvaticaFactory createFactory() {
+    return super.createFactory();
   }
 
-  public DrillClient getClient(){
-    return handler.getClient();
-  }
-  
   @Override
-  protected Handler createHandler() {
-    this.handler = new DrillHandler(true);
-    return handler;
+  public Connection connect(String url, Properties info) throws SQLException {
+    return super.connect(url, info);
   }
+
+  
+//  @Override
+//  protected Function0<OptiqPrepare> createPrepareFactory() {
+//    return new Function0<OptiqPrepare>() {
+//      @Override
+//      public OptiqPrepare apply() {
+//        return new DrillPrepareImpl(null);
+//      }
+//    };
+//  }
+//
+//  public DrillClient getClient(){
+//    return handler.getClient();
+//  }
+//  
+//  @Override
+//  protected Handler createHandler() {
+//    this.handler = new DrillHandler(true);
+//    return handler;
+//  }
   
 }
 

@@ -53,6 +53,7 @@ import org.apache.drill.exec.util.AtomicState;
 import org.apache.drill.exec.work.ErrorHelper;
 import org.apache.drill.exec.work.QueryWorkUnit;
 import org.apache.drill.exec.work.WorkManager.WorkerBee;
+import org.apache.drill.optiq.DrillSqlWorker;
 
 import com.google.common.collect.Lists;
 
@@ -238,11 +239,19 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
 
   }
 
-  private void runSQL(String json) {
-    throw new UnsupportedOperationException();
+  private void runSQL(String sql) {
+    try{
+      DrillSqlWorker sqlWorker = new DrillSqlWorker(context.getConfig());
+      LogicalPlan plan = sqlWorker.getPlan(sql);
+      PhysicalPlan physical = convert(plan);
+      runPhysicalPlan(physical);
+    }catch(Exception e){
+      fail("Failure while parsing sql.", e);
+    }
   }
 
   private PhysicalPlan convert(LogicalPlan plan) throws OptimizerException {
+    if(logger.isDebugEnabled()) logger.debug("Converting logical plan {}.", plan.toJsonStringSafe(context.getConfig()));
     return new BasicOptimizer(DrillConfig.create(), context).optimize(new BasicOptimizer.BasicOptimizationContext(), plan);
   }
 
