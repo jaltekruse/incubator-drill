@@ -49,10 +49,10 @@ package org.apache.drill.exec.vector;
   private final Accessor accessor = new Accessor();
   
   
-  public Repeated${minor.class}Vector(MaterializedField field, BufferAllocator allocator) {
+  public Repeated${minor.class}Vector(MaterializedField field, BufferAllocator allocator<#if minor.class == "FixedBinary">, int valueLength</#if>) {
     super(field, allocator);
     this.offsets = new UInt4Vector(null, allocator);
-    this.values = new ${minor.class}Vector(null, allocator);
+    this.values = new ${minor.class}Vector(null, allocator<#if minor.class == "FixedBinary">, valueLength</#if>);
   }
 
   public int getValueCapacity(){
@@ -86,7 +86,7 @@ package org.apache.drill.exec.vector;
     Repeated${minor.class}Vector to;
     
     public TransferImpl(MaterializedField field){
-      this.to = new Repeated${minor.class}Vector(field, allocator);
+      this.to = new Repeated${minor.class}Vector(field, allocator<#if minor.class == "FixedBinary">, values.valueLength</#if>);
     }
     
     public Repeated${minor.class}Vector getTo(){
@@ -284,7 +284,7 @@ package org.apache.drill.exec.vector;
      * @param index   record of the element to add
      * @param value   value to add to the given row
      */
-    public void add(int index, <#if type.major == "VarLen">byte[]<#elseif (type.width < 4)>int<#else>${minor.javaType!type.javaType}</#if> value) {
+    public void add(int index, <#if type.major == "VarLen">byte[]<#elseif (type.setWithInt)>int<#else>${minor.javaType!type.javaType}</#if> value) {
       int nextOffset = offsets.getAccessor().get(index+1);
       values.getMutator().set(nextOffset, value);
       offsets.getMutator().set(index+1, nextOffset+1);
@@ -299,7 +299,7 @@ package org.apache.drill.exec.vector;
     public void add(int index, Repeated${minor.class}Holder holder){
       
       ${minor.class}Vector.Accessor accessor = holder.vector.getAccessor();
-      ${minor.class}Holder innerHolder = new ${minor.class}Holder();
+      ${minor.class}Holder innerHolder = new ${minor.class}Holder(<#if minor.class == "FixedBinary">values.valueLength</#if>);
       
       for(int i = holder.start; i < holder.end; i++){
         accessor.get(i, innerHolder);

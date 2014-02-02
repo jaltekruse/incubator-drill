@@ -26,6 +26,8 @@
       width: 1,
       javaType: "byte",
       boxedType: "Byte",
+      fitsInPrimitive: true,
+      setWithInt: true,
       minor: [
         { class: "TinyInt", valueHolder: "IntHolder"},
         { class: "UInt1", valueHolder: "UInt1Holder"}
@@ -33,17 +35,33 @@
     },
     {
       major: "Fixed",
+      width: valueLength,
+      javaType: "ByteBuf",
+      boxedType: "ByteBuf",
+      fitsInPrimitive: false,
+      setWithInt: false,
+      minor: [
+        { class: "FixedBinary", valueHolder: "FixedBinaryHolder"}
+      ]
+    },
+    {
+      major: "Fixed",
       width: 2,
       javaType: "char",
       boxedType: "Character",
+      fitsInPrimitive: true,
+      setWithInt: true,
       minor: [
         { class: "UInt2", valueHolder: "UInt2Holder"}
       ]
-    },    {
+    },
+    {
       major: "Fixed",
       width: 2,
       javaType: "short",
       boxedType: "Short",
+      fitsInPrimitive: true,
+      setWithInt: true,
       minor: [
         { class: "SmallInt", valueHolder: "Int2Holder"},
       ]
@@ -53,6 +71,8 @@
       width: 4,
       javaType: "int",
       boxedType: "Integer",
+      fitsInPrimitive: true,
+      setWithInt: false,
       minor: [
         { class: "Int", valueHolder: "IntHolder" },
         { class: "UInt4", valueHolder: "UInt4Holder" },
@@ -68,6 +88,8 @@
       width: 8,
       javaType: "long",
       boxedType: "Long",
+      fitsInPrimitive: true,
+      setWithInt: false,
       minor: [
         { class: "BigInt" },
         { class: "UInt8" },
@@ -86,6 +108,8 @@
       major: "Fixed",
       width: 12,
       javaType: "ByteBuf",
+      fitsInPrimitive: false,
+      setWithInt: false,
       minor: [
         { class: "Decimal12", maxPrecisionDigits: 28, scale: 5},
         { class: "TimeTZ" },
@@ -96,6 +120,8 @@
       major: "Fixed",
       width: 16,
       javaType: "ByteBuf",
+      fitsInPrimitive: false,
+      setWithInt: false,
       minor: [
         { class: "Decimal16", maxPrecisionDigits: 37, scale: 6}
       ]
@@ -105,6 +131,8 @@
       major: "VarLen",
       width: 4,
       javaType: "int",
+      fitsInPrimitive: false,
+      setWithInt: false,
       minor: [
         { class: "VarBinary" },
         { class: "VarChar" }
@@ -115,6 +143,8 @@
       major: "Bit",
       width: 1,
       javaType: "int",
+      fitsInPrimitive: true,
+      setWithInt: false,
       minor: [
         { class: "Bit" }
       ]
