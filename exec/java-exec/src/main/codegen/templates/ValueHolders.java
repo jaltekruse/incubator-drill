@@ -33,24 +33,34 @@ public final class ${className} implements ValueHolder{
   
   public static final MajorType TYPE = Types.${mode.name?lower_case}(MinorType.${minor.class?upper_case});
 
-    <#if mode.name != "Repeated">
-      
+<#if mode.name != "Repeated">
+    <#if minor.class != "FixedBinary">
     public static final int WIDTH = ${type.width};
-      <#if mode.name == "Optional">
+    </#if>
+  <#if mode.name == "Optional">
       /** Whether the given holder holds a valid value.  1 means non-null.  0 means null. **/
       public int isSet;
-      </#if>
+  </#if> <#-- end optional -->
       
-      <#if type.major != "VarLen">
-      
-      <#if (type.width > 8)>
-      public int start;
-      public ByteBuf buffer;
+  <#if type.major != "VarLen">
+    <#if (! type.fitsInPrimitive)>
+      <#if minor.class == "FixedBinary">
+        public ByteBuf buffer;
+        private final int valueLength;
+        public int start;
+
+        public ${className}(int valueLength){
+          this.valueLength = valueLength;
+        }
       <#else>
-        public ${minor.javaType!type.javaType} value;
-      
+        public int start;
+        public ByteBuf buffer;
       </#if>
-      <#else>
+    <#else> <#-- fits in primitive -->
+      public ${minor.javaType!type.javaType} value;
+
+    </#if> <#-- end fits in primitive vs ByteBuf -->
+  <#else> <#-- VarLen -->
       /** The first offset (inclusive) into the buffer. **/
       public int start;
       
@@ -61,18 +71,18 @@ public final class ${className} implements ValueHolder{
       public ByteBuf buffer;
 
       public String toString() {
-      <#if mode.name == "Optional">
+    <#if mode.name == "Optional">
         if (isSet == 0)
           return "<NULL>";
-      </#if>
+    </#if>
         byte[] buf = new byte[end-start];
         buffer.getBytes(start, buf, 0, end-start);
         return new String(buf);
       }
 
-      </#if>
+  </#if> <#-- end else (not VarLen) -->
 
-    <#else> 
+<#else> <#-- repeated -->
     
       /** The first index (inclusive) into the Vector. **/
       public int start;
@@ -82,7 +92,7 @@ public final class ${className} implements ValueHolder{
       
       /** The Vector holding the actual values. **/
       public ${minor.class}Vector vector;
-    </#if>
+</#if> <#-- end else repeated -->
   
     
 }

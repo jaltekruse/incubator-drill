@@ -49,10 +49,10 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
 
-  public ${className}(MaterializedField field, BufferAllocator allocator) {
+  public ${className}(MaterializedField field, BufferAllocator allocator<#if minor.class == "FixedBinary">, int valueLength</#if>) {
     super(field, allocator);
     this.bits = new BitVector(null, allocator);
-    this.values = new ${minor.class}Vector(null, allocator);
+    this.values = new ${minor.class}Vector(null, allocator<#if minor.class == "FixedBinary">,valueLength</#if>);
   }
   
   public int getValueCapacity(){
@@ -183,7 +183,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
     Nullable${minor.class}Vector to;
     
     public TransferImpl(MaterializedField field){
-      this.to = new Nullable${minor.class}Vector(field, allocator);
+      this.to = new Nullable${minor.class}Vector(field, allocator<#if minor.class == "FixedBinary">, values.valueLength</#if>);
     }
     
     public Nullable${minor.class}Vector getTo(){
@@ -209,7 +209,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
   }
   
   public ${minor.class}Vector convertToRequiredVector(){
-    ${minor.class}Vector v = new ${minor.class}Vector(getField().getOtherNullableVersion(), allocator);
+    ${minor.class}Vector v = new ${minor.class}Vector(getField().getOtherNullableVersion(), allocator<#if minor.class == "FixedBinary">,values.valueLength</#if>);
     v.data = values.data;
     v.valueCount = this.valueCount;
     v.data.retain();
@@ -288,7 +288,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
      * @param index   position of the bit to set
      * @param bytes   array of bytes to write
      */
-    public void set(int index, <#if type.major == "VarLen">byte[]<#elseif (type.width < 4)>int<#else>${minor.javaType!type.javaType}</#if> value) {
+    public void set(int index, <#if type.major == "VarLen">byte[]<#elseif (type.setWithInt)>int<#else>${minor.javaType!type.javaType}</#if> value) {
       setCount++;
       bits.getMutator().set(index, 1);
       values.getMutator().set(index, value);
@@ -312,7 +312,11 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
       values.getMutator().set(index, holder);
     }
     
-    public boolean setSafe(int index, <#if type.major == "VarLen">Nullable${minor.class}Holder <#elseif (type.width < 4)>int<#else>${minor.javaType!type.javaType}</#if> value){
+    public boolean setSafe(int index,
+                           <#if type.major == "VarLen">Nullable${minor.class}Holder
+                           <#elseif minor.class == "FixedBinary"> ${minor.class}Holder
+                           <#elseif (type.setWithInt)>int
+                           <#else>${minor.javaType!type.javaType}</#if> value){
       boolean b1 = bits.getMutator().setSafe(index, 1);
       boolean b2 = values.getMutator().setSafe(index, value);
       if(b1 && b2){

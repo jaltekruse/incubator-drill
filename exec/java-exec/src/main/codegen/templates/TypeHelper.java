@@ -34,15 +34,18 @@ public class TypeHelper {
     switch (major.getMinorType()) {
 <#list vv.types as type>
   <#list type.minor as minor>
+    <#if minor.class == "FixedBinary">
+      case FIXEDBINARY: return major.getWidth();
+    <#else>
     case ${minor.class?upper_case}:
       return ${type.width}<#if minor.class?substring(0, 3) == "Var" ||
                                minor.class?substring(0, 3) == "PRO" ||
                                minor.class?substring(0, 3) == "MSG"> + WIDTH_ESTIMATE</#if>;
+    </#if>
   </#list>
 </#list>
       case FIXEDCHAR: return major.getWidth();
       case FIXED16CHAR: return major.getWidth();
-      case FIXEDBINARY: return major.getWidth();
     }
     throw new UnsupportedOperationException();
   }
@@ -72,6 +75,10 @@ public class TypeHelper {
     switch (type) {
 <#list vv.types as type>
   <#list type.minor as minor>
+      <#if minor.class == "FixedBinary">
+      case ${minor.class?upper_case}:
+        throw new UnsupportedOperationException();
+      <#else>
       case ${minor.class?upper_case}:
         switch (mode) {
           case REQUIRED:
@@ -81,6 +88,7 @@ public class TypeHelper {
           case REPEATED:
             return model._ref(Repeated${minor.class}Holder.class);
         }
+      </#if>
   </#list>
 </#list>
       default:
@@ -93,17 +101,22 @@ public class TypeHelper {
     MajorType type = field.getType();
 
     switch (type.getMinorType()) {
-<#list vv.  types as type>
-  <#list type.minor as minor>
-    case ${minor.class?upper_case}:
-      switch (type.getMode()) {
-        case REQUIRED:
-          return new ${minor.class}Vector(field, allocator);
-        case OPTIONAL:
-          return new Nullable${minor.class}Vector(field, allocator);
-        case REPEATED:
-          return new Repeated${minor.class}Vector(field, allocator);
-      }
+  <#list vv.  types as type>
+    <#list type.minor as minor>
+      <#if minor.class == "FixedBinary">
+      case ${minor.class?upper_case}:
+      throw new UnsupportedOperationException();
+      <#else>
+      case ${minor.class?upper_case}:
+        switch (type.getMode()) {
+          case REQUIRED:
+            return new ${minor.class}Vector(field, allocator);
+          case OPTIONAL:
+            return new Nullable${minor.class}Vector(field, allocator);
+          case REPEATED:
+            return new Repeated${minor.class}Vector(field, allocator);
+        }
+       </#if>
   </#list>
 </#list>
     default:

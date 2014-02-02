@@ -43,10 +43,18 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
  
   private final Accessor accessor = new Accessor();
   private final Mutator mutator = new Mutator();
-  
+  <#if minor.class == "FixedBinary">
+  final int ${type.width};
+
+  public ${minor.class}Vector(MaterializedField field, BufferAllocator allocator, int valueLength) {
+    super(field, allocator);
+    this.valueLength = valueLength;
+  }
+  <#else>
   public ${minor.class}Vector(MaterializedField field, BufferAllocator allocator) {
     super(field, allocator);
   }
+  </#if>
 
   public int getValueCapacity(){
     return (int) (data.capacity() *1.0 / ${type.width});
@@ -116,7 +124,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
     ${minor.class}Vector to;
     
     public TransferImpl(MaterializedField field){
-      this.to = new ${minor.class}Vector(field, allocator);
+      this.to = new ${minor.class}Vector(field, allocator<#if minor.class == "FixedBinary">, valueLength</#if>);
     }
     
     public ${minor.class}Vector getTo(){
@@ -134,13 +142,13 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   }
   
   public void copyFrom(int fromIndex, int thisIndex, ${minor.class}Vector from){
-    <#if (type.width > 8)>
+    <#if ( ! type.fitsInPrimitive)>
     data.getBytes(fromIndex * ${type.width}, from.data, thisIndex * ${type.width}, ${type.width});
-    <#else> <#-- type.width <= 8 -->
+    <#else> <#-- value fits in a primitive -->
     data.set${(minor.javaType!type.javaType)?cap_first}(thisIndex * ${type.width}, 
         from.data.get${(minor.javaType!type.javaType)?cap_first}(fromIndex * ${type.width})
     );
-    </#if> <#-- type.width -->
+    </#if> <#-- primitive vs bytebuf-->
   }
   
   public boolean copyFromSafe(int fromIndex, int thisIndex, ${minor.class}Vector from){
@@ -155,7 +163,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
       return valueCount;
     }
     
-    <#if (type.width > 8)>
+    <#if (! type.fitsInPrimitive)>
 
     public ${minor.javaType!type.javaType} get(int index) {
       ByteBuf dst = allocator.buffer(${type.width});
@@ -180,7 +188,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
       return dst;
     }
 
-    <#else> <#-- type.width <= 8 -->
+    <#else> <#-- values fit in a primitive-->
 
     public ${minor.javaType!type.javaType} get(int index) {
       return data.get${(minor.javaType!type.javaType)?cap_first}(index * ${type.width});
@@ -199,7 +207,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
     }
 
 
-   </#if> <#-- type.width -->
+   </#if> <#-- value fits in primtive vs bytebuf -->
  }
  
  /**
@@ -221,8 +229,8 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
     * @param index   position of the bit to set
     * @param value   value to set
     */
-  <#if (type.width > 8)>
-   public void set(int index, <#if (type.width > 4)>${minor.javaType!type.javaType}<#else>int</#if> value) {
+  <#if (! type.fitsInPrimitive)>
+   public void set(int index, ${minor.javaType!type.javaType} value) {
      data.setBytes(index * ${type.width}, value);
    }
    
@@ -252,12 +260,12 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
      }
    }
    
-  <#else> <#-- type.width <= 8 -->
-   public void set(int index, <#if (type.width >= 4)>${minor.javaType!type.javaType}<#else>int</#if> value) {
+  <#else> <#-- values fit in primitives -->
+   public void set(int index, <#if (! type.setWithInt)>${minor.javaType!type.javaType}<#else>int</#if> value) {
      data.set${(minor.javaType!type.javaType)?cap_first}(index * ${type.width}, value);
    }
-   
-   public boolean setSafe(int index, <#if (type.width >= 4)>${minor.javaType!type.javaType}<#else>int</#if> value) {
+
+   public boolean setSafe(int index, <#if (! type.setWithInt)>${minor.javaType!type.javaType}<#else>int</#if> value) {
      if(index >= getValueCapacity()) return false;
      set(index, value);
      return true;
@@ -284,7 +292,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
      }
    }
 
-  </#if> <#-- type.width -->
+  </#if> <#-- values fit in primitive vs bytebufs-->
   
 
   
