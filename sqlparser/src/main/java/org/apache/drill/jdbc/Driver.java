@@ -19,10 +19,7 @@ package org.apache.drill.jdbc;
 
 import net.hydromatic.avatica.DriverVersion;
 import net.hydromatic.avatica.Handler;
-import net.hydromatic.avatica.UnregisteredDriver.JdbcVersion;
-import net.hydromatic.linq4j.function.Function0;
 
-import org.apache.drill.client.jdbc.OptiqPrepare;
 import org.apache.drill.exec.client.DrillClient;
 
 /**

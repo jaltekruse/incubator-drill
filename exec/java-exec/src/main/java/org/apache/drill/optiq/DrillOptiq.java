@@ -25,6 +25,7 @@ import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.ValueExpressions;
+import org.apache.drill.common.expression.ValueExpressions.LongExpression;
 import org.apache.drill.exec.record.NullExpression;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptPlanner;
@@ -171,6 +172,10 @@ public class DrillOptiq {
       List<LogicalExpression> args = Collections.singletonList(arg);
       String fname = null;
       switch(call.getType().getSqlTypeName().getName()){
+      case "VARCHAR": {
+        args = Lists.newArrayList(arg, new LongExpression(call.getType().getPrecision()));
+        return context.getRegistry().createExpression("castVARCHAR", args);
+      }
       case "INTEGER": fname = "castINT"; break;
       case "FLOAT": fname = "castFLOAT4"; break;
       case "DOUBLE": fname = "castFLOAT8"; break;
