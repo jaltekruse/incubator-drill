@@ -38,7 +38,7 @@ public class TestJdbcQuery {
           Stopwatch watch = new Stopwatch().start(); 
           Statement s = c.createStatement();
 //          ResultSet r = s.executeQuery("select cast(_MAP['RCOMMENT'] as varchar) from \"parquet\".\"/Users/jnadeau/region.parquet\"");
-          ResultSet r = s.executeQuery("select R_REGIONKEY, cast(R_NAME as varchar(255)) as region, cast(R_COMMENT as varchar(255)) as comment from parquet.`/Users/jnadeau/region.parquet`");
+          ResultSet r = s.executeQuery("select R_REGIONKEY, cast(R_NAME as varchar(255)) as region, cast(R_COMMENT as varchar(255)) as comment from parquet.`/tmp/region.parquet`");
           boolean first = true;
           while (r.next()) {
             ResultSetMetaData md = r.getMetaData();
