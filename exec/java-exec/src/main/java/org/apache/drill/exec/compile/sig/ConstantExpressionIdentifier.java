@@ -28,6 +28,8 @@ import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.ValueExpressions.BooleanExpression;
 import org.apache.drill.common.expression.ValueExpressions.DoubleExpression;
+import org.apache.drill.common.expression.ValueExpressions.IntExpression;
+import org.apache.drill.common.expression.ValueExpressions.FloatExpression;
 import org.apache.drill.common.expression.ValueExpressions.LongExpression;
 import org.apache.drill.common.expression.ValueExpressions.QuotedString;
 import org.apache.drill.common.expression.visitors.ExprVisitor;
@@ -98,7 +100,19 @@ public class ConstantExpressionIdentifier implements ExprVisitor<Boolean, Identi
   public Boolean visitSchemaPath(SchemaPath path, IdentityHashMap<LogicalExpression, Object> value){
     return false;
   }
-  
+
+  @Override
+  public Boolean visitIntConstant(IntExpression intExpr, IdentityHashMap<LogicalExpression, Object> value) throws RuntimeException {
+    value.put(intExpr, true);
+    return true;
+  }
+
+  @Override
+  public Boolean visitFloatConstant(FloatExpression fExpr, IdentityHashMap<LogicalExpression, Object> value) throws RuntimeException {
+    value.put(fExpr, true);
+    return true;
+  }
+
   @Override
   public Boolean visitLongConstant(LongExpression intExpr, IdentityHashMap<LogicalExpression, Object> value){
     value.put(intExpr, true);

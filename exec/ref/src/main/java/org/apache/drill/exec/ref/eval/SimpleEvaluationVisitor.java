@@ -29,6 +29,8 @@ import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.ValueExpressions.BooleanExpression;
 import org.apache.drill.common.expression.ValueExpressions.DoubleExpression;
+import org.apache.drill.common.expression.ValueExpressions.IntExpression;
+import org.apache.drill.common.expression.ValueExpressions.FloatExpression;
 import org.apache.drill.common.expression.ValueExpressions.LongExpression;
 import org.apache.drill.common.expression.ValueExpressions.QuotedString;
 import org.apache.drill.common.expression.parser.ExprLexer;
@@ -100,6 +102,16 @@ public class SimpleEvaluationVisitor extends SimpleExprVisitor<BasicEvaluator>{
   @Override
   public BasicEvaluator visitSchemaPath(SchemaPath path) {
     return new FieldEvaluator(path, record);
+  }
+
+  @Override
+  public BasicEvaluator visitIntConstant(IntExpression intExpr) {
+    return new LongScalar(intExpr.getInt());
+  }
+
+  @Override
+  public BasicEvaluator visitFloatConstant(FloatExpression fExpr) {
+    return new DoubleScalar(fExpr.getFloat());
   }
 
   @Override
