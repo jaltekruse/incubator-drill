@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.FragmentSetupException;
@@ -53,9 +54,11 @@ import org.apache.drill.exec.util.AtomicState;
 import org.apache.drill.exec.work.ErrorHelper;
 import org.apache.drill.exec.work.QueryWorkUnit;
 import org.apache.drill.exec.work.WorkManager.WorkerBee;
-import org.apache.drill.optiq.DrillSqlWorker;
+import org.apache.drill.optiq.*;
 
 import com.google.common.collect.Lists;
+import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.RelNode;
 
 /**
  * Foreman manages all queries where this is the driving/root node.
@@ -171,6 +174,13 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
     
     try {
       LogicalPlan logicalPlan = context.getPlanReader().readLogicalPlan(json);
+      logger.debug("original plan {}", logicalPlan.unparse(context.getConfig()));
+      ConversionContext conversionContext = new ConversionContext(context.getConfig(), logicalPlan, context);
+      DrillImplementor drillImplementor = new DrillImplementor(new DrillParseContext(new FunctionRegistry(context.getConfig())));
+      DrillRel relNode = (DrillRel)conversionContext.toRel(logicalPlan.getGraph().getRoots().iterator().next());
+      drillImplementor.go(relNode);
+      LogicalPlan convertedPlan = drillImplementor.getPlan();
+      logger.debug("optiq converted logical {}", convertedPlan.unparse(context.getConfig()));
       if(logger.isDebugEnabled()) logger.debug("Logical {}", logicalPlan.unparse(context.getConfig()));
       PhysicalPlan physicalPlan = convert(logicalPlan);
       if(logger.isDebugEnabled()) logger.debug("Physical {}", context.getConfig().getMapper().writeValueAsString(physicalPlan));
@@ -179,6 +189,10 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
       fail("Failure while parsing logical plan.", e);
     } catch (OptimizerException e) {
       fail("Failure while converting logical plan to physical plan.", e);
+    } catch (ExecutionSetupException e) {
+      fail("Failure while parsing logical plan.", e);
+    } catch (InvalidRelException e) {
+      throw new RuntimeException(e);
     }
   }
 

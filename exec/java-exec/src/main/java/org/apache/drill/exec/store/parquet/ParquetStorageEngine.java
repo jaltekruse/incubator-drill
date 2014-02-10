@@ -26,6 +26,7 @@ import com.beust.jcommander.internal.Lists;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.common.logical.data.Scan;
@@ -41,10 +42,13 @@ import org.apache.drill.exec.store.mock.MockStorageEngine;
 
 import com.google.common.collect.ListMultimap;
 
+import org.apache.drill.optiq.DrillTable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.FileSystem;
 
+import org.eigenbase.relopt.RelOptAbstractTable;
+import org.eigenbase.relopt.RelOptTable;
 import parquet.format.converter.ParquetMetadataConverter;
 import parquet.hadoop.CodecFactoryExposer;
 import parquet.hadoop.ParquetFileReader;
@@ -120,5 +124,27 @@ public class ParquetStorageEngine extends AbstractStorageEngine{
   @Override
   public ParquetSchemaProvider getSchemaProvider() {
     return schemaProvider;
+  }
+
+  @Override
+  public DrillTable getDrillTable(JSONOptions selection, String storageEngineName){
+    ArrayList<ReadEntryWithPath> readEntries;
+    // in the case of a store operation, there is no selection 
+    if (selection == null) {
+      readEntries = null;
+    }
+    else {
+      try {
+        readEntries = selection.getListWith(new ObjectMapper(),
+            new TypeReference<ArrayList<ReadEntryWithPath>>() {});
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    String tableName = "";
+    if (readEntries != null){
+      tableName = readEntries.get(0).toString();
+    }
+    return new DrillTable(tableName, storageEngineName, selection, getEngineConfig());
   }
 }

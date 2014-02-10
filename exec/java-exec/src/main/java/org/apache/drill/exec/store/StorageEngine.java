@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.common.logical.data.Scan;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -30,6 +31,8 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.drill.optiq.DrillTable;
+import org.eigenbase.relopt.RelOptTable;
 
 public interface StorageEngine {
   public boolean supportsRead();
@@ -54,8 +57,9 @@ public interface StorageEngine {
   public AbstractGroupScan getPhysicalScan(Scan scan) throws IOException;
 
   public SchemaProvider getSchemaProvider();
-  
-  
+
+  public DrillTable getDrillTable(JSONOptions selection, String storageEngineName);
+
   /**
    * Get the set of Drillbit endpoints that are available for each read entry. Note that it is possible for a read entry
    * to have no Drillbit locations. In that case, the multimap will contain no values for that read entry.

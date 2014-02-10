@@ -18,11 +18,15 @@
 package org.apache.drill.exec.store.parquet;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.SchemaProvider;
+import org.apache.drill.optiq.DrillTable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,11 +40,13 @@ public class ParquetSchemaProvider implements SchemaProvider{
   final ParquetStorageEngineConfig configuration;
   final FileSystem fs;
   final Configuration conf;
+  final DrillConfig drillConfig;
 
   public ParquetSchemaProvider(ParquetStorageEngineConfig configuration, DrillConfig config){
     this.configuration = configuration;
     try {
       this.conf = new Configuration();
+      this.drillConfig = config;
       this.conf.set("fs.classpath.impl", ClassPathFileSystem.class.getName());
       this.conf.set(HADOOP_DEFAULT_NAME, configuration.getDfsName());
       logger.debug("{}: {}",HADOOP_DEFAULT_NAME, configuration.getDfsName());

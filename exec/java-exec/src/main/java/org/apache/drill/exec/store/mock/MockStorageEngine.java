@@ -20,7 +20,9 @@ package org.apache.drill.exec.store.mock;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.logical.data.Scan;
+import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStorageEngine;
@@ -29,12 +31,14 @@ import org.apache.drill.exec.store.mock.MockGroupScanPOP.MockScanEntry;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.drill.optiq.DrillTable;
 
 public class MockStorageEngine extends AbstractStorageEngine {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
+  MockStorageEngineConfig config;
 
   public MockStorageEngine(MockStorageEngineConfig configuration, DrillbitContext context) {
-
+    this.config = configuration;
   }
 
   @Override
@@ -52,4 +56,15 @@ public class MockStorageEngine extends AbstractStorageEngine {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public DrillTable getDrillTable(JSONOptions selection ){
+    ArrayList<ReadEntryWithPath> readEntries;
+    try {
+      readEntries = selection.getListWith(new ObjectMapper(),
+          new TypeReference<ArrayList<ReadEntryWithPath>>() {});
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return new DrillTable(readEntries.get(0).getPath(), readEntries.get(0).getPath(), selection, config);
+  }
 }

@@ -19,6 +19,7 @@ package org.apache.drill.common.expression;
 
 import java.util.List;
 
+// TODO - currently unused (2/10/14) - has this been replaced by DrillFuncs?
 public class FunctionInstance {
 
   private FunctionDefinition definition;

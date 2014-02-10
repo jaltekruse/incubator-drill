@@ -27,6 +27,7 @@ import net.hydromatic.optiq.tools.ValidationException;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.common.logical.LogicalPlan;
+import org.apache.drill.exec.exception.SetupException;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.sql.SqlNode;
 import org.eigenbase.sql.fun.SqlStdOperatorTable;
@@ -48,8 +49,12 @@ public class DrillSqlWorker {
     this.registry = new FunctionRegistry(config);
     String enginesData = Resources.toString(Resources.getResource("storage-engines.json"), Charsets.UTF_8);
     this.engines = config.getMapper().readValue(enginesData, StorageEngines.class);
-    this.planner = Frameworks.getPlanner(ConnectionConfig.Lex.MYSQL, new DrillSchemaFactory(engines, config), SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
-    
+    this.planner = getPlanner(engines, config);
+  }
+
+  public static Planner getPlanner(StorageEngines engines, DrillConfig config) throws SetupException {
+    return Frameworks.getPlanner(ConnectionConfig.Lex.MYSQL, new DrillSchemaFactory(engines, config),
+        SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
   }
 
   
@@ -72,8 +77,8 @@ public class DrillSqlWorker {
     
   }
   private void x() throws Exception {
-    String sqlAgg = "select a, count(1) from parquet.`/Users/jnadeau/region.parquet` group by a";
-    String sql = "select * from parquet.`/Users/jnadeau/region.parquet`";
+    String sqlAgg = "select a, count(1) from parquet.`/tmp/region.parquet` group by a";
+    String sql = "select * from parquet.`/tmp/region.parquet`";
 
     
     System.out.println(sql);

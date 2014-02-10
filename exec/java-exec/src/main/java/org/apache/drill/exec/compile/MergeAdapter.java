@@ -188,7 +188,7 @@ public class MergeAdapter extends ClassVisitor {
     ClassReader tReader = new ClassReader(precompiledClass);
     tReader.accept(visitor, ClassReader.EXPAND_FRAMES);
     byte[] outputClass = cw.toByteArray();
-    Files.write(outputClass, new File(String.format("/Users/jnadeau/gen/%s-output.class", set.generated.dot)));
+    Files.write(outputClass, new File(String.format("/tmp/gen/%s-output.class", set.generated.dot)));
 
     return new MergedClassResult(outputClass, re.getInnerClasses());
   }

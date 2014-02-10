@@ -20,12 +20,15 @@ package org.apache.drill.exec.store.json;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.logical.data.Scan;
+import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStorageEngine;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.drill.exec.store.json.JSONGroupScan.ScanEntry;
+import org.apache.drill.optiq.DrillTable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -72,6 +75,18 @@ public class JSONStorageEngine extends AbstractStorageEngine {
   public SchemaProvider getSchemaProvider() {
     return schemaProvider;
   }
-  
+
+  @Override
+  public DrillTable getDrillTable(JSONOptions selection ){
+    ArrayList<ReadEntryWithPath> readEntries;
+    try {
+      readEntries = selection.getListWith(new ObjectMapper(),
+          new TypeReference<ArrayList<ReadEntryWithPath>>() {});
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
+    return new DrillTable(readEntries.get(0).getPath(), readEntries.get(0).getPath(), selection, getConfig());
+  }
+
   
 }
