@@ -35,6 +35,9 @@ import com.codahale.metrics.Timer;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.exec.metrics.DrillMetrics;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
@@ -81,6 +84,8 @@ public class ParquetGroupScan extends AbstractGroupScan {
   private List<RowGroupInfo> rowGroupInfos;
   private Stopwatch watch = new Stopwatch();
 
+  private List<SchemaPath> columns;
+
   public List<ReadEntryWithPath> getEntries() {
     return entries;
   }
@@ -103,7 +108,8 @@ public class ParquetGroupScan extends AbstractGroupScan {
   public ParquetGroupScan(@JsonProperty("entries") List<ReadEntryWithPath> entries,
                           @JsonProperty("storageengine") ParquetStorageEngineConfig storageEngineConfig,
                           @JacksonInject StorageEngineRegistry engineRegistry,
-                          @JsonProperty("ref") FieldReference ref
+                          @JsonProperty("ref") FieldReference ref,
+                          @JsonProperty("columns") List<SchemaPath> columns
                            )throws IOException, ExecutionSetupException {
     engineRegistry.init(DrillConfig.create());
     this.storageEngine = (ParquetStorageEngine) engineRegistry.getEngine(storageEngineConfig);
@@ -112,15 +118,19 @@ public class ParquetGroupScan extends AbstractGroupScan {
     this.engineConfig = storageEngineConfig;
     this.entries = entries;
     this.ref = ref;
+    this.columns = columns;
     readFooter();
     calculateEndpointBytes();
   }
 
   public ParquetGroupScan(ArrayList<ReadEntryWithPath> entries,
-                          ParquetStorageEngine storageEngine, FieldReference ref) throws IOException {
+                          ParquetStorageEngine storageEngine, FieldReference ref,
+                          List<SchemaPath> columns
+  ) throws IOException {
     this.storageEngine = storageEngine;
     this.engineConfig = storageEngine.getEngineConfig();
     this.availableEndpoints = storageEngine.getContext().getBits();
+    this.columns = columns;
     this.fs = storageEngine.getFileSystem();
     this.entries = entries;
     this.ref = ref;
@@ -362,7 +372,8 @@ public class ParquetGroupScan extends AbstractGroupScan {
       logger.debug("minorFragmentId: {} Path: {} RowGroupIndex: {}",minorFragmentId, rg.getPath(),rg.getRowGroupIndex());
     }
     Preconditions.checkArgument(!mappings.get(minorFragmentId).isEmpty(), String.format("MinorFragmentId %d has no read entries assigned", minorFragmentId));
-    return new ParquetRowGroupScan(storageEngine, engineConfig, mappings.get(minorFragmentId), ref);
+    return new ParquetRowGroupScan(storageEngine, engineConfig, mappings.get(minorFragmentId), ref,
+            columns);
   }
 
   
@@ -373,6 +384,10 @@ public class ParquetGroupScan extends AbstractGroupScan {
   @Override
   public int getMaxParallelizationWidth() {
     return rowGroupInfos.size();
+  }
+
+  public List<SchemaPath> getColumns() {
+    return columns;
   }
 
   @Override
