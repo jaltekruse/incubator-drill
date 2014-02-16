@@ -17,7 +17,6 @@
  ******************************************************************************/
 package org.apache.drill.exec.server;
 
-import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.cache.DistributedMap;

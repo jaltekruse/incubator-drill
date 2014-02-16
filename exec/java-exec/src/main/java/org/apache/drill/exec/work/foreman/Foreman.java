@@ -19,14 +19,15 @@ package org.apache.drill.exec.work.foreman;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.common.logical.data.LogicalOperator;
-import org.apache.drill.common.logical.data.OptionSetter;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.exception.FragmentSetupException;
@@ -185,31 +186,6 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
     try {
       LogicalPlan logicalPlan = context.getPlanReader().readLogicalPlan(json);
       if(logger.isDebugEnabled()) logger.debug("Logical {}", logicalPlan.unparse(context.getConfig()));
-
-      // I'm uncertain if it makes sense to send option setting "plans" through the optimizer
-      // and implement setting the values within a physical operator, this is a hack to identify them
-      // here and stop them before sending them to the optimizer
-      LogicalOperator firstSource = logicalPlan.getGraph().getLeaves().iterator().next();
-      if (logicalPlan.getGraph().getLeaves().size() == 1
-          && firstSource instanceof OptionSetter){
-        OptionSetter set = (OptionSetter) firstSource;
-        if (set.getScope() == OptionSetter.OptionScope.GLOBAL){
-          context.setOptionValue(set.getName(), set.getValue());
-        }
-        else if (set.getScope() == OptionSetter.OptionScope.SESSION){
-          initiatingClient.setSessionLevelOption(set.getName(), set.getValue());
-        }
-        context.batchesCompleted.inc(1);
-        QueryResult header = QueryResult.newBuilder() //
-            .setQueryId(context.getHandle().getQueryId()) //
-            .setRowCount(0) //
-            .setDef(UserBitShared.RecordBatchDef.getDefaultInstance()) //
-            .setIsLastChunk(true) //
-            .build();
-        QueryWritableBatch batch = new QueryWritableBatch(header);
-        connection.sendResult(listener, batch);
-        return;
-      }
       PhysicalPlan physicalPlan = convert(logicalPlan);
       if(logger.isDebugEnabled()) logger.debug("Physical {}", context.getConfig().getMapper().writeValueAsString(physicalPlan));
       runPhysicalPlan(physicalPlan);
@@ -223,6 +199,28 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
   private void parseAndRunPhysicalPlan(String json) {
     try {
       PhysicalPlan plan = context.getPlanReader().readPhysicalPlan(json);
+      JSONOptions drillOptions = plan.getProperties().drillOptions;
+      if (drillOptions != null) {
+        JsonNode globalOptions = drillOptions.getRoot().get("global");
+        if (globalOptions != null) {
+          Iterator<String> fieldIter = globalOptions.fieldNames();
+          String field;
+          while (fieldIter.hasNext()) {
+            field = fieldIter.next();
+            bee.getContext().getGlobalDrillOptions().setOption(field, globalOptions.get(field).asText());
+          }
+        }
+        JsonNode sessionOptions = plan.getProperties().drillOptions.getRoot().get("session");
+        if (sessionOptions != null) {
+          Iterator<String> fieldIter = sessionOptions.fieldNames();
+          String field;
+          while (fieldIter.hasNext()) {
+            field = fieldIter.next();
+            initiatingClient.setSessionLevelOption(field, sessionOptions.get(field).asText());
+          }
+
+        }
+      }
       runPhysicalPlan(plan);
     } catch (IOException e) {
       fail("Failure while parsing physical plan.", e);

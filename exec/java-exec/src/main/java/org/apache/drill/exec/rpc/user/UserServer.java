@@ -23,7 +23,6 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 
-import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.exec.physical.impl.materialize.QueryWritableBatch;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserProtos.BitToUserHandshake;
@@ -36,6 +35,7 @@ import org.apache.drill.exec.rpc.RemoteConnection;
 import org.apache.drill.exec.rpc.Response;
 import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.RpcOutcomeListener;
+import org.apache.drill.exec.server.DrillOptions;
 import org.apache.drill.exec.work.user.UserWorker;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -116,7 +116,7 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
     }
 
     public Object getSessionLevelOption(String name){
-      return sessionOptions.getOptionValue(name);
+      return sessionOptions.getOptionValue(name).getValue();
     }
 
     public Iterator<DrillOptions.DrillOptionValue> getSessionOptionIterator(){

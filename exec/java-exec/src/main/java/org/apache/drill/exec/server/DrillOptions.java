@@ -15,10 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.common.config;
+package org.apache.drill.exec.server;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
+import org.apache.drill.exec.cache.DrillSerializable;
+import org.apache.drill.exec.memory.BufferAllocator;
 
 import java.io.*;
 import java.util.HashMap;
@@ -68,10 +70,10 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
   public DrillOptions(){
     optionValues = new CaseInsensitiveMap<>();
-    optionValues.put(QUOTED_IDENTIFIERS, new BooleanOptionValue(QUOTED_IDENTIFIERS, this));
-    optionValues.put(EXPLAIN_PLAN_LEVEL, new StringOptionValue(EXPLAIN_PLAN_LEVEL, this));
-    optionValues.put(EXPLAIN_PLAN_FORMAT, new StringOptionValue(EXPLAIN_PLAN_FORMAT, this));
-    optionValues.put(QUERY_TIMEOUT, new IntegerOptionValue(QUERY_TIMEOUT, this));
+    optionValues.put(QUOTED_IDENTIFIERS, new BooleanOptionValue(QUOTED_IDENTIFIERS, true, this));
+    optionValues.put(EXPLAIN_PLAN_LEVEL, new StringOptionValue(EXPLAIN_PLAN_LEVEL, "physical", this));
+    optionValues.put(EXPLAIN_PLAN_FORMAT, new StringOptionValue(EXPLAIN_PLAN_FORMAT, "json", this));
+    optionValues.put(QUERY_TIMEOUT, new IntegerOptionValue(QUERY_TIMEOUT, 1000, this));
   }
 
 
@@ -118,7 +120,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     optionValues.put(optionName, DrillOptionValue.wrapBareObject(optionName, validator.validate(opt.parse(value)), this));
   }
 
-  public Object getOptionValue(String name){
+  public DrillOptionValue getOptionValue(String name){
     return optionValues.get(name);
   }
 
@@ -145,7 +147,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
    * restrictions.
    * @param <E> - type of object for the option to store
    */
-  public static abstract class DrillOptionValue<E> implements Cloneable, DrillSerializable{
+  public static abstract class DrillOptionValue<E> implements Cloneable, DrillSerializable {
     String optionName;
 
     E value;
@@ -239,10 +241,16 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
      * This only does a serDe on the values themselves.
      ********************************************************************************/
 
+    // TODO - there was an issue with needing a particular constructor in the deserialization process
+    // for the distributed map, so the usual path of setting values through the parent list to make sure
+    // that everything that is parsed or set goes through the validation cannot happen without sub-classing
+    // all of the implementations of distributed map (currently 2), thus input is assumed to be correct,
+    // as it was set at another node where it had to pass validation before being added to the distributed map
+
     @Override
     public void read(DataInput input) throws IOException {
       try {
-        parentOptionList.setOptionWithString(optionName, input.readUTF());
+        setValue(parse(input.readUTF()));
       } catch (ExpressionParsingException e) {
         throw new IOException("Error reading value for attribute '" + optionName + "'");
       }
@@ -253,21 +261,17 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
       int len = input.read();
       byte[] strBytes = new byte[len];
       input.read(strBytes);
-      try {
-        parentOptionList.setOptionWithString(optionName, new String(strBytes, "UTF-8"));
-      } catch (ExpressionParsingException e) {
-        throw new IOException("Error reading value for attribute '" + optionName + "'");
-      }
+      setValue(parse(new String(strBytes, "UTF-8")));
     }
 
     @Override
     public void write(DataOutput output) throws IOException {
-      output.writeUTF(parentOptionList.getOptionValue(optionName).toString());
+      output.writeUTF(unparse(value));
     }
 
     @Override
     public void writeToStream(OutputStream output) throws IOException {
-      String val = parentOptionList.getOptionValue(optionName).toString();
+      String val = unparse(value);
       output.write(val.length());
       output.write(val.getBytes("UTF-8"));
     }
@@ -403,6 +407,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     public StringOptionValue newInstance(){
       return new StringOptionValue(optionName, value, parentOptionList);
     }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new StringOptionValue(null, null);
+    }
   }
 
   public static class IntegerOptionValue extends DrillOptionValue<Integer> {
@@ -427,6 +436,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     @Override
     public DrillOptionValue newInstance() {
       return new IntegerOptionValue(optionName, value, parentOptionList);
+    }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new IntegerOptionValue(null, null);
     }
   }
 
@@ -453,6 +467,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     public DrillOptionValue newInstance() {
       return new DoubleOptionValue(optionName, value, parentOptionList);
     }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new DoubleOptionValue(null, null);
+    }
   }
 
   public static class FloatOptionValue extends DrillOptionValue<Float> {
@@ -477,6 +496,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     @Override
     public DrillOptionValue newInstance() {
       return new FloatOptionValue(optionName, value, parentOptionList);
+    }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new FloatOptionValue(null, null);
     }
   }
 
@@ -503,6 +527,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     public DrillOptionValue newInstance() {
       return new LongOptionValue(optionName, value, parentOptionList);
     }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new LongOptionValue(null, null);
+    }
   }
 
   public static class BooleanOptionValue extends DrillOptionValue<Boolean> {
@@ -528,6 +557,11 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     @Override
     public DrillOptionValue newInstance() {
       return new BooleanOptionValue(optionName, value, parentOptionList);
+    }
+
+    @Override
+    public DrillSerializable newInstance(BufferAllocator allocator) {
+      return new BooleanOptionValue(null, null);
     }
   }
 

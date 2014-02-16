@@ -33,7 +33,6 @@ import com.google.common.io.ByteArrayDataInput;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.config.DrillSerializable;
 import org.apache.drill.exec.exception.DrillbitStartupException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;

@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.sun.codemodel.JConditional;
 import com.sun.codemodel.JExpr;
-import org.apache.drill.common.config.DrillSerializable;
 import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.expression.*;
 import org.apache.drill.common.logical.data.Order;

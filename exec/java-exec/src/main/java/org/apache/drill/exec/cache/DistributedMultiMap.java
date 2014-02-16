@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.cache;
 
-import org.apache.drill.common.config.DrillSerializable;
-
 import java.util.Collection;
 
 public interface DistributedMultiMap<V> {

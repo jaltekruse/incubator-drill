@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.*;
 
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.config.DrillOptions;
 import org.apache.drill.common.defs.OrderDef;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
@@ -48,6 +47,7 @@ import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.physical.config.Limit;
 import org.apache.drill.exec.physical.config.StreamingAggregate;
 import org.apache.drill.exec.rpc.user.UserServer;
+import org.apache.drill.exec.server.DrillOptions;
 import org.apache.drill.exec.store.StorageEngine;
 
 import com.beust.jcommander.internal.Lists;
@@ -70,7 +70,7 @@ public class BasicOptimizer extends Optimizer{
     Iterator<DrillOptions.DrillOptionValue> optionVals = userSession.getSessionOptionIterator();
     DrillOptions.DrillOptionValue val = null;
     logger.debug("SessionOptions: {\n");
-    for ( ;optionVals.hasNext(); val = optionVals.next()){
+    for ( val = optionVals.next();optionVals.hasNext(); val = optionVals.next()){
       logger.debug(String.format("    %s : %s,\n", val.getOptionName(), val.getValue().toString()));
     }
     logger.debug("}");
@@ -95,7 +95,8 @@ public class BasicOptimizer extends Optimizer{
     PlanProperties props = PlanProperties.builder()
         .type(PlanProperties.PlanType.APACHE_DRILL_PHYSICAL)
         .version(plan.getProperties().version)
-        .generator(plan.getProperties().generator).build();
+        .generator(plan.getProperties().generator)
+        .options(plan.getProperties().drillOptions).build();
     PhysicalPlan p = new PhysicalPlan(props, physOps);
     return p;
     //return new PhysicalPlan(props, physOps);

@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.hazelcast.config.SerializerConfig;
 import com.hazelcast.core.*;
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.config.DrillSerializable;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.cache.ProtoBufImpl.HWorkQueueStatus;
 import org.apache.drill.exec.cache.ProtoBufImpl.HandlePlan;

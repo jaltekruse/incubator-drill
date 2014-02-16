@@ -4,11 +4,6 @@
         version:"1",
         generator:{
             type:"manual"
-        },
-        options : {
-            session : {
-                "EXPLAIN_PLAN_LEVEL" : "PHYSICAL"
-            }
         }
     },
 	graph:[
@@ -24,4 +19,3 @@
         }
     ]
 }
-

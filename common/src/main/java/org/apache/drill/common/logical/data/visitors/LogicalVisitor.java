@@ -50,5 +50,4 @@ public interface LogicalVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
     public RETURN visitTransform(Transform transform, EXTRA value) throws EXCEP;
     public RETURN visitUnion(Union union, EXTRA value) throws EXCEP;
     public RETURN visitWindowFrame(WindowFrame windowFrame, EXTRA value) throws EXCEP;
-    public RETURN visitOptionSetter(OptionSetter optionSetter, EXTRA value) throws EXCEP;
 }

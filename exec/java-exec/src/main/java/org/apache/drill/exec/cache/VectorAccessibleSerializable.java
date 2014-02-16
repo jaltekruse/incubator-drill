@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Timer;
 import io.netty.buffer.ByteBuf;
-import org.apache.drill.common.config.DrillSerializable;
 import org.apache.drill.common.util.DataInputInputStream;
 import org.apache.drill.common.util.DataOutputOutputStream;
 import org.apache.drill.exec.expr.TypeHelper;
@@ -188,6 +187,11 @@ public class VectorAccessibleSerializable implements DrillSerializable {
     } finally {
       clear();
     }
+  }
+
+  @Override
+  public VectorAccessibleSerializable newInstance(BufferAllocator allocator) {
+    return new VectorAccessibleSerializable(batch, sv2, allocator);
   }
 
   private void clear() {
