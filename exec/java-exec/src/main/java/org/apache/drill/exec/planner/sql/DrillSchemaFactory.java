@@ -25,12 +25,10 @@ import net.hydromatic.linq4j.function.Function1;
 import net.hydromatic.optiq.Schema;
 import net.hydromatic.optiq.SchemaPlus;
 
-import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.exception.SetupException;
-import org.apache.drill.exec.planner.logical.StorageEngines;
-import org.apache.drill.exec.store.SchemaProvider;
-import org.apache.drill.exec.store.SchemaProviderRegistry;
+import org.apache.drill.exec.store.StorageEngineRegistry;
+import org.apache.drill.exec.store.dfs.WorkspaceSchemaFactory;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -49,9 +47,10 @@ public class DrillSchemaFactory  implements Function1<SchemaPlus, Schema>{
     this.registry = null;
   }
   
-  public DrillSchemaFactory(StorageEngines engines, DrillConfig config) throws SetupException {
+  public DrillSchemaFactory(StorageEngineRegistry engines) throws SetupException {
     super();
     this.registry = new SchemaProviderRegistry(config);
+    
     
     for (Map.Entry<String, StorageEngineConfig> entry : engines) {
       SchemaProvider provider = registry.getSchemaProvider(entry.getValue());
@@ -64,7 +63,7 @@ public class DrillSchemaFactory  implements Function1<SchemaPlus, Schema>{
     List<String> schemaNames = Lists.newArrayList();
     Schema defaultSchema = null;
     for(Entry<String, StorageEngineEntry> e : preEntries.entrySet()){
-      FileSystemSchema schema = new FileSystemSchema(e.getValue().getConfig(), e.getValue().getProvider(), root, e.getKey());
+      WorkspaceSchemaFactory schema = new WorkspaceSchemaFactory(e.getValue().getConfig(), e.getValue().getProvider(), root, e.getKey());
       if(defaultSchema == null) defaultSchema = schema;
       root.add(schema);
       schemaNames.add(e.getKey());

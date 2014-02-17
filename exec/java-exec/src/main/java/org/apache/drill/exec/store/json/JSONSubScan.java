@@ -42,7 +42,7 @@ import com.google.common.collect.Iterators;
 @JsonTypeName("json-sub-scan")
 public class JSONSubScan extends AbstractBase implements SubScan {
 
-  protected final List<JSONGroupScan.ScanEntry> readEntries;
+  protected final List<ScanEntry> readEntries;
   private final OperatorCost cost;
   private final Size size;
   private final JSONStorageEngine storageEngine;
@@ -52,19 +52,19 @@ public class JSONSubScan extends AbstractBase implements SubScan {
   @JsonCreator
   public JSONSubScan(@JacksonInject StorageEngineRegistry registry,
                      @JsonProperty("engineConfig") StorageEngineConfig engineConfig,
-                     @JsonProperty("readEntries") List<JSONGroupScan.ScanEntry> readEntries,
+                     @JsonProperty("readEntries") List<ScanEntry> readEntries,
                      @JsonProperty("ref") FieldReference ref,
                      @JsonProperty("columns") List<SchemaPath> columns) throws ExecutionSetupException {
     this(readEntries, (JSONStorageEngine) registry.getEngine(engineConfig), ref, columns);
   }
   
-  JSONSubScan(List<JSONGroupScan.ScanEntry> readEntries, JSONStorageEngine engine, FieldReference ref,
+  JSONSubScan(List<ScanEntry> readEntries, JSONStorageEngine engine, FieldReference ref,
               List<SchemaPath> columns){
     this.readEntries = readEntries;
     this.storageEngine = engine;
     OperatorCost cost = new OperatorCost(0, 0, 0, 0);
     Size size = new Size(0, 0);
-    for (JSONGroupScan.ScanEntry r : readEntries) {
+    for (ScanEntry r : readEntries) {
       cost = cost.add(r.getCost());
       size = size.add(r.getSize());
     }
@@ -78,7 +78,7 @@ public class JSONSubScan extends AbstractBase implements SubScan {
     return ref;
   }
 
-  public List<JSONGroupScan.ScanEntry> getReadEntries() {
+  public List<ScanEntry> getReadEntries() {
     return readEntries;
   }
 

@@ -31,7 +31,7 @@ import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.rpc.control.WorkEventBus;
 import org.apache.drill.exec.rpc.data.DataConnectionCreator;
 import org.apache.drill.exec.server.DrillbitContext;
-import org.apache.drill.exec.store.StorageEngine;
+import org.apache.drill.exec.store.StoragePlugin;
 
 public class QueryContext {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryContext.class);
@@ -55,7 +55,7 @@ public class QueryContext {
     return queryId;
   }
 
-  public StorageEngine getStorageEngine(StorageEngineConfig config) throws ExecutionSetupException {
+  public StoragePlugin getStorageEngine(StorageEngineConfig config) throws ExecutionSetupException {
     return drillbitContext.getStorageEngine(config);
   }
 

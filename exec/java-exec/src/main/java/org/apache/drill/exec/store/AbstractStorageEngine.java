@@ -18,25 +18,17 @@
 package org.apache.drill.exec.store;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
 import org.apache.drill.common.logical.data.Scan;
-import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
-import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 
-import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Multimap;
-
-public abstract class AbstractStorageEngine implements StorageEngine{
+public abstract class AbstractStorageEngine implements StoragePlugin{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractStorageEngine.class);
 
   protected AbstractStorageEngine(){
   }
-  
   
   @Override
   public boolean supportsRead() {
@@ -58,32 +50,5 @@ public abstract class AbstractStorageEngine implements StorageEngine{
     throw new UnsupportedOperationException();
   }
 
-  @Override
-  public ListMultimap<ReadEntry, DrillbitEndpoint> getReadLocations(Collection<ReadEntry> entries) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public RecordReader getReader(FragmentContext context, ReadEntry readEntry) throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public RecordRecorder getWriter(FragmentContext context, WriteEntry writeEntry) throws IOException {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Multimap<DrillbitEndpoint, ReadEntry> getEntryAssignments(List<DrillbitEndpoint> assignments,
-      Collection<ReadEntry> entries) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Multimap<DrillbitEndpoint, WriteEntry> getWriteAssignments(List<DrillbitEndpoint> assignments,
-      Collection<ReadEntry> entries) {
-    throw new UnsupportedOperationException();
-  }
-  
   
 }

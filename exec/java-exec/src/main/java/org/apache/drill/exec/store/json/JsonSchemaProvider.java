@@ -20,9 +20,9 @@ package org.apache.drill.exec.store.json;
 import java.io.IOException;
 
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.exec.physical.ReadEntryWithPath;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.SchemaProvider;
+import org.apache.drill.exec.store.dfs.ReadEntryWithPath;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 

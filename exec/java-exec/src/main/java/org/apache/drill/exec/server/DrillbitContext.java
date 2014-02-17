@@ -37,7 +37,7 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.rpc.control.Controller;
 import org.apache.drill.exec.rpc.control.WorkEventBus;
 import org.apache.drill.exec.rpc.data.DataConnectionCreator;
-import org.apache.drill.exec.store.StorageEngine;
+import org.apache.drill.exec.store.StoragePlugin;
 import org.apache.drill.exec.store.StorageEngineRegistry;
 
 import com.codahale.metrics.MetricRegistry;
@@ -131,7 +131,7 @@ public class DrillbitContext {
     return operatorCreatorRegistry;
   }
 
-  public StorageEngine getStorageEngine(StorageEngineConfig config) throws ExecutionSetupException {
+  public StoragePlugin getStorageEngine(StorageEngineConfig config) throws ExecutionSetupException {
     return storageEngineRegistry.getEngine(config);
   }
   

@@ -204,7 +204,7 @@ public class JSONRecordReaderTest {
     new Expectations() {
       {
         context.getAllocator();
-        returns(new DirectBufferAllocator());
+        returns(new TopLevelAllocator());
       }
     };
 

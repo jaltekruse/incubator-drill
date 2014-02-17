@@ -215,7 +215,7 @@ public class JSONRecordReader implements RecordReader {
 
   private boolean fieldSelected(String field){
     SchemaPath sp = new SchemaPath(field, ExpressionPosition.UNKNOWN);
-    if (this.columns != null && this.columns.size() > 1){
+    if (this.columns != null && this.columns.size() > 0){
       for (SchemaPath expr : this.columns){
         if ( sp.equals(expr)){
           return true;

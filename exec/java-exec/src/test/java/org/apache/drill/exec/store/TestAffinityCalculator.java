@@ -19,15 +19,18 @@ package org.apache.drill.exec.store;
 
 import com.google.common.collect.ImmutableRangeMap;
 import com.google.common.collect.Range;
+
 import junit.framework.Assert;
 import mockit.Injectable;
 import mockit.NonStrictExpectations;
+
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.parquet.ParquetGroupScan;
 import org.apache.drill.exec.store.parquet.ParquetRowGroupScan;
-import org.apache.drill.exec.store.parquet.ParquetStorageEngine;
+import org.apache.drill.exec.store.parquet.ParquetFormatPlugin;
+import org.apache.drill.exec.store.schedule.BlockMapBuilder;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -120,7 +123,7 @@ public class TestAffinityCalculator {
     }};
 
 
-    AffinityCalculator ac = new AffinityCalculator(fs, endPoints);
+    BlockMapBuilder ac = new BlockMapBuilder(fs, endPoints);
     for (ParquetGroupScan.RowGroupInfo rowGroup : rowGroups) {
       ac.setEndpointBytes(rowGroup);
     }
@@ -132,7 +135,7 @@ public class TestAffinityCalculator {
 
     buildRowGroups(rowGroups, numberOfBlocks, blockSize, 2);
 
-    ac = new AffinityCalculator(fs, endPoints);
+    ac = new BlockMapBuilder(fs, endPoints);
     for (ParquetGroupScan.RowGroupInfo rowGroup : rowGroups) {
       ac.setEndpointBytes(rowGroup);
     }
@@ -144,7 +147,7 @@ public class TestAffinityCalculator {
 
     buildRowGroups(rowGroups, numberOfBlocks, blockSize, 6);
 
-    ac = new AffinityCalculator(fs, endPoints);
+    ac = new BlockMapBuilder(fs, endPoints);
     for (ParquetGroupScan.RowGroupInfo rowGroup : rowGroups) {
       ac.setEndpointBytes(rowGroup);
     }

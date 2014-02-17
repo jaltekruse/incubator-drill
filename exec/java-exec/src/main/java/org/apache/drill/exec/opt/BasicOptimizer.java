@@ -47,7 +47,7 @@ import org.apache.drill.exec.physical.config.SelectionVectorRemover;
 import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.physical.config.Limit;
 import org.apache.drill.exec.physical.config.StreamingAggregate;
-import org.apache.drill.exec.store.StorageEngine;
+import org.apache.drill.exec.store.StoragePlugin;
 import org.eigenbase.rel.RelFieldCollation.Direction;
 import org.eigenbase.rel.RelFieldCollation.NullDirection;
 
@@ -194,7 +194,7 @@ public class BasicOptimizer extends Optimizer{
     public PhysicalOperator visitScan(Scan scan, Object obj) throws OptimizerException {
       StorageEngineConfig config = logicalPlan.getStorageEngineConfig(scan.getStorageEngine());
       if(config == null) throw new OptimizerException(String.format("Logical plan referenced the storage engine config %s but the logical plan didn't have that available as a config.", scan.getStorageEngine()));
-      StorageEngine engine;
+      StoragePlugin engine;
       try {
         engine = context.getStorageEngine(config);
         return engine.getPhysicalScan(scan);

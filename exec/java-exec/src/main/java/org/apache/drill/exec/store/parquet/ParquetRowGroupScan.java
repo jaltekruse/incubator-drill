@@ -27,7 +27,6 @@ import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.exec.physical.OperatorCost;
-import org.apache.drill.exec.physical.ReadEntryFromHDFS;
 import org.apache.drill.exec.physical.base.AbstractBase;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.PhysicalVisitor;
@@ -48,8 +47,8 @@ import com.google.common.collect.Iterators;
 public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRowGroupScan.class);
 
-  public final StorageEngineConfig engineConfig;
-  private final ParquetStorageEngine parquetStorageEngine;
+  public final ParquetFormatConfig formatConfig;
+  private final ParquetFormatPlugin parquetStorageEngine;
   private final List<RowGroupReadEntry> rowGroupReadEntries;
   private final FieldReference ref;
   private final List<SchemaPath> columns;
@@ -61,19 +60,19 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
                              @JsonProperty("ref") FieldReference ref,
                              @JsonProperty("columns") List<SchemaPath> columns
                              ) throws ExecutionSetupException {
-    parquetStorageEngine = (ParquetStorageEngine) registry.getEngine(engineConfig);
+    parquetStorageEngine = (ParquetFormatPlugin) registry.getEngine(engineConfig);
     this.rowGroupReadEntries = rowGroupReadEntries;
-    this.engineConfig = engineConfig;
+    this.formatConfig = formatConfig;
     this.ref = ref;
     this.columns = columns;
   }
 
-  public ParquetRowGroupScan(ParquetStorageEngine engine, ParquetStorageEngineConfig config,
+  public ParquetRowGroupScan(ParquetFormatPlugin engine, StorageEngineConfig config,
                               List<RowGroupReadEntry> rowGroupReadEntries, FieldReference ref,
                               List<SchemaPath> columns
                               ) {
     parquetStorageEngine = engine;
-    engineConfig = config;
+    formatConfig = config;
     this.rowGroupReadEntries = rowGroupReadEntries;
     this.ref = ref;
     this.columns = columns;
@@ -84,7 +83,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   }
 
   public StorageEngineConfig getEngineConfig() {
-    return engineConfig;
+    return formatConfig;
   }
 
   @Override
@@ -108,7 +107,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   }
 
   @JsonIgnore
-  public ParquetStorageEngine getStorageEngine(){
+  public ParquetFormatPlugin getStorageEngine(){
     return parquetStorageEngine;
   }
 
@@ -120,7 +119,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   @Override
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) throws ExecutionSetupException {
     Preconditions.checkArgument(children.isEmpty());
-    return new ParquetRowGroupScan(parquetStorageEngine, (ParquetStorageEngineConfig) engineConfig, rowGroupReadEntries,
+    return new ParquetRowGroupScan(parquetStorageEngine, (ParquetFormatConfig) formatConfig, rowGroupReadEntries,
             ref, columns);
   }
 
@@ -131,38 +130,6 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
 
   public List<SchemaPath> getColumns() {
     return columns;
-  }
-
-  public static class RowGroupReadEntry extends ReadEntryFromHDFS {
-
-    private int rowGroupIndex;
-
-    @parquet.org.codehaus.jackson.annotate.JsonCreator
-    public RowGroupReadEntry(@JsonProperty("path") String path, @JsonProperty("start") long start,
-                             @JsonProperty("length") long length, @JsonProperty("rowGroupIndex") int rowGroupIndex) {
-      super(path, start, length);
-      this.rowGroupIndex = rowGroupIndex;
-    }
-
-    @Override
-    public OperatorCost getCost() {
-      return new OperatorCost(1, 2, 1, 1);
-    }
-
-    @Override
-    public Size getSize() {
-      // TODO - these values are wrong, I cannot know these until after I read a file
-      return new Size(10, 10);
-    }
-
-    @JsonIgnore
-    public RowGroupReadEntry getRowGroupReadEntry() {
-      return new RowGroupReadEntry(this.getPath(), this.getStart(), this.getLength(), this.rowGroupIndex);
-    }
-
-    public int getRowGroupIndex(){
-      return rowGroupIndex;
-    }
   }
 
 }

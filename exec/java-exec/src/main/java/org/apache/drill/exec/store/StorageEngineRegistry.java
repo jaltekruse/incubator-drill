@@ -17,36 +17,51 @@
  */
 package org.apache.drill.exec.store;
 
+import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+
+import net.hydromatic.linq4j.function.Function1;
+import net.hydromatic.optiq.Schema;
+import net.hydromatic.optiq.SchemaPlus;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.logical.StorageEngineConfig;
 import org.apache.drill.common.util.PathScanner;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.logical.StorageEngines;
 import org.apache.drill.exec.server.DrillbitContext;
 
-public class StorageEngineRegistry {
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Resources;
+
+public class StorageEngineRegistry implements Iterable<Map.Entry<String, StoragePlugin>>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StorageEngineRegistry.class);
 
-  private Map<Object, Constructor<? extends StorageEngine>> availableEngines = new HashMap<Object, Constructor<? extends StorageEngine>>();
-  private Map<StorageEngineConfig, StorageEngine> activeEngines = new HashMap<StorageEngineConfig, StorageEngine>();
+  private Map<Object, Constructor<? extends StoragePlugin>> availableEngines = new HashMap<Object, Constructor<? extends StoragePlugin>>();
+  private final ImmutableMap<String, StoragePlugin> engines;
 
   private DrillbitContext context;
-  public StorageEngineRegistry(DrillbitContext context){
-    init(context.getConfig());
+  private final DrillSchemaFactory schemaFactory = new DrillSchemaFactory();
+  
+  public StorageEngineRegistry(DrillbitContext context) {
     this.context = context;
+    init(context.getConfig());
+    this.engines = ImmutableMap.copyOf(createEngines());
   }
 
   @SuppressWarnings("unchecked")
   public void init(DrillConfig config){
-    Collection<Class<? extends StorageEngine>> engines = PathScanner.scanForImplementations(StorageEngine.class, config.getStringList(ExecConstants.STORAGE_ENGINE_SCAN_PACKAGES));
+    Collection<Class<? extends StoragePlugin>> engines = PathScanner.scanForImplementations(StoragePlugin.class, config.getStringList(ExecConstants.STORAGE_ENGINE_SCAN_PACKAGES));
     logger.debug("Loading storage engines {}", engines);
-    for(Class<? extends StorageEngine> engine: engines){
+    for(Class<? extends StoragePlugin> engine: engines){
       int i =0;
       for(Constructor<?> c : engine.getConstructors()){
         Class<?>[] params = c.getParameterTypes();
@@ -54,31 +69,81 @@ public class StorageEngineRegistry {
           logger.info("Skipping StorageEngine constructor {} for engine class {} since it doesn't implement a [constructor(StorageEngineConfig, DrillbitContext)]", c, engine);
           continue;
         }
-        availableEngines.put(params[0], (Constructor<? extends StorageEngine>) c);
+        availableEngines.put(params[0], (Constructor<? extends StoragePlugin>) c);
         i++;
       }
       if(i == 0){
         logger.debug("Skipping registration of StorageEngine {} as it doesn't have a constructor with the parameters of (StorangeEngineConfig, Config)", engine.getCanonicalName());
       }
     }
+    
+  }
+  
+  private Map<String, StoragePlugin> createEngines(){
+    StorageEngines engines = null;
+    Map<String, StoragePlugin> activeEngines = new HashMap<String, StoragePlugin>();
+    try{
+      String enginesData = Resources.toString(Resources.getResource("storage-engines.json"), Charsets.UTF_8);
+      engines = context.getConfig().getMapper().readValue(enginesData, StorageEngines.class);
+    }catch(IOException e){
+      throw new IllegalStateException("Failure while reading storage engines data.", e);
+    }
+    
+    for(Map.Entry<String, StorageEngineConfig> config : engines){
+      try{
+        StoragePlugin plugin = create(config.getValue());
+        activeEngines.put(config.getKey(), plugin);
+      }catch(ExecutionSetupException e){
+        logger.error("Failure while setting up StoragePlugin with name: '{}'.", config.getKey(), e);
+      }
+    }
+    return activeEngines;
   }
 
-  public synchronized StorageEngine getEngine(StorageEngineConfig engineConfig) throws ExecutionSetupException{
-    StorageEngine engine = activeEngines.get(engineConfig);
-    if(engine != null) return engine;
-    Constructor<? extends StorageEngine> c = availableEngines.get(engineConfig.getClass());
-    if(c == null) throw new ExecutionSetupException(String.format("Failure finding StorageEngine constructor for config %s", engineConfig));
+  public StoragePlugin getEngine(String name) throws ExecutionSetupException {
+    return engines.get(name);
+  }
+
+  private StoragePlugin create(StorageEngineConfig engineConfig) throws ExecutionSetupException {
+    StoragePlugin engine = null;
+    Constructor<? extends StoragePlugin> c = availableEngines.get(engineConfig.getClass());
+    if (c == null)
+      throw new ExecutionSetupException(String.format("Failure finding StorageEngine constructor for config %s",
+          engineConfig));
     try {
       engine = c.newInstance(engineConfig, context);
-      activeEngines.put(engineConfig, engine);
       return engine;
     } catch (InstantiationException | IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
-      Throwable t = e instanceof InvocationTargetException ? ((InvocationTargetException)e).getTargetException() : e;
-      if(t instanceof ExecutionSetupException) throw ((ExecutionSetupException) t);
-      throw new ExecutionSetupException(String.format("Failure setting up new storage engine configuration for config %s", engineConfig), t);
+      Throwable t = e instanceof InvocationTargetException ? ((InvocationTargetException) e).getTargetException() : e;
+      if (t instanceof ExecutionSetupException)
+        throw ((ExecutionSetupException) t);
+      throw new ExecutionSetupException(String.format(
+          "Failure setting up new storage engine configuration for config %s", engineConfig), t);
     }
   }
 
+  @Override
+  public Iterator<Entry<String, StoragePlugin>> iterator() {
+    return engines.entrySet().iterator();
+  }
+  
+  public DrillSchemaFactory getSchemaFactory(){
+    return schemaFactory;
+  }
+
+  public class DrillSchemaFactory implements Function1<SchemaPlus, Schema>{
+
+    @Override
+    public Schema apply(SchemaPlus parent) {
+      for(Map.Entry<String, StoragePlugin> e : engines.entrySet()){
+        e.getValue().createAndAddSchema(parent, e.getKey());
+      }
+      return null;
+    }
+    
+  }
+  
 
 
+  
 }

@@ -28,7 +28,6 @@ import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.EndpointAffinity;
 import org.apache.drill.exec.physical.OperatorCost;
-import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.Size;
@@ -44,11 +43,11 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 
 @JsonTypeName("json-scan")
 public class JSONGroupScan extends AbstractGroupScan {
-  private static int ESTIMATED_RECORD_SIZE = 1024; // 1kb
+  
   private final JSONStorageEngine engine;
 
-  private LinkedList<JSONGroupScan.ScanEntry>[] mappings;
-  private final List<JSONGroupScan.ScanEntry> readEntries;
+  private LinkedList<ScanEntry>[] mappings;
+  private final List<ScanEntry> readEntries;
   private final OperatorCost cost;
   private final Size size;
   private final FieldReference ref;
@@ -68,7 +67,7 @@ public class JSONGroupScan extends AbstractGroupScan {
     this.readEntries = entries;
     OperatorCost cost = new OperatorCost(0, 0, 0, 0);
     Size size = new Size(0, 0);
-    for (JSONGroupScan.ScanEntry r : readEntries) {
+    for (ScanEntry r : readEntries) {
     cost = cost.add(r.getCost());
     size = size.add(r.getSize());
     }
@@ -114,31 +113,6 @@ public class JSONGroupScan extends AbstractGroupScan {
   @JsonIgnore
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) {
     return new JSONGroupScan(readEntries, engine, ref, columns);
-  }
-
-  public static class ScanEntry implements ReadEntry {
-    private final String path;
-    private Size size;
-
-    @JsonCreator
-    public ScanEntry(@JsonProperty("path") String path) {
-      this.path = path;
-      size = new Size(ESTIMATED_RECORD_SIZE, ESTIMATED_RECORD_SIZE);
-    }
-
-    @Override
-    public OperatorCost getCost() {
-      return new OperatorCost(1, 1, 2, 2);
-    }
-
-    @Override
-    public Size getSize() {
-      return size;
-    }
-
-    public String getPath() {
-      return path;
-    }
   }
 
   @Override

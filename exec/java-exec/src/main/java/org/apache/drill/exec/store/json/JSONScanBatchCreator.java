@@ -34,9 +34,9 @@ public class JSONScanBatchCreator implements BatchCreator<JSONSubScan> {
     @Override
     public RecordBatch getBatch(FragmentContext context, JSONSubScan config, List<RecordBatch> children) throws ExecutionSetupException {
         Preconditions.checkArgument(children.isEmpty());
-        List<JSONGroupScan.ScanEntry> entries = config.getReadEntries();
+        List<ScanEntry> entries = config.getReadEntries();
         List<RecordReader> readers = Lists.newArrayList();
-        for (JSONGroupScan.ScanEntry e : entries) {
+        for (ScanEntry e : entries) {
             readers.add(new JSONRecordReader(context, e.getPath(), config.getStorageEngine().getFileSystem(), config.getRef(),
                 config.getColumns()));
         }

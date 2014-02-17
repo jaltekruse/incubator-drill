@@ -17,10 +17,9 @@
  */
 package org.apache.drill.exec.store.hive;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -30,7 +29,6 @@ import org.apache.drill.exec.physical.ReadEntry;
 import org.apache.drill.exec.physical.base.Size;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStorageEngine;
-import org.apache.drill.exec.store.SchemaProvider;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.metastore.HiveMetaStoreClient;
 import org.apache.hadoop.hive.metastore.api.MetaException;
@@ -39,11 +37,14 @@ import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.thrift.TException;
 
-import java.io.IOException;
-import java.util.List;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 
 public class HiveStorageEngine extends AbstractStorageEngine {
 
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(HiveStorageEngine.class);
+  
   private HiveStorageEngineConfig config;
   private HiveConf hiveConf;
   private HiveSchemaProvider schemaProvider;
@@ -52,6 +53,7 @@ public class HiveStorageEngine extends AbstractStorageEngine {
   public HiveStorageEngine(HiveStorageEngineConfig config, DrillbitContext context) throws ExecutionSetupException {
     this.config = config;
     this.context = context;
+    this.schemaProvider = new HiveSchemaProvider(config, context.getConfig());
     this.hiveConf = config.getHiveConf();
   }
 
@@ -67,27 +69,14 @@ public class HiveStorageEngine extends AbstractStorageEngine {
   public HiveScan getPhysicalScan(Scan scan) throws IOException {
     HiveReadEntry hiveReadEntry = scan.getSelection().getListWith(new ObjectMapper(), new TypeReference<HiveReadEntry>(){});
     try {
-      List<Partition> partitions = getSchemaProvider().getPartitions(hiveReadEntry.getTable().getDbName(), hiveReadEntry.getTable().getTableName());
       return new HiveScan(hiveReadEntry, this, null);
-    } catch (ExecutionSetupException | TException e) {
-      throw new DrillRuntimeException(e);
-    }
-  }
-
-  @Override
-  public HiveSchemaProvider getSchemaProvider() {
-    try {
-    if (schemaProvider == null) {
-      schemaProvider = new HiveSchemaProvider(config, context.getConfig());
-    }
-    return schemaProvider;
     } catch (ExecutionSetupException e) {
-      throw new DrillRuntimeException(e);
+      throw new IOException(e);
     }
   }
 
   List<String> getPartitions(String dbName, String tableName) throws TException {
-    List<Partition> partitions = getSchemaProvider().getMetaClient().listPartitions(dbName, tableName, Short.MAX_VALUE);
+    List<Partition> partitions = schemaProvider.getMetaClient().listPartitions(dbName, tableName, Short.MAX_VALUE);
     List<String> partitionLocations = Lists.newArrayList();
     if (partitions == null) return null;
     for (Partition part : partitions) {
@@ -96,7 +85,7 @@ public class HiveStorageEngine extends AbstractStorageEngine {
     return partitionLocations;
   }
 
-  public static class HiveEntry implements ReadEntry {
+  public static class HiveEntry{
 
     private Table table;
 
@@ -108,20 +97,9 @@ public class HiveStorageEngine extends AbstractStorageEngine {
       return table;
     }
 
-    @Override
-    public OperatorCost getCost() {
-      throw new UnsupportedOperationException(this.getClass().getCanonicalName() + " is only for extracting path data from " +
-              "selections inside a scan node from a logical plan, it cannot be used in an executing plan and has no cost.");
-    }
-
-    @Override
-    public Size getSize() {
-      throw new UnsupportedOperationException(this.getClass().getCanonicalName() + " is only for extracting path data from " +
-              "selections inside a scan node from a logical plan, it cannot be used in an executing plan and has no cost.");
-    }
   }
 
-  public static class HiveSchemaProvider implements SchemaProvider {
+  public static class HiveSchemaProvider{
 
     private HiveConf hiveConf;
     private HiveMetaStoreClient metaClient;
@@ -162,7 +140,7 @@ public class HiveStorageEngine extends AbstractStorageEngine {
       return partitions;
     }
 
-    @Override
+    
     public HiveReadEntry getSelectionBaseOnName(String name) {
       String[] dbNameTableName = name.split("\\.");
       String dbName;
