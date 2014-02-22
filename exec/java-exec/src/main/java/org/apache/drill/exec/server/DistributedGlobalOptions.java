@@ -35,6 +35,8 @@ public class DistributedGlobalOptions {
   DistributedGlobalOptions(DistributedCache cache){
     distributedCacheOptions = cache.getMap(DrillOptions.DrillOptionValue.class);
     optionValidator = new DrillOptions();
+    // TODO - read this from a config file
+    optionValidator.setDefaults();
     // fill in setting values that are not already present in the distributed cache
     for (DrillOptions.DrillOptionValue opt : optionValidator){
       distributedCacheOptions.putIfAbsent(opt.getOptionName(), opt);

@@ -6,7 +6,7 @@
             type:"manual"
         },
         options : {
-            session : {
+            global : {
                 "EXPLAIN_PLAN_LEVEL" : "PHYSICAL"
             }
         }

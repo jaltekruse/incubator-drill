@@ -49,7 +49,7 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
     optionValidators.put(QUOTED_IDENTIFIERS, allowAllValuesValidator(QUOTED_IDENTIFIERS));
     optionValidators.put(QUERY_TIMEOUT, new MinMaxValidator(QUERY_TIMEOUT, 10, Integer.MAX_VALUE));
     optionValidators.put(EXPLAIN_PLAN_LEVEL, new EnumeratedStringValidator(EXPLAIN_PLAN_LEVEL, "PHYSICAL", "LOGICAL"));
-    optionValidators.put(EXPLAIN_PLAN_FORMAT, new EnumeratedValueValidator(EXPLAIN_PLAN_FORMAT, "TEXT", "XML", "JSON"));
+    optionValidators.put(EXPLAIN_PLAN_FORMAT, new EnumeratedStringValidator(EXPLAIN_PLAN_FORMAT, "TEXT", "XML", "JSON"));
 
     // example to show the enumerated values can be used for anything that implements compareTo including integers
     optionValidators.put("numeric_enumeration_option",
@@ -70,12 +70,18 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
 
   public DrillOptions(){
     optionValues = new CaseInsensitiveMap<>();
-    optionValues.put(QUOTED_IDENTIFIERS, new BooleanOptionValue(QUOTED_IDENTIFIERS, true, this));
-    optionValues.put(EXPLAIN_PLAN_LEVEL, new StringOptionValue(EXPLAIN_PLAN_LEVEL, "physical", this));
-    optionValues.put(EXPLAIN_PLAN_FORMAT, new StringOptionValue(EXPLAIN_PLAN_FORMAT, "json", this));
-    optionValues.put(QUERY_TIMEOUT, new IntegerOptionValue(QUERY_TIMEOUT, 1000, this));
+    optionValues.put(QUOTED_IDENTIFIERS, new BooleanOptionValue(QUOTED_IDENTIFIERS, this));
+    optionValues.put(EXPLAIN_PLAN_LEVEL, new StringOptionValue(EXPLAIN_PLAN_LEVEL, this));
+    optionValues.put(EXPLAIN_PLAN_FORMAT, new StringOptionValue(EXPLAIN_PLAN_FORMAT, this));
+    optionValues.put(QUERY_TIMEOUT, new IntegerOptionValue(QUERY_TIMEOUT, this));
   }
 
+  public void setDefaults(){
+    setOptionValue(QUOTED_IDENTIFIERS, true);
+    setOptionValue(EXPLAIN_PLAN_LEVEL, "physical");
+    setOptionValue(EXPLAIN_PLAN_FORMAT, "json");
+    setOptionValue(QUERY_TIMEOUT, 1000);
+  }
 
   @Override
   public Iterator<DrillOptionValue> iterator() {
@@ -109,6 +115,15 @@ public class DrillOptions implements Iterable<DrillOptions.DrillOptionValue>, Cl
         return value;
       }
     };
+  }
+
+  public void setOptionValue(String optionName, Object value) {
+    OptionValidator validator = optionValidators.get(optionName);
+    DrillOptionValue opt = optionValues.get(optionName);
+    if (validator == null){
+      throw new ExpressionParsingException("invalid option optionName '" + optionName + "'");
+    }
+    optionValues.put(optionName, DrillOptionValue.wrapBareObject(optionName, validator.validate(value), this));
   }
 
   public void setOptionWithString(String optionName, String value) throws ExpressionParsingException {

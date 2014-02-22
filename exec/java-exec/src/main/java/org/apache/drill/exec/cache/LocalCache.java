@@ -184,6 +184,14 @@ public class LocalCache implements DistributedCache {
     }
   }
 
+  public class LocalDistributedMapAbstractValueClassImpl<V extends DrillSerializable> extends LocalDistributedMapImpl<V> {
+
+    public LocalDistributedMapAbstractValueClassImpl(Class<V> clazz, Method valueClassHolderGenerator) {
+
+    }
+
+  }
+
   public static class LocalCounterImpl implements Counter {
     private AtomicLong al = new AtomicLong();
 
