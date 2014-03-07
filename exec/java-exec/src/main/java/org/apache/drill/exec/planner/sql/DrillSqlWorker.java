@@ -34,6 +34,7 @@ import org.apache.drill.exec.planner.logical.DrillRuleSets;
 import org.apache.drill.exec.planner.logical.DrillScreenRel;
 import org.apache.drill.exec.planner.logical.DrillStoreRel;
 import org.apache.drill.exec.store.StoragePluginRegistry.DrillSchemaFactory;
+import org.apache.drill.exec.exception.SetupException;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.sql.SqlExplain;
 import org.eigenbase.sql.SqlKind;
@@ -51,7 +52,11 @@ public class DrillSqlWorker {
   public DrillSqlWorker(DrillSchemaFactory schemaFactory, FunctionRegistry functionRegistry) throws Exception {
     this.registry = functionRegistry;
     this.planner = Frameworks.getPlanner(ConnectionConfig.Lex.MYSQL, schemaFactory, SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
+    //this.registry = new FunctionRegistry(config);
+    //String enginesData = Resources.toString(Resources.getResource("storage-engines.json"), Charsets.UTF_8);
+    //this.engines = config.getMapper().readValue(enginesData, StorageEngines.class);
   }
+
   
   public LogicalPlan getPlan(String sql) throws SqlParseException, ValidationException, RelConversionException{
     SqlNode sqlNode = planner.parse(sql);

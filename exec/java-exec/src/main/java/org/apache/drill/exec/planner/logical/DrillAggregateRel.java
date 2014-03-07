@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.planner.logical;
 
+import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.List;
 
@@ -30,14 +31,16 @@ import org.apache.drill.common.expression.ValueExpressions;
 import org.apache.drill.common.logical.data.GroupingAggregate;
 import org.apache.drill.common.logical.data.LogicalOperator;
 import org.apache.drill.exec.planner.torel.ConversionContext;
-import org.eigenbase.rel.AggregateCall;
-import org.eigenbase.rel.AggregateRelBase;
-import org.eigenbase.rel.InvalidRelException;
-import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.*;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelOptUtil;
 import org.eigenbase.relopt.RelTraitSet;
 
 import com.google.common.collect.Lists;
+import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.reltype.RelDataTypeFactory;
+import org.eigenbase.rex.RexNode;
 
 /**
  * Aggregation implemented in Drill.
@@ -102,7 +105,32 @@ public class DrillAggregateRel extends AggregateRelBase implements DrillRel {
   
   public static DrillAggregateRel convert(GroupingAggregate groupBy, ConversionContext value)
       throws InvalidRelException {
-    throw new UnsupportedOperationException();
+    List<AggregateCall> calls = new ArrayList(groupBy.getExprs().length);
+    RexNode aggExpression;
+    AggregateCall aggCall;
+    for (NamedExpression ex : groupBy.getExprs()){
+      aggExpression = value.toRex(ex.getExpr());
+      BitSet bitSet = RelOptUtil.InputFinder.bits(aggExpression);
+      aggCall = new AggregateCall(new Aggregation() {
+        @Override
+        public List<RelDataType> getParameterTypes(RelDataTypeFactory typeFactory) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public RelDataType getReturnType(RelDataTypeFactory typeFactory) {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+
+        @Override
+        public String getName() {
+          return null;  //To change body of implemented methods use File | Settings | File Templates.
+        }
+      }, false, new ArrayList<Integer>(), aggExpression.getType(), null);
+      calls.add(aggCall);
+    }
+    return new DrillAggregateRel(value.getCluster(), value.getLogicalTraits(), value.toRel(groupBy.iterator().next()),
+         new BitSet(), calls);
   }
 
 }

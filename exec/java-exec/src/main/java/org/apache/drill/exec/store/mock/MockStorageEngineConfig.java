@@ -29,6 +29,10 @@ public class MockStorageEngineConfig extends StoragePluginConfigBase{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngineConfig.class);
 
   private String url;
+
+  public MockStorageEngineConfig(){
+
+  }
   
   @JsonCreator
   public MockStorageEngineConfig(@JsonProperty("url") String url) {

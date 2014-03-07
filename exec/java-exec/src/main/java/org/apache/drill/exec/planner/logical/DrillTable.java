@@ -17,17 +17,25 @@
  */
 package org.apache.drill.exec.planner.logical;
 
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.List;
+
+import net.hydromatic.linq4j.expressions.Expression;
 import net.hydromatic.optiq.Schema.TableType;
 import net.hydromatic.optiq.Statistic;
 import net.hydromatic.optiq.Statistics;
 import net.hydromatic.optiq.Table;
 
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.eigenbase.rel.RelCollation;
 import org.eigenbase.rel.RelNode;
+import org.eigenbase.relopt.RelOptSchema;
 import org.eigenbase.relopt.RelOptTable;
+import org.eigenbase.reltype.RelDataType;
 
 
-public abstract class DrillTable implements Table{
+public abstract class DrillTable implements Table, RelOptTable{
   
   private final String storageEngineName;  
   public final StoragePluginConfig storageEngineConfig;
@@ -68,6 +76,69 @@ public abstract class DrillTable implements Table{
   public TableType getJdbcTableType() {
     return TableType.TABLE;
   }
+
+  @Override
+  public List<String> getQualifiedName() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public double getRowCount() {
+    return 0;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public RelDataType getRowType() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public RelOptSchema getRelOptSchema() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public RelNode toRel(ToRelContext context) {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public List<RelCollation> getCollationList() {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public boolean isKey(BitSet columns) {
+    return false;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+  @Override
+  public <T> T unwrap(Class<T> clazz) {
+    if (clazz == this.getClass())
+      return (T) this;
+    else return null;
+  }
+
+  @Override
+  public Expression getExpression(Class clazz) {
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
+  }
+
+
+//  /** Factory for custom tables in Optiq schema. */
+//  @SuppressWarnings("UnusedDeclaration")
+//  public static class Factory implements TableFactory<DrillTable> {
+//
+//    @Override
+//    public DrillTable create(Schema schema, String name, Map<String, Object> operand, RelDataType rowType) {
+//      
+//      final ClasspathRSE.ClasspathRSEConfig rseConfig = new ClasspathRSE.ClasspathRSEConfig();
+//      final ClasspathInputConfig inputConfig = new ClasspathInputConfig();
+//      inputConfig.path = "/" + name.toLowerCase() + ".json";
+//      inputConfig.type = DataWriter.ConverterType.JSON;
+//      return createTable(schema.getTypeFactory(), (MutableSchema) schema, name, "donuts-json", rseConfig, inputConfig);
+//    }
+//  }
 
   
   

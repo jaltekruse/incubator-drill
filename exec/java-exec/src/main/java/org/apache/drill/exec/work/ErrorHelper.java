@@ -39,6 +39,7 @@ public class ErrorHelper {
     while (true) {
       sb.append(" < ");
       sb.append(t.getClass().getSimpleName());
+      t.printStackTrace();
       if(t.getMessage() != null){
         sb.append(":[ ");
         sb.append(t.getMessage());

@@ -142,11 +142,15 @@ public class ParquetRecordReaderTest2 {
   @Test
   public void testNullableColumnsVarLen() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 300000, DEFAULT_BYTES_PER_PAGE, fields);
     byte[] val = {'b'};
+    byte[] val2 = {'b', '2'};
+    byte[] val3 = { 'l','o','n','g','e','r',' ','s','t','r','i','n','g'};
+    Object[] boolVals = { val, val2, val3};
+//    byte[] val = {'b'};
 //    Object[] boolVals = { val, null, null};
 //    Object[] boolVals = { null, null, null};
-    Object[] boolVals = { val, val, val};
+//    Object[] boolVals = { val, val, val};
     props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngine(false, "/parquet_nullable_varlen.json", "/tmp/nullable.parquet", 1, props);
   }

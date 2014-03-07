@@ -18,6 +18,7 @@
 package org.apache.drill.exec.planner.logical;
 
 import org.apache.drill.common.JSONOptions;
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.logical.data.LogicalOperator;
 import org.apache.drill.common.logical.data.Scan;
@@ -56,7 +57,7 @@ public class DrillScanRel extends TableAccessRelBase implements DrillRel {
     return builder.build();
   }
   
-  public static DrillScanRel convert(Scan scan, ConversionContext context){
+  public static DrillScanRel convert(Scan scan, ConversionContext context) throws ExecutionSetupException {
     return new DrillScanRel(context.getCluster(), context.getLogicalTraits(), context.getTable(scan));
   }
 }

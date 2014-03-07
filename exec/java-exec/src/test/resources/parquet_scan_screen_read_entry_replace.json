@@ -30,6 +30,7 @@
       input: 1,
       op: "store",
       memo: "output sink",
+      storageengine: "parquet",
       target: {
         file: "console:///stdout"
       }

@@ -25,6 +25,7 @@ import net.hydromatic.optiq.SchemaPlus;
 
 import org.apache.drill.common.logical.data.Scan;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
+import org.apache.drill.exec.planner.logical.DrillTable;
 
 public interface StoragePlugin {
   public boolean supportsRead();

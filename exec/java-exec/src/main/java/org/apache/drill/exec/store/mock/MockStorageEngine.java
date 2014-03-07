@@ -34,9 +34,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class MockStorageEngine extends AbstractStoragePlugin {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MockStorageEngine.class);
+  MockStorageEngineConfig config;
 
   public MockStorageEngine(MockStorageEngineConfig configuration, DrillbitContext context, String name) {
-
+    this.config = configuration;
   }
 
   @Override
@@ -53,6 +54,5 @@ public class MockStorageEngine extends AbstractStoragePlugin {
   public Schema createAndAddSchema(SchemaPlus parent) {
     return null;
   }
-
 
 }

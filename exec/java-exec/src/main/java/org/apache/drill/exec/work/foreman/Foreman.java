@@ -27,6 +27,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.common.logical.PlanProperties.Generator.ResultMode;
 import org.apache.drill.common.types.TypeProtos.MinorType;
@@ -46,7 +47,11 @@ import org.apache.drill.exec.planner.fragment.MakeFragmentsVisitor;
 import org.apache.drill.exec.planner.fragment.PlanningSet;
 import org.apache.drill.exec.planner.fragment.SimpleParallelizer;
 import org.apache.drill.exec.planner.fragment.StatsCollector;
+import org.apache.drill.exec.planner.logical.DrillImplementor;
+import org.apache.drill.exec.planner.logical.DrillParseContext;
+import org.apache.drill.exec.planner.logical.DrillRel;
 import org.apache.drill.exec.planner.sql.DrillSqlWorker;
+import org.apache.drill.exec.planner.torel.ConversionContext;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
@@ -70,6 +75,8 @@ import org.apache.drill.exec.work.WorkManager.WorkerBee;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
+import org.eigenbase.rel.InvalidRelException;
+import org.eigenbase.rel.RelNode;
 
 /**
  * Foreman manages all queries where this is the driving/root node.
@@ -190,6 +197,13 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
       if(logicalPlan.getProperties().resultMode == ResultMode.LOGICAL){
         fail("Failure running plan.  You requested a result mode of LOGICAL and submitted a logical plan.  In this case you're output mode must be PHYSICAL or EXEC.", new Exception());
       }      
+//      logger.debug("original plan {}", logicalPlan.unparse(context.getConfig()));
+//      ConversionContext conversionContext = new ConversionContext(context.getConfig(), logicalPlan, context);
+//      DrillImplementor drillImplementor = new DrillImplementor(new DrillParseContext(new FunctionRegistry(context.getConfig())), ResultMode.LOGICAL);
+//      DrillRel relNode = (DrillRel)conversionContext.toRel(logicalPlan.getGraph().getRoots().iterator().next());
+//      drillImplementor.go(relNode);
+//      LogicalPlan convertedPlan = drillImplementor.getPlan();
+//      logger.debug("optiq converted logical {}", convertedPlan.unparse(context.getConfig()));
       if(logger.isDebugEnabled()) logger.debug("Logical {}", logicalPlan.unparse(context.getConfig()));
       PhysicalPlan physicalPlan = convert(logicalPlan);
       
@@ -204,6 +218,10 @@ public class Foreman implements Runnable, Closeable, Comparable<Object>{
       fail("Failure while parsing logical plan.", e);
     } catch (OptimizerException e) {
       fail("Failure while converting logical plan to physical plan.", e);
+//    } catch (ExecutionSetupException e) {
+//      fail("Failure while parsing logical plan.", e);
+//    } catch (InvalidRelException e) {
+//      throw new RuntimeException(e);
     }
   }
 

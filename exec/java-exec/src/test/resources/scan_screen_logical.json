@@ -8,17 +8,17 @@
     }
   },
   "storage" : {
-  "mock" : {
-      "type" : "mock"
-  }
-},
-  
+      "mock-engine": {
+        type : "mock",
+	      url : "http://www.apache.org/"
+      }
+  },
   query:[
     {
       @id:"1",
       op:"scan",
       memo:"initial_scan",
-      storageengine:"mock",
+      storageengine:"mock-engine",
       selection: [
        {
             records : 100,
