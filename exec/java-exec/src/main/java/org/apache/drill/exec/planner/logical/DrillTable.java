@@ -39,6 +39,7 @@ public abstract class DrillTable implements Table, RelOptTable{
   
   private final String storageEngineName;  
   public final StoragePluginConfig storageEngineConfig;
+  public RelOptTable relOptTable;
   private Object selection;
   
   
@@ -114,16 +115,13 @@ public abstract class DrillTable implements Table, RelOptTable{
 
   @Override
   public <T> T unwrap(Class<T> clazz) {
-    if (clazz == this.getClass())
-      return (T) this;
-    else return null;
+    return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
   @Override
   public Expression getExpression(Class clazz) {
     return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
-
 
 //  /** Factory for custom tables in Optiq schema. */
 //  @SuppressWarnings("UnusedDeclaration")

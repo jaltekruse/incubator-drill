@@ -37,7 +37,7 @@ public interface Store extends HasAffinity {
    * materialization.
    * 
    * @param endpoints
-   *          The list of endpoints that this Store node are going to be executed on.
+   *          The list of endpoints that this Stoe node are going to be executed on.
    * @throws PhysicalOperatorSetupException
    */
   public abstract void applyAssignments(List<DrillbitEndpoint> endpoints) throws PhysicalOperatorSetupException;

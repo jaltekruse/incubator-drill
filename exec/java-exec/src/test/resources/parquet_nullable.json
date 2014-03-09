@@ -34,7 +34,7 @@
       memo: "output sink",
       target: {
         files: [
-          "file:///"
+          "file:///tmp/"
         ]
       }
 

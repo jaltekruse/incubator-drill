@@ -166,7 +166,7 @@ public class BasicOptimizer extends Optimizer{
       for(LogicalExpression e : segment.getExprs()){
         if( !(e instanceof SchemaPath)) throw new OptimizerException("The basic optimizer doesn't currently support collapsing aggregate where the segment value is something other than a SchemaPath.");
         keys.add(new NamedExpression(e, new FieldReference((SchemaPath) e)));
-        orderDefs.add(new Ordering(Direction.Ascending, e, NullDirection.FIRST));
+        orderDefs.add(new Ordering(Direction.ASCENDING, e, NullDirection.FIRST));
       }
       Sort sort = new Sort(segment.getInput().accept(this, value), orderDefs, false);
       
@@ -181,7 +181,7 @@ public class BasicOptimizer extends Optimizer{
       PhysicalOperator leftOp = join.getLeft().accept(this, value);
       List<Ordering> leftOrderDefs = Lists.newArrayList();
       for(JoinCondition jc : join.getConditions()){
-        leftOrderDefs.add(new Ordering(Direction.Ascending, jc.getLeft()));
+        leftOrderDefs.add(new Ordering(Direction.ASCENDING, jc.getLeft()));
       }
       leftOp = new Sort(leftOp, leftOrderDefs, false);
       leftOp = new SelectionVectorRemover(leftOp);
@@ -189,7 +189,7 @@ public class BasicOptimizer extends Optimizer{
       PhysicalOperator rightOp = join.getRight().accept(this, value);
       List<Ordering> rightOrderDefs = Lists.newArrayList();
       for(JoinCondition jc : join.getConditions()){
-        rightOrderDefs.add(new Ordering(Direction.Ascending, jc.getRight()));
+        rightOrderDefs.add(new Ordering(Direction.ASCENDING, jc.getRight()));
       }
       rightOp = new Sort(rightOp, rightOrderDefs, false);
       rightOp = new SelectionVectorRemover(rightOp);

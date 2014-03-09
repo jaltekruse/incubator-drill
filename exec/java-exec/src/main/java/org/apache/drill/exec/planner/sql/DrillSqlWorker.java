@@ -64,14 +64,14 @@ public class DrillSqlWorker {
     ResultMode resultMode = ResultMode.EXEC;
     if(sqlNode.getKind() == SqlKind.EXPLAIN){
       SqlExplain explain = (SqlExplain) sqlNode;
-      sqlNode = explain.operands[0];
-      SqlLiteral op = (SqlLiteral) explain.operands[2];
+      sqlNode = explain.getOperandList().get(0);
+      SqlLiteral op = (SqlLiteral) explain.getOperandList().get(2);
       SqlExplain.Depth depth = (SqlExplain.Depth) op.getValue();
       switch(depth){
-      case Logical:
+      case LOGICAL:
         resultMode = ResultMode.LOGICAL;
         break;
-      case Physical:
+      case PHYSICAL:
         resultMode = ResultMode.PHYSICAL;
         break;
       default:

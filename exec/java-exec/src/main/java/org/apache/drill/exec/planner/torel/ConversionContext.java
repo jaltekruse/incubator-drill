@@ -18,6 +18,7 @@
 package org.apache.drill.exec.planner.torel;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -101,9 +102,9 @@ public class ConversionContext implements ToRelContext {
       engines = config.getMapper().readValue(enginesData, StorageEngines.class);
       Planner planner = Frameworks.getPlanner(MYSQL, schemaFactory, SqlStdOperatorTable.instance(), new RuleSet[]{DrillRuleSets.DRILL_BASIC_RULES});
       planner.parse("select 5+5 from table_name");
-      //RelOptQuery query = new RelOptQuery(planner.getRelOptPlanner());
-//      cluster = query.createCluster(
-//              rexBuilder.getTypeFactory(), rexBuilder);
+      RelOptQuery query = new RelOptQuery(planner.getRelOptPlanner());
+      cluster = query.createCluster(
+              rexBuilder.getTypeFactory(), rexBuilder);
     } catch (IOException e) {
       throw new ExecutionSetupException(e);
     } catch (SqlParseException e) {

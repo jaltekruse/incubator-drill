@@ -193,7 +193,7 @@ public class SortBatch extends AbstractRecordBatch<Sort> {
       HoldingContainer out = g.addExpr(f, false);
       JConditional jc = g.getEvalBlock()._if(out.getValue().ne(JExpr.lit(0)));
       
-      if(od.getDirection() == Direction.Ascending){
+      if(od.getDirection() == Direction.ASCENDING){
         jc._then()._return(out.getValue());
       }else{
         jc._then()._return(out.getValue().minus());
