@@ -145,7 +145,19 @@ public class ConversionContext implements ToRelContext {
     }
   }
 
-  public RelOptTable getTable(Store store) throws ExecutionSetupException {
+  public List<DrillTable> getTables(Store store) throws ExecutionSetupException {
+    store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
+    FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
+    ArrayList<DrillTable> tables = new ArrayList(formatSelection.getAsFiles().size());
+    int i = 0;
+    for (String s : formatSelection.getAsFiles()){
+      tables.add((DrillTable)
+          queryContext.getStorage().getSchemaFactory().apply(
+              queryContext.getFactory().getOrphanedRootSchema()).getTable(s));
+      i++;
+    }
+    return tables;
+
     /*
     FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
     queryContext.getStorage().getEngine().get
@@ -159,16 +171,19 @@ public class ConversionContext implements ToRelContext {
     return queryContext.getStorage().getEngine().
         getStorageEngine(storageConfig).getDrillTable(null, storageEngine);
         */
-    return null;
   }
 
-  public RelOptTable getTable(Scan scan) throws ExecutionSetupException {
-    return null;
-    /*
-    FieldList list = getFieldList(scan);
-    StorageEngineConfig storageConfig = plan.getStorageEngineConfig(scan.getStorageEngine());
-    return queryContext.getStorageEngine(storageConfig).getDrillTable(scan.getSelection(), scan.getStorageEngine());
-    */
+  public List<DrillTable> getTables(Scan scan) throws ExecutionSetupException {
+    FormatSelection formatSelection = scan.getSelection().getWith(queryContext.getConfig(), FormatSelection.class);
+    ArrayList<DrillTable> tables = new ArrayList(formatSelection.getAsFiles().size());
+    int i = 0;
+    for (String s : formatSelection.getAsFiles()){
+      tables.add((DrillTable)
+          queryContext.getStorage().getSchemaFactory().apply(
+              queryContext.getFactory().getOrphanedRootSchema()).getTable(s));
+      i++;
+    }
+    return tables;
   }
 
   @Override

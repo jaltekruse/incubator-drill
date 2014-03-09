@@ -58,6 +58,6 @@ public class DrillScanRel extends TableAccessRelBase implements DrillRel {
   }
   
   public static DrillScanRel convert(Scan scan, ConversionContext context) throws ExecutionSetupException {
-    return new DrillScanRel(context.getCluster(), context.getLogicalTraits(), context.getTable(scan));
+    return new DrillScanRel(context.getCluster(), context.getLogicalTraits(), context.getTables(scan).get(0));
   }
 }

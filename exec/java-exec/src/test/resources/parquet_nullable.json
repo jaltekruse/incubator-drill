@@ -33,7 +33,9 @@
       op: "store",
       memo: "output sink",
       target: {
-        file: "console:///stdout"
+        files: [
+          "file:///"
+        ]
       }
 
     }
