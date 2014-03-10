@@ -35,7 +35,7 @@ public interface ExprVisitor<T, VAL, EXCEP extends Exception> {
 	public T visitSchemaPath(SchemaPath path, VAL value) throws EXCEP;
   public T visitIntConstant(IntExpression intExpr, VAL value) throws EXCEP;
   public T visitFloatConstant(FloatExpression fExpr, VAL value) throws EXCEP;
-	public T visitLongConstant(LongExpression intExpr, VAL value) throws EXCEP;
+	public T visitLongConstant(LongExpression longExpr, VAL value) throws EXCEP;
 	public T visitDoubleConstant(DoubleExpression dExpr, VAL value) throws EXCEP;
 	public T visitBooleanConstant(BooleanExpression e, VAL value) throws EXCEP;
 	public T visitQuotedStringConstant(QuotedString e, VAL value) throws EXCEP;	

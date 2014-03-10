@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.visitors.AbstractExprVisitor;
@@ -201,6 +202,14 @@ public class ScanFieldDeterminer extends AbstractLogicalVisitor<Void, ScanFieldD
     public Set<SchemaPath> visitSchemaPath(SchemaPath path, Void value) {
       Set<SchemaPath> set = Sets.newHashSet();
       set.add(path);
+      return set;
+    }
+
+    public Set<SchemaPath> visitFunctionCall(FunctionCall call, Void value) {
+      Set<SchemaPath> set = Sets.newHashSet();
+      for (LogicalExpression logEx : call){
+        set.addAll(logEx.accept(this, value));
+      }
       return set;
     }
 

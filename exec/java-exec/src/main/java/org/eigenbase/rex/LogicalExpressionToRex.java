@@ -40,6 +40,7 @@ import org.eigenbase.sql.parser.SqlParserPos;
 import org.eigenbase.sql.type.SqlTypeFactoryImpl;
 import org.eigenbase.sql.type.SqlTypeName;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -64,24 +65,27 @@ public class LogicalExpressionToRex implements ExprVisitor<RexNode, Object, Exce
       rexArgs.add(logEx.accept(this, value));
     }
     SqlOperator op = null;
-    SqlIdentifier identifier =
-        new SqlIdentifier(call.getDefinition().getName().toUpperCase(),
-                          new SqlParserPos(0, call.getPosition().getCharIndex()));
-    List<SqlOperator> matches;
-    // TODO - I had some trouble navigating optiq to figure out exactly where the SqlSyntax enum
-    // is meaningful. I assumed it was only for validation or precedence determination for
-    // different syntaxes of a given function, which is already handled by Drill
-    // this means of converting Drill calls into SqlOperators assumes that the implementations
-    // of the functions is the same once they have entered the parse tree (thus there is no need to
-    // add a notion of the different syntax tracking to the drill parser)
-    for (SqlSyntax syntax : SqlSyntax.values()){
-      matches = SqlStdOperatorTable.instance().lookupOperatorOverloads(
-          identifier,
-          SqlFunctionCategory.NUMERIC, // this is currently being ignored in the lookup
-          syntax);
-      if (matches.size() > 0){
-        op = matches.get(0);
-        break;
+    regNameLoop:
+    for (String regName : call.getDefinition().getRegisteredNames()){
+      SqlIdentifier identifier =
+          new SqlIdentifier(regName,
+                            new SqlParserPos(0, call.getPosition().getCharIndex()));
+      List<SqlOperator> matches;
+      // TODO - I had some trouble navigating optiq to figure out exactly where the SqlSyntax enum
+      // is meaningful. I assumed it was only for validation or precedence determination for
+      // different syntaxes of a given function, which is already handled by Drill
+      // this means of converting Drill calls into SqlOperators assumes that the implementations
+      // of the functions is the same once they have entered the parse tree (thus there is no need to
+      // add a notion of the different syntax tracking to the drill parser)
+      for (SqlSyntax syntax : SqlSyntax.values()){
+        matches = SqlStdOperatorTable.instance().lookupOperatorOverloads(
+            identifier,
+            SqlFunctionCategory.NUMERIC, // this is currently being ignored in the lookup
+            syntax);
+        if (matches.size() > 0){
+          op = matches.get(0);
+          break regNameLoop;
+        }
       }
     }
     return new RexCall(relDataTypeDrill, op, rexArgs);
@@ -103,25 +107,30 @@ public class LogicalExpressionToRex implements ExprVisitor<RexNode, Object, Exce
 
   @Override
   public RexNode visitIntConstant(ValueExpressions.IntExpression intExpr, Object value) throws Exception {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    return rexBuilder.makeLiteral(new BigDecimal(intExpr.getInt()),
+        ((JavaTypeFactoryImpl)rexBuilder.getTypeFactory()).createType(Float.class),
+        SqlTypeName.DOUBLE);
   }
 
   @Override
   public RexNode visitFloatConstant(ValueExpressions.FloatExpression fExpr, Object value) throws Exception {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    return rexBuilder.makeLiteral(new BigDecimal(fExpr.getFloat()),
+        ((JavaTypeFactoryImpl)rexBuilder.getTypeFactory()).createType(Float.class),
+        SqlTypeName.DOUBLE);
   }
 
   @Override
-  public RexNode visitLongConstant(LongExpression intExpr, Object value)
+  public RexNode visitLongConstant(LongExpression longExpr, Object value)
       throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    return rexBuilder.makeLiteral(new BigDecimal(longExpr.getLong()),
+        ((JavaTypeFactoryImpl)rexBuilder.getTypeFactory()).createType(Long.class),
+        SqlTypeName.DOUBLE);
   }
 
   @Override
   public RexNode visitDoubleConstant(DoubleExpression dExpr, Object value)
       throws Exception {
-    return rexBuilder.makeLiteral(new Double(dExpr.getDouble()),
+    return rexBuilder.makeLiteral(new BigDecimal(dExpr.getDouble()),
         ((JavaTypeFactoryImpl)rexBuilder.getTypeFactory()).createType(Double.class),
         SqlTypeName.DOUBLE);
   }
@@ -145,8 +154,9 @@ public class LogicalExpressionToRex implements ExprVisitor<RexNode, Object, Exce
   @Override
   public RexNode visitUnknown(LogicalExpression e, Object value)
       throws Exception {
-    // TODO Auto-generated method stub
-    return null;
+    throw new RuntimeException("Unsupported expression type in logical expression to Rex conversion, type "
+                               + e.getMajorType()
+                               + " at position " + e.getPosition().getCharIndex());
   }
 
 }

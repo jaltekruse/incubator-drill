@@ -53,7 +53,7 @@ public class DrillStoreRel extends TableModificationRelBase implements DrillRel{
 
   public static RelNode convert(Store store, ConversionContext context) throws ExecutionSetupException, InvalidRelException {
     logger.debug("store child!!" + store.iterator().next());
-    return new DrillStoreRel(context.getCluster(), null, context.getTables(store).get(0), null,
+    return new DrillStoreRel(context.getCluster(), null, context.getTables(store), null,
         context.toRel(store.iterator().next()), null, null, false, store.getTarget(), store.getStorageEngine(), store.getInput() );
   }
 

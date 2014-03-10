@@ -146,18 +146,19 @@ public class ConversionContext implements ToRelContext {
     }
   }
 
-  public List<DrillTable> getTables(Store store) throws ExecutionSetupException {
+  public DrillTable getTables(Store store) throws ExecutionSetupException {
+    /*
     store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
     FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
     ArrayList<DrillTable> tables = new ArrayList(formatSelection.getAsFiles().size());
     int i = 0;
     for (String s : formatSelection.getAsFiles()){
       tables.add((DrillTable)
-          queryContext.getStorage().getSchemaFactory().apply(
-              queryContext.getFactory().getOrphanedRootSchema()).getTable(s));
       i++;
     }
-    return tables;
+    */
+    return (DrillTable) queryContext.getStorage().getSchemaFactory().apply(
+            queryContext.getFactory().getOrphanedRootSchema()).getTable("");
 
     /*
     FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
