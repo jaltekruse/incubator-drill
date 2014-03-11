@@ -29,7 +29,10 @@ public class AggregationFunctions implements CallProvider {
   public FunctionDefinition[] getFunctionDefintions() {
     return new FunctionDefinition[] {
         FunctionDefinition.aggregator("count",  new AnyTypeAllowed(1), OutputTypeDeterminer.FIXED_BIGINT),
-        FunctionDefinition.aggregator("sum",  new AnyTypeAllowed(1), new OutputTypeDeterminer.SameAsFirstInput())
+        FunctionDefinition.aggregator("sum",  new AnyTypeAllowed(1), new OutputTypeDeterminer.SameAsFirstInput()),
+        FunctionDefinition.aggregator("avg",  new AnyTypeAllowed(1), OutputTypeDeterminer.FIXED_FLOAT8),
+        FunctionDefinition.aggregator("min",  new AnyTypeAllowed(1), new OutputTypeDeterminer.SameAsFirstInput()),
+        FunctionDefinition.aggregator("max",  new AnyTypeAllowed(1), new OutputTypeDeterminer.SameAsFirstInput())
     };
   }
 }

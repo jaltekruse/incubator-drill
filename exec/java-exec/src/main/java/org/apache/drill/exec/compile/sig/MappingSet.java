@@ -37,7 +37,9 @@ public class MappingSet {
   private DirectExpression writeIndex;
   private DirectExpression incoming;
   private DirectExpression outgoing;
-  
+  private DirectExpression workspace;
+  private DirectExpression workspaceIndex;
+
   
   public MappingSet(GeneratorMapping mapping) {
     this("inIndex", "outIndex", new GeneratorMapping[]{mapping, mapping});
@@ -60,6 +62,12 @@ public class MappingSet {
     this.constant = mappings[0];
     this.mappings = Arrays.copyOfRange(mappings, 1, mappings.length);
     this.current = this.mappings[0];
+  }
+  
+  public MappingSet(String readIndex, String writeIndex, String workspaceIndex, String incoming, String outgoing, String workspace, GeneratorMapping... mappings) {
+    this(readIndex, writeIndex, incoming, outgoing, mappings);
+    this.workspaceIndex = DirectExpression.direct(workspaceIndex);
+    this.workspace = DirectExpression.direct(workspace);
   }
 
   public void enterConstant(){
@@ -106,4 +114,17 @@ public class MappingSet {
   public DirectExpression getIncoming(){
     return incoming;
   }
+  
+  public DirectExpression getWorkspaceIndex(){
+    return workspaceIndex;
+  }
+  
+  public DirectExpression getWorkspace(){
+    return workspace;
+  }
+  
+  public boolean isHashAggMapping() {
+    return workspace != null;
+  }
+
 }

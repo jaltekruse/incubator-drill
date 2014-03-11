@@ -17,6 +17,9 @@
  */
 package org.apache.drill.exec.expr.fn.impl;
 
+import org.apache.drill.common.expression.ArgumentValidators;
+import org.apache.drill.common.expression.FunctionDefinition;
+import org.apache.drill.common.expression.OutputTypeDeterminer;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
@@ -28,6 +31,13 @@ import org.apache.drill.exec.expr.holders.IntHolder;
 import org.apache.drill.exec.record.RecordBatch;
 
 public class BitFunctions {
+
+  public static final FunctionDefinition OR = FunctionDefinition.simple("or", new ArgumentValidators.AnyTypeAllowed(1),
+		        OutputTypeDeterminer.FIXED_INT, "or");	
+  public static final FunctionDefinition AND = FunctionDefinition.simple("and", new ArgumentValidators.AnyTypeAllowed(1),
+	        OutputTypeDeterminer.FIXED_INT, "and");	
+  public static final FunctionDefinition XOR = FunctionDefinition.simple("xor", new ArgumentValidators.AnyTypeAllowed(1),
+		        OutputTypeDeterminer.FIXED_INT, "xor");	
   
   @FunctionTemplate(name = "or", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
   public static class BitOr implements DrillSimpleFunc {

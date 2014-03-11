@@ -83,6 +83,14 @@ public class VectorContainer implements Iterable<VectorWrapper<?>>, VectorAccess
     wrappers.add(wrapper.cloneAndTransfer());
   }
 
+  public static VectorContainer clone(VectorContainer incoming) {
+    VectorContainer vc = new VectorContainer();
+    for (VectorWrapper<?> w : incoming) {
+      vc.add(w.getValueVector()); 
+    }
+    return vc;
+  }
+  
   public void addCollection(Iterable<ValueVector> vectors) {
     schema = null;
     for (ValueVector vv : vectors) {

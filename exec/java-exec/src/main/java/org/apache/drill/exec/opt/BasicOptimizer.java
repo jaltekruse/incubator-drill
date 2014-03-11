@@ -57,6 +57,8 @@ import org.apache.drill.exec.physical.config.Screen;
 import org.apache.drill.exec.physical.config.SelectionVectorRemover;
 import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.physical.config.StreamingAggregate;
+import org.apache.drill.exec.physical.config.HashAggregate;
+import org.apache.drill.exec.physical.OperatorCost;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.eigenbase.rel.RelFieldCollation.Direction;
 import org.eigenbase.rel.RelFieldCollation.NullDirection;
@@ -170,8 +172,27 @@ public class BasicOptimizer extends Optimizer{
       }
       Sort sort = new Sort(segment.getInput().accept(this, value), orderDefs, false);
       
-      StreamingAggregate sa = new StreamingAggregate(sort, keys.toArray(new NamedExpression[keys.size()]), agg.getAggregations(), 1.0f);
-      return sa;
+      NamedExpression[] keyArr = keys.toArray(new NamedExpression[keys.size()]);
+      
+      StreamingAggregate streamingAggr = new StreamingAggregate(sort, keyArr, agg.getAggregations(), 1.0f);
+      OperatorCost totalSACost = sort.getCost().add(streamingAggr.getCost());
+      
+      if (keyArr.length > 0) { // for now hash aggr is only applicable when group-by keys are present
+        HashAggregate hashAggr = new HashAggregate(segment.getInput().accept(this, value), keyArr, agg.getAggregations(), 1.0f);
+        OperatorCost totalHACost = hashAggr.getCost();
+      
+        hashAggr.logCostInfo(totalHACost, totalSACost);
+      
+        // Compare the total cost of HashAggr vs. StreamingAggr (which includes cost
+        // of Sort). Return the operator with lower cost;  note that this is a temporary
+        // and simplistic approach
+        if (totalHACost.compare(totalSACost) < 0)
+          return hashAggr ;
+        else 
+          return streamingAggr;
+      }
+
+      return streamingAggr;
     }
 
 
