@@ -118,6 +118,9 @@
             <exclude>**/*.tdd</exclude>
             <exclude>**/drill_hive_db/**</exclude>
             <exclude>**/drill_hive_wh/**</exclude>
+            <exclude>**/target/**</exclude>
+            <exclude>**/*.iml</exclude>
+
           </excludes>
         </configuration>
       </plugin>

@@ -146,7 +146,7 @@ public class ConversionContext implements ToRelContext {
     }
   }
 
-  public DrillTable getTables(Store store) throws ExecutionSetupException {
+  public DrillRelOptTable getTables(Store store) throws ExecutionSetupException {
     /*
     store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
     FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
