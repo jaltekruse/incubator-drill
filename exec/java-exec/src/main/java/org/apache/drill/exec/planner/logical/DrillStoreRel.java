@@ -38,12 +38,12 @@ public class DrillStoreRel extends TableModificationRelBase implements DrillRel{
 
   JSONOptions target;
   String storageEngineName;
-  LogicalOperator input;
   private final DrillTable drillTable;
+  DrillRel input;
 
   protected DrillStoreRel(RelOptCluster cluster, RelTraitSet traits, RelOptTable table, CatalogReader catalogReader,
       RelNode child, Operation operation, List<String> updateColumnList, boolean flattened,
-      JSONOptions target, String storageEngineName, LogicalOperator input) {
+      JSONOptions target, String storageEngineName, DrillRel input) {
     super(cluster, traits, table, catalogReader, child, operation, updateColumnList, flattened);
     this.target = target;
     this.storageEngineName = storageEngineName;
@@ -53,8 +53,9 @@ public class DrillStoreRel extends TableModificationRelBase implements DrillRel{
 
   public static RelNode convert(Store store, ConversionContext context) throws ExecutionSetupException, InvalidRelException {
     logger.debug("store child!!" + store.iterator().next());
-    return new DrillStoreRel(context.getCluster(), null, context.getTables(store), null,
-        context.toRel(store.iterator().next()), null, null, false, store.getTarget(), store.getStorageEngine(), store.getInput() );
+    return new DrillStoreRel(context.getCluster(), null, context.getTable(store), null,
+        context.toRel(store.iterator().next()), null, null, false, store.getTarget(), store.getStorageEngine(),
+        (DrillRel) context.toRel(store.getInput()) );
   }
 
   @Override
@@ -62,8 +63,8 @@ public class DrillStoreRel extends TableModificationRelBase implements DrillRel{
     Store.Builder builder = Store.builder();
     builder.storageEngine(storageEngineName);
     builder.target(target);
-    builder.setInput(input);
-    //implementor.registerSource(implementor.get);
+    builder.setInput(input.implement(implementor));
+    //gtgimplementor.registerSource(drillTable);
     //builder.outputReference(new FieldReference("_MAP"));
     return builder.build();
   }

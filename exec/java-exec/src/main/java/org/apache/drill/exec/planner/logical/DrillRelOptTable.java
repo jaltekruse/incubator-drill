@@ -35,14 +35,16 @@ public class DrillRelOptTable implements RelOptTable {
   RelDataType rowType;
   RelOptSchema relOptSchema;
   List<RelCollation> relCollations;
+  DrillTable table;
 
   public DrillRelOptTable(List<String> qualifiedName, double rowCount, RelDataType rowType, RelOptSchema relOptSchema,
-                          List<RelCollation> relCollations){
+                          List<RelCollation> relCollations, DrillTable table){
     this.qualifiedName = qualifiedName;
     this.rowCount = rowCount;
     this.rowType = rowType;
     this.relOptSchema = relOptSchema;
     this.relCollations = relCollations;
+    this.table = table;
   }
 
   @Override
@@ -85,7 +87,10 @@ public class DrillRelOptTable implements RelOptTable {
   // TODO - look at docs to see how to fill this in correctly
   @Override
   public <T> T unwrap(Class<T> clazz) {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
+    if (clazz.isInstance(table)){
+      return clazz.cast(table);
+    }
+    return null;
   }
 
   // TODO - look at docs to see how to fill this in correctly

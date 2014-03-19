@@ -24,7 +24,6 @@ import java.util.Map;
 
 import com.google.common.io.Resources;
 
-import net.hydromatic.optiq.jdbc.ConnectionConfig;
 import net.hydromatic.optiq.jdbc.JavaTypeFactoryImpl;
 import net.hydromatic.optiq.prepare.Prepare;
 import net.hydromatic.optiq.tools.Frameworks;
@@ -38,31 +37,25 @@ import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.logical.LogicalPlan;
 import org.apache.drill.common.logical.data.*;
-import org.apache.drill.common.logical.data.visitors.AbstractLogicalVisitor;
 import org.apache.drill.exec.planner.logical.*;
 import org.apache.drill.exec.planner.logical.ScanFieldDeterminer.FieldList;
 import org.apache.drill.common.logical.data.visitors.LogicalVisitor;
-import org.apache.drill.exec.exception.SetupException;
 import org.apache.drill.exec.ops.QueryContext;
-import org.apache.drill.exec.planner.sql.DrillSqlWorker;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.dfs.FormatSelection;
 import org.eigenbase.rel.InvalidRelException;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptCluster;
 import org.eigenbase.relopt.RelOptQuery;
-import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.relopt.RelOptTable.ToRelContext;
 import org.eigenbase.relopt.RelTraitSet;
 import org.eigenbase.reltype.RelDataType;
-import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.rex.LogicalExpressionToRex;
 import org.eigenbase.rex.RexBuilder;
 import org.eigenbase.rex.RexNode;
 import org.eigenbase.sql.fun.SqlStdOperatorTable;
 import org.eigenbase.sql.parser.SqlParseException;
 
-import static net.hydromatic.optiq.jdbc.ConnectionConfig.*;
 import static net.hydromatic.optiq.jdbc.ConnectionConfig.Lex.*;
 
 // TODO - was unsure why this was implementing ToRelContext, the methods were unused so far
@@ -129,7 +122,7 @@ public class ConversionContext implements ToRelContext {
   
   public RelTraitSet getLogicalTraits(){
     RelTraitSet set = RelTraitSet.createEmpty();
-    set.plus(DrillRel.CONVENTION);
+    set = set.plus(DrillRel.CONVENTION);
     return set;
   }
   
@@ -146,46 +139,12 @@ public class ConversionContext implements ToRelContext {
     }
   }
 
-  public DrillRelOptTable getTables(Store store) throws ExecutionSetupException {
-    /*
-    store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
-    FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
-    ArrayList<DrillTable> tables = new ArrayList(formatSelection.getAsFiles().size());
-    int i = 0;
-    for (String s : formatSelection.getAsFiles()){
-      tables.add((DrillTable)
-      i++;
-    }
-    */
-    return (DrillTable) queryContext.getStorage().getSchemaFactory().apply(
-            queryContext.getFactory().getOrphanedRootSchema()).getTable("");
-
-    /*
-    FormatSelection formatSelection = store.getTarget().getWith(queryContext.getConfig(), FormatSelection.class);
-    queryContext.getStorage().getEngine().get
-    StorageEngineConfig storageConfig = plan.getStorageEngineConfig(store.getStorageEngine());
-    // TODO - might want to create a better implementation of drill table for both input and output
-    // or find a better way of unifying the interfaces on scan and store
-    String storageEngine = store.getStorageEngine();
-    if (store.getStorageEngine() == null) {
-      storageEngine = "mock";
-    }
-    return queryContext.getStorage().getEngine().
-        getStorageEngine(storageConfig).getDrillTable(null, storageEngine);
-        */
+  public DrillRelOptTable getTable(Store store) throws ExecutionSetupException {
+    return new DrillRelOptTableFactory().buildScreenTable();
   }
 
-  public List<DrillTable> getTables(Scan scan) throws ExecutionSetupException {
-    FormatSelection formatSelection = scan.getSelection().getWith(queryContext.getConfig(), FormatSelection.class);
-    ArrayList<DrillTable> tables = new ArrayList(formatSelection.getAsFiles().size());
-    int i = 0;
-    for (String s : formatSelection.getAsFiles()){
-      tables.add((DrillTable)
-          queryContext.getStorage().getSchemaFactory().apply(
-              queryContext.getFactory().getOrphanedRootSchema()).getTable(s));
-      i++;
-    }
-    return tables;
+  public DrillRelOptTable getTable(Scan scan) throws ExecutionSetupException {
+    return new DrillRelOptTableFactory().buildDynamicTable(scan, plan.getStorageEngineConfig(scan.getStorageEngine()));
   }
 
   @Override

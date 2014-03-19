@@ -88,9 +88,14 @@ public class DrillProjectRel extends ProjectRelBase implements DrillRel {
     RelNode input = context.toRel(project.getInput());
     List<RelDataTypeField> fields = Lists.newArrayList();
     List<RexNode> exps = Lists.newArrayList();
+    RexNode curr;
+    String path;
     for(NamedExpression expr : project.getSelections()){
-      fields.add(new RelDataTypeFieldImpl(expr.getRef().getPath().toString(), fields.size(), context.getTypeFactory().createSqlType(SqlTypeName.ANY) ));
-      exps.add(context.toRex(expr.getExpr()));
+      curr = context.toRex(expr.getExpr());
+      exps.add(curr);
+      // grab the field path, removing the output portion
+      path = expr.getRef().getPath().toString().substring("output.".length());
+      fields.add(new RelDataTypeFieldImpl(path, fields.size(), curr.getType()));
     }
     return new DrillProjectRel(context.getCluster(), context.getLogicalTraits(), input, exps, new RelRecordType(fields));
   }

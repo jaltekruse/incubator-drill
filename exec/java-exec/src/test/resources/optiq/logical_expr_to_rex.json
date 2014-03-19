@@ -1,41 +1,49 @@
 {
-  "head" : {
-    "type" : "APACHE_DRILL_LOGICAL",
-    "version" : 1,
-    "generator" : {
-      "type" : "manual",
-      "info" : "na"
+  head:{
+    type:"APACHE_DRILL_LOGICAL",
+    version:"1",
+    generator:{
+      type:"manual",
+      info:"na"
     }
   },
-  "storage" : {
-      "mock-engine": {
-        type : "mock",
-	    url : "http://www.apache.org/"
+  storage:{
+    "dfs" :
+      {
+        "type":"file",
+        "connection" : "file:///"
       }
   },
-  "query" : [
+  query:[
     {
-      "op" : "scan",
-      "@id" : 1,
-      "storageengine" : "mock-engine",
-      "selection" : null,
-      "ref" : null
+      @id:"1",
+      op:"scan",
+      memo:"initial_scan",
+      storageengine:"dfs",
+      selection: {
+        format: {type: "parquet"},
+        files: ["/tmp/test.parquet"]
+      }
     },
     {
+      @id:"2",
+      input: 1,
       op: "project",
-      @id : 2,
-      input : 1,
       projections: [
-        { ref: "output.addition", expr: "2+2" },
-        { ref: "output.subtraction", expr: "5-2" }
+        { ref: "output.key", expr: "5" },
+        { ref: "output.value", expr: "5+3" }
       ]
     },
     {
-      "op" : "store",
-      "@id" : 3,
-      "input" : 2,
-      target: null,
-      "storageEngine" : "mock-engine"
+      @id:"3",
+      input: 2,
+      op: "store",
+      memo: "output sink",
+      target: {
+        file: "console:///stdout"
+      }
+
     }
+
   ]
 }

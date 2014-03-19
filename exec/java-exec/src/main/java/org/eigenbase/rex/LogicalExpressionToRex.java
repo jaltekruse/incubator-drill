@@ -88,7 +88,7 @@ public class LogicalExpressionToRex implements ExprVisitor<RexNode, Object, Exce
         }
       }
     }
-    return new RexCall(relDataTypeDrill, op, rexArgs);
+    return new RexCall(rexArgs.get(0).getType(), op, rexArgs);
 
   }
 

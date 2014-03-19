@@ -35,14 +35,12 @@ import org.eigenbase.relopt.RelOptTable;
 import org.eigenbase.reltype.RelDataType;
 
 
-public abstract class DrillTable implements Table, RelOptTable{
+public abstract class DrillTable implements Table {
   
   private final String storageEngineName;  
   public final StoragePluginConfig storageEngineConfig;
-  public RelOptTable relOptTable;
   private Object selection;
-  
-  
+
   /** Creates a DrillTable. */
   public DrillTable(String storageEngineName, Object selection, StoragePluginConfig storageEngineConfig) {
     this.selection = selection;
@@ -76,51 +74,6 @@ public abstract class DrillTable implements Table, RelOptTable{
   @Override
   public TableType getJdbcTableType() {
     return TableType.TABLE;
-  }
-
-  @Override
-  public List<String> getQualifiedName() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public double getRowCount() {
-    return 0;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public RelDataType getRowType() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public RelOptSchema getRelOptSchema() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public RelNode toRel(ToRelContext context) {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public List<RelCollation> getCollationList() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public boolean isKey(BitSet columns) {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public <T> T unwrap(Class<T> clazz) {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public Expression getExpression(Class clazz) {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
   }
 
 //  /** Factory for custom tables in Optiq schema. */
