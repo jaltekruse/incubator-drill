@@ -223,12 +223,27 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
   
   public void copyFrom(int fromIndex, int thisIndex, Nullable${minor.class}Vector from){
     if (!from.getAccessor().isNull(fromIndex)) {
-    mutator.set(thisIndex, from.getAccessor().get(fromIndex));
-}
+      <#if type.major == "VarLen">
+      Nullable${minor.class}Holder holder = new Nullable${minor.class}Holder();
+      from.getAccessor().get(fromIndex, holder);
+      mutator.set(thisIndex, holder);
+      <#else>
+        mutator.set(thisIndex, from.getAccessor().get(fromIndex));
+      </#if>
+    }
   }
   
   public boolean copyFromSafe(int fromIndex, int thisIndex, Nullable${minor.class}Vector from){
-    return bits.copyFromSafe(fromIndex, thisIndex, from.bits) && values.copyFromSafe(fromIndex, thisIndex, from.values);
+    if (!from.getAccessor().isNull(fromIndex)) {
+      <#if type.major == "VarLen">
+      Nullable${minor.class}Holder holder = new Nullable${minor.class}Holder();
+      from.getAccessor().get(fromIndex, holder);
+      return mutator.setSafe(thisIndex, holder);
+      <#else>
+      return mutator.setSafe(thisIndex, from.getAccessor().get(fromIndex));
+      </#if>
+    }
+    return true;
   }
 
   
