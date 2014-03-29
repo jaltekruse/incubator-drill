@@ -52,6 +52,8 @@ import org.apache.drill.exec.store.ischema.InfoSchemaStoragePlugin;
 import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
+import org.apache.drill.exec.store.options.OptionValueStorageConfig;
+import org.apache.drill.exec.store.options.OptionValueStoragePlugin;
 
 
 public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>>{
@@ -116,7 +118,8 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
       }
     }
     activeEngines.put("INFORMATION_SCHEMA", new InfoSchemaStoragePlugin(new InfoSchemaConfig(), context, "INFORMATION_SCHEMA"));
-    
+    activeEngines.put("OPTIONS", new OptionValueStoragePlugin(new OptionValueStorageConfig(), context, "OPTIONS"));
+
     return activeEngines;
   }
 

@@ -25,6 +25,7 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FunctionRegistry;
 import org.apache.drill.exec.cache.DistributedCache;
+import org.apache.drill.exec.cache.DistributedMultiMap;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -57,6 +58,7 @@ public class DrillbitContext {
   private final WorkEventBus workBus;
   private final FunctionImplementationRegistry functionRegistry;
   private final FunctionRegistry functionRegistryX;
+  private final DistributedGlobalOptions globalDrillOptions;
   
   public DrillbitContext(DrillbitEndpoint endpoint, BootStrapContext context, ClusterCoordinator coord, Controller controller, DataConnectionCreator connectionsPool, DistributedCache cache, WorkEventBus workBus) {
     super();
@@ -76,6 +78,7 @@ public class DrillbitContext {
     this.operatorCreatorRegistry = new OperatorCreatorRegistry(context.getConfig());
     this.functionRegistry = new FunctionImplementationRegistry(context.getConfig());
     this.functionRegistryX = new FunctionRegistry(context.getConfig());
+    this.globalDrillOptions = new DistributedGlobalOptions(this.cache);
   }
 
   public FunctionRegistry getFunctionRegistry(){
@@ -90,6 +93,10 @@ public class DrillbitContext {
     return workBus;
   }
   
+  public DistributedGlobalOptions getGlobalDrillOptions() {
+    return globalDrillOptions;
+  }
+
   public DrillbitEndpoint getEndpoint(){
     return endpoint;
   }

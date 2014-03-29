@@ -45,6 +45,8 @@ import com.hazelcast.core.IMap;
 import com.hazelcast.core.ITopic;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
+import org.apache.drill.exec.server.options.DrillOptionValue;
+import org.apache.drill.exec.server.options.DrillOptions;
 
 public class HazelCache implements DistributedCache {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(HazelCache.class);
@@ -141,8 +143,56 @@ public class HazelCache implements DistributedCache {
   }
 
   @Override
+  public <V extends DrillSerializable> DistributedMap<V> getMap(Class<V> clazz, DistributedMapDeserializer deserializer) {
+    // the LocalCache was able to accomodate custome deserialization based on key name, this does not appear
+    // to be a plug in point for hazel cache, so instead the bare objects for the option values are being stored
+    // and
+    if (deserializer instanceof DrillOptions){
+      IMap<String, Object> imap = this.instance.getMap(clazz.toString());
+      MapConfig myMapConfig = new MapConfig();
+      myMapConfig.setBackupCount(0);
+      myMapConfig.setReadBackupData(true);
+      instance.getConfig().getMapConfigs().put(clazz.toString(), myMapConfig);
+      return (DistributedMap<V>) new HCDistributedOptionsMapImpl(imap);
+    }
+    else {
+      throw new RuntimeException("Cannot create a Hazelcache distributed map for type '" + clazz + "'" + " with " +
+          "deserializer '" + deserializer.getClass() + "'");
+    }
+  }
+
+  @Override
   public Counter getCounter(String name) {
     return new HCCounterImpl(this.instance.getAtomicLong(name));
+  }
+
+  public static class HCDistributedOptionsMapImpl implements DistributedMap<DrillOptionValue> {
+
+    private IMap<String, Object> m;
+
+    public HCDistributedOptionsMapImpl(IMap<String, Object> m) {
+      this.m = m;
+    }
+
+    @Override
+    public DrillOptionValue get(String key) {
+      return DrillOptionValue.wrapBareObject(key, m.get(key), null);
+    }
+
+    @Override
+    public void put(String key, DrillOptionValue value) {
+      m.put(key, value.getValue());
+    }
+
+    @Override
+    public void putIfAbsent(String key, DrillOptionValue value) {
+      m.putIfAbsent(key, value.getValue());
+    }
+
+    @Override
+    public void putIfAbsent(String key, DrillOptionValue value, long ttl, TimeUnit timeUnit) {
+      m.putIfAbsent(key, value.getValue(), ttl, timeUnit);
+    }
   }
 
   public static class HCDistributedMapImpl<V extends DrillSerializable> implements DistributedMap<V> {

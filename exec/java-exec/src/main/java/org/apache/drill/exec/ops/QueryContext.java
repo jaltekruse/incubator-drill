@@ -21,6 +21,9 @@ import java.util.Collection;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.expression.FunctionRegistry;
+import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
+import org.apache.drill.common.exceptions.LogicalPlanParsingException;
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
@@ -43,6 +46,14 @@ public class QueryContext {
     this.queryId = queryId;
     this.drillbitContext = drllbitContext;
     this.workBus = drllbitContext.getWorkBus();
+  }
+
+  public Object getOptionValue(String name){
+    return drillbitContext.getGlobalDrillOptions().getOption(name);
+  }
+
+  public void setOptionValue(String name, String value) throws ExpressionParsingException {
+    drillbitContext.getGlobalDrillOptions().setOption(name, value);
   }
   
   public DrillbitEndpoint getCurrentEndpoint(){

@@ -36,5 +36,6 @@ public interface DistributedCache extends Closeable{
   public void storeFragment(PlanFragment fragment);
   public <V extends DrillSerializable> DistributedMultiMap<V> getMultiMap(Class<V> clazz);
   public <V extends DrillSerializable> DistributedMap<V> getMap(Class<V> clazz);
+  public <V extends DrillSerializable> DistributedMap<V> getMap(Class<V> clazz, DistributedMapDeserializer deserializer);
   public Counter getCounter(String name);
 }

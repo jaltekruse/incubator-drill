@@ -86,6 +86,18 @@ public class LocalCache implements DistributedCache {
   }
 
   @Override
+  public <V extends DrillSerializable> DistributedMap<V> getMap(Class<V> clazz, DistributedMapDeserializer deserializer) {
+    DistributedMap m = maps.get(deserializer.getValueClass());
+    if (m == null) {
+      maps.putIfAbsent(deserializer.getValueClass(),
+          new LocalDistributedMapImplCustomDeserializer<DrillSerializable>(deserializer.getValueClass(), deserializer));
+      return (DistributedMap) maps.get(deserializer.getValueClass());
+    } else {
+      return m;
+    }
+  }
+
+  @Override
   public <V extends DrillSerializable> DistributedMap<V> getMap(Class<V> clazz) {
     DistributedMap m = maps.get(clazz);
     if (m == null) {
@@ -153,8 +165,8 @@ public class LocalCache implements DistributedCache {
   }
 
   public static class LocalDistributedMapImpl<V extends DrillSerializable> implements DistributedMap<V> {
-    private ConcurrentMap<String, ByteArrayDataOutput> m;
-    private Class<V> clazz;
+    protected ConcurrentMap<String, ByteArrayDataOutput> m;
+    protected Class<V> clazz;
 
     public LocalDistributedMapImpl(Class<V> clazz) {
       m = Maps.newConcurrentMap();
@@ -181,6 +193,26 @@ public class LocalCache implements DistributedCache {
     public void putIfAbsent(String key, V value, long ttl, TimeUnit timeUnit) {
       m.putIfAbsent(key, serialize(value));
       logger.warn("Expiration not implemented in local map cache");
+    }
+  }
+
+  public static class LocalDistributedMapImplCustomDeserializer<V extends DrillSerializable> extends LocalDistributedMapImpl<V> {
+
+    DistributedMapDeserializer deserializer;
+
+    public LocalDistributedMapImplCustomDeserializer(Class<V> clazz, DistributedMapDeserializer deserializer) {
+      super(clazz);
+      this.deserializer = deserializer;
+    }
+
+    @Override
+    public V get(String key) {
+      if (m.get(key) == null) return null;
+      try {
+        return (V) deserializer.put(key, m.get(key).toByteArray());
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 

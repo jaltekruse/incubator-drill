@@ -49,7 +49,7 @@ public class FixedTable extends EmptyVectorSet  {
    * @param fieldNames - names of the fields
    * @param fieldTypes - major types of the fields
    */
-  FixedTable(String tableName, String[] fieldNames, MajorType[] fieldTypes) {
+  protected FixedTable(String tableName, String[] fieldNames, MajorType[] fieldTypes) {
     this.tableName = tableName;
     this.fieldNames = fieldNames;
     this.fieldTypes = fieldTypes;

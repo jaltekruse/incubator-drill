@@ -29,13 +29,11 @@ import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.TypeHelper;
+import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.planner.logical.DrillTable;
 import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.vector.AllocationHelper;
-import org.apache.drill.exec.vector.IntVector;
-import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.VarCharVector;
+import org.apache.drill.exec.vector.*;
 
 /**
  * Manages the value vectors used to implement columns in a record batch.
@@ -45,6 +43,7 @@ import org.apache.drill.exec.vector.VarCharVector;
 public abstract class EmptyVectorSet implements VectorSet {
   
   protected List<ValueVector> vectors;
+  protected NullableVarCharHolder nullableVarCharHolder;
 
   /**
    * Prepare to construct a new set of vectors.
@@ -53,6 +52,7 @@ public abstract class EmptyVectorSet implements VectorSet {
    */
   public EmptyVectorSet() {
     vectors = new ArrayList<ValueVector>();
+    nullableVarCharHolder = new NullableVarCharHolder();
   }
 
   /**
@@ -231,8 +231,25 @@ public abstract class EmptyVectorSet implements VectorSet {
    */
   protected static boolean setSafe(VarCharVector v, int index, String string) {
     return v.getMutator().setSafe(index, string.getBytes(UTF8));
-  } 
-  
+  }
+
+  /**
+   * Strongly typed routines for setting a Java value into a value vector. For cases
+   * where the value is null, nothing is done as nullable vectors default to all values
+   * being set as null until they are explicitly given a value. Thus this interface is
+   * not designed for taking a populated vector and overwriting the values, it should go
+   * through the standard process of clearing all of the null bits before filling it.
+   *
+   * @return true if the value was successfully set.
+   */
+  protected static boolean setSafe(NullableVarCharVector v, int index, String string) {
+    // vectors default to zero fill
+    if (string == null)
+        return true;
+    byte[] bytes = string.getBytes(UTF8);
+    return v.getMutator().setSafe(index, bytes, 0, bytes.length);
+  }
+
   protected static boolean setSafe(IntVector v, int index, int value) {
     return v.getMutator().setSafe(index, value);
   }
