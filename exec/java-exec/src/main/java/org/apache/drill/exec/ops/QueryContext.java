@@ -23,6 +23,7 @@ import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.tools.Frameworks;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
@@ -79,6 +80,14 @@ public class QueryContext{
     return rootSchema;
   }
 
+  public Object getOptionValue(String name){
+    return drillbitContext.getGlobalDrillOptions().getOption(name);
+  }
+
+  public void setOptionValue(String name, String value) throws ExpressionParsingException {
+    drillbitContext.getGlobalDrillOptions().setOption(name, value);
+  }
+  
   public DrillbitEndpoint getCurrentEndpoint(){
     return drillbitContext.getEndpoint();
   }

@@ -18,10 +18,7 @@
 package org.apache.drill.exec.opt;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -55,20 +52,54 @@ import org.apache.drill.exec.physical.config.Sort;
 import org.apache.drill.exec.physical.config.StreamingAggregate;
 import org.apache.drill.exec.physical.config.HashAggregate;
 import org.apache.drill.exec.physical.OperatorCost;
+import org.apache.drill.exec.server.options.DrillOptionValue;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.eigenbase.rel.RelFieldCollation.Direction;
 import org.eigenbase.rel.RelFieldCollation.NullDirection;
+import org.apache.drill.exec.rpc.user.UserServer;
 
 import com.beust.jcommander.internal.Lists;
 
 public class BasicOptimizer extends Optimizer{
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BasicOptimizer.class);
 
   private DrillConfig config;
   private QueryContext context;
+  private UserServer.UserClientConnection userSession;
 
-  public BasicOptimizer(DrillConfig config, QueryContext context){
+  public BasicOptimizer(DrillConfig config, QueryContext context, UserServer.UserClientConnection userSession){
     this.config = config;
     this.context = context;
+    this.userSession = userSession;
+    logCurrentOptionValues();
+  }
+
+  private void logCurrentOptionValues(){
+    Iterator<DrillOptionValue> optionVals = userSession.getSessionOptionIterator();
+    DrillOptionValue val = null;
+    String output = "";
+    output += "SessionOptions: {\n";
+    for ( ;optionVals.hasNext(); val = optionVals.next()){
+      if (val != null) {
+        output += val.getOptionName() + ":" + val.getValue() + ",\n";
+      }
+    }
+    output += "}";
+    logger.debug(output);
+  }
+
+  /**
+   * Get the current value of an option. Session options override global options.
+   *
+   * @param name - the name of the option
+   * @return - value of the option
+   */
+  private Object getOptionValue(String name) {
+    Object val = userSession.getSessionLevelOption(name);
+    if (val == null) {
+      context.getOptionValue(name);
+    }
+    return val;
   }
 
   @Override
@@ -90,7 +121,8 @@ public class BasicOptimizer extends Optimizer{
     PlanProperties props = PlanProperties.builder()
         .type(PlanProperties.PlanType.APACHE_DRILL_PHYSICAL)
         .version(plan.getProperties().version)
-        .generator(plan.getProperties().generator).build();
+        .generator(plan.getProperties().generator)
+        .options(plan.getProperties().drillOptions).build();
     PhysicalPlan p = new PhysicalPlan(props, physOps);
     return p;
     //return new PhysicalPlan(props, physOps);
