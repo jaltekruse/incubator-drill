@@ -35,6 +35,11 @@ abstract class ColumnReader {
   
   // Value Vector for this column
   final VectorHolder valueVecHolder;
+
+  ColumnDescriptor getColumnDescriptor() {
+    return columnDescriptor;
+  }
+
   // column description from the parquet library
   final ColumnDescriptor columnDescriptor;
   // metadata of the column, from the parquet library

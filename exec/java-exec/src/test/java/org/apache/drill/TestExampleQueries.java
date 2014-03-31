@@ -19,6 +19,7 @@ package org.apache.drill;
 
 import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.client.QuerySubmitter;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -33,6 +34,11 @@ public class TestExampleQueries extends BaseTestQuery{
   }
   
 
+  @Test
+  @Ignore
+  public void testQ() throws Exception {
+    test("select * from dfs.`/Users/sphillips/customer_drill.dict.parquet` limit 10");
+  }
 
         
   @Test

@@ -72,7 +72,8 @@ abstract class NullableColumnReader extends ColumnReader{
         lastValueWasNull = true;
         nullsFound = 0;
         if (currentValueIndexInVector - totalValuesRead == recordsToReadInThisPass
-            || currentValueIndexInVector >= valueVecHolder.getValueVector().getValueCapacity()){
+            || currentValueIndexInVector >= valueVecHolder.getValueVector().getValueCapacity()
+            || pageReadStatus.readPosInBytes >= pageReadStatus.byteLength){
           break;
         }
         while(currentValueIndexInVector - totalValuesRead < recordsToReadInThisPass
@@ -115,7 +116,7 @@ abstract class NullableColumnReader extends ColumnReader{
         valuesReadInCurrentPass += recordsReadInThisIteration;
         totalValuesRead += recordsReadInThisIteration;
         pageReadStatus.valuesRead += recordsReadInThisIteration;
-        if (readStartInBytes + readLength >= pageReadStatus.byteLength && bitsUsed == 0) {
+        if (readStartInBytes + readLength > pageReadStatus.byteLength && bitsUsed == 0) {
           pageReadStatus.next();
         } else {
           pageReadStatus.readPosInBytes = readStartInBytes + readLength;

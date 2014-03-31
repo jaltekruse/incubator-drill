@@ -165,6 +165,9 @@ public class VarLenBinaryReader {
         // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
         currVec.getAccessor().getOffsetVector().getData().writeInt((int) columnReader.bytesReadInCurrentPass  +
             columnReader.dataTypeLengthInBits - 4 * (int) columnReader.valuesReadInCurrentPass);
+        if (!(columnReader.dataTypeLengthInBits > 0)) {
+          System.out.println();
+        }
         currVec.getData().writeBytes(bytes, (int) columnReader.pageReadStatus.readPosInBytes + 4,
             columnReader.dataTypeLengthInBits);
         columnReader.pageReadStatus.readPosInBytes += columnReader.dataTypeLengthInBits + 4;
