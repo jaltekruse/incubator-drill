@@ -37,7 +37,7 @@ public class TestExampleQueries extends BaseTestQuery{
   @Test
   @Ignore
   public void testQ() throws Exception {
-    test("select * from dfs.`/Users/sphillips/customer_drill.dict.parquet` limit 10");
+    test("select * from dfs.`/tmp/users_dictionary.parquet` limit 10");
   }
 
         
