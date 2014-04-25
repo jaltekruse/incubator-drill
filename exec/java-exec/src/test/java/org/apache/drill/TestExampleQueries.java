@@ -17,7 +17,13 @@
  */
 package org.apache.drill;
 
+import static org.junit.Assert.assertTrue;
+
+import io.netty.buffer.Unpooled;
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.record.QueryResultAccessor;
 import org.junit.Test;
 
 public class TestExampleQueries extends BaseTestQuery{
@@ -90,4 +96,39 @@ public class TestExampleQueries extends BaseTestQuery{
     test("explain plan without implementation for select marital_status, COUNT(1) as cnt from cp.`employee.json` group by marital_status");
   }
 
+  @Test
+  public void testShowTables() throws Exception{
+    testSqlWithValidator("SHOW TABLES", new Validator() {
+      @Override
+      public void validate(QueryResultAccessor accessor) throws Exception {
+        String[][] expected = {
+            {"INFORMATION_SCHEMA", "VIEWS"},
+            {"INFORMATION_SCHEMA", "COLUMNS"},
+            {"INFORMATION_SCHEMA", "TABLES"},
+            {"INFORMATION_SCHEMA", "CATALOGS"},
+            {"INFORMATION_SCHEMA", "SCHEMATA"}
+        };
+
+        VarCharHolder schema = new VarCharHolder();
+        schema.buffer = Unpooled.wrappedBuffer(new byte[100]);
+        schema.start = 0;
+        schema.end = 100;
+        VarCharHolder table = new VarCharHolder();
+        table.buffer = Unpooled.wrappedBuffer(new byte[100]);
+        table.start = 0;
+        table.end = 100;
+
+        while (accessor.nextBatch()) {
+          int rows = accessor.getRowCount();
+          for (int i=0; i<rows; i++) {
+            accessor.getFieldById(0, i, schema);
+            accessor.getFieldById(1, i, table);
+
+            assertTrue(expected[i][0].equals(schema.toString()));
+            assertTrue(expected[i][1].equals(table.toString()));
+          }
+        }
+      }
+    });
+  }
 }

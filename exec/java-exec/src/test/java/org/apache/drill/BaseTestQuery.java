@@ -17,6 +17,8 @@
  */
 package org.apache.drill;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
@@ -28,10 +30,12 @@ import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.client.PrintingResultsListener;
 import org.apache.drill.exec.client.QuerySubmitter;
 import org.apache.drill.exec.client.QuerySubmitter.Format;
+import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.UserProtos.QueryType;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
+import org.apache.drill.exec.record.QueryResultAccessor;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.util.VectorUtil;
@@ -91,21 +95,26 @@ public class BaseTestQuery extends ExecTest{
   }
 
 
-  protected List<QueryResultBatch> testSqlWithResults(String sql) throws Exception{
-    return testRunAndReturn(QueryType.SQL, sql);
+  protected void testSqlWithValidator(String sql, Validator validator) throws Exception{
+    testRunAndReturn(QueryType.SQL, sql, validator);
   }
 
-  protected List<QueryResultBatch> testLogicalWithResults(String logical) throws Exception{
-    return testRunAndReturn(QueryType.LOGICAL, logical);
+  protected void testLogicalWithValidator(String logical, Validator validator) throws Exception{
+    testRunAndReturn(QueryType.LOGICAL, logical, validator);
   }
 
-  protected List<QueryResultBatch> testPhysicalWithResults(String physical) throws Exception{
-    return testRunAndReturn(QueryType.PHYSICAL, physical);
+  protected void testPhysicalWithValidator(String physical, Validator validator) throws Exception{
+    testRunAndReturn(QueryType.PHYSICAL, physical, validator);
   }
 
-  private List<QueryResultBatch>  testRunAndReturn(QueryType type, String query) throws Exception{
+  private void testRunAndReturn(QueryType type, String query, Validator validator) throws Exception{
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
-    return client.runQuery(type, query);
+    List<QueryResultBatch> results = client.runQuery(type, query);
+    QueryResultAccessor provider = new QueryResultAccessor(results, getAllocator());
+    validator.validate(provider);
+    for(QueryResultBatch b : results) {
+      b.release();
+    }
   }
 
   private int testRunAndPrint(QueryType type, String query) throws Exception{
@@ -153,5 +162,9 @@ public class BaseTestQuery extends ExecTest{
       throw new IOException(String.format("Unable to find path %s.", resource));
     }
     return Resources.toString(url, Charsets.UTF_8);
+  }
+
+  interface Validator {
+    void validate(QueryResultAccessor accessor) throws Exception;
   }
 }

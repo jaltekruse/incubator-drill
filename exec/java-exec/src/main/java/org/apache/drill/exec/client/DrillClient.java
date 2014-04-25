@@ -198,7 +198,7 @@ public class DrillClient implements Closeable, ConnectionThrottle{
     }
 
     // TODO: fix tests that fail when this is called.
-    //allocator.close();
+    allocator.close();
     connected = false;
   }
 
