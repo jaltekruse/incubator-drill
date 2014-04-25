@@ -25,6 +25,7 @@ import static org.junit.Assert.assertTrue;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +38,7 @@ import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
-import org.apache.drill.exec.client.DrillClient;
+import org.apache.drill.exec.ResultProvider;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -48,11 +49,8 @@ import org.apache.drill.exec.proto.BitControl;
 import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.proto.UserProtos.QueryType;
 import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.rpc.user.UserServer;
-import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
-import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.store.CachedSingleFileSystem;
 import org.apache.drill.exec.store.TestOutputMutator;
 import org.apache.drill.exec.vector.ValueVector;
@@ -141,13 +139,37 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     testFull(QueryType.LOGICAL, planText, filename, numberOfTimesRead, numberOfRowGroups, recordsPerRowGroup);
   }
 
+  private static class StaticValueRepeatingProvider extends ResultProvider {
+
+    ParquetTestProperties props;
+
+    public StaticValueRepeatingProvider(ParquetTestProperties props) {
+      super();
+      this.props = props;
+    }
+
+    @Override
+    public Object get(int i, int j) {
+      Iterator<String> iter = props.fields.keySet().iterator();
+      int columnIndex = 0;
+      String curr = null;
+      while (iter.hasNext()) {
+        curr = iter.next();
+        if (columnIndex == j){
+        }
+        columnIndex++;
+      }
+      return props.fields.get(curr).values[ i % 3];
+    }
+  }
+
   private void testFull(QueryType type, String planText, String filename, int numberOfTimesRead /* specified in json plan */, int numberOfRowGroups, int recordsPerRowGroup) throws Exception{
 
 //    RecordBatchLoader batchLoader = new RecordBatchLoader(getAllocator());
     HashMap<String, FieldInfo> fields = new HashMap<>();
     ParquetTestProperties props = new ParquetTestProperties(numberRowGroups, recordsPerRowGroup, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populateFieldInfoMap(props);
-    ParquetResultListener resultListener = new ParquetResultListener(getAllocator(), props, numberOfTimesRead, true);
+    DrillResultListener resultListener = new DrillResultListener(getAllocator(), new StaticValueRepeatingProvider(props), props.recordsPerRowGroup * props.numberRowGroups * numberOfTimesRead, true);
     Stopwatch watch = new Stopwatch().start();
     testWithListener(type, planText, resultListener);
     resultListener.getResults();
@@ -182,7 +204,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     HashMap<String, FieldInfo> fields = new HashMap<>();
     ParquetTestProperties props = new ParquetTestProperties(numberRowGroups, recordsPerRowGroup, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populateFieldInfoMap(props);
-    ParquetResultListener resultListener = new ParquetResultListener(getAllocator(), props, numberOfTimesRead, true);
+    DrillResultListener resultListener = new DrillResultListener(getAllocator(), new StaticValueRepeatingProvider(props),props.recordsPerRowGroup * props.numberRowGroups * numberOfTimesRead, true);
     testWithListener(UserProtos.QueryType.PHYSICAL, Files.toString(FileUtils.getResourceAsFile(plan), Charsets.UTF_8), resultListener);
     resultListener.getResults();
   }
@@ -446,7 +468,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
                                               boolean runAsLogicalPlan) throws Exception{
     if (generateNew) TestFileGenerator.generateParquetFile(filename, props);
 
-    ParquetResultListener resultListener = new ParquetResultListener(getAllocator(), props, numberOfTimesRead, testValues);
+    DrillResultListener resultListener = new DrillResultListener(getAllocator(), new StaticValueRepeatingProvider(props), props.recordsPerRowGroup * props.numberRowGroups * numberOfTimesRead, testValues);
     long C = System.nanoTime();
     String planText = Files.toString(FileUtils.getResourceAsFile(plan), Charsets.UTF_8);
     // substitute in the string for the read entries, allows reuse of the plan file for several tests
