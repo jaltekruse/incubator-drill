@@ -24,11 +24,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.common.expression.ExpressionPosition;
-import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
@@ -55,15 +52,11 @@ import parquet.format.converter.ParquetMetadataConverter;
 import parquet.hadoop.CodecFactoryExposer;
 import parquet.hadoop.ParquetFileWriter;
 import parquet.column.Encoding;
-import parquet.hadoop.CodecFactoryExposer;
-import parquet.hadoop.metadata.BlockMetaData;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.PrimitiveType;
 
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.*;
-
-import com.google.common.base.Joiner;
 
 public class ParquetRecordReader implements RecordReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReader.class);
@@ -259,8 +252,8 @@ public class ParquetRecordReader implements RecordReader {
         fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         v = TypeHelper.getNewVector(field, allocator);
         if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
-          createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
-            convertedType);
+            createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
+                convertedType);
         } else {
           if (column.getMaxDefinitionLevel() == 0){// column is required
             if (convertedType == ConvertedType.UTF8) {
@@ -353,8 +346,13 @@ public class ParquetRecordReader implements RecordReader {
             fixedLength, v, convertedType));
       }
       else{
-        columnStatuses.add(new FixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, convertedType));
+        if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
+          columnStatuses.add(new ParquetFixedWidthDictionaryReader(this, allocateSize, descriptor, columnChunkMetaData,
+              fixedLength, v, convertedType));
+        } else {
+          columnStatuses.add(new FixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
+              fixedLength, v, convertedType));
+        }
       }
       return true;
     }
@@ -364,8 +362,8 @@ public class ParquetRecordReader implements RecordReader {
             fixedLength, v, convertedType));
       }
       else{
-        columnStatuses.add(new NullableFixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, convertedType));
+        columnStatuses.add(NullableFixedByteAlignedReaders.getNullableColumnReader(this, allocateSize, descriptor,
+            columnChunkMetaData, fixedLength, v, convertedType));
       }
       return true;
     }

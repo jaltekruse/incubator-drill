@@ -47,8 +47,8 @@ abstract class ColumnReader<V extends ValueVector> {
   final ColumnChunkMetaData columnChunkMetaData;
   // status information on the current page
   final PageReadStatus pageReadStatus;
-
   final ConvertedType convertedType;
+  boolean usingDictionary;
 
   // quick reference to see if the field is fixed length (as this requires an instanceof)
   final boolean isFixedLength;

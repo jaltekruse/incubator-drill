@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.parquet;
 
+import static org.apache.drill.exec.store.parquet.TestFileGenerator.intVals;
 import static org.apache.drill.exec.store.parquet.TestFileGenerator.populateFieldInfoMap;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -304,12 +305,19 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   @Test
   public void testDictionaryEncoding() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 300000, DEFAULT_BYTES_PER_PAGE, fields);
-    Object[] boolVals2 = { "b", "b2", "b3"};
-    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals2, TypeProtos.MinorType.BIT, props));
+    ParquetTestProperties props = new ParquetTestProperties(1, 25, DEFAULT_BYTES_PER_PAGE, fields);
+    Object[] boolVals = null;
+    props.fields.put("n_name", null);
+    props.fields.put("n_nationkey", null);
+    props.fields.put("n_regionkey", null);
+    props.fields.put("n_comment", null);
     // test dictionary encoding
     testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
-        "\"/tmp/dictionary_pig.parquet/a\"", "unused", 1, props);
+        "\"/tmp/nation_dictionary_fail.parquet\"", "unused", 1, props);
+    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
+        "\"/tmp/test_impala_5_15_14.parquet\"", "unused", 1, props);
+    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
+        "\"/tmp/employees_5_16_14.parquet\"", "unused", 1, props);
   }
 
   @Test
@@ -458,7 +466,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   // specific tests should call this method, but it is not marked as a test itself intentionally
   public void testParquetFullEngineEventBased(boolean generateNew, String plan, String readEntries, String filename,
                                               int numberOfTimesRead /* specified in json plan */, ParquetTestProperties props) throws Exception{
-    testParquetFullEngineEventBased(true, generateNew, plan, readEntries,filename,
+    testParquetFullEngineEventBased(false, generateNew, plan, readEntries,filename,
                                               numberOfTimesRead /* specified in json plan */, props, true);
   }
 

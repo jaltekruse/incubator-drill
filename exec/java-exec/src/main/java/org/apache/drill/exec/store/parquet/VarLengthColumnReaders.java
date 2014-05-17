@@ -35,7 +35,6 @@ public class VarLengthColumnReaders {
 
   public static abstract class VarLengthColumn<V extends ValueVector> extends ColumnReader {
 
-    boolean usingDictionary;
     Binary currDictVal;
 
     VarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
@@ -59,7 +58,6 @@ public class VarLengthColumnReaders {
 
     int nullsRead;
     boolean currentValNull = false;
-    boolean usingDictionary;
     Binary currDictVal;
 
     NullableVarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
