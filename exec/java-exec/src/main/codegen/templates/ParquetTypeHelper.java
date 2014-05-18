@@ -27,13 +27,20 @@ import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 package org.apache.drill.exec.store.parquet;
 
+import io.netty.buffer.SwappedByteBuf;
+import io.netty.buffer.Unpooled;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.store.parquet2.*;
+import org.apache.drill.exec.store.parquet2.DrillParquetRecordConverter.DrillPrimitiveConverter;
+import org.apache.drill.exec.vector.*;
+import org.apache.drill.exec.expr.holders.*;
 import parquet.schema.OriginalType;
 import parquet.schema.DecimalMetadata;
 import parquet.schema.PrimitiveType.PrimitiveTypeName;
 import parquet.schema.Type.Repetition;
+import parquet.io.api.Binary;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -151,5 +158,142 @@ public class ParquetTypeHelper {
         return 0;
     }
   }
+
+  public static DrillPrimitiveConverter getConverterForVector(ValueVector vector) {
+    switch(vector.getField().getType().getMinorType()){
+    <#list vv.types as type>
+    <#list type.minor as minor>
+    case ${minor.class?upper_case}:
+    switch (vector.getField().getType().getMode()) {
+      case REQUIRED:
+        return new ${minor.class}Converter((${minor.class}Vector) vector);
+      case OPTIONAL:
+        return new Nullable${minor.class}Converter((Nullable${minor.class}Vector) vector);
+//      case REPEATED:
+//        return new Repeated${minor.class}Converter((Nullable${minor.class}Vector) vector);
+      default:
+      throw new UnsupportedOperationException();
+    }
+    </#list>
+    </#list>
+    default:
+    throw new UnsupportedOperationException();
+    }
+  }
+
+  <#list vv.types as type>
+  <#list type.minor as minor>
+  public static class ${minor.class}Converter extends DrillPrimitiveConverter {
+        ${minor.class}Holder holder = new ${minor.class}Holder();
+        ${minor.class}Vector vector;
+
+        ${minor.class}Converter(ValueVector vector) {
+        this.vector = (${minor.class}Vector) vector;
+        }
+
+        @Override
+        public boolean write(int index) {
+          return vector.getMutator().setSafe(index, holder);
+        }
+
+        <#if minor.class == "Int">
+        @Override
+        public void addInt(int value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "BigInt">
+        @Override
+        public void addLong(long value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "Float4">
+        @Override
+        public void addFloat(float value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "Float8">
+        @Override
+        public void addDouble(double value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "VarChar">
+        @Override
+        public void addBinary(Binary value) {
+        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
+        holder.buffer = buf;
+        holder.start = 0;
+        holder.end = value.length();
+        }
+        <#elseif minor.class == "VarBinary">
+        @Override
+        public void addBinary(Binary value) {
+        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
+        holder.buffer = buf;
+        holder.start = 0;
+        holder.end = value.length();
+        }
+        </#if>
+
+  }
+  </#list>
+  </#list>
+
+ <#list vv.types as type>
+  <#list type.minor as minor>
+  public static class Nullable${minor.class}Converter extends DrillPrimitiveConverter {
+        Nullable${minor.class}Holder holder = new Nullable${minor.class}Holder();
+        Nullable${minor.class}Vector vector;
+
+        Nullable${minor.class}Converter(ValueVector vector) {
+        this.vector = (Nullable${minor.class}Vector) vector;
+        this.holder.isSet = 1;
+        }
+
+        @Override
+        public boolean write(int index) {
+          return vector.getMutator().setSafe(index, holder);
+        }
+
+        <#if minor.class == "Int">
+        @Override
+        public void addInt(int value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "BigInt">
+        @Override
+        public void addLong(long value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "Float4">
+        @Override
+        public void addFloat(float value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "Float8">
+        @Override
+        public void addDouble(double value) {
+        holder.value = value;
+        }
+        <#elseif minor.class == "VarChar">
+        @Override
+        public void addBinary(Binary value) {
+        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
+        holder.buffer = buf;
+        holder.start = 0;
+        holder.end = value.length();
+        }
+        <#elseif minor.class == "VarBinary">
+        @Override
+        public void addBinary(Binary value) {
+        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
+        holder.buffer = buf;
+        holder.start = 0;
+        holder.end = value.length();
+        }
+        </#if>
+
+  }
+  </#list>
+  </#list>
 
 }

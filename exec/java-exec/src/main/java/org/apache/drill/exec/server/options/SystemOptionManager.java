@@ -42,7 +42,8 @@ public class SystemOptionManager implements OptionManager{
       PlannerSettings.MULTIPHASE,
       PlannerSettings.BROADCAST,
       ExecConstants.OUTPUT_FORMAT_VALIDATOR,
-      ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR
+      ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR,
+      ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR
   };
 
   private DistributedMap<OptionValue> options;
