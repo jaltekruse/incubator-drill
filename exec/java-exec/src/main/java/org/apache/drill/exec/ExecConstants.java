@@ -73,6 +73,6 @@ public interface ExecConstants {
   public static final String PARQUET_BLOCK_SIZE = "parquet.block.size";
   public static final OptionValidator PARQUET_BLOCK_SIZE_VALIDATOR = new LongValidator(PARQUET_BLOCK_SIZE, 512*1024*1024);
   public static String PARQUET_NEW_RECORD_READER = "store.parquet.use_new_reader";
-  public static OptionValidator PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR = new BooleanValidator(PARQUET_NEW_RECORD_READER, false);
+  public static OptionValidator PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR = new BooleanValidator(PARQUET_NEW_RECORD_READER, true);
 
 }

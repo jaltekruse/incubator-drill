@@ -23,6 +23,14 @@ import org.junit.Test;
 public class TestExampleQueries extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
+  @Test
+  public void testQ() throws Exception {
+//    test("select count(l_shipdate) from cp.`tpch/lineitem.parquet` where l_shipdate between '1997-01-01' and '1998-01-01'");
+//    test("select count(1) from cp.`tpch/lineitem.parquet` where l_partkey > 0");
+    test("select count(1) from dfs.`/tmp/1_7_0.parquet` where l_orderkey > 0");
+    test("select l_orderkey, l_extendedprice from dfs.`/tmp/1_7_0.parquet` limit 10");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");

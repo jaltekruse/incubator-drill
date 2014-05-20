@@ -23,9 +23,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import com.google.common.base.Preconditions;
 
+import com.google.common.base.Stopwatch;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
@@ -362,6 +364,8 @@ public class ParquetRecordReader implements RecordReader {
   @Override
   public int next() {
     resetBatch();
+    Stopwatch watch = new Stopwatch();
+    watch.start();
     long recordsToRead = 0;
     try {
       ColumnReader firstColumnStatus;
@@ -400,6 +404,10 @@ public class ParquetRecordReader implements RecordReader {
         readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
       }
 
+      long t = watch.elapsed(TimeUnit.NANOSECONDS);
+      int count = firstColumnStatus.valuesReadInCurrentPass;
+      if (count > 0)
+        logger.debug("Took {} ns to read {} records. {} ns / record", t, count, t / count);
       return firstColumnStatus.valuesReadInCurrentPass;
     } catch (IOException e) {
       throw new DrillRuntimeException(e);

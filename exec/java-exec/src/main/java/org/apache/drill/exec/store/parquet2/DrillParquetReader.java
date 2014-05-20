@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.parquet2;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -31,31 +32,50 @@ import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.store.RecordReader;
+import org.apache.drill.exec.store.parquet.ParquetTypeHelper;
+import org.apache.drill.exec.store.parquet.ParquetTypeHelper.BigIntConverter;
 import org.apache.drill.exec.store.parquet.RowGroupReadEntry;
+import org.apache.drill.exec.store.parquet2.DrillParquetRecordConverter.DrillPrimitiveConverter;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.Reporter;
+import parquet.column.ColumnDescriptor;
+import parquet.column.ColumnReader;
+import parquet.column.impl.ColumnReaderImpl;
 import parquet.hadoop.*;
+import parquet.hadoop.ColumnChunkIncReadStore.*;
+import parquet.hadoop.metadata.ColumnChunkMetaData;
+import parquet.hadoop.metadata.ColumnPath;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.*;
 import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class DrillParquetReader implements RecordReader {
 
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillParquetReader.class);
+
   private ParquetMetadata footer;
   private MessageType schema;
-  private ParquetRecordReader<DrillParquetRecord> reader;
   private Configuration conf;
-  private boolean hasRemainder = false;
   private List<ValueVector> vectors;
   private RowGroupReadEntry entry;
   private List<SchemaPath> columns;
+
+  private List<ColumnReader> columnReaders = Lists.newArrayList();
+  private List<DrillPrimitiveConverter> converters = Lists.newArrayList();
+
+  private long totalCount;
 
   public DrillParquetReader(ParquetMetadata footer, RowGroupReadEntry entry, List<SchemaPath> columns, Configuration conf) {
     this.footer = footer;
@@ -86,6 +106,17 @@ public class DrillParquetReader implements RecordReader {
         }
         projection = new MessageType("projection", types);
       }
+
+      Map<ColumnPath, ColumnChunkMetaData> paths = new HashMap();
+
+      for (ColumnChunkMetaData md : footer.getBlocks().get(entry.getRowGroupIndex()).getColumns()) {
+        paths.put(md.getPath(), md);
+      }
+
+      CodecFactoryExposer codecFactoryExposer = new CodecFactoryExposer(conf);
+      FileSystem fs = FileSystem.get(conf);
+      Path filePath = new Path(entry.getPath());
+
       for (String[] path : projection.getPaths()) {
         Type type = projection.getType(path);
         PrimitiveType pType;
@@ -95,34 +126,44 @@ public class DrillParquetReader implements RecordReader {
           ValueVector v = output.addField(MaterializedField.create(SchemaPath.getCompoundPath(path), mType),
                   (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(mType.getMinorType(), mType.getMode()));
           vectors.add(v);
+          DrillPrimitiveConverter converter = ParquetTypeHelper.getConverterForVector(v);
+          converters.add(converter);
+          FSDataInputStream in = fs.open(filePath);
+          ColumnChunkMetaData md = paths.get(ColumnPath.get(path));
+          in.seek(md.getStartingPos());
+
+          ColumnChunkIncPageReader pageReader = new ColumnChunkIncPageReader(md, in, codecFactoryExposer.getCodecFactory());
+          ColumnReader reader = new ColumnReaderImpl(projection.getColumnDescription(path), pageReader, converter);
+          columnReaders.add(reader);
         }
       }
-      ParquetInputSplit split = new ParquetInputSplit(
-              new Path(entry.getPath()),
-              entry.getStart(),
-              entry.getLength(),
-              null,
-              footer.getBlocks(),
-              projection.toString().intern(),
-              footer.getFileMetaData().getSchema().toString().intern(),
-              null,
-              null
-      );
-      reader = new ParquetRecordReader(new DrillReadSupport(vectors));
-      reader.initialize(split, conf, Reporter.NULL);
+//      ParquetInputSplit split = new ParquetInputSplit(
+//              new Path(entry.getPath()),
+//              entry.getStart(),
+//              entry.getLength(),
+//              null,
+//              footer.getBlocks(),
+//              projection.toString().intern(),
+//              footer.getFileMetaData().getSchema().toString().intern(),
+//              null,
+//              null
+//      );
+//      reader = new ParquetRecordReader(new DrillReadSupport(vectors));
+//      reader.initialize(split, conf, Reporter.NULL);
+
       this.vectors = vectors;
-      output.setNewSchema();
-    } catch (IOException | InterruptedException | SchemaChangeException e) {
+
+      this.totalCount = footer.getBlocks().get(entry.getRowGroupIndex()).getRowCount();
+
+    } catch (IOException | SchemaChangeException e) {
       throw new ExecutionSetupException(e);
     }
   }
 
+  /*
   @Override
   public int next() {
     try {
-      for (ValueVector v : vectors) {
-        v.allocateNew();
-      }
       int count = 0;
       if (reader.getCurrentValue() != null) {
         reader.getCurrentValue().index = 0;
@@ -135,7 +176,9 @@ public class DrillParquetReader implements RecordReader {
         hasRemainder = false;
         count++;
       }
-      while(reader.nextKeyValue() && count < 5000) {
+      Stopwatch watch = new Stopwatch();
+      watch.start();
+      while(reader.nextKeyValue() && count < 32*1024) {
         if (reader.getCurrentValue().success) {
           count++;
         } else {
@@ -143,6 +186,9 @@ public class DrillParquetReader implements RecordReader {
           break;
         }
       }
+      long t = watch.elapsed(TimeUnit.NANOSECONDS);
+      if (count > 0)
+        logger.debug("Took {} ns to read {} records. {} ns / record", t, count, t / count);
       for (ValueVector v : vectors) {
         v.getMutator().setValueCount(count);
       }
@@ -150,6 +196,34 @@ public class DrillParquetReader implements RecordReader {
     } catch (IOException | InterruptedException e) {
       throw new DrillRuntimeException(e);
     }
+  }
+  */
+
+  private long totalRead = 0;
+  @Override
+  public int next() {
+    Stopwatch watch = new Stopwatch();
+    watch.start();
+    int count = 0;
+    int width = columnReaders.size();
+    outer: for (; count < 10000 && totalRead < totalCount; count++, totalRead++) {
+      for (int i = 0; i < columnReaders.size(); i++) {
+        columnReaders.get(i).writeCurrentValueToConverter();
+        if (!converters.get(i).write(count)) {
+          break outer;
+        }
+      }
+      for (ColumnReader reader : columnReaders) {
+        reader.consume();
+      }
+    }
+    for (ValueVector v : vectors) {
+      v.getMutator().setValueCount(count);
+    }
+    long t = watch.elapsed(TimeUnit.NANOSECONDS);
+    if (count > 0)
+      logger.debug("Took {} ns to read {} records. {} ns / record", t, count, t / count);
+    return count;
   }
 
   static TypeProtos.MajorType toMajorType(PrimitiveType pType) {
