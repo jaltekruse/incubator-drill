@@ -335,6 +335,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
     
     public void get(int index, Nullable${minor.class}Holder holder){
       holder.isSet = bits.getAccessor().get(index);
+      if (holder.isSet == 0) return;
       values.getAccessor().get(index, holder);
 
       <#if minor.class.startsWith("Decimal")>
@@ -430,6 +431,16 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
         return false;
       }
       </#if>
+    }
+
+    public boolean setSafeSkipNull(int index, ${minor.class}Holder holder){
+      if (bits.getValueCapacity() <= index) return false;
+      return values.getMutator().setSafe(index, holder);
+    }
+
+    public boolean setSafeSkipNull(int index, Nullable${minor.class}Holder holder){
+      if (bits.getValueCapacity() <= index) return false;
+      return values.getMutator().setSafe(index, holder);
     }
 
     public void setSkipNull(int index, ${minor.class}Holder holder){

@@ -9,7 +9,7 @@
           writable: false
         },
         "tmp" : {
-          location: "/tmp/drilltest",
+          location: "/tmp",
           writable: true,
           storageformat: "csv"
         }
@@ -29,6 +29,9 @@
               type: "text",
               extensions: [ "tsv" ],
               delimiter: "\t"
+            },
+            "json" : {
+              type: "json"
             },
             "parquet" : {
               type: "parquet"

@@ -236,12 +236,11 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
      * @return 1 if set, otherwise 0
      */
     public final int get(int index) {
-      // logger.debug("BIT GET: index: {}, byte: {}, mask: {}, masked byte: {}",
-      // index,
-      // data.getByte((int)Math.floor(index/8)),
-      // (int)Math.pow(2, (index % 8)),
-      // data.getByte((int)Math.floor(index/8)) & (int)Math.pow(2, (index % 8)));
-      return ((data.getByte((int) Math.floor(index / 8)) & (int) Math.pow(2, (index % 8))) == 0) ? 0 : 1;
+      int byteIndex = index >> 3;
+      byte b = data.getByte(byteIndex);
+      int bitIndex = index & 7;
+      return Long.bitCount(b &  (1L << bitIndex));
+//      return ((data.getByte((int) Math.floor(index / 8)) & (int) Math.pow(2, (index % 8))) == 0) ? 0 : 1;
     }
 
     public boolean isNull(int index){
@@ -292,15 +291,14 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
      *          value to set (either 1 or 0)
      */
     public final void set(int index, int value) {
-      byte currentByte = data.getByte((int) Math.floor(index / 8));
-      if (value != 0) {
-        // true
-        currentByte |= (byte) Math.pow(2, (index % 8));
-      } else if ((currentByte & (byte) Math.pow(2, (index % 8))) == (byte) Math.pow(2, (index % 8))) {
-        // false, and bit was previously set
-        currentByte -= (byte) Math.pow(2, (index % 8));
-      }
-      data.setByte((int) Math.floor(index / 8), currentByte);
+      if (value == 0) return;
+      int byteIndex = index >> 3;
+      int bitIndex = index & 7;
+      byte currentByte = data.getByte(byteIndex);
+      byte bitMask = (byte) (1L << bitIndex);
+      currentByte |= bitMask;
+
+      data.setByte(byteIndex, currentByte);
     }
 
     public final void set(int index, BitHolder holder) {

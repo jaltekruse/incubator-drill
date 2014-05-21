@@ -27,8 +27,12 @@ public class TestExampleQueries extends BaseTestQuery{
   public void testQ() throws Exception {
 //    test("select count(l_shipdate) from cp.`tpch/lineitem.parquet` where l_shipdate between '1997-01-01' and '1998-01-01'");
 //    test("select count(1) from cp.`tpch/lineitem.parquet` where l_partkey > 0");
-    test("select count(1) from dfs.`/tmp/1_7_0.parquet` where l_orderkey > 0");
-    test("select l_orderkey, l_extendedprice from dfs.`/tmp/1_7_0.parquet` limit 10");
+//    test("select count(1) from dfs.`/tmp/1_7_0.parquet` where l_orderkey > 0");
+//    test("select l_orderkey, l_extendedprice from dfs.`/tmp/1_7_0.parquet` limit 10");
+//    test("select a from dfs.`/tmp/t1` where a > 0");
+    test("use dfs.tmp");
+//    test("create table t12 as select * from data");
+    test("select a from t4 where a IS NOT NULL");
   }
 
   @Test // see DRILL-553

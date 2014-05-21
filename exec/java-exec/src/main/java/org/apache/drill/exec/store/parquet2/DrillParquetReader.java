@@ -207,11 +207,16 @@ public class DrillParquetReader implements RecordReader {
     int count = 0;
     int width = columnReaders.size();
     outer: for (; count < 10000 && totalRead < totalCount; count++, totalRead++) {
-      for (int i = 0; i < columnReaders.size(); i++) {
-        columnReaders.get(i).writeCurrentValueToConverter();
-        if (!converters.get(i).write(count)) {
-          break outer;
+      for (int i = 0; i < width; i++) {
+        if (columnReaders.get(i).getCurrentDefinitionLevel() != 0){
+          columnReaders.get(i).writeCurrentValueToConverter();
+          if (!converters.get(i).write(count)) {
+            break outer;
+          }
         }
+      }
+      for (DrillPrimitiveConverter converter : converters) {
+        converter.reset();
       }
       for (ColumnReader reader : columnReaders) {
         reader.consume();

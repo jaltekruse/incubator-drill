@@ -192,6 +192,10 @@ public class ParquetTypeHelper {
         }
 
         @Override
+        public void reset() {
+        }
+
+        @Override
         public boolean write(int index) {
           return vector.getMutator().setSafe(index, holder);
         }
@@ -247,6 +251,11 @@ public class ParquetTypeHelper {
         Nullable${minor.class}Converter(ValueVector vector) {
         this.vector = (Nullable${minor.class}Vector) vector;
         this.holder.isSet = 1;
+        }
+
+        @Override
+        public void reset() {
+          holder.isSet = 0;
         }
 
         @Override
