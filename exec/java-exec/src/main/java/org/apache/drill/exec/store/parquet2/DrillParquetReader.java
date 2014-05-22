@@ -206,7 +206,7 @@ public class DrillParquetReader implements RecordReader {
     watch.start();
     int count = 0;
     int width = columnReaders.size();
-    outer: for (; count < 10000 && totalRead < totalCount; count++, totalRead++) {
+    outer: for (; count < 32*1024 && totalRead < totalCount; count++, totalRead++) {
       for (int i = 0; i < width; i++) {
         if (columnReaders.get(i).getCurrentDefinitionLevel() != 0){
           columnReaders.get(i).writeCurrentValueToConverter();
@@ -226,8 +226,9 @@ public class DrillParquetReader implements RecordReader {
       v.getMutator().setValueCount(count);
     }
     long t = watch.elapsed(TimeUnit.NANOSECONDS);
-    if (count > 0)
+    if (count > 0) {
       logger.debug("Took {} ns to read {} records. {} ns / record", t, count, t / count);
+    }
     return count;
   }
 

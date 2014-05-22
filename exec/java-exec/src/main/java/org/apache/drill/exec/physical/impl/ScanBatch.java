@@ -21,7 +21,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -78,6 +80,9 @@ public class ScanBatch implements RecordBatch {
   List<Integer> selectedPartitionColumns;
   private String partitionColumnDesignator;
 
+  private long totalCount = 0;
+  private long totalTime = 0;
+
   public ScanBatch(PhysicalOperator subScanConfig, FragmentContext context, Iterator<RecordReader> readers, List<String[]> partitionColumns, List<Integer> selectedPartitionColumns) throws ExecutionSetupException {
     this.context = context;
     this.readers = readers;
@@ -125,11 +130,14 @@ public class ScanBatch implements RecordBatch {
   @Override
   public IterOutcome next() {
     mutator.allocate(MAX_RECORD_CNT);
+    Stopwatch watch = new Stopwatch();
+    watch.start();
     while ((recordCount = currentReader.next()) == 0) {
       try {
         if (!readers.hasNext()) {
           currentReader.cleanup();
           releaseAssets();
+          logger.debug("Took {} ns to read {} records. {} ns / record", totalTime, totalCount, totalTime / totalCount);
           return IterOutcome.NONE;
         }
         currentReader.cleanup();
@@ -149,8 +157,12 @@ public class ScanBatch implements RecordBatch {
     if (mutator.isNewSchema()) {
       container.buildSchema(SelectionVectorMode.NONE);
       schema = container.getSchema();
+      totalCount += getRecordCount();
+      totalTime += watch.elapsed(TimeUnit.NANOSECONDS);
       return IterOutcome.OK_NEW_SCHEMA;
     } else {
+      totalTime += watch.elapsed(TimeUnit.NANOSECONDS);
+      totalCount += getRecordCount();
       return IterOutcome.OK;
     }
   }
