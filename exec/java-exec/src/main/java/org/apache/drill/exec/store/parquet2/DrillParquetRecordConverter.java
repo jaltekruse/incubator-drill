@@ -71,6 +71,8 @@ public class DrillParquetRecordConverter  extends GroupConverter {
   }
 
   public static abstract class DrillPrimitiveConverter extends PrimitiveConverter {
+    public boolean success;
+    public int index;
     public abstract boolean write(int index);
     public abstract void reset();
   }

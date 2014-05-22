@@ -203,38 +203,38 @@ public class ParquetTypeHelper {
         <#if minor.class == "Int">
         @Override
         public void addInt(int value) {
-        holder.value = value;
+          success = vector.getMutator().setSafe(index, value);
+          if (success) index++;
         }
         <#elseif minor.class == "BigInt">
         @Override
         public void addLong(long value) {
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "Float4">
         @Override
         public void addFloat(float value) {
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "Float8">
         @Override
         public void addDouble(double value) {
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "VarChar">
         @Override
         public void addBinary(Binary value) {
-        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
-        holder.buffer = buf;
-        holder.start = 0;
-        holder.end = value.length();
+      success = vector.getMutator().setSafe(index, value.getBytes());
+      if (success) index++;
         }
         <#elseif minor.class == "VarBinary">
         @Override
         public void addBinary(Binary value) {
-        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
-        holder.buffer = buf;
-        holder.start = 0;
-        holder.end = value.length();
+      success = vector.getMutator().setSafe(index, value.getBytes());
+      if (success) index++;
         }
         </#if>
 
@@ -267,44 +267,38 @@ public class ParquetTypeHelper {
         <#if minor.class == "Int">
         @Override
         public void addInt(int value) {
-      holder.isSet = 1;
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "BigInt">
         @Override
         public void addLong(long value) {
-      holder.isSet = 1;
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "Float4">
         @Override
         public void addFloat(float value) {
-      holder.isSet = 1;
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "Float8">
         @Override
         public void addDouble(double value) {
-      holder.isSet = 1;
-        holder.value = value;
+      success = vector.getMutator().setSafe(index, value);
+      if (success) index++;
         }
         <#elseif minor.class == "VarChar">
         @Override
         public void addBinary(Binary value) {
-      holder.isSet = 1;
-        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
-        holder.buffer = buf;
-        holder.start = 0;
-        holder.end = value.length();
+      success = vector.getMutator().setSafe(index, value.getBytes(), 0, value.length());
+      if (success) index++;
         }
         <#elseif minor.class == "VarBinary">
         @Override
         public void addBinary(Binary value) {
-      holder.isSet = 1;
-        SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
-        holder.buffer = buf;
-        holder.start = 0;
-        holder.end = value.length();
+      success = vector.getMutator().setSafe(index, value.getBytes(), 0, value.length());
+      if (success) index++;
         }
         </#if>
 

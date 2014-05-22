@@ -21,17 +21,29 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.ErrorCollector;
+import org.apache.drill.common.expression.ErrorCollectorImpl;
+import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.expr.ClassGenerator;
+import org.apache.drill.exec.expr.CodeGenerator;
+import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
+import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
-import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.physical.impl.filter.Filterer;
+import org.apache.drill.exec.physical.impl.filter.ReturnValueExpression;
+import org.apache.drill.exec.record.*;
+import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
 import org.apache.drill.exec.store.RecordReader;
+import org.apache.drill.exec.store.parquet.ParquetRowGroupScan;
 import org.apache.drill.exec.store.parquet.ParquetTypeHelper;
 import org.apache.drill.exec.store.parquet.ParquetTypeHelper.BigIntConverter;
 import org.apache.drill.exec.store.parquet.RowGroupReadEntry;
@@ -68,20 +80,30 @@ public class DrillParquetReader implements RecordReader {
   private ParquetMetadata footer;
   private MessageType schema;
   private Configuration conf;
-  private List<ValueVector> vectors;
   private RowGroupReadEntry entry;
   private List<SchemaPath> columns;
+  private ParquetRowGroupScan popConfig;
+  private FragmentContext context;
 
   private List<ColumnReader> columnReaders = Lists.newArrayList();
+  private List<ColumnReader> filterColumnReaders = Lists.newArrayList();
+  private List<ColumnReader> nonFilterColumnReaders = Lists.newArrayList();
   private List<DrillPrimitiveConverter> converters = Lists.newArrayList();
+  private List<ColumnDescriptor> columnDescriptors = Lists.newArrayList();
+
+  private VectorContainer container = new VectorContainer();
+  private ParquetFilter filterer;
+  private List<TypedFieldId> filterIds;
 
   private long totalCount;
 
-  public DrillParquetReader(ParquetMetadata footer, RowGroupReadEntry entry, List<SchemaPath> columns, Configuration conf) {
+  public DrillParquetReader(ParquetMetadata footer, RowGroupReadEntry entry, List<SchemaPath> columns, Configuration conf, ParquetRowGroupScan popConfig, FragmentContext context) {
     this.footer = footer;
     this.conf = conf;
     this.columns = columns;
     this.entry = entry;
+    this.popConfig = popConfig;
+    this.context = context;
   }
 
   @Override
@@ -125,33 +147,35 @@ public class DrillParquetReader implements RecordReader {
           MajorType mType = toMajorType(pType);
           ValueVector v = output.addField(MaterializedField.create(SchemaPath.getCompoundPath(path), mType),
                   (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(mType.getMinorType(), mType.getMode()));
-          vectors.add(v);
-          DrillPrimitiveConverter converter = ParquetTypeHelper.getConverterForVector(v);
-          converters.add(converter);
-          FSDataInputStream in = fs.open(filePath);
-          ColumnChunkMetaData md = paths.get(ColumnPath.get(path));
-          in.seek(md.getStartingPos());
-
-          ColumnChunkIncPageReader pageReader = new ColumnChunkIncPageReader(md, in, codecFactoryExposer.getCodecFactory());
-          ColumnReader reader = new ColumnReaderImpl(projection.getColumnDescription(path), pageReader, converter);
-          columnReaders.add(reader);
+          container.add(v);
         }
       }
-//      ParquetInputSplit split = new ParquetInputSplit(
-//              new Path(entry.getPath()),
-//              entry.getStart(),
-//              entry.getLength(),
-//              null,
-//              footer.getBlocks(),
-//              projection.toString().intern(),
-//              footer.getFileMetaData().getSchema().toString().intern(),
-//              null,
-//              null
-//      );
-//      reader = new ParquetRecordReader(new DrillReadSupport(vectors));
-//      reader.initialize(split, conf, Reporter.NULL);
+      container.buildSchema(SelectionVectorMode.NONE);
+      this.filterer = generateFilter();
 
-      this.vectors = vectors;
+
+      for (String[] path : projection.getPaths()) {
+        TypedFieldId id = container.getValueVectorId(SchemaPath.getCompoundPath(path));
+        ValueVector v = container.getValueAccessorById(TypeHelper.getValueVectorClass(id.getFinalType().getMinorType(), id.getFinalType().getMode()), id.getFieldIds()).getValueVector();
+        DrillPrimitiveConverter converter = ParquetTypeHelper.getConverterForVector(v);
+        converters.add(converter);
+        FSDataInputStream in = fs.open(filePath);
+        ColumnChunkMetaData md = paths.get(ColumnPath.get(path));
+        in.seek(md.getStartingPos());
+
+        ColumnChunkIncPageReader pageReader = new ColumnChunkIncPageReader(md, in, codecFactoryExposer.getCodecFactory());
+        ColumnDescriptor columnDescriptor = projection.getColumnDescription(path);
+        columnDescriptors.add(columnDescriptor);
+        ColumnReader reader = new ColumnReaderImpl(columnDescriptor, pageReader, converter);
+        columnReaders.add(reader);
+        if (filterIds.contains(id)) {
+          filterColumnReaders.add(reader);
+        } else {
+          nonFilterColumnReaders.add(reader);
+        }
+      }
+
+      filterer.doSetup(context, container);
 
       this.totalCount = footer.getBlocks().get(entry.getRowGroupIndex()).getRowCount();
 
@@ -160,44 +184,27 @@ public class DrillParquetReader implements RecordReader {
     }
   }
 
-  /*
-  @Override
-  public int next() {
-    try {
-      int count = 0;
-      if (reader.getCurrentValue() != null) {
-        reader.getCurrentValue().index = 0;
-      }
-      if (hasRemainder) {
-        reader.getCurrentValue().write();
-        if (!reader.getCurrentValue().success) {
-          throw new DrillRuntimeException("Failed to read next record");
-        }
-        hasRemainder = false;
-        count++;
-      }
-      Stopwatch watch = new Stopwatch();
-      watch.start();
-      while(reader.nextKeyValue() && count < 32*1024) {
-        if (reader.getCurrentValue().success) {
-          count++;
-        } else {
-          hasRemainder = true;
-          break;
-        }
-      }
-      long t = watch.elapsed(TimeUnit.NANOSECONDS);
-      if (count > 0)
-        logger.debug("Took {} ns to read {} records. {} ns / record", t, count, t / count);
-      for (ValueVector v : vectors) {
-        v.getMutator().setValueCount(count);
-      }
-      return count;
-    } catch (IOException | InterruptedException e) {
-      throw new DrillRuntimeException(e);
+  protected ParquetFilter generateFilter() throws SchemaChangeException {
+    final ErrorCollector collector = new ErrorCollectorImpl();
+    final ClassGenerator<ParquetFilter> cg = CodeGenerator.getRoot(ParquetFilter.TEMPLATE_DEFINITION, context.getFunctionRegistry());
+
+    final LogicalExpression expr = ExpressionTreeMaterializer.materialize(popConfig.getFilter(), container, collector, context.getFunctionRegistry());
+    if(collector.hasErrors()){
+      throw new SchemaChangeException(String.format("Failure while trying to materialize incoming schema.  Errors:\n %s.", collector.toErrorString()));
     }
+
+    cg.addExpr(new ReturnValueExpression(expr));
+
+    try {
+      ParquetFilter filterer = context.getImplementationClass(cg);
+      filterer.doSetup(context, container);
+      filterIds = cg.evaluationVisitor.ids;
+      return filterer;
+    } catch (ClassTransformationException | IOException e) {
+      throw new SchemaChangeException("Failure while attempting to load generated class", e);
+    }
+
   }
-  */
 
   private long totalRead = 0;
   @Override
@@ -205,25 +212,41 @@ public class DrillParquetReader implements RecordReader {
     Stopwatch watch = new Stopwatch();
     watch.start();
     int count = 0;
-    int width = columnReaders.size();
-    outer: for (; count < 32*1024 && totalRead < totalCount; count++, totalRead++) {
-      for (int i = 0; i < width; i++) {
-        if (columnReaders.get(i).getCurrentDefinitionLevel() != 0){
-          columnReaders.get(i).writeCurrentValueToConverter();
-          if (!converters.get(i).write(count)) {
-            break outer;
+    for (DrillPrimitiveConverter converter : converters) {
+      converter.index = 0;
+    }
+    outer: for (; count < 32*1024 && totalRead < totalCount; totalRead++) {
+      for (ColumnReader reader : filterColumnReaders) {
+        reader.writeCurrentValueToConverter();
+      }
+      if (filterer.doEval(count, 0)) {
+        for (ColumnReader reader : nonFilterColumnReaders) {
+          if (reader.getCurrentDefinitionLevel() == reader.getDescriptor().getMaxDefinitionLevel()) {
+            reader.writeCurrentValueToConverter();
           }
+        }
+        for (ColumnReader reader : columnReaders) {
+          reader.consume();
+        }
+        for (DrillPrimitiveConverter converter : converters) {
+          converter.index++;
+        }
+        count++;
+      } else {
+        for (ColumnReader reader : filterColumnReaders) {
+          reader.consume();
+        }
+        for (ColumnReader reader : nonFilterColumnReaders) {
+          reader.skip();
         }
       }
       for (DrillPrimitiveConverter converter : converters) {
         converter.reset();
       }
-      for (ColumnReader reader : columnReaders) {
-        reader.consume();
-      }
     }
-    for (ValueVector v : vectors) {
-      v.getMutator().setValueCount(count);
+
+    for (VectorWrapper v : container) {
+      v.getValueVector().getMutator().setValueCount(count);
     }
     long t = watch.elapsed(TimeUnit.NANOSECONDS);
     if (count > 0) {

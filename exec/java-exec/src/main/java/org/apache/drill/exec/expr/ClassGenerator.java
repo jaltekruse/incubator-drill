@@ -65,7 +65,7 @@ public class ClassGenerator<T>{
   public static enum BlockType {SETUP, EVAL, RESET, CLEANUP};
 
   private final SignatureHolder sig;
-  private final EvaluationVisitor evaluationVisitor;
+  public final EvaluationVisitor evaluationVisitor;
   private final Map<ValueVectorSetup, JVar> vvDeclaration = Maps.newHashMap();
   private final Map<String, ClassGenerator<T>> innerClasses = Maps.newHashMap();
   private final List<TypedFieldId> workspaceTypes = Lists.newArrayList();

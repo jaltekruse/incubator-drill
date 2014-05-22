@@ -32,9 +32,9 @@ public class TestExampleQueries extends BaseTestQuery{
 //    test("select a from dfs.`/tmp/t1` where a > 0");
     test("use dfs.tmp");
 //    test("create table t12 as select * from data");
-//    test("select a from t4 where a IS NOT NULL");
-    test("alter session set `store.parquet.use_new_reader` = false");
-    test("select count(1) from t6 where a > '0'");
+    test("select a from t6 limit 1000");
+//    test("alter session set `store.parquet.use_new_reader` = false");
+//    test("select count(1) from t4 where a > '0'");
 //    test("use dfs.tmp");
 //    test("create table lineitem_null_dict as select * from `part-m-00034.parquet` limit 100000");
 //    test("select * from `part-m-00034.parquet` limit 100000");

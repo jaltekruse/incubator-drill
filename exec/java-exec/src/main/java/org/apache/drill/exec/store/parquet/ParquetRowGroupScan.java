@@ -23,6 +23,7 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
@@ -52,6 +53,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   private final List<RowGroupReadEntry> rowGroupReadEntries;
   private final List<SchemaPath> columns;
   private String selectionRoot;
+  private LogicalExpression filter;
 
   @JsonCreator
   public ParquetRowGroupScan( //
@@ -60,7 +62,8 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
       @JsonProperty("format") FormatPluginConfig formatConfig, //
       @JsonProperty("entries") LinkedList<RowGroupReadEntry> rowGroupReadEntries, //
       @JsonProperty("columns") List<SchemaPath> columns, //
-      @JsonProperty("selectionRoot") String selectionRoot //
+      @JsonProperty("selectionRoot") String selectionRoot, //
+      @JsonProperty("filter") LogicalExpression filter
   ) throws ExecutionSetupException {
 
     if(formatConfig == null) formatConfig = new ParquetFormatConfig();
@@ -78,12 +81,18 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
       ParquetFormatPlugin formatPlugin, //
       List<RowGroupReadEntry> rowGroupReadEntries, //
       List<SchemaPath> columns,
-      String selectionRoot) {
+      String selectionRoot,
+      LogicalExpression filter) {
     this.formatPlugin = formatPlugin;
     this.formatConfig = formatPlugin.getConfig();
     this.rowGroupReadEntries = rowGroupReadEntries;
     this.columns = columns;
     this.selectionRoot = selectionRoot;
+    this.filter = filter;
+  }
+
+  public LogicalExpression getFilter() {
+    return filter;
   }
 
   @JsonProperty("entries")
@@ -128,7 +137,7 @@ public class ParquetRowGroupScan extends AbstractBase implements SubScan {
   @Override
   public PhysicalOperator getNewWithChildren(List<PhysicalOperator> children) throws ExecutionSetupException {
     Preconditions.checkArgument(children.isEmpty());
-    return new ParquetRowGroupScan(formatPlugin, rowGroupReadEntries, columns, selectionRoot);
+    return new ParquetRowGroupScan(formatPlugin, rowGroupReadEntries, columns, selectionRoot, filter);
   }
 
   @Override

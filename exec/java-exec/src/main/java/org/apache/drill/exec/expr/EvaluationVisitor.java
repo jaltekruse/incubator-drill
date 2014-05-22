@@ -56,6 +56,7 @@ import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.expr.fn.HiveFuncHolder;
 import org.apache.drill.exec.physical.impl.filter.ReturnValueExpression;
 import org.apache.drill.exec.record.NullExpression;
+import org.apache.drill.exec.record.TypedFieldId;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.FieldWriter;
@@ -74,6 +75,8 @@ import com.sun.codemodel.JVar;
 public class EvaluationVisitor {
 
   private final FunctionImplementationRegistry registry;
+
+  public List<TypedFieldId> ids = Lists.newArrayList();
 
   public EvaluationVisitor(FunctionImplementationRegistry registry) {
     super();
@@ -329,6 +332,7 @@ public class EvaluationVisitor {
     private HoldingContainer visitValueVectorReadExpression(ValueVectorReadExpression e, ClassGenerator<?> generator)
         throws RuntimeException {
       // declare value vector
+      ids.add(e.getTypedFieldId());
 
       JExpression vv1 = generator.declareVectorValueSetupAndMember(generator.getMappingSet().getIncoming(), e.getFieldId());
       JExpression indexVariable = generator.getMappingSet().getValueReadIndex();
