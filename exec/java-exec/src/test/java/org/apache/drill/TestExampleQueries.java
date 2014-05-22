@@ -30,9 +30,14 @@ public class TestExampleQueries extends BaseTestQuery{
 //    test("select count(1) from dfs.`/tmp/1_7_0.parquet` where l_orderkey > 0");
 //    test("select l_orderkey, l_extendedprice from dfs.`/tmp/1_7_0.parquet` limit 10");
 //    test("select a from dfs.`/tmp/t1` where a > 0");
-    test("use dfs.tmp");
+//    test("use dfs.tmp");
 //    test("create table t12 as select * from data");
-    test("select a from t4 where a IS NOT NULL");
+//    test("select a from t4 where a IS NOT NULL");
+    test("use dfs.tmp");
+//    test("create table lineitem_null_dict as select * from `part-m-00034.parquet` limit 100000");
+//    test("select * from `part-m-00034.parquet` limit 100000");
+//    test("alter session set `store.parquet.use_new_reader` = false");
+    test("select l_orderkey, cast(l_returnflag as VARCHAR(100)), cast(l_linestatus as varchar(100)), cast(l_shipdate as varchar(100)) from lineitem_null_dict where l_orderkey > 0 limit 100");
   }
 
   @Test // see DRILL-553

@@ -260,32 +260,38 @@ public class ParquetTypeHelper {
 
         @Override
         public boolean write(int index) {
+          if (holder.isSet == 0) return vector.getValueCapacity() > index;
           return vector.getMutator().setSafe(index, holder);
         }
 
         <#if minor.class == "Int">
         @Override
         public void addInt(int value) {
+      holder.isSet = 1;
         holder.value = value;
         }
         <#elseif minor.class == "BigInt">
         @Override
         public void addLong(long value) {
+      holder.isSet = 1;
         holder.value = value;
         }
         <#elseif minor.class == "Float4">
         @Override
         public void addFloat(float value) {
+      holder.isSet = 1;
         holder.value = value;
         }
         <#elseif minor.class == "Float8">
         @Override
         public void addDouble(double value) {
+      holder.isSet = 1;
         holder.value = value;
         }
         <#elseif minor.class == "VarChar">
         @Override
         public void addBinary(Binary value) {
+      holder.isSet = 1;
         SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
         holder.buffer = buf;
         holder.start = 0;
@@ -294,6 +300,7 @@ public class ParquetTypeHelper {
         <#elseif minor.class == "VarBinary">
         @Override
         public void addBinary(Binary value) {
+      holder.isSet = 1;
         SwappedByteBuf buf = new SwappedByteBuf(Unpooled.wrappedBuffer(value.getBytes()));
         holder.buffer = buf;
         holder.start = 0;

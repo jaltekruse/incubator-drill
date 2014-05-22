@@ -9,7 +9,7 @@
           writable: false
         },
         "tmp" : {
-          location: "/tmp",
+          location: "/tmp/drilltest",
           writable: true,
           storageformat: "csv"
         }
