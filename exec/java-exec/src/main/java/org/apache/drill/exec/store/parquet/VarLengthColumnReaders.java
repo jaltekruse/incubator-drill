@@ -27,6 +27,7 @@ import org.apache.drill.exec.vector.NullableVarBinaryVector;
 import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
 import org.apache.drill.exec.vector.VarCharVector;
+import parquet.bytes.BytesUtils;
 import parquet.column.ColumnDescriptor;
 import parquet.format.ConvertedType;
 import parquet.column.Encoding;
@@ -34,6 +35,7 @@ import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.io.api.Binary;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 
 public class VarLengthColumnReaders {
@@ -56,16 +58,63 @@ public class VarLengthColumnReaders {
 
     @Override
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
+      // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
+      boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
+          (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+      assert success;
+      pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
+      bytesReadInCurrentPass += dataTypeLengthInBits + 4;
+      pageReadStatus.valuesRead++;
+      valuesReadInCurrentPass++;
     }
 
     public abstract boolean setSafe(int index, byte[] bytes, int start, int length);
 
     public abstract int capacity();
 
+    public void reset() {
+      bytesReadInCurrentPass = 0;
+      valuesReadInCurrentPass = 0;
+    }
+    /**
+     * Determines the size of a single value in a variable column.
+     *
+     * Return value indicates if we have finished a row group and should stop reading
+     *
+     * @param recordsReadInCurrentPass
+     * @param lengthVarFieldsInCurrentRecord
+     * @return
+     * @throws IOException
+     */
+    public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
+
+      if (recordsReadInCurrentPass == valueVec.getValueCapacity()){
+        return true;
+      }
+      if (pageReadStatus.currentPage == null
+          || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        totalValuesRead += pageReadStatus.valuesRead;
+        if (!pageReadStatus.next()) {
+          return true;
+        }
+      }
+
+      // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
+      dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
+          (int) pageReadStatus.readPosInBytes);
+      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+
+      if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
+        // TODO - determine if we need to add this back somehow
+        //break outer;
+        return false;
+      }
+      return false;
+    }
+
   }
 
-  public static abstract class NullableVarLengthColumn<V extends ValueVector> extends ColumnReader {
+  public static abstract class NullableVarLengthColumn<V extends ValueVector> extends VarLengthColumn<V> {
 
     int nullsRead;
     boolean currentValNull = false;
@@ -81,9 +130,84 @@ public class VarLengthColumnReaders {
 
     public abstract int capacity();
 
+    public void reset() {
+      bytesReadInCurrentPass = 0;
+      valuesReadInCurrentPass = 0;
+      nullsRead = 0;
+    }
+
+    public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
+      // check to make sure there is capacity for the next value (for nullables this is a check to see if there is
+      // still space in the nullability recording vector)
+      if (recordsReadInCurrentPass == valueVec.getValueCapacity()){
+        return true;
+      }
+      if (pageReadStatus.currentPage == null
+          || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        if (!pageReadStatus.next()) {
+          return true;
+        } else {
+          currDictVal = null;
+        }
+      }
+      // we need to read all of the lengths to determine if this value will fit in the current vector,
+      // as we can only read each definition level once, we have to store the last one as we will need it
+      // at the start of the next read if we decide after reading all of the varlength values in this record
+      // that it will not fit in this batch
+      if ( currDefLevel == -1 ) {
+        currDefLevel = pageReadStatus.definitionLevels.readInteger();
+      }
+      if ( columnDescriptor.getMaxDefinitionLevel() > currDefLevel){
+        currentValNull = true;
+        dataTypeLengthInBits = 0;
+        nullsRead++;
+        return false;// field is null, no length to add to data vector
+      }
+
+      if (usingDictionary) {
+        if (currDictVal == null) {
+          currDictVal = pageReadStatus.valueReader.readBytes();
+        }
+        // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
+        dataTypeLengthInBits = currDictVal.length();
+      }
+      else {
+        // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
+        dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
+            (int) pageReadStatus.readPosInBytes);
+      }
+      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+
+      if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
+        // TODO - determine if we need to add this back somehow
+        //break outer;
+        return false;
+      }
+      return false;
+    }
+    
     @Override
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
+      // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
+      if (!currentValNull && dataTypeLengthInBits > 0){
+        boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
+            (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+        assert success;
+      }
+      currentValNull = false;
+      currDefLevel = -1;
+      if (dataTypeLengthInBits > 0){
+        pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
+        bytesReadInCurrentPass += dataTypeLengthInBits + 4;
+      }
+      pageReadStatus.valuesRead++;
+      valuesReadInCurrentPass++;
+      if ( pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        totalValuesRead += pageReadStatus.valuesRead;
+        // I do not believe this is needed
+        //pageReadStatus.next();
+      }
+      currDictVal = null;
     }
   }
 
@@ -219,11 +343,6 @@ public class VarLengthColumnReaders {
     }
 
     @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean setSafe(int index, byte[] bytes, int start, int length) {
       boolean success;
       if(index >= varCharVector.getValueCapacity()) return false;
@@ -276,11 +395,6 @@ public class VarLengthColumnReaders {
     public int capacity() {
       return nullableVarCharVector.getData().capacity();
     }
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
   }
 
   public static class VarBinaryColumn extends VarLengthColumn <VarBinaryVector> {
@@ -293,11 +407,6 @@ public class VarLengthColumnReaders {
                     SchemaElement schemaElement) throws ExecutionSetupException {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       varBinaryVector = v;
-    }
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -354,9 +463,5 @@ public class VarLengthColumnReaders {
       return nullableVarBinaryVector.getData().capacity();
     }
 
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
   }
 }
