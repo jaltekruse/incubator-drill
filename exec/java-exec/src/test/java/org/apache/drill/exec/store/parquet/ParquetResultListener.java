@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.parquet;
 
 import static junit.framework.Assert.assertEquals;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -32,6 +33,7 @@ import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
+import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 
 import com.google.common.base.Strings;
@@ -126,7 +128,15 @@ public class ParquetResultListener implements UserResultsListener {
       }
       for (int j = 0; j < vv.getAccessor().getValueCount(); j++) {
         if (ParquetRecordReaderTest.VERBOSE_DEBUG){
-          System.out.print(Strings.padStart(vv.getAccessor().getObject(j) + "", 20, ' ') + " ");
+          Object o = vv.getAccessor().getObject(j);
+          if (o instanceof byte[]) {
+            try {
+              o = new String((byte[])o, "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+              throw new RuntimeException(e);
+            }
+          }
+          System.out.print(Strings.padStart(o + "", 20, ' ') + " ");
           System.out.print(", " + (j % 25 == 0 ? "\n batch:" + batchCounter + " v:" + j + " - " : ""));
         }
         if (testValues){

@@ -213,12 +213,7 @@ public class TestParquetWriter extends BaseTestQuery {
       for (int i = 0; i < loader.getRecordCount(); i++) {
         HashMap<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
-          Object obj = null;
-          try {
-            obj = w.getValueVector().getAccessor().getObject(i);
-          } catch (Exception ex) {
-            throw ex;
-          }
+          Object obj = w.getValueVector().getAccessor().getObject(i);
           if (obj != null) {
             if (obj instanceof Text) {
               obj = obj.toString();
@@ -229,6 +224,7 @@ public class TestParquetWriter extends BaseTestQuery {
             else if (obj instanceof byte[]) {
               obj = new String((byte[]) obj, "UTF-8");
             }
+            record.put(w.getField().toExpr(), obj);
           }
           record.put(w.getField().toExpr(), obj);
         }
