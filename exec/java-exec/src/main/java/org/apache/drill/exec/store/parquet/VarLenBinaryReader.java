@@ -27,12 +27,9 @@ public class VarLenBinaryReader {
 
   ParquetRecordReader parentReader;
   final List<VarLengthColumn> columns;
-  final List<NullableVarLengthColumn> nullableColumns;
 
-  public VarLenBinaryReader(ParquetRecordReader parentReader, List<VarLengthColumn> columns,
-                            List<NullableVarLengthColumn> nullableColumns){
+  public VarLenBinaryReader(ParquetRecordReader parentReader, List<VarLengthColumn> columns){
     this.parentReader = parentReader;
-    this.nullableColumns = nullableColumns;
     this.columns = columns;
   }
 
@@ -51,136 +48,32 @@ public class VarLenBinaryReader {
     boolean rowGroupFinished = false;
     byte[] bytes;
     // write the first 0 offset
-    for (ColumnReader columnReader : columns) {
-      columnReader.bytesReadInCurrentPass = 0;
-      columnReader.valuesReadInCurrentPass = 0;
+    for (VarLengthColumn columnReader : columns) {
+      columnReader.reset();
     }
-    // same for the nullable columns
-    for (NullableVarLengthColumn columnReader : nullableColumns) {
-      columnReader.bytesReadInCurrentPass = 0;
-      columnReader.valuesReadInCurrentPass = 0;
-      columnReader.nullsRead = 0;
-    }
+
     outer: do {
       lengthVarFieldsInCurrentRecord = 0;
       for (VarLengthColumn columnReader : columns) {
-        if (recordsReadInCurrentPass == columnReader.valueVec.getValueCapacity()){
-          rowGroupFinished = true;
-          break;
-        }
-        if (columnReader.pageReadStatus.currentPage == null
-            || columnReader.pageReadStatus.valuesRead == columnReader.pageReadStatus.currentPage.getValueCount()) {
-          columnReader.totalValuesRead += columnReader.pageReadStatus.valuesRead;
-          if (!columnReader.pageReadStatus.next()) {
-            rowGroupFinished = true;
-            break;
-          }
-        }
-        bytes = columnReader.pageReadStatus.pageDataByteArray;
-
-        // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
-        columnReader.dataTypeLengthInBits = BytesUtils.readIntLittleEndian(bytes,
-            (int) columnReader.pageReadStatus.readPosInBytes);
-        lengthVarFieldsInCurrentRecord += columnReader.dataTypeLengthInBits;
-
-        if (columnReader.bytesReadInCurrentPass + columnReader.dataTypeLengthInBits > columnReader.capacity()) {
-          break outer;
-        }
-
-      }
-      for (NullableVarLengthColumn columnReader : nullableColumns) {
-        // check to make sure there is capacity for the next value (for nullables this is a check to see if there is
-        // still space in the nullability recording vector)
-        if (recordsReadInCurrentPass == columnReader.valueVec.getValueCapacity()){
-          rowGroupFinished = true;
-          break;
-        }
-        if (columnReader.pageReadStatus.currentPage == null
-            || columnReader.pageReadStatus.valuesRead == columnReader.pageReadStatus.currentPage.getValueCount()) {
-          if (!columnReader.pageReadStatus.next()) {
-            rowGroupFinished = true;
-            break;
-          } else {
-            columnReader.currDictVal = null;
-          }
-        }
-        bytes = columnReader.pageReadStatus.pageDataByteArray;
-        // we need to read all of the lengths to determine if this value will fit in the current vector,
-        // as we can only read each definition level once, we have to store the last one as we will need it
-        // at the start of the next read if we decide after reading all of the varlength values in this record
-        // that it will not fit in this batch
-        if ( columnReader.currDefLevel == -1 ) {
-          columnReader.currDefLevel = columnReader.pageReadStatus.definitionLevels.readInteger();
-        }
-        if ( columnReader.columnDescriptor.getMaxDefinitionLevel() > columnReader.currDefLevel){
-          columnReader.currentValNull = true;
-          columnReader.dataTypeLengthInBits = 0;
-          columnReader.nullsRead++;
-          continue;// field is null, no length to add to data vector
-        }
-
-        if (columnReader.usingDictionary) {
-          if (columnReader.currDictVal == null) {
-            columnReader.currDictVal = columnReader.pageReadStatus.valueReader.readBytes();
-          }
-          // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
-          columnReader.dataTypeLengthInBits = columnReader.currDictVal.length();
-        }
-        else {
-          // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
-          columnReader.dataTypeLengthInBits = BytesUtils.readIntLittleEndian(bytes,
-              (int) columnReader.pageReadStatus.readPosInBytes);
-        }
-        lengthVarFieldsInCurrentRecord += columnReader.dataTypeLengthInBits;
-
-        if (columnReader.bytesReadInCurrentPass + columnReader.dataTypeLengthInBits > columnReader.capacity()) {
-          break outer;
-        }
+        rowGroupFinished = columnReader.determineSize(recordsReadInCurrentPass, lengthVarFieldsInCurrentRecord);
       }
       // check that the next record will fit in the batch
       if (rowGroupFinished || (recordsReadInCurrentPass + 1) * parentReader.getBitWidthAllFixedFields() + lengthVarFieldsInCurrentRecord
           > parentReader.getBatchSize()){
         break outer;
       }
-      for (VarLengthColumn columnReader : columns) {
-        bytes = columnReader.pageReadStatus.pageDataByteArray;
-        // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-        boolean success = columnReader.setSafe(columnReader.valuesReadInCurrentPass, bytes,
-            (int) columnReader.pageReadStatus.readPosInBytes + 4, columnReader.dataTypeLengthInBits);
-        assert success;
-        columnReader.pageReadStatus.readPosInBytes += columnReader.dataTypeLengthInBits + 4;
-        columnReader.bytesReadInCurrentPass += columnReader.dataTypeLengthInBits + 4;
-        columnReader.pageReadStatus.valuesRead++;
-        columnReader.valuesReadInCurrentPass++;
-      }
-      for (NullableVarLengthColumn columnReader : nullableColumns) {
-        bytes = columnReader.pageReadStatus.pageDataByteArray;
-        // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-        if (!columnReader.currentValNull && columnReader.dataTypeLengthInBits > 0){
-          boolean success = columnReader.setSafe(columnReader.valuesReadInCurrentPass, bytes,
-                (int) columnReader.pageReadStatus.readPosInBytes + 4, columnReader.dataTypeLengthInBits);
-          assert success;
-        }
-        columnReader.currentValNull = false;
-        columnReader.currDefLevel = -1;
-        if (columnReader.dataTypeLengthInBits > 0){
-          columnReader.pageReadStatus.readPosInBytes += columnReader.dataTypeLengthInBits + 4;
-          columnReader.bytesReadInCurrentPass += columnReader.dataTypeLengthInBits + 4;
-        }
-        columnReader.pageReadStatus.valuesRead++;
-        columnReader.valuesReadInCurrentPass++;
-        if ( columnReader.pageReadStatus.valuesRead == columnReader.pageReadStatus.currentPage.getValueCount()) {
-          columnReader.totalValuesRead += columnReader.pageReadStatus.valuesRead;
-          columnReader.pageReadStatus.next();
-        }
-        columnReader.currDictVal = null;
-      }
       recordsReadInCurrentPass++;
     } while (recordsReadInCurrentPass < recordsToReadInThisPass);
+
     for (VarLengthColumn columnReader : columns) {
-      columnReader.valueVec.getMutator().setValueCount((int) recordsReadInCurrentPass);
+      // TODO - break up the updatePosition method into one for each of the loops (determine read length and actually reading)
+      // the way this works it is incrementing this counter twice
+      //columnReader.valuesReadInCurrentPass = 0;
     }
-    for (NullableVarLengthColumn columnReader : nullableColumns) {
+    for (VarLengthColumn columnReader : columns) {
+      columnReader.readRecords(columnReader.pageReadStatus.valuesReadyToRead);
+    }
+    for (VarLengthColumn columnReader : columns) {
       columnReader.valueVec.getMutator().setValueCount((int) recordsReadInCurrentPass);
     }
     return recordsReadInCurrentPass;

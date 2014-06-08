@@ -28,6 +28,8 @@ import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.record.WritableBatch;
 import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
+import org.apache.drill.exec.vector.RepeatedFixedWidthVector;
+import org.apache.drill.exec.vector.RepeatedVariableWidthVector;
 
 public class IteratorValidatorBatchIterator implements RecordBatch {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(IteratorValidatorBatchIterator.class);
@@ -115,8 +117,22 @@ public class IteratorValidatorBatchIterator implements RecordBatch {
       if(schema.getFieldCount() == 0){
         throw new IllegalStateException ("Incoming batch has an empty schema. This is not allowed.");
       }
-     if(incoming.getRecordCount() > MAX_BATCH_SIZE){
-       throw new IllegalStateException (String.format("Incoming batch of %s has size %d, which is beyond the limit of %d",  incoming.getClass().getName(), incoming.getRecordCount(), MAX_BATCH_SIZE));
+      if(incoming.getRecordCount() > MAX_BATCH_SIZE){
+        throw new IllegalStateException (String.format("Incoming batch of %s has size %d, which is beyond the limit of %d",  incoming.getClass().getName(), incoming.getRecordCount(), MAX_BATCH_SIZE));
+      }
+      int valueCount = incoming.getRecordCount();
+      String VALUE_COUNT_MISMATCH_MESSAGE = "The value counts of the vectors within this batch do not match.";
+      for (VectorWrapper vw : incoming) {
+        // TODO - this should be fixed with the changing of the interfaces, getValueCount in the repeated vectors should return the group count
+        // and we should instead create a new method to return the child count (but this needs to go along with a review of the code to make
+        // sure we adjust all uses of the methods to prevent regressions
+        if ( vw.getValueVector() instanceof RepeatedFixedWidthVector) {
+          assert valueCount == ((RepeatedFixedWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+        } else if (vw.getValueVector() instanceof RepeatedVariableWidthVector ) {
+          assert valueCount == ((RepeatedVariableWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+        } else {
+          assert valueCount == vw.getValueVector().getAccessor().getValueCount() : VALUE_COUNT_MISMATCH_MESSAGE;
+        }
       }
     }
 

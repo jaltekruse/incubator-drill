@@ -146,6 +146,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private void checkBlockSizeReached() throws IOException {
     if (recordCount >= recordCountForNextMemCheck) { // checking the memory size is relatively expensive, so let's not do it for every record.
       long memSize = store.memSize();
+      System.out.println("mem size: " + memSize + " blocksize: " + blockSize);
       if (memSize > blockSize) {
         System.out.println("Reached block size " + blockSize);
         flush();
