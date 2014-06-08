@@ -83,6 +83,16 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testTPCHReadWrite1_date_convertedType() throws Exception {
+    String selection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
+        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, cast(L_COMMITDATE as DATE) as COMMITDATE, cast(L_RECEIPTDATE as DATE) AS RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
+    String validationSelection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
+        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,COMMITDATE ,RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
+    String inputTable = "cp.`tpch/lineitem.parquet`";
+    runTestAndValidate(selection, validationSelection, inputTable, "lineitem_parquet");
+  }
+
+  @Test
   public void testTPCHReadWrite2() throws Exception {
     String inputTable = "cp.`tpch/customer.parquet`";
     runTestAndValidate("*", "*", inputTable, "customer_parquet");
@@ -124,15 +134,6 @@ public class TestParquetWriter extends BaseTestQuery {
     String inputTable = "cp.`tpch/supplier.parquet`";
     runTestAndValidate("*", "*", inputTable, "supplier_parquet");
   }
-
-
-  @Test
-  public void testTPCHReadWrite() throws Exception {
-    String selection = "*";
-    String inputTable = "`/tmp/lineitem.parquet`";
-    runTestAndValidate(selection, selection, inputTable);
-  }
-
 
   @Test
   public void testDecimal() throws Exception {

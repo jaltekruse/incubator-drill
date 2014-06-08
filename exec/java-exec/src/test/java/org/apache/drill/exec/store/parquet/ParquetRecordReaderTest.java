@@ -357,7 +357,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     HashMap<String, FieldInfo> fields = new HashMap<>();
     ParquetTestProperties props = new ParquetTestProperties(1, 120350, DEFAULT_BYTES_PER_PAGE, fields);
     testParquetFullEngineEventBased(false, false, "/parquet/par_writer_test.json", null,
-        "unused, no file is generated", 1, props, false);
+        "unused, no file is generated", 1, props, QueryType.PHYSICAL);
   }
 
 
@@ -523,7 +523,6 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     if (readEntries != null) {
       planText = planText.replaceFirst( "&REPLACED_IN_PARQUET_TEST&", readEntries);
     }
-    this.testWithListener(queryType, planText, resultListener);
     this.testWithListener(queryType, planText, resultListener);
     resultListener.getResults();
     long D = System.nanoTime();

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
 
@@ -386,7 +387,19 @@ public class ParquetRecordReader implements RecordReader {
         long fixedRecordsToRead = varLengthReader.readFields(recordsToRead, firstColumnStatus);
         readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
       }
-
+      Map<String, String> headResults = new HashMap<>();
+      String head;
+      for (ColumnReader cr : columnStatuses) {
+        head = cr.columnDescriptor.getPath()[0] + ",";
+        for (int i = 0; i < Math.min(100, firstColumnStatus.valuesReadInCurrentPass); i++) {
+          head += cr.valueVec.getAccessor().getObject(i) + ", ";
+        }
+        headResults.put(cr.columnDescriptor.getPath()[0], head);
+      }
+      String allHeads = "";
+      for (String col : headResults.values()) {
+        allHeads += col + "\n";
+      }
       return firstColumnStatus.valuesReadInCurrentPass;
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
