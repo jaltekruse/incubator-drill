@@ -201,6 +201,8 @@ public class TestFileGenerator {
         int bytesPerPage = (int) (valsPerPage * ((int) fieldInfo.bitLength / 8.0));
         int bytesWritten = 0;
         for (int z = 0; z < (int) fieldInfo.numberOfPages; z++, bytesWritten = 0) {
+          repLevels.reset();
+          defLevels.reset();
           for (int i = 0; i < valsPerPage; i++) {
             repLevels.writeInteger(0);
             defLevels.writeInteger(1);

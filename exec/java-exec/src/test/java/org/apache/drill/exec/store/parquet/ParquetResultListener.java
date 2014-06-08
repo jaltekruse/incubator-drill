@@ -126,8 +126,6 @@ public class ParquetResultListener implements UserResultsListener {
       } else {
         columnValCounter = valuesChecked.get(vv.getField().getAsSchemaPath().getRootSegment().getPath());
       }
-      byte[] bytes = new byte[((BaseDataValueVector)vv).getData().capacity()];
-      ((BaseDataValueVector)vv).getData().readBytes(bytes);
       for (int j = 0; j < vv.getAccessor().getValueCount(); j++) {
         if (ParquetRecordReaderTest.VERBOSE_DEBUG){
           Object o = vv.getAccessor().getObject(j);
