@@ -35,10 +35,14 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
   int rightBitShift;
   // used when copying less than a byte worth of data at a time, to indicate the number of used bits in the current byte
   int bitsUsed;
+  BaseValueVector castedBaseVector;
+  NullableVectorDefinitionSetter castedVectorMutator;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+    castedBaseVector = (BaseValueVector) v;
+    castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
   }
 
   public void readAllFixedFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
@@ -46,7 +50,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
     readLength = 0;
     readLengthInBits = 0;
     recordsReadInThisIteration = 0;
-    vectorData = ((BaseValueVector)valueVec).getData();
+    vectorData = castedBaseVector.getData();
 
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
@@ -99,7 +103,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
               lastValueWasNull = false;
             }
             runLength++;
-            ((NullableVectorDefinitionSetter)valueVec.getMutator()).setIndexDefined(currentValueIndexInVector);
+            castedVectorMutator.setIndexDefined(currentValueIndexInVector);
           }
           currentValueIndexInVector++;
         }
@@ -109,7 +113,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         readField( runLength, firstColumnStatus);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
-          ((BaseValueVector) valueVec).getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
+          castedBaseVector.getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
         }
         else if (dataTypeLengthInBits < 8){
           rightBitShift += dataTypeLengthInBits * nullsFound;

@@ -1,0 +1,26 @@
+  {
+    head : {
+      version : 1,
+          generator : {
+        type : "manual",
+            info : "na"
+      },
+      type : "APACHE_DRILL_PHYSICAL"
+    },
+    graph : [ {
+    pop : "parquet-scan",
+    @id : 1,
+        entries : [ {
+      path : "/tmp/drilltest/employee_parquet"
+    } ],
+    storage : {
+      type : "file",
+          connection : "file:///"
+    },
+    columns: [ "L_COMMENT"]
+  }, {
+    pop : "screen",
+    @id : 2,
+        child : 1
+  } ]
+  }

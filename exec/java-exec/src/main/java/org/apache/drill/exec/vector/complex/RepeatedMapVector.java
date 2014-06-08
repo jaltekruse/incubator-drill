@@ -50,6 +50,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 public class RepeatedMapVector extends AbstractContainerVector implements RepeatedFixedWidthVector {
+
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RepeatedMapVector.class);
 
   public final static MajorType TYPE = MajorType.newBuilder().setMinorType(MinorType.MAP).setMode(DataMode.REPEATED).build();
@@ -59,7 +60,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
   private final Map<String, VectorWithOrdinal> vectorIds = Maps.newHashMap();
   private final RepeatedMapReaderImpl reader = new RepeatedMapReaderImpl(RepeatedMapVector.this);
   private final IntObjectOpenHashMap<ValueVector> vectorsById = new IntObjectOpenHashMap<>();
-  private final Accessor accessor = new Accessor();
+  private final RepeatedMapAccessor accessor = new RepeatedMapAccessor();
   private final Mutator mutator = new Mutator();
   private final BufferAllocator allocator;
   private final MaterializedField field;
@@ -278,7 +279,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
   }
 
   @Override
-  public Accessor getAccessor() {
+  public RepeatedMapAccessor getAccessor() {
     return accessor;
   }
 
@@ -349,7 +350,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     return mutator;
   }
 
-  public class Accessor implements ValueVector.Accessor{
+  public class RepeatedMapAccessor implements RepeatedAccessor {
 
     @Override
     public Object getObject(int index) {
@@ -414,6 +415,10 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
       return reader;
     }
 
+    @Override
+    public int getGroupCount() {
+      return size();
+    }
   }
 
   private void populateEmpties(int groupCount){

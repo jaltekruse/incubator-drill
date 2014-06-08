@@ -47,7 +47,7 @@ class NullableFixedByteAlignedReaders {
               fixedLength, (NullableBigIntVector)valueVec, schemaElement);
       }
       else if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.INT32) {
-        return new NullableDicationaryIntReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
+        return new NullableDictionaryIntReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
             fixedLength, (NullableIntVector)valueVec, schemaElement);
       }
       else if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.FLOAT) {
@@ -88,13 +88,13 @@ class NullableFixedByteAlignedReaders {
     }
   }
 
-  private static class NullableDicationaryIntReader extends NullableColumnReader<NullableIntVector> {
+  private static class NullableDictionaryIntReader extends NullableColumnReader<NullableIntVector> {
 
     private byte[] bytes;
 
-    NullableDicationaryIntReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
-                                 ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, NullableIntVector v,
-                                 SchemaElement schemaElement) throws ExecutionSetupException {
+    NullableDictionaryIntReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
+                                ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, NullableIntVector v,
+                                SchemaElement schemaElement) throws ExecutionSetupException {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     }
 
@@ -103,7 +103,7 @@ class NullableFixedByteAlignedReaders {
     protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
       if (usingDictionary) {
         for (int i = 0; i < recordsToReadInThisPass; i++){
-          valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.valueReader.readInteger());
+          valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readInteger());
         }
       }
     }
@@ -123,7 +123,7 @@ class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.valueReader.readLong());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readLong());
       }
     }
   }
@@ -142,7 +142,7 @@ class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.valueReader.readFloat());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readFloat());
       }
     }
   }
@@ -161,7 +161,7 @@ class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.valueReader.readDouble());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readDouble());
       }
     }
   }

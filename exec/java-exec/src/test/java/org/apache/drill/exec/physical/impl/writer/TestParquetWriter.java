@@ -26,6 +26,7 @@ import java.util.Map;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
@@ -39,7 +40,8 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
-@Ignore
+import java.io.UnsupportedEncodingException;
+
 public class TestParquetWriter extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestParquetWriter.class);
 
@@ -151,6 +153,22 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "supplier_parquet");
   }
 
+  // working to create an exhaustive test of the format for this one. including all convertedTypes
+  // will not be supporting interval for Beta as of current schedule
+  // Types left out:
+  // "TIMESTAMPTZ_col"
+  @Test
+  public void testRepeated() throws Exception {
+    String inputTable = "cp.`parquet/basic_repeated.json`";
+    runTestAndValidate("*", "*", inputTable, "basic_repeated");
+  }
+
+  @Test
+  public void testNullReadWrite() throws Exception {
+    String inputTable = "cp.`parquet/null_test_data.json`";
+    runTestAndValidate("*", "*", inputTable, "nullable_test");
+  }
+
   @Test
   @Ignore
   public void testDecimal() throws Exception {
@@ -169,7 +187,7 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testMulipleRowGroups() throws Exception {
     try {
       //test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
-      String selection = "*";
+      String selection = "mi";
       String inputTable = "cp.`customer.json`";
       runTestAndValidate(selection, selection, inputTable, EMPLOYEE_PARQUET_PATH);
     } finally {
@@ -219,12 +237,7 @@ public class TestParquetWriter extends BaseTestQuery {
       for (int i = 0; i < loader.getRecordCount(); i++) {
         HashMap<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
-          Object obj = null;
-          try {
-            obj = w.getValueVector().getAccessor().getObject(i);
-          } catch (Exception ex) {
-            throw ex;
-          }
+          Object obj = w.getValueVector().getAccessor().getObject(i);
           if (obj != null) {
             if (obj instanceof Text) {
               obj = obj.toString();
@@ -252,13 +265,15 @@ public class TestParquetWriter extends BaseTestQuery {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     addToMaterializedResults(expectedRecords, expected, loader, schema);
     addToMaterializedResults(actualRecords, result, loader, schema);
-    Assert.assertEquals("Different number of objects returned", expectedRecords.size(), actualRecords.size());
+    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
     String missing = "";
     int i = 0;
+    int counter = 0;
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
+      counter++;
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
           continue;
@@ -267,7 +282,7 @@ public class TestParquetWriter extends BaseTestQuery {
           continue;
         if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
           missmatch++;
-          System.out.println( i + " " + column + "[ex: " + record.get(column) + ", actual:" + actualRecords.get(i).get(column) + "]");
+          System.out.println( counter + " " + column + "[ex: " + record.get(column) + ", actual:" + actualRecords.get(i).get(column) + "]");
         }
       }
       if ( ! actualRecords.remove(record)) {

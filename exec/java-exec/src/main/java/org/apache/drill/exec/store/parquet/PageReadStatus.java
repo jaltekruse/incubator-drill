@@ -53,6 +53,10 @@ final class PageReadStatus {
   Page currentPage;
   // buffer to store bytes of current page
   byte[] pageDataByteArray;
+
+  // for variable length data we need to keep track of our current position in the page data
+  // as the values and lengths are intermixed, making random access to the length data impossible
+  long readyToReadPosInBytes;
   // read position in the current page, stored in the ByteBuf in ParquetRecordReader called bufferWithAllData
   long readPosInBytes;
   // bit shift needed for the next page if the last one did not line up with a byte boundary
@@ -60,12 +64,23 @@ final class PageReadStatus {
   // storage space for extra bits at the end of a page if they did not line up with a byte boundary
   // prevents the need to keep the entire last page, as these pageDataByteArray need to be added to the next batch
   //byte extraBits;
+
+  // used for columns where the number of values that will fit in a vector is unknown
+  // currently used for variable length
+  // TODO - reuse this when compressed vectors are added, where fixed length values will take up a
+  // variable amount of space
+  // For example: if nulls are stored without extra space left in the data vector
+  // (this is currently simplifying random access to the data during processing, but increases the size of the vectors)
+  int valuesReadyToRead;
+
   // the number of values read out of the last page
   int valuesRead;
   int byteLength;
   //int rowGroupIndex;
   ValuesReader definitionLevels;
   ValuesReader valueReader;
+  ValuesReader dictionaryLengthDeterminingReader;
+  ValuesReader dictionaryValueReader;
   Dictionary dictionary;
   PageHeader pageHeader = null;
 
@@ -111,6 +126,7 @@ final class PageReadStatus {
 
     currentPage = null;
     valuesRead = 0;
+    valuesReadyToRead = 0;
 
     // TODO - the metatdata for total size appears to be incorrect for impala generated files, need to find cause
     // and submit a bug report
@@ -177,11 +193,20 @@ final class PageReadStatus {
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
         definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, 0);
         readPosInBytes = definitionLevels.getNextOffset();
-        valueReader = new DictionaryValuesReader(dictionary);
-        valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+        // initialize two of the dictionary readers, one is for determining the lengths of each value, the second is for
+        // actually copying the values out into the vectors
+        dictionaryLengthDeterminingReader = new DictionaryValuesReader(dictionary);
+        dictionaryLengthDeterminingReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+        dictionaryValueReader = new DictionaryValuesReader(dictionary);
+        dictionaryValueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         this.parentColumnReader.usingDictionary = true;
       }
     }
+    // readPosInBytes is used for actually reading the values after we determine how many will fit in the vector
+    // readyToReadPosInBytes serves a similar purpose for the vector types where we must count up the values that will
+    // fit one record at a time, such as for variable length data. Both operations must start in the same location after the
+    // definition and repetition level data which is stored alongside the page data itself
+    readyToReadPosInBytes = readPosInBytes;
     return true;
   }
   
