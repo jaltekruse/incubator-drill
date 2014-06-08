@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import java.math.BigDecimal;
 
@@ -29,68 +29,16 @@ import org.apache.drill.exec.vector.NullableDecimal28SparseVector;
 import org.apache.drill.exec.vector.NullableDecimal38SparseVector;
 import org.apache.drill.exec.vector.NullableVarBinaryVector;
 import org.apache.drill.exec.vector.NullableVarCharVector;
-import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
 import org.apache.drill.exec.vector.VarCharVector;
-
 import parquet.column.ColumnDescriptor;
-import parquet.column.Encoding;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
-import parquet.io.api.Binary;
 
 public class VarLengthColumnReaders {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(VarLengthColumnReaders.class);
 
-  public static abstract class VarLengthColumn<V extends ValueVector> extends ColumnReader {
-
-    Binary currDictVal;
-
-    VarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
-                    ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, V v,
-                    SchemaElement schemaElement) throws ExecutionSetupException {
-      super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-      if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
-        usingDictionary = true;
-      }
-      else {
-        usingDictionary = false;
-      }
-    }
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
-
-    public abstract boolean setSafe(int index, byte[] bytes, int start, int length);
-
-    public abstract int capacity();
-
-  }
-
-  public static abstract class NullableVarLengthColumn<V extends ValueVector> extends ColumnReader {
-
-    int nullsRead;
-    boolean currentValNull = false;
-    Binary currDictVal;
-
-    NullableVarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
-                            ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, V v,
-                            SchemaElement schemaElement) throws ExecutionSetupException {
-      super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-    }
-
-    public abstract boolean setSafe(int index, byte[] value, int start, int length);
-
-    public abstract int capacity();
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
-  }
-
-  public static class Decimal28Column extends VarLengthColumn<Decimal28SparseVector> {
+  public static class Decimal28Column extends VarLengthValuesColumn<Decimal28SparseVector> {
 
     protected Decimal28SparseVector decimal28Vector;
 
@@ -119,7 +67,7 @@ public class VarLengthColumnReaders {
     }
   }
 
-  public static class NullableDecimal28Column extends NullableVarLengthColumn<NullableDecimal28SparseVector> {
+  public static class NullableDecimal28Column extends NullableVarLengthValuesColumn<NullableDecimal28SparseVector> {
 
     protected NullableDecimal28SparseVector nullableDecimal28Vector;
 
@@ -149,7 +97,7 @@ public class VarLengthColumnReaders {
     }
   }
 
-  public static class Decimal38Column extends VarLengthColumn<Decimal38SparseVector> {
+  public static class Decimal38Column extends VarLengthValuesColumn<Decimal38SparseVector> {
 
     protected Decimal38SparseVector decimal28Vector;
 
@@ -178,7 +126,7 @@ public class VarLengthColumnReaders {
     }
   }
 
-  public static class NullableDecimal38Column extends NullableVarLengthColumn<NullableDecimal38SparseVector> {
+  public static class NullableDecimal38Column extends NullableVarLengthValuesColumn<NullableDecimal38SparseVector> {
 
     protected NullableDecimal38SparseVector nullableDecimal38Vector;
 
@@ -209,7 +157,7 @@ public class VarLengthColumnReaders {
   }
 
 
-  public static class VarCharColumn extends VarLengthColumn <VarCharVector> {
+  public static class VarCharColumn extends VarLengthValuesColumn<VarCharVector> {
 
     // store a hard reference to the vector (which is also stored in the superclass) to prevent repetitive casting
     protected VarCharVector varCharVector;
@@ -219,11 +167,6 @@ public class VarLengthColumnReaders {
                   SchemaElement schemaElement) throws ExecutionSetupException {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       varCharVector = v;
-    }
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -247,7 +190,7 @@ public class VarLengthColumnReaders {
     }
   }
 
-  public static class NullableVarCharColumn extends NullableVarLengthColumn <NullableVarCharVector> {
+  public static class NullableVarCharColumn extends NullableVarLengthValuesColumn<NullableVarCharVector> {
 
     int nullsRead;
     boolean currentValNull = false;
@@ -279,14 +222,9 @@ public class VarLengthColumnReaders {
     public int capacity() {
       return nullableVarCharVector.getData().capacity();
     }
-
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
   }
 
-  public static class VarBinaryColumn extends VarLengthColumn <VarBinaryVector> {
+  public static class VarBinaryColumn extends VarLengthValuesColumn<VarBinaryVector> {
 
     // store a hard reference to the vector (which is also stored in the superclass) to prevent repetitive casting
     protected VarBinaryVector varBinaryVector;
@@ -299,17 +237,12 @@ public class VarLengthColumnReaders {
     }
 
     @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean setSafe(int index, byte[] bytes, int start, int length) {
       boolean success;
       if(index >= varBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = varBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
+        success = varBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
             0, currDictVal.length());
       }
       else {
@@ -324,7 +257,7 @@ public class VarLengthColumnReaders {
     }
   }
 
-  public static class NullableVarBinaryColumn extends NullableVarLengthColumn <NullableVarBinaryVector> {
+  public static class NullableVarBinaryColumn extends NullableVarLengthValuesColumn<NullableVarBinaryVector> {
 
     int nullsRead;
     boolean currentValNull = false;
@@ -343,7 +276,7 @@ public class VarLengthColumnReaders {
       if(index >= nullableVarBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = nullableVarBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
+        success = nullableVarBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
             0, currDictVal.length());
       }
       else {
@@ -357,9 +290,5 @@ public class VarLengthColumnReaders {
       return nullableVarBinaryVector.getData().capacity();
     }
 
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      throw new UnsupportedOperationException();
-    }
   }
 }
