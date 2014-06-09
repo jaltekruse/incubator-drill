@@ -54,7 +54,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
   private final UInt4Vector offsets;   // offsets to start of each record
   private final BufferAllocator allocator;
   private final Mutator mutator = new Mutator();
-  private final Accessor accessor = new Accessor();
+  private final RepeatedListAccessor accessor = new RepeatedListAccessor();
   private ValueVector vector;
   private final MaterializedField field;
   private final RepeatedListReaderImpl reader = new RepeatedListReaderImpl(null, this);
@@ -153,7 +153,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
 
   }
 
-  public class Accessor implements ValueVector.Accessor {
+  public class RepeatedListAccessor implements RepeatedAccessor{
 
     @Override
     public Object getObject(int index) {
@@ -211,6 +211,10 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
       return reader;
     }
 
+    @Override
+    public int getGroupCount() {
+      return size();
+    }
   }
 
   @Override
@@ -315,7 +319,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
   }
 
   @Override
-  public Accessor getAccessor() {
+  public RepeatedListAccessor getAccessor() {
     return accessor;
   }
 
