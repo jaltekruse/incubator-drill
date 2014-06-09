@@ -83,7 +83,7 @@ public class VarLengthColumnReaders {
      *
      * @param recordsReadInCurrentPass
      * @param lengthVarFieldsInCurrentRecord
-     * @return
+     * @return - true if we should stop reading
      * @throws IOException
      */
     public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {

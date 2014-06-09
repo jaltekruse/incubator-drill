@@ -146,6 +146,16 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "supplier_parquet");
   }
 
+  // working to create an exhaustive test of the format for this one. including all convertedTypes
+  // will not be supporting interval for Beta as of current schedule
+  // Types left out:
+  // "TIMESTAMPTZ_col"
+  @Test
+  public void testRepeated() throws Exception {
+    String inputTable = "cp.`parquet/basic_repeated.json`";
+    runTestAndValidate("*", "*", inputTable, "basic_repeated");
+  }
+
   @Test
   public void testDecimal() throws Exception {
     String selection = "cast(salary as decimal(8,2)) as decimal8, cast(salary as decimal(15,2)) as decimal15, " +
@@ -242,7 +252,7 @@ public class TestParquetWriter extends BaseTestQuery {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     addToMaterializedResults(expectedRecords, expected, loader, schema);
     addToMaterializedResults(actualRecords, result, loader, schema);
-    Assert.assertEquals("Different number of objects returned", expectedRecords.size(), actualRecords.size());
+    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
     String missing = "";
     int i = 0;
