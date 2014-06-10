@@ -50,7 +50,9 @@ public class VarLenBinaryReader {
     // write the first 0 offset
     for (VarLengthColumn columnReader : columns) {
       columnReader.reset();
+      columnReader.storePosition();
     }
+
     outer: do {
       lengthVarFieldsInCurrentRecord = 0;
       for (VarLengthColumn columnReader : columns) {
@@ -61,11 +63,15 @@ public class VarLenBinaryReader {
           > parentReader.getBatchSize()){
         break outer;
       }
-      for (VarLengthColumn columnReader : columns) {
-        columnReader.readField(0, null);
-      }
       recordsReadInCurrentPass++;
     } while (recordsReadInCurrentPass < recordsToReadInThisPass);
+
+    for (VarLengthColumn columnReader : columns) {
+      columnReader.recallPosition();
+    }
+    for (VarLengthColumn columnReader : columns) {
+      columnReader.readRecords();
+    }
     for (VarLengthColumn columnReader : columns) {
       columnReader.valueVec.getMutator().setValueCount((int) recordsReadInCurrentPass);
     }

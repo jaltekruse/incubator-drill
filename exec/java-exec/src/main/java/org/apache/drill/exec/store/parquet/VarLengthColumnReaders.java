@@ -43,11 +43,13 @@ public class VarLengthColumnReaders {
   public static abstract class VarLengthColumn<V extends ValueVector> extends ColumnReader {
 
     Binary currDictVal;
+    VariableWidthVector variableWidthVector;
 
     VarLengthColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
                     ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, V v,
                     SchemaElement schemaElement) throws ExecutionSetupException {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+      variableWidthVector = (VariableWidthVector) valueVec;
       if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
         usingDictionary = true;
       }
@@ -58,14 +60,45 @@ public class VarLengthColumnReaders {
 
     @Override
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+      dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
       // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
       boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
           (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
       assert success;
+      updatePosition();
+    }
+
+    protected void readRecords() {
+      recallPosition();
+      for (int i = 0; i < pageReadStatus.valuesRead; i++) {
+        readField(0, null);
+      }
+    }
+
+    public void updatePosition() {
       pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
       bytesReadInCurrentPass += dataTypeLengthInBits + 4;
       pageReadStatus.valuesRead++;
       valuesReadInCurrentPass++;
+    }
+
+    long storedPageReadStatus_readPosInBytes;
+    int storedBytesReadInCurrentPass;
+    int storedPageReadStatus_valuesRead;
+    int storedValuesReadInCurrentPass;
+
+    public void storePosition() {
+      storedPageReadStatus_readPosInBytes = pageReadStatus.readPosInBytes;
+      storedBytesReadInCurrentPass = bytesReadInCurrentPass;
+      storedPageReadStatus_valuesRead = pageReadStatus.valuesRead;
+      storedValuesReadInCurrentPass = valuesReadInCurrentPass;
+    }
+
+    public void recallPosition() {
+      pageReadStatus.readPosInBytes = storedPageReadStatus_readPosInBytes;
+      bytesReadInCurrentPass = storedBytesReadInCurrentPass;
+      pageReadStatus.valuesRead = storedPageReadStatus_valuesRead;
+      valuesReadInCurrentPass = storedValuesReadInCurrentPass;
     }
 
     public abstract boolean setSafe(int index, byte[] bytes, int start, int length);
@@ -76,6 +109,7 @@ public class VarLengthColumnReaders {
       bytesReadInCurrentPass = 0;
       valuesReadInCurrentPass = 0;
     }
+
     /**
      * Determines the size of a single value in a variable column.
      *
@@ -93,8 +127,10 @@ public class VarLengthColumnReaders {
       }
       if (pageReadStatus.currentPage == null
           || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        readRecords();
         totalValuesRead += pageReadStatus.valuesRead;
         if (!pageReadStatus.next()) {
+          pageReadStatus.valuesRead = 0;
           return true;
         }
       }
@@ -102,6 +138,12 @@ public class VarLengthColumnReaders {
       // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
       dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
           (int) pageReadStatus.readPosInBytes);
+
+      // this should not fail
+      if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass, dataTypeLengthInBits)) {
+        return true;
+      }
+      updatePosition();
       lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
 
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
@@ -111,7 +153,6 @@ public class VarLengthColumnReaders {
       }
       return false;
     }
-
   }
 
   public static abstract class NullableVarLengthColumn<V extends ValueVector> extends VarLengthColumn<V> {
@@ -144,6 +185,7 @@ public class VarLengthColumnReaders {
       }
       if (pageReadStatus.currentPage == null
           || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+        readRecords();
         if (!pageReadStatus.next()) {
           return true;
         } else {
@@ -172,10 +214,22 @@ public class VarLengthColumnReaders {
         dataTypeLengthInBits = currDictVal.length();
       }
       else {
+        try {
         // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
         dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
             (int) pageReadStatus.readPosInBytes);
+        } catch (Exception ex) {
+          Math.min(3,4);
+          throw ex;
+        }
       }
+      if ( ! currentValNull) {
+        // this should not fail
+        if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass, dataTypeLengthInBits)) {
+          return true;
+        }
+      }
+      updatePosition();
       lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
 
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
@@ -185,23 +239,33 @@ public class VarLengthColumnReaders {
       }
       return false;
     }
-    
-    @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
-      // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-      if (!currentValNull && dataTypeLengthInBits > 0){
-        boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
-            (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
-        assert success;
-      }
-      currentValNull = false;
-      currDefLevel = -1;
+
+    public void updatePosition() {
       if (dataTypeLengthInBits > 0){
         pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
         bytesReadInCurrentPass += dataTypeLengthInBits + 4;
       }
       pageReadStatus.valuesRead++;
       valuesReadInCurrentPass++;
+    }
+    
+    @Override
+    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+      try {
+      dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
+      // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
+      if (!currentValNull && dataTypeLengthInBits > 0){
+        boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
+            (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+        assert success;
+      }
+      } catch (Exception ex ) {
+        Math.min(3,4);
+        throw ex;
+      }
+      currentValNull = false;
+      currDefLevel = -1;
+      updatePosition();
       if ( pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
         totalValuesRead += pageReadStatus.valuesRead;
         // I do not believe this is needed
