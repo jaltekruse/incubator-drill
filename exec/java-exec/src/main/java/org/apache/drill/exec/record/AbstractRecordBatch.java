@@ -82,6 +82,9 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
     try {
       stats.startProcessing();
       return innerNext();
+    } catch (Exception ex){
+      logger.debug("Unexpected error in operator processing:", ex);
+      throw ex;
     } finally {
       stats.stopProcessing();
     }
