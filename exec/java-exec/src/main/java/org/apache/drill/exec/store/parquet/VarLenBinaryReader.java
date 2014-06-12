@@ -67,14 +67,17 @@ public class VarLenBinaryReader {
     } while (recordsReadInCurrentPass < recordsToReadInThisPass);
 
     for (VarLengthColumn columnReader : columns) {
-      columnReader.recallPosition();
+      // TODO - break up the updatePosition method into one for each of the loops (determine read length and actually reading)
+      // the way this works it is incrementing this counter twice
+      columnReader.valuesReadInCurrentPass = 0;
     }
     for (VarLengthColumn columnReader : columns) {
-      columnReader.readRecords();
+      columnReader.readRecords(columnReader.pageReadStatus.valuesRead);
     }
     for (VarLengthColumn columnReader : columns) {
       columnReader.valueVec.getMutator().setValueCount((int) recordsReadInCurrentPass);
     }
+    firstColumnStatus.valuesReadInCurrentPass = (int) recordsReadInCurrentPass;
     return recordsReadInCurrentPass;
   }
 }

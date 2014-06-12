@@ -78,7 +78,9 @@ public class ParquetResultListener implements UserResultsListener {
       return;
     }
 
-    T val = (T) valueVector.getAccessor().getObject(index);
+    T val;
+    try {
+    val = (T) valueVector.getAccessor().getObject(index);
     if (val instanceof byte[]) {
       assert(Arrays.equals((byte[]) value, (byte[]) val));
     }
@@ -86,6 +88,9 @@ public class ParquetResultListener implements UserResultsListener {
       assert(val.equals(value));
     } else {
       assertEquals(value, val);
+    }
+    } catch (Throwable ex) {
+      throw ex;
     }
   }
 

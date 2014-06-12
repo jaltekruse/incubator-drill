@@ -59,19 +59,19 @@ public class VarLengthColumnReaders {
     }
 
     @Override
-    protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+    protected void readField(long recordToRead, ColumnReader firstColumnStatus) {
       dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
       // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-      boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
+      boolean success = setSafe((int) recordToRead, pageReadStatus.pageDataByteArray,
           (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
       assert success;
       updatePosition();
     }
 
-    protected void readRecords() {
+    protected void readRecords(int recordsToRead) {
       recallPosition();
-      for (int i = 0; i < pageReadStatus.valuesRead; i++) {
-        readField(0, null);
+      for (int i = 0; i < recordsToRead; i++) {
+        readField(i, null);
       }
     }
 
@@ -127,10 +127,9 @@ public class VarLengthColumnReaders {
       }
       if (pageReadStatus.currentPage == null
           || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
-        readRecords();
         totalValuesRead += pageReadStatus.valuesRead;
+        readRecords(pageReadStatus.valuesRead);
         if (!pageReadStatus.next()) {
-          pageReadStatus.valuesRead = 0;
           return true;
         }
       }
@@ -185,10 +184,11 @@ public class VarLengthColumnReaders {
       }
       if (pageReadStatus.currentPage == null
           || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
-        readRecords();
+        readRecords(pageReadStatus.valuesRead);
         if (!pageReadStatus.next()) {
           return true;
         } else {
+          storePosition();
           currDictVal = null;
         }
       }
@@ -253,6 +253,7 @@ public class VarLengthColumnReaders {
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
       try {
       dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
+      // TODO - recall nullability into currentValNull
       // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
       if (!currentValNull && dataTypeLengthInBits > 0){
         boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,

@@ -360,7 +360,15 @@ public void testNullableColumnsVarLen() throws Exception {
         "unused, no file is generated", 1, props, QueryType.PHYSICAL);
   }
 
-
+  @Test
+  public void testReadError_Drill_839() throws Exception {
+    // select cast( L_COMMENT as varchar) from  dfs.`/tmp/drilltest/employee_parquet`
+    HashMap<String, FieldInfo> fields = new HashMap<>();
+    ParquetTestProperties props = new ParquetTestProperties(1, 120350, DEFAULT_BYTES_PER_PAGE, fields);
+    String readEntries = "\"/tmp/customer_nonull.parquet\"";
+    testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
+        "unused, no file is generated", 1, props, QueryType.LOGICAL);
+  }
 
   @Test
   public void testReadBug_Drill_418() throws Exception {
