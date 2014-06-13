@@ -95,6 +95,7 @@ public class VarLengthColumnReaders {
     public void reset() {
       bytesReadInCurrentPass = 0;
       valuesReadInCurrentPass = 0;
+      pageReadStatus.valuesReadyToRead = 0;
     }
 
     /**
@@ -113,7 +114,7 @@ public class VarLengthColumnReaders {
         return true;
       }
       if (pageReadStatus.currentPage == null
-          || pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
+          || pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
         readRecords(pageReadStatus.valuesReadyToRead);
         totalValuesRead += pageReadStatus.valuesRead;
         if (!pageReadStatus.next()) {
@@ -164,6 +165,7 @@ public class VarLengthColumnReaders {
       bytesReadInCurrentPass = 0;
       valuesReadInCurrentPass = 0;
       nullsRead = 0;
+      pageReadStatus.valuesReadyToRead = 0;
     }
 
     public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
@@ -173,7 +175,7 @@ public class VarLengthColumnReaders {
         return true;
       }
       if (pageReadStatus.currentPage == null
-          || pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
+          || pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
         readRecords(pageReadStatus.valuesReadyToRead);
         totalValuesRead += pageReadStatus.valuesRead;
         if (!pageReadStatus.next()) {
