@@ -295,17 +295,36 @@ public void testNullableColumnsVarLen() throws Exception {
     byte[] val2 = {'b', '2'};
     byte[] val3 = {'b', '3'};
     byte[] val4 = { 'l','o','n','g','e','r',' ','s','t','r','i','n','g'};
-    Object[] boolVals = { val, val2, val4};
-    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
+    Object[] byteArrayVals = { val, val2, val4};
+    props.fields.put("a", new FieldInfo("boolean", "a", 1, byteArrayVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngineEventBased(false, "/parquet/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
-    fields.clear();
+    HashMap<String, FieldInfo> fields2 = new HashMap<>();
     // pass strings instead of byte arrays
-//    Object[] boolVals2 = { new org.apache.hadoop.io.Text("b"), new org.apache.hadoop.io.Text("b2"),
-//        new org.apache.hadoop.io.Text("b3")};
-//    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals2, TypeProtos.MinorType.BIT, props));
-//    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
-//        "\"/tmp/varLen.parquet/a\"", "unused", 1, props);
+    Object[] textVals = { new org.apache.hadoop.io.Text("b"), new org.apache.hadoop.io.Text("b2"),
+        new org.apache.hadoop.io.Text("b3")};
+    ParquetTestProperties props2 = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields2);
+    props2.fields.put("a", new FieldInfo("boolean", "a", 1, textVals, TypeProtos.MinorType.BIT, props2));
+    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
+        "\"/tmp/varLen.parquet/a\"", "unused", 1, props2);
+
   }
+
+  @Test
+  public void testFileWithNulls() throws Exception {
+    byte[] val = {'b'};
+    byte[] val2 = {'b', '2'};
+    byte[] val3 = {'b', '3'};
+    byte[] val4 = { 'l','o','n','g','e','r',' ','s','t','r','i','n','g'};
+    HashMap<String, FieldInfo> fields3 = new HashMap<>();
+    ParquetTestProperties props3 = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields3);
+    // actually include null values
+    Object[] valuesWithNull = { val, val4, null};
+    props3.fields.put("a", new FieldInfo("boolean", "a", 1, valuesWithNull, TypeProtos.MinorType.BIT, props3));
+    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
+        "\"/tmp/nullable_with_nulls.parquet/part-m-00000.parquet\"", "unused", 1, props3);
+
+  }
+
 
 
   @Test

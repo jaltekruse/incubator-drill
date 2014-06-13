@@ -196,6 +196,11 @@ public class VarLengthColumnReaders {
         currentValNull = true;
         dataTypeLengthInBits = 0;
         nullsRead++;
+        // set null in vector
+        variableWidthVector.getMutator().setValueLengthSafe(
+            valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, dataTypeLengthInBits);
+        pageReadStatus.valuesReadyToRead++;
+        currDefLevel = -1;
         return false;// field is null, no length to add to data vector
       }
 
@@ -227,6 +232,7 @@ public class VarLengthColumnReaders {
 //      }
       updateReadyToReadPosition();
       lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+      currDefLevel = -1;
 
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
         // TODO - determine if we need to add this back somehow

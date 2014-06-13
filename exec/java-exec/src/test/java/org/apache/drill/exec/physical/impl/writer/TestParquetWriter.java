@@ -157,6 +157,12 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testNullReadWrite() throws Exception {
+    String inputTable = "cp.`parquet/null_test_data.json`";
+    runTestAndValidate("*", "*", inputTable, "nullable_test");
+  }
+
+  @Test
   public void testDecimal() throws Exception {
     String selection = "cast(salary as decimal(8,2)) as decimal8, cast(salary as decimal(15,2)) as decimal15, " +
         "cast(salary as decimal(24,2)) as decimal24, cast(salary as decimal(38,2)) as decimal38";
