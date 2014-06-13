@@ -300,11 +300,11 @@ public void testNullableColumnsVarLen() throws Exception {
     testParquetFullEngineEventBased(false, "/parquet/parquet_nullable_varlen.json", "/tmp/nullable_varlen.parquet", 1, props);
     fields.clear();
     // pass strings instead of byte arrays
-    Object[] boolVals2 = { new org.apache.hadoop.io.Text("b"), new org.apache.hadoop.io.Text("b2"),
-        new org.apache.hadoop.io.Text("b3")};
-    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals2, TypeProtos.MinorType.BIT, props));
-    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
-        "\"/tmp/varLen.parquet/a\"", "unused", 1, props);
+//    Object[] boolVals2 = { new org.apache.hadoop.io.Text("b"), new org.apache.hadoop.io.Text("b2"),
+//        new org.apache.hadoop.io.Text("b3")};
+//    props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals2, TypeProtos.MinorType.BIT, props));
+//    testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
+//        "\"/tmp/varLen.parquet/a\"", "unused", 1, props);
   }
 
 

@@ -50,7 +50,6 @@ public class VarLenBinaryReader {
     // write the first 0 offset
     for (VarLengthColumn columnReader : columns) {
       columnReader.reset();
-      columnReader.storePosition();
     }
 
     outer: do {
@@ -69,15 +68,14 @@ public class VarLenBinaryReader {
     for (VarLengthColumn columnReader : columns) {
       // TODO - break up the updatePosition method into one for each of the loops (determine read length and actually reading)
       // the way this works it is incrementing this counter twice
-      columnReader.valuesReadInCurrentPass = 0;
+      //columnReader.valuesReadInCurrentPass = 0;
     }
     for (VarLengthColumn columnReader : columns) {
-      columnReader.readRecords(columnReader.pageReadStatus.valuesRead);
+      columnReader.readRecords(columnReader.pageReadStatus.valuesReadyToRead);
     }
     for (VarLengthColumn columnReader : columns) {
       columnReader.valueVec.getMutator().setValueCount((int) recordsReadInCurrentPass);
     }
-    firstColumnStatus.valuesReadInCurrentPass = (int) recordsReadInCurrentPass;
     return recordsReadInCurrentPass;
   }
 }

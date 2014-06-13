@@ -189,7 +189,7 @@ public class ParquetResultListener implements UserResultsListener {
     if(result.getHeader().getIsLastChunk()){
       // ensure the right number of columns was returned, especially important to ensure selective column read is working
       if (testValues) {
-        assertEquals( "Unexpected number of output columns from parquet scan.", valuesChecked.keySet().size(), props.fields.keySet().size() );
+        assertEquals( "Unexpected number of output columns from parquet scan.", props.fields.keySet().size(), valuesChecked.keySet().size() );
       }
       for (String s : valuesChecked.keySet()) {
         try {
