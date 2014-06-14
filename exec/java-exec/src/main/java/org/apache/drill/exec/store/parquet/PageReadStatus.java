@@ -79,6 +79,8 @@ final class PageReadStatus {
   //int rowGroupIndex;
   ValuesReader definitionLevels;
   ValuesReader valueReader;
+  ValuesReader dictionaryLengthDeterminingReader;
+  ValuesReader dictionaryValueReader;
   Dictionary dictionary;
   PageHeader pageHeader = null;
 
@@ -191,8 +193,12 @@ final class PageReadStatus {
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
         definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, 0);
         readPosInBytes = definitionLevels.getNextOffset();
-        valueReader = new DictionaryValuesReader(dictionary);
-        valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+        // initialize two of the dictionary readers, one is for determining the lengths of each value, the second is for
+        // actually copying the values out into the vectors
+        dictionaryLengthDeterminingReader = new DictionaryValuesReader(dictionary);
+        dictionaryLengthDeterminingReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+        dictionaryValueReader = new DictionaryValuesReader(dictionary);
+        dictionaryValueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         this.parentColumnReader.usingDictionary = true;
       }
     }

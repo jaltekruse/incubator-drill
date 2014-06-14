@@ -193,12 +193,10 @@ public class VarLengthColumnReaders {
         currDefLevel = pageReadStatus.definitionLevels.readInteger();
       }
       if ( columnDescriptor.getMaxDefinitionLevel() > currDefLevel){
-        currentValNull = true;
-        dataTypeLengthInBits = 0;
         nullsRead++;
-        // set null in vector
+        // set length of zero, each index in the vector defaults to null so no need to set the nullability
         variableWidthVector.getMutator().setValueLengthSafe(
-            valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, dataTypeLengthInBits);
+            valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, 0);
         pageReadStatus.valuesReadyToRead++;
         currDefLevel = -1;
         return false;// field is null, no length to add to data vector
@@ -206,7 +204,7 @@ public class VarLengthColumnReaders {
 
       if (usingDictionary) {
         if (currDictVal == null) {
-          currDictVal = pageReadStatus.valueReader.readBytes();
+          currDictVal = pageReadStatus.dictionaryLengthDeterminingReader.readBytes();
         }
         // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
         dataTypeLengthInBits = currDictVal.length();
@@ -224,6 +222,15 @@ public class VarLengthColumnReaders {
       if (! variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, dataTypeLengthInBits)) {
         return true;
       }
+      // TODO - replace with with a new interface to allow the nullability to be set for each value
+      // this is a hack that is allowing a distinction between null values and empty strings
+      // the value has length zero, but it is not null (this case is handled above), record that is is defined with zero length
+      // this this condition should be changed to (! currValNull)
+//      if ( dataTypeLengthInBits == 0 ) {
+        boolean success = setSafe(valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, pageReadStatus.pageDataByteArray,
+            (int) pageReadStatus.readyToReadPosInBytes + 4, dataTypeLengthInBits);
+        assert success;
+//      }
 //      if ( ! currentValNull) {
 //        // this should not fail
 //        if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass, dataTypeLengthInBits)) {
@@ -233,6 +240,7 @@ public class VarLengthColumnReaders {
       updateReadyToReadPosition();
       lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
       currDefLevel = -1;
+      currDictVal = null;
 
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
         // TODO - determine if we need to add this back somehow
@@ -244,14 +252,14 @@ public class VarLengthColumnReaders {
     }
 
     public void updateReadyToReadPosition() {
-      if (dataTypeLengthInBits > 0){
+      if (! currentValNull){
         pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
       }
       pageReadStatus.valuesReadyToRead++;
     }
 
     public void updatePosition() {
-      if (dataTypeLengthInBits > 0){
+      if (! currentValNull){
         pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
         bytesReadInCurrentPass += dataTypeLengthInBits + 4;
       }
@@ -261,11 +269,16 @@ public class VarLengthColumnReaders {
     @Override
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
       try {
+
+      if (usingDictionary) {
+        currDictVal = pageReadStatus.dictionaryValueReader.readBytes();
+        // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
+      }
       dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
-      currentValNull = false;
+      currentValNull = variableWidthVector.getAccessor().getObject(valuesReadInCurrentPass) == null;
       // TODO - recall nullability into currentValNull
       // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-      if (!currentValNull && dataTypeLengthInBits > 0){
+      if (! currentValNull){
         boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
             (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
         assert success;
@@ -274,9 +287,9 @@ public class VarLengthColumnReaders {
         Math.min(3,4);
         throw ex;
       }
-      currentValNull = false;
-      currDefLevel = -1;
       updatePosition();
+      currDefLevel = -1;
+      currentValNull = false;
       if ( pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
         totalValuesRead += pageReadStatus.valuesRead;
         // I do not believe this is needed
@@ -490,7 +503,7 @@ public class VarLengthColumnReaders {
       if(index >= varBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = varBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
+        success = varBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
             0, currDictVal.length());
       }
       else {
@@ -524,7 +537,7 @@ public class VarLengthColumnReaders {
       if(index >= nullableVarBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = nullableVarBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
+        success = nullableVarBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
             0, currDictVal.length());
       }
       else {

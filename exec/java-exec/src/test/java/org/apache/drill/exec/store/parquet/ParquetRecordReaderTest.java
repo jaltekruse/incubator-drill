@@ -56,6 +56,7 @@ import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -78,7 +79,7 @@ import com.google.common.io.Files;
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  static boolean VERBOSE_DEBUG = false;
+  static boolean VERBOSE_DEBUG = true;
 
   static final int numberRowGroups = 1;
   static final int recordsPerRowGroup = 300;
@@ -126,7 +127,9 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     readEntries = "\"/tmp/lineitem_null_dict.parquet\"";
 
     String planText = Files.toString(FileUtils.getResourceAsFile("/parquet/parquet_scan_screen_read_entry_replace.json"), Charsets.UTF_8).replaceFirst( "&REPLACED_IN_PARQUET_TEST&", readEntries);
-    testParquetFullEngineLocalText(planText, fileName, 1, 1, 100000, false);
+    //testParquetFullEngineLocalText(planText, fileName, 1, 1, 100000, false);
+
+    testFull(QueryType.SQL, "select L_RECEIPTDATE from dfs.`/tmp/lineitem_null_dict.parquet`", "", 1, 1, recordsPerRowGroup, false);
   }
 
   @Test
@@ -311,14 +314,10 @@ public void testNullableColumnsVarLen() throws Exception {
 
   @Test
   public void testFileWithNulls() throws Exception {
-    byte[] val = {'b'};
-    byte[] val2 = {'b', '2'};
-    byte[] val3 = {'b', '3'};
-    byte[] val4 = { 'l','o','n','g','e','r',' ','s','t','r','i','n','g'};
     HashMap<String, FieldInfo> fields3 = new HashMap<>();
     ParquetTestProperties props3 = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields3);
     // actually include null values
-    Object[] valuesWithNull = { val, val4, null};
+    Object[] valuesWithNull = {new Text(""), new Text("longer string"), null};
     props3.fields.put("a", new FieldInfo("boolean", "a", 1, valuesWithNull, TypeProtos.MinorType.BIT, props3));
     testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
         "\"/tmp/nullable_with_nulls.parquet/part-m-00000.parquet\"", "unused", 1, props3);
