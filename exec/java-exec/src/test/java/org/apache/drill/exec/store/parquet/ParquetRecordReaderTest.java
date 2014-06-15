@@ -79,7 +79,7 @@ import com.google.common.io.Files;
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  static boolean VERBOSE_DEBUG = true;
+  static boolean VERBOSE_DEBUG = false;
 
   static final int numberRowGroups = 1;
   static final int recordsPerRowGroup = 300;
@@ -320,11 +320,9 @@ public void testNullableColumnsVarLen() throws Exception {
     Object[] valuesWithNull = {new Text(""), new Text("longer string"), null};
     props3.fields.put("a", new FieldInfo("boolean", "a", 1, valuesWithNull, TypeProtos.MinorType.BIT, props3));
     testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
-        "\"/tmp/nullable_with_nulls.parquet/part-m-00000.parquet\"", "unused", 1, props3);
+        "\"/tmp/nullable_with_nulls.parquet/nullable_with_nulls.parquet\"", "unused", 1, props3);
 
   }
-
-
 
   @Test
   public void testDictionaryEncoding() throws Exception {
@@ -417,7 +415,6 @@ public void testNullableColumnsVarLen() throws Exception {
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
   }
 
-  @Ignore
   @Test
   public void drill_958bugTest() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
@@ -425,7 +422,7 @@ public void testNullableColumnsVarLen() throws Exception {
     TestFileGenerator.populatePigTPCHCustomerFields(props);
     String readEntries = "\"/tmp/store_sales\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
-        "unused, no file is generated", 1, props, true);
+        "unused, no file is generated", 1, props, QueryType.LOGICAL);
   }
 
   @Test
