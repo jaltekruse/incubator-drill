@@ -37,6 +37,7 @@ import org.apache.drill.exec.proto.UserBitShared.SerializedField;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.util.JsonStringArrayList;
+import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.RepeatedFixedWidthVector;
 import org.apache.drill.exec.vector.UInt4Vector;
 import org.apache.drill.exec.vector.ValueVector;
@@ -429,7 +430,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     lastSet = groupCount - 1;
   }
 
-  public class Mutator implements ValueVector.Mutator{
+  public class Mutator implements ValueVector.Mutator, RepeatedMutator {
 
     public void startNewGroup(int index) {
       populateEmpties(index);
@@ -463,6 +464,21 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     public void generateTestData(int values) {
     }
 
+    @Override
+    public void setValueCounts(int parentValueCount, int childValueCount) {
+      // TODO - determine if this should be implemented for this class
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean setRepetitionAtIndexSafe(int index, int repetitionCount) {
+      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
+    public BaseDataValueVector getDataVector() {
+      return null;  //To change body of implemented methods use File | Settings | File Templates.
+    }
   }
 
   @Override

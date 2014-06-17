@@ -48,7 +48,6 @@ import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableDecima
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableDecimal38Column;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarBinaryColumn;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarCharColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarLengthColumn;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarBinaryColumn;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarCharColumn;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarLengthColumn;
@@ -61,6 +60,7 @@ import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
 import org.apache.drill.exec.vector.VarCharVector;
+import org.apache.drill.exec.vector.RepeatedFixedWidthVector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -75,6 +75,7 @@ import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.PrimitiveType;
+
 import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 public class ParquetRecordReader implements RecordReader {
@@ -223,6 +224,9 @@ public class ParquetRecordReader implements RecordReader {
       columnsToScan++;
       // sum the lengths of all of the fixed length fields
       if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
+        if (column.getMaxRepetitionLevel() > 0) {
+          allFieldsFixedLength = false;
+        }
         // There is not support for the fixed binary type yet in parquet, leaving a task here as a reminder
         // TODO - implement this when the feature is added upstream
           if (column.getType() == PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY){
@@ -268,15 +272,26 @@ public class ParquetRecordReader implements RecordReader {
         fieldFixedLength = column.getType() != PrimitiveType.PrimitiveTypeName.BINARY;
         v = output.addField(field, (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(type.getMinorType(), type.getMode()));
         if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
-          createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
-            schemaElement);
+          if (column.getMaxRepetitionLevel() > 0) {
+            System.out.println("Column is repeated!");
+            ColumnReader dataReader = createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch,
+                ((RepeatedFixedWidthVector)v).getMutator().getDataVector(), schemaElement);
+            varLengthColumns.add(new VarLengthColumnReaders.FixedWidthRepeatedReader(this, dataReader,
+                -1, getTypeLengthInBits(column.getType()), column, columnChunkMetaData, false, v, schemaElement));
+          }
+          else {
+            columnStatuses.add(createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
+              schemaElement));
+          }
         } else {
           // create a reader and add it to the appropriate list
-          varLengthColumns.add(getReader(this, -1, column, columnChunkMetaData, false, v, schemaElement, varLengthColumns));
+          varLengthColumns.add(getReader(this, -1, column, columnChunkMetaData, false, v, schemaElement));
         }
       }
       varLengthReader = new VarLenBinaryReader(this, varLengthColumns);
     } catch (SchemaChangeException e) {
+      throw new ExecutionSetupException(e);
+    } catch (Exception e) {
       throw new ExecutionSetupException(e);
     }
   }
@@ -286,7 +301,9 @@ public class ParquetRecordReader implements RecordReader {
   }
 
   private TypeProtos.DataMode getDataMode(ColumnDescriptor column) {
-    if (column.getMaxDefinitionLevel() == 0) {
+    if (column.getMaxRepetitionLevel() > 0 ) {
+      return DataMode.REPEATED;
+    } else if (column.getMaxDefinitionLevel() == 0) {
       return TypeProtos.DataMode.REQUIRED;
     } else {
       return TypeProtos.DataMode.OPTIONAL;
@@ -310,55 +327,55 @@ public class ParquetRecordReader implements RecordReader {
    * @return
    * @throws SchemaChangeException
    */
-  private boolean createFixedColumnReader(boolean fixedLength, ColumnDescriptor descriptor,
+  private ColumnReader createFixedColumnReader(boolean fixedLength, ColumnDescriptor descriptor,
                                           ColumnChunkMetaData columnChunkMetaData, int allocateSize, ValueVector v,
                                           SchemaElement schemaElement)
-      throws SchemaChangeException, ExecutionSetupException {
+      throws Exception {
     ConvertedType convertedType = schemaElement.getConverted_type();
-    // if the column is required
-    if (descriptor.getMaxDefinitionLevel() == 0){
+    // if the column is required, or repeated (in which case we just want to use this to generate our appropriate
+    // ColumnReader for actually transferring data into the data vector inside of our repeated vector
+    if (descriptor.getMaxDefinitionLevel() == 0 || descriptor.getMaxRepetitionLevel() > 0){
       if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
-        columnStatuses.add(new BitReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, schemaElement));
+        return new BitReader(this, allocateSize, descriptor, columnChunkMetaData,
+            fixedLength, v, schemaElement);
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
         int length = schemaElement.type_length;
         if (length <= 12) {
-          columnStatuses.add(new Decimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+          return new Decimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         } else if (length <= 16) {
-          columnStatuses.add(new Decimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+          return new Decimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         }
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-        columnStatuses.add(new FixedByteAlignedReader.DateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+        return new FixedByteAlignedReader.DateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       } else{
         if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
-          columnStatuses.add(new ParquetFixedWidthDictionaryReader(this, allocateSize, descriptor, columnChunkMetaData,
-              fixedLength, v, schemaElement));
+          return new ParquetFixedWidthDictionaryReader(this, allocateSize, descriptor, columnChunkMetaData,
+              fixedLength, v, schemaElement);
         } else {
-          columnStatuses.add(new FixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
-              fixedLength, v, schemaElement));
+          return new FixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
+              fixedLength, v, schemaElement);
         }
       }
-      return true;
     }
     else { // if the column is nullable
       if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
-        columnStatuses.add(new NullableBitReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, schemaElement));
+        return new NullableBitReader(this, allocateSize, descriptor, columnChunkMetaData,
+            fixedLength, v, schemaElement);
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-        columnStatuses.add(new NullableFixedByteAlignedReader.NullableDateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+        return new NullableFixedByteAlignedReader.NullableDateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
         int length = schemaElement.type_length;
         if (length <= 12) {
-          columnStatuses.add(new NullableDecimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+          return new NullableDecimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         } else if (length <= 16) {
-          columnStatuses.add(new NullableDecimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
+          return new NullableDecimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         }
       } else {
-        columnStatuses.add(NullableFixedByteAlignedReaders.getNullableColumnReader(this, allocateSize, descriptor,
-            columnChunkMetaData, fixedLength, v, schemaElement));
+        return NullableFixedByteAlignedReaders.getNullableColumnReader(this, allocateSize, descriptor,
+            columnChunkMetaData, fixedLength, v, schemaElement);
       }
-      return true;
     }
+    throw new Exception("Unexpected parquet metadata configuration.");
   }
 
  public void readAllFixedFields(long recordsToRead, ColumnReader firstColumnStatus) throws IOException {
@@ -401,7 +418,7 @@ public class ParquetRecordReader implements RecordReader {
         readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
       }
 
-      return firstColumnStatus.valuesReadInCurrentPass;
+      return firstColumnStatus.getRecordsReadInCurrentPass();
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }
@@ -614,9 +631,9 @@ public class ParquetRecordReader implements RecordReader {
     throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName + " Mode: " + mode);
   }
 
-  private VarLengthColumn getReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
+  private VarLengthColumnReaders.VarLengthValuesColumn getReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
                                         ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v,
-                                        SchemaElement schemaElement, List<VarLengthColumn> varLengthColumns
+                                        SchemaElement schemaElement
                                         ) throws ExecutionSetupException {
     ConvertedType convertedType = schemaElement.getConverted_type();
     switch (descriptor.getMaxDefinitionLevel()) {

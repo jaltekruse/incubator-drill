@@ -20,7 +20,6 @@ package org.apache.drill.exec.store.parquet;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarLengthColumn;
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarLengthColumn;
 
 import parquet.bytes.BytesUtils;

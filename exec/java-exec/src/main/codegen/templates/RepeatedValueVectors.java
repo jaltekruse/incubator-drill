@@ -372,6 +372,21 @@ package org.apache.drill.exec.vector;
     private Mutator(){
     }
 
+    public boolean setRepetitionAtIndexSafe(int index, int repetitionCount) {
+      return offsets.getMutator().setSafe(index+1, offsets.getAccessor().get(index) + repetitionCount);
+    }
+
+    public BaseDataValueVector getDataVector() {
+      return values;
+    }
+
+    public void setValueCounts(int parentValueCount, int childValueCount){
+      Repeated${minor.class}Vector.this.parentValueCount = parentValueCount;
+      Repeated${minor.class}Vector.this.childValueCount = childValueCount;
+      values.getMutator().setValueCount(childValueCount);
+      offsets.getMutator().setValueCount(childValueCount);
+    }
+
     public boolean startNewGroup(int index) {
       if(getValueCapacity() <= index){
         return false;

@@ -139,10 +139,6 @@ public class IteratorValidatorBatchIterator implements RecordBatch {
 //          throw t;
 //        }
       }
-//      int valueCount = incoming.getRecordCount();
-//      for (VectorWrapper vw : incoming) {
-//        assert valueCount == vw.getValueVector().getAccessor().getValueCount() : "Count of values in each vector within this batch does not match.";
-//      }
     }
 
     return state;
