@@ -78,6 +78,7 @@ final class PageReadStatus {
   int byteLength;
   //int rowGroupIndex;
   ValuesReader definitionLevels;
+  ValuesReader repetitionLevels;
   ValuesReader valueReader;
   ValuesReader dictionaryLengthDeterminingReader;
   ValuesReader dictionaryValueReader;
@@ -179,11 +180,23 @@ final class PageReadStatus {
     pageDataByteArray = currentPage.getBytes().toByteArray();
 
     readPosInBytes = 0;
+    if (parentColumnReader.getColumnDescriptor().getMaxRepetitionLevel() > 0) {
+      repetitionLevels = currentPage.getRlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.REPETITION_LEVEL);
+      repetitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+      // we know that the first value will be a 0, at the end of each list of repeated values we will hit another 0 indicating
+      // a new record, although we don't know the length until we hit it (and this is a one way stream of integers) so we
+      // read the first zero here to simplify the reading processes, and start reading the first value the same as all
+      // of the rest. Effectively we are 'reading' the non-existent value in front of the first allowing direct access to
+      // the first list of repetition levels
+      repetitionLevels.readInteger();
+      readPosInBytes = repetitionLevels.getNextOffset();
+      System.out.println("initialized def level reader");
+    }
     if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){
       parentColumnReader.currDefLevel = -1;
       if (!currentPage.getValueEncoding().usesDictionary()) {
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
-        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, 0);
+        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         readPosInBytes = definitionLevels.getNextOffset();
         if (parentColumnReader.columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN) {
           valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.VALUES);
@@ -191,7 +204,7 @@ final class PageReadStatus {
         }
       } else {
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
-        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, 0);
+        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         readPosInBytes = definitionLevels.getNextOffset();
         // initialize two of the dictionary readers, one is for determining the lengths of each value, the second is for
         // actually copying the values out into the vectors

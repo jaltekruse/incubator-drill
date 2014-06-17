@@ -18,7 +18,6 @@
 package org.apache.drill.exec.store.parquet;
 
 import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.*;
-import parquet.bytes.BytesUtils;
 
 import java.io.IOException;
 import java.util.List;

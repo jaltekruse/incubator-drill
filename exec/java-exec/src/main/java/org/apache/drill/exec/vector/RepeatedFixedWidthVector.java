@@ -39,7 +39,14 @@ public interface RepeatedFixedWidthVector extends ValueVector{
 
   public abstract RepeatedAccessor getAccessor();
 
+  public abstract RepeatedMutator getMutator();
+
   public interface RepeatedAccessor extends Accessor {
     public int getGroupCount();
+  }
+  public interface RepeatedMutator extends Mutator {
+    public int setValueCounts(int parentValueCount, int childValueCount);
+    public boolean setRepetitionAtIndexSafe(int index, int repetitionCount);
+    public BaseDataValueVector getDataVector();
   }
 }

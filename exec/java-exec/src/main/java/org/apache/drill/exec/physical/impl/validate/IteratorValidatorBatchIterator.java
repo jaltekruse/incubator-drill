@@ -127,9 +127,9 @@ public class IteratorValidatorBatchIterator implements RecordBatch {
         // and we should instead create a new method to return the child count (but this needs to go along with a review of the code to make
         // sure we adjust all uses of the methods to prevent regressions
         if ( vw.getValueVector() instanceof RepeatedFixedWidthVector) {
-          assert valueCount == ((RepeatedFixedWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+          assert valueCount == ((RepeatedFixedWidthVector)vw.getValueVector()).getAccessor().getGroupCount() : VALUE_COUNT_MISMATCH_MESSAGE;
         } else if (vw.getValueVector() instanceof RepeatedVariableWidthVector ) {
-          assert valueCount == ((RepeatedVariableWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+          assert valueCount == ((RepeatedVariableWidthVector)vw.getValueVector()).getAccessor().getGroupCount() : VALUE_COUNT_MISMATCH_MESSAGE;
         } else {
           assert valueCount == vw.getValueVector().getAccessor().getValueCount() : VALUE_COUNT_MISMATCH_MESSAGE;
         }

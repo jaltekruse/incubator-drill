@@ -48,7 +48,7 @@ abstract class ColumnReader<V extends ValueVector> {
   // metadata of the column, from the parquet library
   final ColumnChunkMetaData columnChunkMetaData;
   // status information on the current page
-  final PageReadStatus pageReadStatus;
+  PageReadStatus pageReadStatus;
 
   final SchemaElement schemaElement;
   boolean usingDictionary;
@@ -101,6 +101,10 @@ abstract class ColumnReader<V extends ValueVector> {
       }
     }
 
+  }
+
+  public int getRecordsReadInCurrentPass() {
+    return valuesReadInCurrentPass;
   }
 
   public void readAllFixedFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
