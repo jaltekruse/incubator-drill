@@ -391,7 +391,6 @@ public class VarLengthColumnReaders {
     protected void readRecords(int valuesToRead) {
       if (valuesToRead == 0) return;
       dataReader.readField(valuesToRead, null);
-      castedRepeatedVector.getMutator()
 //      for (int i = 0; i < recordsToRead; i++) {
 //        readField(i, null);
 //      }

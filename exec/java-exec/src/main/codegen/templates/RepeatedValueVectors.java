@@ -386,9 +386,11 @@ package org.apache.drill.exec.vector;
       return values;
     }
 
-    public int setValueCounts(int parentValueCount, int childValueCount){
-      this.parentValueCount = parentValueCount;
-      this.childValueCount = childValueCount;
+    public void setValueCounts(int parentValueCount, int childValueCount){
+      Repeated${minor.class}Vector.this.parentValueCount = parentValueCount;
+      Repeated${minor.class}Vector.this.childValueCount = childValueCount;
+      values.getMutator().setValueCount(childValueCount);
+      offsets.getMutator().setValueCount(childValueCount);
     }
 
     public boolean startNewGroup(int index) {

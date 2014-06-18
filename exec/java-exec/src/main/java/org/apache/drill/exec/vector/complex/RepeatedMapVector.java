@@ -465,6 +465,11 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     }
 
     @Override
+    public void setValueCounts(int parentValueCount, int childValueCount) {
+      //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    @Override
     public boolean setRepetitionAtIndexSafe(int index, int repetitionCount) {
       return false;  //To change body of implemented methods use File | Settings | File Templates.
     }
