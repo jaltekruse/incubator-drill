@@ -163,6 +163,7 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "basic_repeated");
   }
 
+  @Ignore
   @Test
   public void testNullReadWrite() throws Exception {
     String inputTable = "cp.`parquet/null_test_data.json`";

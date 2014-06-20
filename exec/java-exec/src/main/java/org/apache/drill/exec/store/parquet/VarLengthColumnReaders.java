@@ -268,6 +268,7 @@ public class VarLengthColumnReaders {
         pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
       }
       pageReadStatus.valuesReadyToRead++;
+      currDictVal = null;
       byte[] buf = new byte[100];
 //      System.arraycopy(pageReadStatus.pageDataByteArray, (int) Math.max(0, (pageReadStatus.readyToReadPosInBytes - 50)), buf, 0, 100);
     }
