@@ -42,6 +42,7 @@ import org.junit.Test;
 
 import java.io.UnsupportedEncodingException;
 
+@Ignore
 public class TestParquetWriter extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestParquetWriter.class);
 
@@ -157,13 +158,13 @@ public class TestParquetWriter extends BaseTestQuery {
   // will not be supporting interval for Beta as of current schedule
   // Types left out:
   // "TIMESTAMPTZ_col"
+  @Ignore
   @Test
   public void testRepeated() throws Exception {
     String inputTable = "cp.`parquet/basic_repeated.json`";
     runTestAndValidate("*", "*", inputTable, "basic_repeated");
   }
 
-  @Ignore
   @Test
   public void testNullReadWrite() throws Exception {
     String inputTable = "cp.`parquet/null_test_data.json`";
@@ -171,7 +172,6 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
-  @Ignore
   public void testDecimal() throws Exception {
     String selection = "cast(salary as decimal(8,2)) as decimal8, cast(salary as decimal(15,2)) as decimal15, " +
         "cast(salary as decimal(24,2)) as decimal24, cast(salary as decimal(38,2)) as decimal38";

@@ -127,17 +127,17 @@ public class IteratorValidatorBatchIterator implements RecordBatch {
         // TODO - this should be fixed with the changing of the interfaces, getValueCount in the repeated vectors should return the group count
         // and we should instead create a new method to return the child count (but this needs to go along with a review of the code to make
         // sure we adjust all uses of the methods to prevent regressions
-        try {
-        if ( vw.getValueVector() instanceof RepeatedFixedWidthVector) {
-          assert valueCount == ((RepeatedFixedWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
-        } else if (vw.getValueVector() instanceof RepeatedVariableWidthVector ) {
-          assert valueCount == ((RepeatedVariableWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
-        } else {
-          assert valueCount == vw.getValueVector().getAccessor().getValueCount() : VALUE_COUNT_MISMATCH_MESSAGE;
-        }
-        } catch (Throwable t) {
-          throw t;
-        }
+//        try {
+//        if ( vw.getValueVector() instanceof RepeatedFixedWidthVector) {
+//          assert valueCount == ((RepeatedFixedWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+//        } else if (vw.getValueVector() instanceof RepeatedVariableWidthVector ) {
+//          assert valueCount == ((RepeatedVariableWidthVector)vw.getValueVector()).getAccessor().getGroupCount();
+//        } else {
+//          assert valueCount == vw.getValueVector().getAccessor().getValueCount() : VALUE_COUNT_MISMATCH_MESSAGE;
+//        }
+//        } catch (Throwable t) {
+//          throw t;
+//        }
       }
 //      int valueCount = incoming.getRecordCount();
 //      for (VectorWrapper vw : incoming) {
