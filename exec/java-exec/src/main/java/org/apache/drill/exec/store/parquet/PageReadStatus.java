@@ -188,8 +188,8 @@ final class PageReadStatus {
       // read the first zero here to simplify the reading processes, and start reading the first value the same as all
       // of the rest. Effectively we are 'reading' the non-existent value in front of the first allowing direct access to
       // the first list of repetition levels
-      repetitionLevels.readInteger();
       readPosInBytes = repetitionLevels.getNextOffset();
+      repetitionLevels.readInteger();
       System.out.println("initialized def level reader");
     }
     if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){

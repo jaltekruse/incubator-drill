@@ -83,6 +83,9 @@ public abstract class ParquetOutputRecordWriter implements RecordWriter {
       return;
     }
   <#elseif mode.prefix == "Repeated" >
+    // empty lists are represented by simply not starting a field, rather than starting one and putting in 0 elements
+    if (valueHolder.start == valueHolder.end)
+      return;
     consumer.startField(schema.getFieldName(fieldId), fieldId);
     for (int i = valueHolder.start; i < valueHolder.end; i++) {
   </#if>

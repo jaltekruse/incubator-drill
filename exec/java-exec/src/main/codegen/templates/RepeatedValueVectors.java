@@ -64,9 +64,9 @@ package org.apache.drill.exec.vector;
   }
 
   public int getValueCapacity(){
-    return Math.min(values.getValueCapacity(), offsets.getValueCapacity());
+    return Math.min(values.getValueCapacity(), offsets.getValueCapacity() - 1);
   }
-  
+
   public int getBufferSize(){
     return offsets.getBufferSize() + values.getBufferSize();
   }
@@ -384,7 +384,7 @@ package org.apache.drill.exec.vector;
       Repeated${minor.class}Vector.this.parentValueCount = parentValueCount;
       Repeated${minor.class}Vector.this.childValueCount = childValueCount;
       values.getMutator().setValueCount(childValueCount);
-      offsets.getMutator().setValueCount(childValueCount);
+      offsets.getMutator().setValueCount(childValueCount + 1);
     }
 
     public boolean startNewGroup(int index) {

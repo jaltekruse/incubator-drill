@@ -26,7 +26,10 @@ import java.util.Map;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.SchemaChangeException;
+<<<<<<< HEAD
+=======
 import org.apache.drill.exec.memory.TopLevelAllocator;
+>>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
@@ -35,12 +38,17 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+<<<<<<< HEAD
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
+=======
+import org.junit.*;
 
 import java.io.UnsupportedEncodingException;
+import java.util.*;
+>>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
 
 public class TestParquetWriter extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestParquetWriter.class);
@@ -144,6 +152,8 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testTPCHReadWrite7() throws Exception {
     String inputTable = "cp.`tpch/region.parquet`";
     runTestAndValidate("*", "*", inputTable, "region_parquet");
+<<<<<<< HEAD
+=======
   }
 
   // This test fails an asset in OperatorStats intermittently
@@ -164,18 +174,21 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
-  public void testRepeatedPerformance() throws Exception {
-    String inputTable = "cp.`parquet/parquet_repeated_performance_test_input_data.json`";
-    runTestAndValidate("*", "*", inputTable, "repeated_performance");
-  }
-
-  @Test
   public void testNullReadWrite() throws Exception {
     String inputTable = "cp.`parquet/null_test_data.json`";
     runTestAndValidate("*", "*", inputTable, "nullable_test");
+>>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
+  }
+
+  // This test fails an asset in OperatorStats intermittently
+  @Test
+  public void testTPCHReadWrite8() throws Exception {
+    String inputTable = "cp.`tpch/supplier.parquet`";
+    runTestAndValidate("*", "*", inputTable, "supplier_parquet");
   }
 
   @Test
+  @Ignore
   public void testDecimal() throws Exception {
     String selection = "cast(salary as decimal(8,2)) as decimal8, cast(salary as decimal(15,2)) as decimal15, " +
         "cast(salary as decimal(24,2)) as decimal24, cast(salary as decimal(38,2)) as decimal38";
@@ -192,7 +205,7 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testMulipleRowGroups() throws Exception {
     try {
       //test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
-      String selection = "mi";
+      String selection = "*";
       String inputTable = "cp.`customer.json`";
       runTestAndValidate(selection, selection, inputTable, EMPLOYEE_PARQUET_PATH);
     } finally {
@@ -242,7 +255,16 @@ public class TestParquetWriter extends BaseTestQuery {
       for (int i = 0; i < loader.getRecordCount(); i++) {
         HashMap<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
+<<<<<<< HEAD
+          Object obj = null;
+          try {
+            obj = w.getValueVector().getAccessor().getObject(i);
+          } catch (Exception ex) {
+            throw ex;
+          }
+=======
           Object obj = w.getValueVector().getAccessor().getObject(i);
+>>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
           if (obj != null) {
             if (obj instanceof Text) {
               obj = obj.toString();
@@ -271,15 +293,17 @@ public class TestParquetWriter extends BaseTestQuery {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     addToMaterializedResults(expectedRecords, expected, loader, schema);
     addToMaterializedResults(actualRecords, result, loader, schema);
+<<<<<<< HEAD
+    Assert.assertEquals("Different number of objects returned", expectedRecords.size(), actualRecords.size());
+=======
     Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
+>>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
 
     String missing = "";
     int i = 0;
-    int counter = 0;
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
-      counter++;
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
           continue;
@@ -288,7 +312,7 @@ public class TestParquetWriter extends BaseTestQuery {
           continue;
         if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
           missmatch++;
-          System.out.println( counter + " " + column + "[ex: " + record.get(column) + ", actual:" + actualRecords.get(i).get(column) + "]");
+          System.out.println( i + " " + column + "[ex: " + record.get(column) + ", actual:" + actualRecords.get(i).get(column) + "]");
         }
       }
       if ( ! actualRecords.remove(record)) {
