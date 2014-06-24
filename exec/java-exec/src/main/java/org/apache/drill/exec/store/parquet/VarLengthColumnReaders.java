@@ -368,6 +368,7 @@ public class VarLengthColumnReaders {
       pageReadStatus.valuesReadyToRead += repeatedValuesInCurrentList;
       repeatedGroupsReadInCurrentPass++;
       currDictVal = null;
+      repeatedValuesInCurrentList = -1;
     }
 
     public void updatePosition() {
@@ -391,11 +392,11 @@ public class VarLengthColumnReaders {
           definitionLevelsRead = 0;
           return true;
         }
+        repeatedValuesInCurrentList = -1;
         pageReadStatus.valuesReadyToRead = 0;
         definitionLevelsRead = 0;
       }
 
-      repeatedValuesInCurrentList = 0;
       int repLevel;
       if ( currDefLevel == -1 ) {
         try {
@@ -406,15 +407,20 @@ public class VarLengthColumnReaders {
         }
       }
       if ( columnDescriptor.getMaxDefinitionLevel() == currDefLevel){
-        repeatedValuesInCurrentList = 1;
-        do {
-          repLevel = pageReadStatus.repetitionLevels.readInteger();
-          if (repLevel > 0) {
-            repeatedValuesInCurrentList++;
-            currDefLevel = pageReadStatus.definitionLevels.readInteger();
-            definitionLevelsRead++;
-          }
-        } while (repLevel != 0);
+        if (repeatedValuesInCurrentList == -1) {
+          repeatedValuesInCurrentList = 1;
+          do {
+            repLevel = pageReadStatus.repetitionLevels.readInteger();
+            if (repLevel > 0) {
+              repeatedValuesInCurrentList++;
+              currDefLevel = pageReadStatus.definitionLevels.readInteger();
+              definitionLevelsRead++;
+            }
+          } while (repLevel != 0);
+        }
+      }
+      else {
+        repeatedValuesInCurrentList = 0;
       }
       System.out.println("size:" + repeatedValuesInCurrentList + " total page values:" + pageReadStatus.currentPage.getValueCount());
       // this should not fail
@@ -425,7 +431,7 @@ public class VarLengthColumnReaders {
       // again going to make this the length in BYTES to avoid repetitive multiplication/division
       lengthVarFieldsInCurrentRecord += repeatedValuesInCurrentList * dataTypeLengthInBytes;
 
-      if (valuesReadInCurrentPass + repeatedGroupsReadInCurrentPass + repeatedValuesInCurrentList >= valueVec.getValueCapacity()) {
+      if (valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList >= valueVec.getValueCapacity()) {
         return true;
       }
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
@@ -439,8 +445,12 @@ public class VarLengthColumnReaders {
 
     protected void readRecords(int valuesToRead) {
       if (valuesToRead == 0) return;
-      dataReader.readField(valuesToRead, null);
-      pageReadStatus.valuesRead += definitionLevelsRead;
+      try {
+        dataReader.readAllFixedFields(valuesToRead, null);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+      //pageReadStatus.valuesRead += definitionLevelsRead;
       valuesReadInCurrentPass += valuesToRead;
       try {
       castedRepeatedVector.getMutator().setValueCounts(repeatedGroupsReadInCurrentPass, valuesReadInCurrentPass);
