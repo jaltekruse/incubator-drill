@@ -73,11 +73,9 @@ public class VarLengthColumnReaders {
       pageReadStatus.valuesRead += recordsToRead;
     }
 
-    public void updatePosition() {
-    }
+    public abstract void updatePosition();
 
-    public void updateReadyToReadPosition() {
-    }
+    public abstract void updateReadyToReadPosition();
 
     public void reset() {
       bytesReadInCurrentPass = 0;
@@ -117,6 +115,20 @@ public class VarLengthColumnReaders {
           (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
       assert success;
       updatePosition();
+    }
+
+    public void updateReadyToReadPosition() {
+      pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
+      pageReadStatus.valuesReadyToRead++;
+      currDictVal = null;
+      byte[] buf = new byte[100];
+//      System.arraycopy(pageReadStatus.pageDataByteArray, (int) Math.max(0, (pageReadStatus.readyToReadPosInBytes - 50)), buf, 0, 100);
+    }
+
+    public void updatePosition() {
+      pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
+      bytesReadInCurrentPass += dataTypeLengthInBits;
+      valuesReadInCurrentPass++;
     }
 
     /**
