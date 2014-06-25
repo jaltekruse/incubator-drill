@@ -126,11 +126,7 @@ abstract class ColumnReader<V extends ValueVector> {
       valuesReadInCurrentPass += recordsReadInThisIteration;
       totalValuesRead += recordsReadInThisIteration;
       pageReadStatus.valuesRead += recordsReadInThisIteration;
-      if (readStartInBytes + readLength >= pageReadStatus.byteLength) {
-        pageReadStatus.next();
-      } else {
-        pageReadStatus.readPosInBytes = readStartInBytes + readLength;
-      }
+      pageReadStatus.readPosInBytes = readStartInBytes + readLength;
     } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
     valueVec.getMutator().setValueCount(valuesReadInCurrentPass);
   }

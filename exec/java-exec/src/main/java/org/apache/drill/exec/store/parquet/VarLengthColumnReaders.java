@@ -434,7 +434,6 @@ public class VarLengthColumnReaders {
       else {
         repeatedValuesInCurrentList = 0;
       }
-      System.out.println("size:" + repeatedValuesInCurrentList + " total page values:" + pageReadStatus.currentPage.getValueCount());
       // this should not fail
       if (!castedRepeatedVector.getMutator().setRepetitionAtIndexSafe(repeatedGroupsReadInCurrentPass,
           repeatedValuesInCurrentList)) {
@@ -457,11 +456,7 @@ public class VarLengthColumnReaders {
 
     protected void readRecords(int valuesToRead) {
       if (valuesToRead == 0) return;
-      try {
-        dataReader.readAllFixedFields(valuesToRead, null);
-      } catch (IOException e) {
-        throw new RuntimeException(e);
-      }
+      dataReader.readField(valuesToRead, null);
       //pageReadStatus.valuesRead += definitionLevelsRead;
       valuesReadInCurrentPass += valuesToRead;
       try {
