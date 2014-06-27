@@ -363,6 +363,7 @@ public class VarLengthColumnReaders {
       valuesReadInCurrentPass = 0;
       pageReadStatus.valuesReadyToRead = 0;
       dataReader.vectorData = castedRepeatedVector.getMutator().getDataVector().getData();
+      dataReader.valuesReadInCurrentPass = 0;
       repeatedGroupsReadInCurrentPass = 0;
     }
 
@@ -456,7 +457,7 @@ public class VarLengthColumnReaders {
 
     protected void readRecords(int valuesToRead) {
       if (valuesToRead == 0) return;
-      dataReader.readField(valuesToRead, null);
+      dataReader.readValues(valuesToRead, null);
       //pageReadStatus.valuesRead += definitionLevelsRead;
       valuesReadInCurrentPass += valuesToRead;
       try {

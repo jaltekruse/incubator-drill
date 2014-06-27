@@ -20,6 +20,7 @@ import org.joda.time.DateTimeUtils;
 import parquet.io.api.Binary;
 
 import java.lang.Override;
+import java.lang.RuntimeException;
 
 <@pp.dropOutputFile />
 <@pp.changeOutputFile name="org/apache/drill/exec/store/ParquetOutputRecordWriter.java" />
@@ -86,6 +87,8 @@ public abstract class ParquetOutputRecordWriter implements RecordWriter {
     // empty lists are represented by simply not starting a field, rather than starting one and putting in 0 elements
     if (valueHolder.start == valueHolder.end)
       return;
+    if (valueHolder.end - valueHolder.start < 4)
+      throw new RuntimeException("list with less than 4 items");
     consumer.startField(schema.getFieldName(fieldId), fieldId);
     for (int i = valueHolder.start; i < valueHolder.end; i++) {
   </#if>
