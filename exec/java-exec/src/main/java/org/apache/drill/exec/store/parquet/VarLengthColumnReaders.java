@@ -87,6 +87,8 @@ public class VarLengthColumnReaders {
 
     public abstract int capacity();
 
+    public abstract boolean skipReadyToReadPositionUpdate();
+
   }
 
   public static abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLengthColumn {
@@ -129,6 +131,10 @@ public class VarLengthColumnReaders {
       pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
       bytesReadInCurrentPass += dataTypeLengthInBits;
       valuesReadInCurrentPass++;
+    }
+
+    public boolean skipReadyToReadPositionUpdate() {
+      return false;
     }
 
     /**
@@ -349,6 +355,10 @@ public class VarLengthColumnReaders {
     // empty lists are notated by definition levels, to stop reading at the correct time, we must keep
     // track of the number of empty lists as well as the length of all of the defined lists together
     int definitionLevelsRead;
+    // parquet currently does not restrict lists reaching across pages for repeated values, this necessitates
+    // tracking when this happens to stop some of the state updates until we know the full length of the repeated
+    // value for the current record
+    boolean notFishedReadingList;
 
     FixedWidthRepeatedReader(ParquetRecordReader parentReader, ColumnReader dataReader, int dataTypeLengthInBytes, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector valueVector, SchemaElement schemaElement) throws ExecutionSetupException {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, valueVector, schemaElement);
@@ -365,6 +375,7 @@ public class VarLengthColumnReaders {
       dataReader.vectorData = castedRepeatedVector.getMutator().getDataVector().getData();
       dataReader.valuesReadInCurrentPass = 0;
       repeatedGroupsReadInCurrentPass = 0;
+      notFishedReadingList = false;
     }
 
     public int getRecordsReadInCurrentPass() {
@@ -374,6 +385,10 @@ public class VarLengthColumnReaders {
     @Override
     protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
       //To change body of implemented methods use File | Settings | File Templates.
+    }
+
+    public boolean skipReadyToReadPositionUpdate() {
+      return false;
     }
 
     public void updateReadyToReadPosition() {
@@ -428,6 +443,19 @@ public class VarLengthColumnReaders {
               repeatedValuesInCurrentList++;
               currDefLevel = pageReadStatus.definitionLevels.readInteger();
               definitionLevelsRead++;
+              // TODO - may need to add a condition here for the end of the row group, as this is currently causing
+              // us to skip the writing of the value length into the vector, and bring us back to reading the next page
+              // a missing next page will currently cause this method to exit early.
+              // we hit the end of this page, without confirmation that we reached the end of the current record
+              if (definitionLevelsRead == pageReadStatus.currentPage.getValueCount()) {
+                // check that we have not hit the end of the row group (in which case we will not find the repetition level indicating
+                // the end of this record as there is no next page to check, we have read all the values in this repetition so it is okay
+                // to add it to the read )
+                if (totalValuesRead + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList != columnChunkMetaData.getValueCount()){
+                  notFishedReadingList = true;
+                  return false;
+                }
+              }
             }
           } while (repLevel != 0);
         }
