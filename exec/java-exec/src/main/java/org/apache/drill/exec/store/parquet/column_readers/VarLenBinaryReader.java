@@ -15,14 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import java.io.IOException;
 import java.util.List;
-
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarLengthColumn;
-
-import parquet.bytes.BytesUtils;
 
 public class VarLenBinaryReader {
 

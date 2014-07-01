@@ -15,23 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import java.io.IOException;
-import java.util.ArrayList;
 
-import com.google.common.base.Preconditions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.exec.proto.SchemaDefProtos;
-import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.vector.VarBinaryVector;
+import org.apache.drill.exec.store.parquet.ColumnDataReader;
+import org.apache.drill.exec.store.parquet.ParquetFormatPlugin;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import parquet.bytes.BytesInput;
 import parquet.column.Dictionary;
-import parquet.column.Encoding;
 import parquet.column.ValuesType;
 import parquet.column.page.DictionaryPage;
 import parquet.column.page.Page;

@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -38,20 +38,14 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.store.RecordReader;
-import org.apache.drill.exec.store.parquet.FixedByteAlignedReader.Decimal28Reader;
-import org.apache.drill.exec.store.parquet.FixedByteAlignedReader.Decimal38Reader;
-import org.apache.drill.exec.store.parquet.NullableFixedByteAlignedReader.NullableDecimal28Reader;
-import org.apache.drill.exec.store.parquet.NullableFixedByteAlignedReader.NullableDecimal38Reader;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.Decimal28Column;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.Decimal38Column;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableDecimal28Column;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableDecimal38Column;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarBinaryColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarCharColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.NullableVarLengthColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarBinaryColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarCharColumn;
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.VarLengthColumn;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.Decimal28Column;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.Decimal38Column;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableDecimal28Column;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableDecimal38Column;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableVarBinaryColumn;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableVarCharColumn;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarBinaryColumn;
+import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarCharColumn;
 import org.apache.drill.exec.vector.Decimal28SparseVector;
 import org.apache.drill.exec.vector.Decimal38SparseVector;
 import org.apache.drill.exec.vector.NullableDecimal28SparseVector;
@@ -61,6 +55,7 @@ import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
 import org.apache.drill.exec.vector.VarCharVector;
+import org.apache.drill.exec.vector.RepeatedFixedWidthVector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -75,12 +70,7 @@ import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.PrimitiveType;
-<<<<<<< HEAD
-=======
 
-import org.apache.drill.exec.store.parquet.VarLengthColumnReaders.*;
-
->>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
 import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 public class ParquetRecordReader implements RecordReader {
@@ -109,19 +99,13 @@ public class ParquetRecordReader implements RecordReader {
   private long rowGroupOffset;
 
   private List<ColumnReader> columnStatuses;
-  FileSystem fileSystem;
+  private FileSystem fileSystem;
   private long batchSize;
   Path hadoopPath;
   private VarLenBinaryReader varLengthReader;
   private ParquetMetadata footer;
   private List<SchemaPath> columns;
-
-  public CodecFactoryExposer getCodecFactoryExposer() {
-    return codecFactoryExposer;
-  }
-
   private final CodecFactoryExposer codecFactoryExposer;
-
   int rowGroupIndex;
 
   public ParquetRecordReader(FragmentContext fragmentContext, //
@@ -146,6 +130,18 @@ public class ParquetRecordReader implements RecordReader {
     this.batchSize = batchSize;
     this.footer = footer;
     this.columns = columns;
+  }
+
+  public CodecFactoryExposer getCodecFactoryExposer() {
+    return codecFactoryExposer;
+  }
+
+  public Path getHadoopPath() {
+    return hadoopPath;
+  }
+
+  public FileSystem getFileSystem() {
+    return fileSystem;
   }
 
   public int getRowGroupIndex() {
@@ -282,7 +278,7 @@ public class ParquetRecordReader implements RecordReader {
             ColumnReader dataReader = createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch,
                 ((RepeatedFixedWidthVector)v).getMutator().getDataVector(), schemaElement);
             varLengthColumns.add(new FixedWidthRepeatedReader(this, dataReader,
-                -1, getTypeLengthInBits(column.getType()), column, columnChunkMetaData, false, v, schemaElement));
+                getTypeLengthInBits(column.getType()), -1, column, columnChunkMetaData, false, v, schemaElement));
           }
           else {
             columnStatuses.add(createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
@@ -346,16 +342,12 @@ public class ParquetRecordReader implements RecordReader {
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
         int length = schemaElement.type_length;
         if (length <= 12) {
-          return new Decimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+          return new FixedByteAlignedReader.Decimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         } else if (length <= 16) {
-          return new Decimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+          return new FixedByteAlignedReader.Decimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         }
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-<<<<<<< HEAD
-        columnStatuses.add(new FixedByteAlignedReader.DateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
-=======
         return new FixedByteAlignedReader.DateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
->>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
       } else{
         if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
           return new ParquetFixedWidthDictionaryReader(this, allocateSize, descriptor, columnChunkMetaData,
@@ -368,23 +360,16 @@ public class ParquetRecordReader implements RecordReader {
     }
     else { // if the column is nullable
       if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
-<<<<<<< HEAD
-        columnStatuses.add(new NullableBitReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, schemaElement));
-      } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-        columnStatuses.add(new NullableFixedByteAlignedReader.NullableDateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement));
-=======
         return new NullableBitReader(this, allocateSize, descriptor, columnChunkMetaData,
             fixedLength, v, schemaElement);
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
         return new NullableFixedByteAlignedReader.NullableDateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
->>>>>>> Drill-929: Bug in transferTo leading to incorrect value counts and Deadbufs downstream.
       } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
         int length = schemaElement.type_length;
         if (length <= 12) {
-          return new NullableDecimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+          return new NullableFixedByteAlignedReader.NullableDecimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         } else if (length <= 16) {
-          return new NullableDecimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+          return new NullableFixedByteAlignedReader.NullableDecimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
         }
       } else {
         return NullableFixedByteAlignedReaders.getNullableColumnReader(this, allocateSize, descriptor,

@@ -15,16 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.exec.store.VectorHolder;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.hadoop.fs.FSDataInputStream;
 import parquet.column.ColumnDescriptor;
-import parquet.format.ConvertedType;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.schema.PrimitiveType;
@@ -32,7 +29,7 @@ import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 import java.io.IOException;
 
-abstract class ColumnReader<V extends ValueVector> {
+public abstract class ColumnReader<V extends ValueVector> {
   
   final ParquetRecordReader parentReader;
   
@@ -91,7 +88,7 @@ abstract class ColumnReader<V extends ValueVector> {
     }
 
 
-    this.pageReadStatus = new PageReadStatus(this, parentReader.fileSystem, parentReader.hadoopPath, columnChunkMetaData);
+    this.pageReadStatus = new PageReadStatus(this, parentReader.getFileSystem(), parentReader.getHadoopPath(), columnChunkMetaData);
 
     if (columnDescriptor.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
       if (columnDescriptor.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY) {

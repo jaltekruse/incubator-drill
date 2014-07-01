@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import static org.apache.drill.exec.store.parquet.TestFileGenerator.intVals;
 import static org.apache.drill.exec.store.parquet.TestFileGenerator.populateFieldInfoMap;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -46,12 +45,12 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.proto.BitControl;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
-import org.apache.drill.exec.proto.UserProtos;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.rpc.user.UserServer;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.CachedSingleFileSystem;
 import org.apache.drill.exec.store.TestOutputMutator;
+import org.apache.drill.exec.store.parquet.column_readers.ParquetRecordReader;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;

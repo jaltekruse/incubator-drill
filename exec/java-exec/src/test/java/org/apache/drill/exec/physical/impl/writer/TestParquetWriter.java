@@ -92,24 +92,13 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testTPCHReadWrite1_date_convertedType() throws Exception {
     String selection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
-        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, cast(L_COMMITDATE as DATE) as COMMITDATE, cast(L_RECEIPTDATE as DATE) AS RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
+        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, cast(L_COMMITDATE as DATE) as L_COMMITDATE, cast(L_RECEIPTDATE as DATE) AS L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
     String validationSelection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
-        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,COMMITDATE ,RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
+        "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,L_COMMITDATE ,L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
     String inputTable = "cp.`tpch/lineitem.parquet`";
     runTestAndValidate(selection, validationSelection, inputTable, "lineitem_parquet");
   }
 
-  // TODO file a JIRA for running this query with the projected column names the same as the originals, it failed with a deadbuf
-  // on the client, it appeared that the projection was sending batches out with a record count but a deadbuf
-  /*
-  String selection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
-      "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, cast(L_COMMITDATE as DATE) as L_COMMITDATE, cast(L_RECEIPTDATE as DATE) AS L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
-  String validationSelection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
-      "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,COMMITDATE ,RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
-      */
-  // this is rather odd, I can select the data out fo parquet and project it to cast the date fields
-  // this stores all of the data correctly, but when I got to read it out again with the query that created it (with redudant casts I beleive) it has
-  // everything but the cast date columns as nulls
   @Test
   public void testTPCHReadWrite2() throws Exception {
     String inputTable = "cp.`tpch/customer.parquet`";
@@ -146,7 +135,6 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "region_parquet");
   }
 
-  // This test fails an asset in OperatorStats intermittently
   @Test
   public void testTPCHReadWrite8() throws Exception {
     String inputTable = "cp.`tpch/supplier.parquet`";
@@ -184,10 +172,6 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate(selection, validateSelection, inputTable, EMPLOYEE_PARQUET_PATH);
   }
 
-  // TODO - ask jacques about OperatorStats
-  // this is also experiencing the same failure as the 8th tpch dataset test above when run with the rest of the tests
-  // in this class all at once, not sure if this is IDE related for resorce management or something that should be looked
-  // at.
   @Test
   public void testMulipleRowGroups() throws Exception {
     try {
