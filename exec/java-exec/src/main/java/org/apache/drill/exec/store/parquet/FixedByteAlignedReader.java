@@ -58,6 +58,10 @@ class FixedByteAlignedReader extends ColumnReader {
 
     bytes = pageReadStatus.pageDataByteArray;
     // vectorData is assigned by the superclass read loop method
+    writeData();
+  }
+
+  protected void writeData() {
     vectorData.writeBytes(bytes,
         (int) readStartInBytes, (int) readLength);
   }
@@ -71,17 +75,7 @@ class FixedByteAlignedReader extends ColumnReader {
       super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     }
 
-    @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
-      recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-              - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
-
-      readStartInBytes = pageReadStatus.readPosInBytes;
-      readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
-      readLength = (int) Math.ceil(readLengthInBits / 8.0);
-
-      bytes = pageReadStatus.pageDataByteArray;
-
+    public void writeData() {
       dataTypeLengthInBytes = (int) Math.ceil(dataTypeLengthInBits / 8.0);
       for (int i = 0; i < recordsReadInThisIteration; i++) {
         addNext((int)readStartInBytes + i * dataTypeLengthInBytes, i + valuesReadInCurrentPass);

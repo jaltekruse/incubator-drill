@@ -89,6 +89,31 @@ public class VarLengthColumnReaders {
 
     public abstract boolean skipReadyToReadPositionUpdate();
 
+    // Read a page if we need more data, returns true if we need to exit the read loop
+    public boolean readPage() throws IOException {
+      if (pageReadStatus.currentPage == null
+          || totalValuesReadAndReadyToReadInPage() == pageReadStatus.currentPage.getValueCount()) {
+        readRecords(pageReadStatus.valuesReadyToRead);
+        if (pageReadStatus.currentPage != null)
+          totalValuesRead += pageReadStatus.currentPage.getValueCount();
+        if (!pageReadStatus.next()) {
+          hitRowGroupEnd();
+          return true;
+        }
+        postPageRead();
+      }
+      return false;
+    }
+
+    protected int totalValuesReadAndReadyToReadInPage() {
+      return pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead;
+    }
+
+    protected void postPageRead() {
+      pageReadStatus.valuesReadyToRead = 0;
+    }
+
+    protected void hitRowGroupEnd() {}
   }
 
   public static abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLengthColumn {
@@ -149,30 +174,40 @@ public class VarLengthColumnReaders {
      */
     public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
 
-      if (recordsReadInCurrentPass == valueVec.getValueCapacity()){
+      if (recordsReadInCurrentPass == valueVec.getValueCapacity())
         return true;
-      }
-      if (pageReadStatus.currentPage == null
-          || pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
-        readRecords(pageReadStatus.valuesReadyToRead);
-        totalValuesRead += pageReadStatus.valuesRead;
-        if (!pageReadStatus.next()) {
-          return true;
-        }
-        pageReadStatus.valuesReadyToRead = 0;
-      }
 
+      boolean doneReading = readPage();
+      if (doneReading)
+        return true;
+
+      doneReading = readAndStoreValueSizeInformation();
+      if (doneReading)
+        return true;
+
+      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+
+      doneReading = checkVectorCapacityReached();
+      if (doneReading)
+        return true;
+
+      return false;
+    }
+
+    protected boolean readAndStoreValueSizeInformation() throws IOException {
       // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
       dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
-          (int) pageReadStatus.readyToReadPosInBytes);
+      (int) pageReadStatus.readyToReadPosInBytes);
 
       // this should not fail
       if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead,
-          dataTypeLengthInBits)) {
+      dataTypeLengthInBits)) {
         return true;
       }
-      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+      return false;
+    }
 
+    protected boolean checkVectorCapacityReached() {
       if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
         // TODO - determine if we need to add this back somehow
         //break outer;
@@ -205,34 +240,19 @@ public class VarLengthColumnReaders {
       pageReadStatus.valuesReadyToRead = 0;
     }
 
-    public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
-      // check to make sure there is capacity for the next value (for nullables this is a check to see if there is
-      // still space in the nullability recording vector)
-      if (recordsReadInCurrentPass == valueVec.getValueCapacity()){
-        return true;
-      }
-      if (pageReadStatus.currentPage == null
-          || pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead == pageReadStatus.currentPage.getValueCount()) {
-        readRecords(pageReadStatus.valuesReadyToRead);
-        totalValuesRead += pageReadStatus.valuesRead;
-        if (!pageReadStatus.next()) {
-          return true;
-        } else {
-          currDictVal = null;
-        }
-        pageReadStatus.valuesReadyToRead = 0;
-      }
+    protected void postPageRead() {
+      currDictVal = null;
+      pageReadStatus.valuesReadyToRead = 0;
+    }
+
+    protected boolean readAndStoreValueSizeInformation() throws IOException {
       // we need to read all of the lengths to determine if this value will fit in the current vector,
       // as we can only read each definition level once, we have to store the last one as we will need it
       // at the start of the next read if we decide after reading all of the varlength values in this record
       // that it will not fit in this batch
       currentValNull = false;
       if ( currDefLevel == -1 ) {
-        try {
         currDefLevel = pageReadStatus.definitionLevels.readInteger();
-        } catch (Exception ex) {
-          throw ex;
-        }
       }
       if ( columnDescriptor.getMaxDefinitionLevel() > currDefLevel){
         nullsRead++;
@@ -251,32 +271,24 @@ public class VarLengthColumnReaders {
         dataTypeLengthInBits = currDictVal.length();
       }
       else {
-        try {
         // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
         dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
             (int) pageReadStatus.readyToReadPosInBytes);
-        } catch (Exception ex) {
-          throw ex;
-        }
       }
       // I think this also needs to happen if it is null for the random access
       if (! variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, dataTypeLengthInBits)) {
         return true;
       }
+      // I believe this comment is no longer relevant, as fas as I can tell there is no distinction between an
+      // empty list and a null list in parquet
       // TODO - replace with with a new interface to allow the nullability to be set for each value
       // this is a hack that is allowing a distinction between null values and empty strings
       // the value has length zero, but it is not null (this case is handled above), record that is is defined with zero length
       // this this condition should be changed to (! currValNull)
 //      if ( dataTypeLengthInBits == 0 ) {
-      try {
-        boolean success = setSafe(valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, pageReadStatus.pageDataByteArray,
-            (int) pageReadStatus.readyToReadPosInBytes + 4, dataTypeLengthInBits);
-        assert success;
-      } catch (Throwable t) {
-        byte[] buf = new byte[100];
-        System.arraycopy(pageReadStatus.pageDataByteArray, (int) (pageReadStatus.readyToReadPosInBytes - 50), buf, 0, 100);
-        throw t;
-      }
+      boolean success = setSafe(valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, pageReadStatus.pageDataByteArray,
+          (int) pageReadStatus.readyToReadPosInBytes + 4, dataTypeLengthInBits);
+      assert success;
 //      }
 //      if ( ! currentValNull) {
 //        // this should not fail
@@ -284,14 +296,6 @@ public class VarLengthColumnReaders {
 //          return true;
 //        }
 //      }
-      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
-
-      if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
-        // TODO - determine if we need to add this back somehow
-        //break outer;
-        logger.debug("Reached the capacity of the data vector in a variable length value vector.");
-        return true;
-      }
       return false;
     }
 
@@ -405,35 +409,37 @@ public class VarLengthColumnReaders {
       valuesReadInCurrentPass++;
     }
 
+    public void hitRowGroupEnd() {
+      pageReadStatus.valuesReadyToRead = 0;
+      definitionLevelsRead = 0;
+    }
+
+    public void postPageRead() {
+      super.postPageRead();
+      repeatedValuesInCurrentList = -1;
+      definitionLevelsRead = 0;
+    }
+
+    protected int totalValuesReadAndReadyToReadInPage() {
+      return definitionLevelsRead;
+    }
 
     public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
 
       if (recordsReadInCurrentPass == valueVec.getValueCapacity()){
         return true;
       }
-      if (pageReadStatus.currentPage == null
-          || definitionLevelsRead == pageReadStatus.currentPage.getValueCount()) {
-        readRecords(pageReadStatus.valuesReadyToRead);
-        totalValuesRead += definitionLevelsRead;
-        if (!pageReadStatus.next()) {
-          pageReadStatus.valuesReadyToRead = 0;
-          definitionLevelsRead = 0;
-          return true;
-        }
-        repeatedValuesInCurrentList = -1;
-        pageReadStatus.valuesReadyToRead = 0;
-        definitionLevelsRead = 0;
+
+      boolean doneReading = readPage();
+      if (doneReading) {
+        return true;
       }
 
-      int repLevel;
       if ( currDefLevel == -1 ) {
-        try {
-          currDefLevel = pageReadStatus.definitionLevels.readInteger();
-          definitionLevelsRead++;
-        } catch (Exception ex) {
-          throw ex;
-        }
+        currDefLevel = pageReadStatus.definitionLevels.readInteger();
+        definitionLevelsRead++;
       }
+      int repLevel;
       if ( columnDescriptor.getMaxDefinitionLevel() == currDefLevel){
         if (repeatedValuesInCurrentList == -1) {
           repeatedValuesInCurrentList = 1;
@@ -453,7 +459,7 @@ public class VarLengthColumnReaders {
                 // to add it to the read )
                 if (totalValuesRead + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList != columnChunkMetaData.getValueCount()){
                   notFishedReadingList = true;
-                  return false;
+                  //return false;
                 }
               }
             }
@@ -469,7 +475,9 @@ public class VarLengthColumnReaders {
         return true;
       }
       // again going to make this the length in BYTES to avoid repetitive multiplication/division
-      lengthVarFieldsInCurrentRecord += repeatedValuesInCurrentList * dataTypeLengthInBytes;
+      dataTypeLengthInBits = repeatedValuesInCurrentList * dataTypeLengthInBytes;
+
+      lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
 
       if (valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList >= valueVec.getValueCapacity()) {
         return true;

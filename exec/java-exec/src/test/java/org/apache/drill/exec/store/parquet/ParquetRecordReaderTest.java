@@ -320,7 +320,7 @@ public void testNullableColumnsVarLen() throws Exception {
     Object[] valuesWithNull = {new Text(""), new Text("longer string"), null};
     props3.fields.put("a", new FieldInfo("boolean", "a", 1, valuesWithNull, TypeProtos.MinorType.BIT, props3));
     testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
-        "\"/tmp/nullable_with_nulls.parquet/nullable_with_nulls.parquet\"", "unused", 1, props3);
+        "\"/tmp/nullable_with_nulls.parquet\"", "unused", 1, props3);
 
   }
 
@@ -367,7 +367,6 @@ public void testNullableColumnsVarLen() throws Exception {
         "/tmp/test.parquet", i, props);
   }
 
-  @Ignore
   @Test
   public void testReadError_Drill_901() throws Exception {
     // select cast( L_COMMENT as varchar) from  dfs.`/tmp/drilltest/employee_parquet`

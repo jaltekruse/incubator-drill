@@ -87,8 +87,6 @@ public abstract class ParquetOutputRecordWriter implements RecordWriter {
     // empty lists are represented by simply not starting a field, rather than starting one and putting in 0 elements
     if (valueHolder.start == valueHolder.end)
       return;
-    if (valueHolder.end - valueHolder.start < 4)
-      throw new RuntimeException("list with less than 4 items");
     consumer.startField(schema.getFieldName(fieldId), fieldId);
     for (int i = valueHolder.start; i < valueHolder.end; i++) {
   </#if>

@@ -46,6 +46,7 @@ public class VarLenBinaryReader {
 
     long recordsReadInCurrentPass = 0;
     int lengthVarFieldsInCurrentRecord;
+    long totalVariableLengthData = 0;
     boolean exitLengthDeterminingLoop = false;
     byte[] bytes;
     // write the first 0 offset
@@ -53,7 +54,7 @@ public class VarLenBinaryReader {
       columnReader.reset();
     }
 
-    outer: do {
+    do {
       lengthVarFieldsInCurrentRecord = 0;
       for (VarLengthColumn columnReader : columns) {
         if ( ! exitLengthDeterminingLoop )
@@ -62,20 +63,21 @@ public class VarLenBinaryReader {
           break;
       }
       // check that the next record will fit in the batch
-      if (exitLengthDeterminingLoop || (recordsReadInCurrentPass + 1) * parentReader.getBitWidthAllFixedFields() + lengthVarFieldsInCurrentRecord
-          > parentReader.getBatchSize()){
+      if (exitLengthDeterminingLoop || (recordsReadInCurrentPass + 1) * parentReader.getBitWidthAllFixedFields() + totalVariableLengthData
+          + lengthVarFieldsInCurrentRecord > parentReader.getBatchSize()){
 //        // a lack of capacity in the vector stopped the reading in this iteration, save the last values of each reader
 //        // in cases where we cannot re-read values (the valueReaders in parquet are one-way)
 //        if ( exitLengthDeterminingLoop ) {
 //          columnReader.currDefLevel = -1;
 //        }
-        break outer;
+        break;
       }
       for (VarLengthColumn columnReader : columns ) {
         columnReader.updateReadyToReadPosition();
         columnReader.currDefLevel = -1;
       }
       recordsReadInCurrentPass++;
+      totalVariableLengthData += lengthVarFieldsInCurrentRecord;
     } while (recordsReadInCurrentPass < recordsToReadInThisPass);
 
     for (VarLengthColumn columnReader : columns) {
