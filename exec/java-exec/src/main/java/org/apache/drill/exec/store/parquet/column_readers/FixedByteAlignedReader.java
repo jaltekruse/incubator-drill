@@ -45,7 +45,7 @@ class FixedByteAlignedReader extends ColumnReader {
 
   // this method is called by its superclass during a read loop
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass) {
 
     recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
         - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);

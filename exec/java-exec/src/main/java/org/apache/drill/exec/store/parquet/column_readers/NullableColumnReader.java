@@ -44,7 +44,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
   }
 
-  public void processPages(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public void processPages(long recordsToReadInThisPass) throws IOException {
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
@@ -109,7 +109,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         pageReadStatus.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
 
-        readField( runLength, firstColumnStatus);
+        readField( runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
           castedBaseVector.getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
@@ -135,5 +135,5 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         valuesReadInCurrentPass);
   }
 
-  protected abstract void readField(long recordsToRead, ColumnReader firstColumnStatus);
+  protected abstract void readField(long recordsToRead);
 }

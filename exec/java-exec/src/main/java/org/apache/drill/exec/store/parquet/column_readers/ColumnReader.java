@@ -97,7 +97,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     return valuesReadInCurrentPass;
   }
 
-  public void processPages(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public void processPages(long recordsToReadInThisPass) throws IOException {
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
@@ -111,7 +111,7 @@ public abstract class ColumnReader<V extends ValueVector> {
         }
       }
 
-      readValues(recordsToReadInThisPass, firstColumnStatus);
+      readValues(recordsToReadInThisPass);
 
     } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
     valueVec.getMutator().setValueCount(valuesReadInCurrentPass);
@@ -122,8 +122,8 @@ public abstract class ColumnReader<V extends ValueVector> {
     this.pageReadStatus.clear();
   }
 
-  public void readValues(long recordsToRead, ColumnReader firstColumnStatus) {
-    readField(recordsToRead, firstColumnStatus);
+  public void readValues(long recordsToRead) {
+    readField(recordsToRead);
 
     valuesReadInCurrentPass += recordsReadInThisIteration;
     totalValuesRead += recordsReadInThisIteration;
@@ -131,5 +131,5 @@ public abstract class ColumnReader<V extends ValueVector> {
     pageReadStatus.readPosInBytes = readStartInBytes + readLength;
   }
 
-  protected abstract void readField(long recordsToRead, ColumnReader firstColumnStatus);
+  protected abstract void readField(long recordsToRead);
 }

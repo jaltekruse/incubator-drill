@@ -113,7 +113,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
   }
 
   @Override
-  protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToRead) {
     if (usingDictionary) {
       currDictVal = pageReadStatus.dictionaryValueReader.readBytes();
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division

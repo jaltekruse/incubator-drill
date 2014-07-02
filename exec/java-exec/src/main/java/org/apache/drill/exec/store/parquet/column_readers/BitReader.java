@@ -36,7 +36,7 @@ final class BitReader extends ColumnReader {
   }
 
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass) {
 
     recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
         - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);

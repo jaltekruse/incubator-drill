@@ -33,10 +33,8 @@ import org.apache.drill.exec.vector.NullableDecimal38SparseVector;
 
 import org.joda.time.DateTimeUtils;
 import parquet.column.ColumnDescriptor;
-import parquet.column.Encoding;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
-import parquet.schema.PrimitiveType;
 
 import java.math.BigDecimal;
 
@@ -52,7 +50,7 @@ public class NullableFixedByteAlignedReaders {
 
     // this method is called by its superclass during a read loop
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
       this.recordsReadInThisIteration = recordsToReadInThisPass;
 
       // set up metadata
@@ -78,7 +76,7 @@ public class NullableFixedByteAlignedReaders {
 
     // this method is called by its superclass during a read loop
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
       if (usingDictionary) {
         for (int i = 0; i < recordsToReadInThisPass; i++){
           valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readInteger());
@@ -99,7 +97,7 @@ public class NullableFixedByteAlignedReaders {
 
     // this method is called by its superclass during a read loop
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
         valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readLong());
       }
@@ -118,7 +116,7 @@ public class NullableFixedByteAlignedReaders {
 
     // this method is called by its superclass during a read loop
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
         valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readFloat());
       }
@@ -137,7 +135,7 @@ public class NullableFixedByteAlignedReaders {
 
     // this method is called by its superclass during a read loop
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
         valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readDouble());
       }
@@ -154,7 +152,7 @@ public class NullableFixedByteAlignedReaders {
     }
 
     @Override
-    protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+    protected void readField(long recordsToReadInThisPass) {
 
       this.recordsReadInThisIteration = recordsToReadInThisPass;
 

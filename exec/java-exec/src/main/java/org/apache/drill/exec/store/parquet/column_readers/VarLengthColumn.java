@@ -78,7 +78,7 @@ public abstract class VarLengthColumn<V extends ValueVector> extends ColumnReade
 
   protected void readRecords(int recordsToRead) {
     for (int i = 0; i < recordsToRead; i++) {
-      readField(i, null);
+      readField(i);
     }
     pageReadStatus.valuesRead += recordsToRead;
   }

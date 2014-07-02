@@ -67,7 +67,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   }
 
   @Override
-  protected void readField(long recordsToRead, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToRead) {
     //To change body of implemented methods use File | Settings | File Templates.
   }
 
@@ -162,7 +162,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
 
   protected void readRecords(int valuesToRead) {
     if (valuesToRead == 0) return;
-    dataReader.readValues(valuesToRead, null);
+    dataReader.readValues(valuesToRead);
     //pageReadStatus.valuesRead += definitionLevelsRead;
     valuesReadInCurrentPass += valuesToRead;
     try {

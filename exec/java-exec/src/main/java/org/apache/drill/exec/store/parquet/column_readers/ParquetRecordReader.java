@@ -297,10 +297,10 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
- public void readAllFixedFields(long recordsToRead, ColumnReader firstColumnStatus) throws IOException {
+ public void readAllFixedFields(long recordsToRead) throws IOException {
 
    for (ColumnReader crs : columnStatuses){
-     crs.processPages(recordsToRead, firstColumnStatus);
+     crs.processPages(recordsToRead);
    }
  }
 
@@ -321,6 +321,10 @@ public class ParquetRecordReader implements RecordReader {
           firstColumnStatus = null;
         }
       }
+      // TODO - replace this with new functionality of returning batches even if no columns are selected
+      // the query 'select 5 from parquetfile' should return the number of records that the parquet file contains
+      // we don't need to read any of the data, we just need to fill batches with a record count and a useless vector with
+      // the right number of values
       if (firstColumnStatus == null) throw new DrillRuntimeException("Unexpected error reading parquet file, not reading any columns");
 
       if (allFieldsFixedLength) {
@@ -331,10 +335,10 @@ public class ParquetRecordReader implements RecordReader {
       }
 
       if (allFieldsFixedLength) {
-        readAllFixedFields(recordsToRead, firstColumnStatus);
+        readAllFixedFields(recordsToRead);
       } else { // variable length columns
         long fixedRecordsToRead = varLengthReader.readFields(recordsToRead, firstColumnStatus);
-        readAllFixedFields(fixedRecordsToRead, firstColumnStatus);
+        readAllFixedFields(fixedRecordsToRead);
       }
 
       return firstColumnStatus.getRecordsReadInCurrentPass();

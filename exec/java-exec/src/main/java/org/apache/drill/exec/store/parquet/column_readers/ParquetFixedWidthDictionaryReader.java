@@ -34,7 +34,7 @@ public class ParquetFixedWidthDictionaryReader extends ColumnReader{
   }
 
   @Override
-  public void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  public void readField(long recordsToReadInThisPass) {
 
     recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
         - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);

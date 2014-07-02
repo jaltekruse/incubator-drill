@@ -48,7 +48,7 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
   }
 
   @Override
-  protected void readField(long recordToRead, ColumnReader firstColumnStatus) {
+  protected void readField(long recordToRead) {
     dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
     boolean success = setSafe((int) valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
