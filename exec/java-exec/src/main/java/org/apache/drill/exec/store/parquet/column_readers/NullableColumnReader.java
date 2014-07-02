@@ -44,7 +44,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
   }
 
-  public void readAllFixedFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public void processPages(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
@@ -67,9 +67,9 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
 
       long runStart = pageReadStatus.readPosInBytes;
       int runLength;
-      int currentDefinitionLevel = 0;
+      int currentDefinitionLevel;
       int currentValueIndexInVector = (int) recordsReadInThisIteration;
-      boolean lastValueWasNull = true;
+      boolean lastValueWasNull;
       int definitionLevelsRead;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){

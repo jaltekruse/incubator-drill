@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.store.parquet.column_readers;
 
-import static com.google.common.base.Preconditions.checkArgument;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,37 +28,18 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
-import org.apache.drill.common.types.TypeProtos.MinorType;
-import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.store.RecordReader;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.Decimal28Column;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.Decimal38Column;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableDecimal28Column;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableDecimal38Column;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableVarBinaryColumn;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableVarCharColumn;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarBinaryColumn;
-import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarCharColumn;
-import org.apache.drill.exec.vector.Decimal28SparseVector;
-import org.apache.drill.exec.vector.Decimal38SparseVector;
-import org.apache.drill.exec.vector.NullableDecimal28SparseVector;
-import org.apache.drill.exec.vector.NullableDecimal38SparseVector;
-import org.apache.drill.exec.vector.NullableVarBinaryVector;
-import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.VarBinaryVector;
-import org.apache.drill.exec.vector.VarCharVector;
 import org.apache.drill.exec.vector.RepeatedFixedWidthVector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
 import parquet.column.ColumnDescriptor;
-import parquet.column.Encoding;
 import parquet.format.ConvertedType;
 import parquet.format.FileMetaData;
 import parquet.format.SchemaElement;
@@ -70,8 +49,6 @@ import parquet.hadoop.ParquetFileWriter;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.metadata.ParquetMetadata;
 import parquet.schema.PrimitiveType;
-
-import parquet.schema.PrimitiveType.PrimitiveTypeName;
 
 public class ParquetRecordReader implements RecordReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReader.class);
@@ -217,7 +194,7 @@ public class ParquetRecordReader implements RecordReader {
       column = columns.get(i);
       logger.debug("name: " + fileMetaData.getSchema().get(i).name);
       SchemaElement se = schemaElements.get(column.getPath()[0]);
-      MajorType mt = toMajorType(column.getType(), se.getType_length(), getDataMode(column), se);
+      MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(), getDataMode(column), se);
       field = MaterializedField.create(toFieldName(column.getPath()),mt);
       if ( ! fieldSelected(field)){
         continue;
@@ -265,7 +242,7 @@ public class ParquetRecordReader implements RecordReader {
         columnChunkMetaData = footer.getBlocks().get(rowGroupIndex).getColumns().get(i);
         schemaElement = schemaElements.get(column.getPath()[0]);
         convertedType = schemaElement.getConverted_type();
-        MajorType type = toMajorType(column.getType(), schemaElement.getType_length(), getDataMode(column), schemaElement);
+        MajorType type = ParquetToDrillTypeConverter.toMajorType(column.getType(), schemaElement.getType_length(), getDataMode(column), schemaElement);
         field = MaterializedField.create(toFieldName(column.getPath()), type);
         // the field was not requested to be read
         if ( ! fieldSelected(field)) continue;
@@ -275,18 +252,18 @@ public class ParquetRecordReader implements RecordReader {
         if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
           if (column.getMaxRepetitionLevel() > 0) {
             System.out.println("Column is repeated!");
-            ColumnReader dataReader = createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch,
-                ((RepeatedFixedWidthVector)v).getMutator().getDataVector(), schemaElement);
+            ColumnReader dataReader = ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength, column, columnChunkMetaData, recordsPerBatch,
+                ((RepeatedFixedWidthVector) v).getMutator().getDataVector(), schemaElement);
             varLengthColumns.add(new FixedWidthRepeatedReader(this, dataReader,
                 getTypeLengthInBits(column.getType()), -1, column, columnChunkMetaData, false, v, schemaElement));
           }
           else {
-            columnStatuses.add(createFixedColumnReader(fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
-              schemaElement));
+            columnStatuses.add(ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
+                schemaElement));
           }
         } else {
           // create a reader and add it to the appropriate list
-          varLengthColumns.add(getReader(this, -1, column, columnChunkMetaData, false, v, schemaElement));
+          varLengthColumns.add(ColumnReaderFactory.getReader(this, -1, column, columnChunkMetaData, false, v, schemaElement));
         }
       }
       varLengthReader = new VarLenBinaryReader(this, varLengthColumns);
@@ -320,69 +297,10 @@ public class ParquetRecordReader implements RecordReader {
     }
   }
 
-  /**
-   * @param fixedLength
-   * @param descriptor
-   * @param columnChunkMetaData
-   * @param allocateSize - the size of the vector to create
-   * @return
-   * @throws SchemaChangeException
-   */
-  private ColumnReader createFixedColumnReader(boolean fixedLength, ColumnDescriptor descriptor,
-                                          ColumnChunkMetaData columnChunkMetaData, int allocateSize, ValueVector v,
-                                          SchemaElement schemaElement)
-      throws Exception {
-    ConvertedType convertedType = schemaElement.getConverted_type();
-    // if the column is required, or repeated (in which case we just want to use this to generate our appropriate
-    // ColumnReader for actually transferring data into the data vector inside of our repeated vector
-    if (descriptor.getMaxDefinitionLevel() == 0 || descriptor.getMaxRepetitionLevel() > 0){
-      if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
-        return new BitReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, schemaElement);
-      } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
-        int length = schemaElement.type_length;
-        if (length <= 12) {
-          return new FixedByteAlignedReader.Decimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-        } else if (length <= 16) {
-          return new FixedByteAlignedReader.Decimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-        }
-      } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-        return new FixedByteAlignedReader.DateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-      } else{
-        if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
-          return new ParquetFixedWidthDictionaryReader(this, allocateSize, descriptor, columnChunkMetaData,
-              fixedLength, v, schemaElement);
-        } else {
-          return new FixedByteAlignedReader(this, allocateSize, descriptor, columnChunkMetaData,
-              fixedLength, v, schemaElement);
-        }
-      }
-    }
-    else { // if the column is nullable
-      if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
-        return new NullableBitReader(this, allocateSize, descriptor, columnChunkMetaData,
-            fixedLength, v, schemaElement);
-      } else if (columnChunkMetaData.getType() == PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-        return new NullableFixedByteAlignedReader.NullableDateReader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-      } else if (columnChunkMetaData.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY && convertedType == ConvertedType.DECIMAL){
-        int length = schemaElement.type_length;
-        if (length <= 12) {
-          return new NullableFixedByteAlignedReader.NullableDecimal28Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-        } else if (length <= 16) {
-          return new NullableFixedByteAlignedReader.NullableDecimal38Reader(this, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-        }
-      } else {
-        return NullableFixedByteAlignedReaders.getNullableColumnReader(this, allocateSize, descriptor,
-            columnChunkMetaData, fixedLength, v, schemaElement);
-      }
-    }
-    throw new Exception("Unexpected parquet metadata configuration.");
-  }
-
  public void readAllFixedFields(long recordsToRead, ColumnReader firstColumnStatus) throws IOException {
 
    for (ColumnReader crs : columnStatuses){
-     crs.readAllFixedFields(recordsToRead, firstColumnStatus);
+     crs.processPages(recordsToRead, firstColumnStatus);
    }
  }
 
@@ -423,257 +341,6 @@ public class ParquetRecordReader implements RecordReader {
     } catch (IOException e) {
       throw new DrillRuntimeException(e);
     }
-  }
-
-  static TypeProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName,
-                                               TypeProtos.DataMode mode, SchemaElement schemaElement) {
-    return toMajorType(primitiveTypeName, 0, mode, schemaElement);
-  }
-
-  // TODO - move this into ParquetTypeHelper and use code generation to create the list
-  static TypeProtos.MajorType toMajorType(PrimitiveType.PrimitiveTypeName primitiveTypeName, int length,
-                                               TypeProtos.DataMode mode, SchemaElement schemaElement) {
-    ConvertedType convertedType = schemaElement.getConverted_type();
-    switch (mode) {
-
-      case OPTIONAL:
-        switch (primitiveTypeName) {
-          case BINARY:
-            if (convertedType == null) {
-              return Types.optional(TypeProtos.MinorType.VARBINARY);
-            }
-            switch (convertedType) {
-              case UTF8:
-                return Types.optional(MinorType.VARCHAR);
-              case DECIMAL:
-                return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.OPTIONAL, schemaElement.getScale(), schemaElement.getPrecision());
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT64:
-            if (convertedType == null) {
-              return Types.optional(TypeProtos.MinorType.BIGINT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL18, DataMode.OPTIONAL, schemaElement.getScale(), schemaElement.getPrecision());
-              case FINETIME:
-                throw new UnsupportedOperationException();
-              case TIMESTAMP:
-                return Types.optional(MinorType.TIMESTAMP);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT32:
-            if (convertedType == null) {
-              return Types.optional(TypeProtos.MinorType.INT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL9, DataMode.OPTIONAL, schemaElement.getScale(), schemaElement.getPrecision());
-              case DATE:
-                return Types.optional(MinorType.DATE);
-              case TIME:
-                return Types.optional(MinorType.TIME);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case BOOLEAN:
-            return Types.optional(TypeProtos.MinorType.BIT);
-          case FLOAT:
-            return Types.optional(TypeProtos.MinorType.FLOAT4);
-          case DOUBLE:
-            return Types.optional(TypeProtos.MinorType.FLOAT8);
-          // TODO - Both of these are not supported by the parquet library yet (7/3/13),
-          // but they are declared here for when they are implemented
-          case INT96:
-            return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY).setWidth(12)
-                .setMode(mode).build();
-          case FIXED_LEN_BYTE_ARRAY:
-            if (convertedType == null) {
-              checkArgument(length > 0, "A length greater than zero must be provided for a FixedBinary type.");
-              return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY)
-                      .setWidth(length).setMode(mode).build();
-            } else if (convertedType == ConvertedType.DECIMAL) {
-              return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.OPTIONAL, schemaElement.getScale(), schemaElement.getPrecision());
-            }
-          default:
-            throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName);
-        }
-      case REQUIRED:
-        switch (primitiveTypeName) {
-          case BINARY:
-            if (convertedType == null) {
-              return Types.required(TypeProtos.MinorType.VARBINARY);
-            }
-            switch (convertedType) {
-              case UTF8:
-                return Types.required(MinorType.VARCHAR);
-              case DECIMAL:
-                return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.REQUIRED, schemaElement.getScale(), schemaElement.getPrecision());
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT64:
-            if (convertedType == null) {
-              return Types.required(MinorType.BIGINT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL18, DataMode.REQUIRED, schemaElement.getScale(), schemaElement.getPrecision());
-              case FINETIME:
-                throw new UnsupportedOperationException();
-              case TIMESTAMP:
-                return Types.required(MinorType.TIMESTAMP);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT32:
-            if (convertedType == null) {
-              return Types.required(MinorType.INT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL9, DataMode.REQUIRED, schemaElement.getScale(), schemaElement.getPrecision());
-              case DATE:
-                return Types.required(MinorType.DATE);
-              case TIME:
-                return Types.required(MinorType.TIME);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case BOOLEAN:
-            return Types.required(TypeProtos.MinorType.BIT);
-          case FLOAT:
-            return Types.required(TypeProtos.MinorType.FLOAT4);
-          case DOUBLE:
-            return Types.required(TypeProtos.MinorType.FLOAT8);
-          // Both of these are not supported by the parquet library yet (7/3/13),
-          // but they are declared here for when they are implemented
-          case INT96:
-            return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY).setWidth(12)
-                .setMode(mode).build();
-          case FIXED_LEN_BYTE_ARRAY:
-            if (convertedType == null) {
-              checkArgument(length > 0, "A length greater than zero must be provided for a FixedBinary type.");
-              return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY)
-                      .setWidth(length).setMode(mode).build();
-            } else if (convertedType == ConvertedType.DECIMAL) {
-              return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.REQUIRED, schemaElement.getScale(), schemaElement.getPrecision());
-            }
-          default:
-            throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName);
-        }
-      case REPEATED:
-        switch (primitiveTypeName) {
-          case BINARY:
-            if (convertedType == null) {
-              return Types.repeated(TypeProtos.MinorType.VARBINARY);
-            }
-            switch (schemaElement.getConverted_type()) {
-              case UTF8:
-                return Types.repeated(MinorType.VARCHAR);
-              case DECIMAL:
-                return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.REPEATED, schemaElement.getScale(), schemaElement.getPrecision());
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT64:
-            if (convertedType == null) {
-              return Types.repeated(MinorType.BIGINT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL18, DataMode.REPEATED, schemaElement.getScale(), schemaElement.getPrecision());
-              case FINETIME:
-                throw new UnsupportedOperationException();
-              case TIMESTAMP:
-                return Types.repeated(MinorType.TIMESTAMP);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case INT32:
-            if (convertedType == null) {
-              return Types.repeated(MinorType.INT);
-            }
-            switch(convertedType) {
-              case DECIMAL:
-                return Types.withScaleAndPrecision(MinorType.DECIMAL9, DataMode.REPEATED, schemaElement.getScale(), schemaElement.getPrecision());
-              case DATE:
-                return Types.repeated(MinorType.DATE);
-              case TIME:
-                return Types.repeated(MinorType.TIME);
-              default:
-                throw new UnsupportedOperationException(String.format("unsupported type: %s %s", primitiveTypeName, convertedType));
-            }
-          case BOOLEAN:
-            return Types.repeated(TypeProtos.MinorType.BIT);
-          case FLOAT:
-            return Types.repeated(TypeProtos.MinorType.FLOAT4);
-          case DOUBLE:
-            return Types.repeated(TypeProtos.MinorType.FLOAT8);
-          // Both of these are not supported by the parquet library yet (7/3/13),
-          // but they are declared here for when they are implemented
-          case INT96:
-            return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY).setWidth(12)
-                .setMode(mode).build();
-          case FIXED_LEN_BYTE_ARRAY:
-            if (convertedType == null) {
-              checkArgument(length > 0, "A length greater than zero must be provided for a FixedBinary type.");
-              return TypeProtos.MajorType.newBuilder().setMinorType(TypeProtos.MinorType.FIXEDBINARY)
-                      .setWidth(length).setMode(mode).build();
-            } else if (convertedType == ConvertedType.DECIMAL) {
-              return Types.withScaleAndPrecision(getDecimalType(schemaElement), DataMode.REPEATED, schemaElement.getScale(), schemaElement.getPrecision());
-            }
-          default:
-            throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName);
-        }
-    }
-    throw new UnsupportedOperationException("Type not supported: " + primitiveTypeName + " Mode: " + mode);
-  }
-
-  private VarLengthValuesColumn getReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
-                                        ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v,
-                                        SchemaElement schemaElement
-                                        ) throws ExecutionSetupException {
-    ConvertedType convertedType = schemaElement.getConverted_type();
-    switch (descriptor.getMaxDefinitionLevel()) {
-      case 0:
-        if (convertedType == null) {
-          return new VarBinaryColumn(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (VarBinaryVector) v, schemaElement);
-        }
-        switch (convertedType) {
-          case UTF8:
-            return new VarCharColumn(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (VarCharVector) v, schemaElement);
-          case DECIMAL:
-            if (v instanceof Decimal28SparseVector) {
-              return new Decimal28Column(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Decimal28SparseVector) v, schemaElement);
-            } else if (v instanceof Decimal38SparseVector) {
-              return new Decimal38Column(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Decimal38SparseVector) v, schemaElement);
-            }
-          default:
-        }
-      default:
-        if (convertedType == null) {
-          return new NullableVarBinaryColumn(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (NullableVarBinaryVector) v, schemaElement);
-        }
-        switch (convertedType) {
-          case UTF8:
-            return new NullableVarCharColumn(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (NullableVarCharVector) v, schemaElement);
-          case DECIMAL:
-            if (v instanceof NullableDecimal28SparseVector) {
-              return new NullableDecimal28Column(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (NullableDecimal28SparseVector) v, schemaElement);
-            } else if (v instanceof NullableDecimal38SparseVector) {
-              return new NullableDecimal38Column(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (NullableDecimal38SparseVector) v, schemaElement);
-            }
-          default:
-        }
-    }
-    throw new UnsupportedOperationException();
-  }
-
-  private static MinorType getDecimalType(SchemaElement schemaElement) {
-    return schemaElement.getPrecision() <= 28 ? MinorType.DECIMAL28SPARSE : MinorType.DECIMAL38SPARSE;
   }
 
   @Override

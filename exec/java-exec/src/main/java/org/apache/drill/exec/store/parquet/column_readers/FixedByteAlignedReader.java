@@ -101,7 +101,7 @@ class FixedByteAlignedReader extends ColumnReader {
     @Override
     void addNext(int start, int index) {
       dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(
-          NullableFixedByteAlignedReader.NullableDateReader.readIntLittleEndian(bytes, start)
+          NullableFixedByteAlignedReaders.NullableDateReader.readIntLittleEndian(bytes, start)
               - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
     }
   }

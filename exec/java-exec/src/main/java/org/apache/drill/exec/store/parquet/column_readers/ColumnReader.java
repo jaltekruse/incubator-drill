@@ -80,14 +80,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     this.columnChunkMetaData = columnChunkMetaData;
     this.isFixedLength = fixedLength;
     this.schemaElement = schemaElement;
-
-    if (allocateSize > 1) {
-      valueVec =  v;
-    } else {
-      valueVec =  v;
-    }
-
-
+    this.valueVec =  v;
     this.pageReadStatus = new PageReadStatus(this, parentReader.getFileSystem(), parentReader.getHadoopPath(), columnChunkMetaData);
 
     if (columnDescriptor.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
@@ -104,7 +97,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     return valuesReadInCurrentPass;
   }
 
-  public void readAllFixedFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public void processPages(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
