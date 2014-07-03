@@ -173,11 +173,6 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   }
 
   @Override
-  public boolean setSafe(int index, byte[] bytes, int start, int length) {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
   public int capacity() {
     return castedRepeatedVector.getMutator().getDataVector().getData().capacity();
   }

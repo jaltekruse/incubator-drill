@@ -47,6 +47,8 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
     }
   }
 
+  public abstract boolean setSafe(int index, byte[] bytes, int start, int length);
+
   @Override
   protected void readField(long recordToRead) {
     dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
@@ -75,8 +77,12 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
 
   protected boolean readAndStoreValueSizeInformation() throws IOException {
     // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
+    try {
     dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
         (int) pageReadStatus.readyToReadPosInBytes);
+    } catch (Throwable t) {
+      throw t;
+    }
 
     // this should not fail
     if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead,

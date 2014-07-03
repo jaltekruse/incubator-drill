@@ -30,7 +30,8 @@ import parquet.schema.PrimitiveType.PrimitiveTypeName;
 import java.io.IOException;
 
 public abstract class ColumnReader<V extends ValueVector> {
-  
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ColumnReader.class);
+
   final ParquetRecordReader parentReader;
   
   // Value Vector for this column
@@ -98,20 +99,17 @@ public abstract class ColumnReader<V extends ValueVector> {
   }
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
-    readStartInBytes = 0;
-    readLength = 0;
-    readLengthInBits = 0;
-    recordsReadInThisIteration = 0;
-    vectorData = ((BaseValueVector) valueVec).getData();
+    reset();
     do {
-      // if no page has been read, or all of the records have been read out of a page, read the next one
-      if (pageReadStatus.currentPage == null || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
-        if (!pageReadStatus.next()) {
-          break;
-        }
-      }
-
-      readValues(recordsToReadInThisPass);
+//      // if no page has been read, or all of the records have been read out of a page, read the next one
+//      if (pageReadStatus.currentPage == null || pageReadStatus.valuesRead == pageReadStatus.currentPage.getValueCount()) {
+//        if (!pageReadStatus.next()) {
+//          break;
+//        }
+//      }
+//
+//      readValues(recordsToReadInThisPass);
+      determineSize(recordsToReadInThisPass, 0);
 
     } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
     valueVec.getMutator().setValueCount(valuesReadInCurrentPass);
@@ -132,4 +130,100 @@ public abstract class ColumnReader<V extends ValueVector> {
   }
 
   protected abstract void readField(long recordsToRead);
+
+  /**
+   * Determines the size of a single value in a variable column.
+   *
+   * Return value indicates if we have finished a row group and should stop reading
+   *
+   * @param recordsReadInCurrentPass
+   * @param lengthVarFieldsInCurrentRecord
+   * @return - true if we should stop reading
+   * @throws IOException
+   */
+  public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
+
+    if (recordsReadInCurrentPass == valueVec.getValueCapacity())
+      return true;
+
+    boolean doneReading = readPage();
+    if (doneReading)
+      return true;
+
+    doneReading = processPageData((int) recordsReadInCurrentPass);
+    if (doneReading)
+      return true;
+
+    lengthVarFieldsInCurrentRecord += dataTypeLengthInBits;
+
+    doneReading = checkVectorCapacityReached();
+    if (doneReading)
+      return true;
+
+    return false;
+  }
+
+  protected void readRecords(int recordsToRead) {
+    for (int i = 0; i < recordsToRead; i++) {
+      readField(i);
+    }
+    pageReadStatus.valuesRead += recordsToRead;
+  }
+
+  protected boolean processPageData(int recordsToReadInThisPass) throws IOException {
+    readValues(recordsToReadInThisPass);
+    return true;
+  }
+
+  public void updatePosition() {}
+
+  public void updateReadyToReadPosition() {}
+
+  public void reset() {
+    readStartInBytes = 0;
+    readLength = 0;
+    readLengthInBits = 0;
+    recordsReadInThisIteration = 0;
+    vectorData = ((BaseValueVector) valueVec).getData();
+  }
+
+  public int capacity() {
+    return (int) (valueVec.getValueCapacity() * dataTypeLengthInBits / 8.0);
+  }
+
+  // Read a page if we need more data, returns true if we need to exit the read loop
+  public boolean readPage() throws IOException {
+    if (pageReadStatus.currentPage == null
+        || totalValuesReadAndReadyToReadInPage() == pageReadStatus.currentPage.getValueCount()) {
+      readRecords(pageReadStatus.valuesReadyToRead);
+      if (pageReadStatus.currentPage != null)
+        totalValuesRead += pageReadStatus.currentPage.getValueCount();
+      if (!pageReadStatus.next()) {
+        hitRowGroupEnd();
+        return true;
+      }
+      postPageRead();
+    }
+    return false;
+  }
+
+  protected int totalValuesReadAndReadyToReadInPage() {
+    return pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead;
+  }
+
+  protected void postPageRead() {
+    pageReadStatus.valuesReadyToRead = 0;
+  }
+
+  protected void hitRowGroupEnd() {}
+
+  protected boolean checkVectorCapacityReached() {
+    if (bytesReadInCurrentPass + dataTypeLengthInBits > capacity()) {
+      // TODO - determine if we need to add this back somehow
+      //break outer;
+      logger.debug("Reached the capacity of the data vector in a variable length value vector.");
+      return true;
+    }
+    return false;
+  }
 }
