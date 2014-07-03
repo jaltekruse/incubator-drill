@@ -143,9 +143,6 @@ public abstract class ColumnReader<V extends ValueVector> {
    */
   public boolean determineSize(long recordsReadInCurrentPass, Integer lengthVarFieldsInCurrentRecord) throws IOException {
 
-    if (recordsReadInCurrentPass == valueVec.getValueCapacity())
-      return true;
-
     boolean doneReading = readPage();
     if (doneReading)
       return true;
@@ -222,6 +219,9 @@ public abstract class ColumnReader<V extends ValueVector> {
       // TODO - determine if we need to add this back somehow
       //break outer;
       logger.debug("Reached the capacity of the data vector in a variable length value vector.");
+      return true;
+    }
+    else if (valuesReadInCurrentPass > valueVec.getValueCapacity()){
       return true;
     }
     return false;
