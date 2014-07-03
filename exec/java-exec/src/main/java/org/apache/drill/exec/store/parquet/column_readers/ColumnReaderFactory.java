@@ -27,8 +27,20 @@ import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders
 import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.NullableVarCharColumn;
 import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarBinaryColumn;
 import org.apache.drill.exec.store.parquet.column_readers.VarLengthColumnReaders.VarCharColumn;
-import org.apache.drill.exec.vector.*;
 
+import org.apache.drill.exec.vector.Decimal28SparseVector;
+import org.apache.drill.exec.vector.Decimal38SparseVector;
+import org.apache.drill.exec.vector.NullableBigIntVector;
+import org.apache.drill.exec.vector.NullableDecimal28SparseVector;
+import org.apache.drill.exec.vector.NullableDecimal38SparseVector;
+import org.apache.drill.exec.vector.NullableFloat4Vector;
+import org.apache.drill.exec.vector.NullableFloat8Vector;
+import org.apache.drill.exec.vector.NullableIntVector;
+import org.apache.drill.exec.vector.NullableVarBinaryVector;
+import org.apache.drill.exec.vector.NullableVarCharVector;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.VarBinaryVector;
+import org.apache.drill.exec.vector.VarCharVector;
 import parquet.column.ColumnDescriptor;
 import parquet.column.Encoding;
 import parquet.format.ConvertedType;
