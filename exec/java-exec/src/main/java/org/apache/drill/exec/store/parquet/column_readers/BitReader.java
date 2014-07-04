@@ -15,13 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
-import parquet.format.ConvertedType;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
@@ -37,7 +36,7 @@ final class BitReader extends ColumnReader {
   }
 
   @Override
-  protected void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  protected void readField(long recordsToReadInThisPass) {
 
     recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
         - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
