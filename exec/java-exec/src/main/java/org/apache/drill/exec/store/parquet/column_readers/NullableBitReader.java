@@ -1,4 +1,4 @@
-/*******************************************************************************
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,28 +14,33 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- ******************************************************************************/
-package org.apache.drill.exec.store.parquet;
+ */
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.exec.vector.BigIntVector;
+import org.apache.drill.exec.vector.NullableBitVector;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
-import parquet.format.ConvertedType;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
-import parquet.schema.PrimitiveType;
 
-public class ParquetFixedWidthDictionaryReader extends ColumnReader{
+/**
+ * This class is used in conjunction with its superclass to read nullable bit columns in a parquet file.
+ * It currently is using an inefficient value-by-value approach.
+ * TODO - make this more efficient by copying runs of values like in NullableFixedByteAlignedReader
+ * This will also involve incorporating the ideas from the BitReader (the reader for non-nullable bits)
+ * because page/batch boundaries that do not land on byte boundaries require shifting of all of the values
+ * in the next batch.
+ */
+final class NullableBitReader extends ColumnReader {
 
-  ParquetFixedWidthDictionaryReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
-                                    ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v,
-                                    SchemaElement schemaElement) throws ExecutionSetupException {
+  NullableBitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
+                    boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
   }
 
   @Override
-  public void readField(long recordsToReadInThisPass, ColumnReader firstColumnStatus) {
+  public void readField(long recordsToReadInThisPass) {
 
     recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
         - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
@@ -44,11 +49,13 @@ public class ParquetFixedWidthDictionaryReader extends ColumnReader{
       defLevel = pageReadStatus.definitionLevels.readInteger();
       // if the value is defined
       if (defLevel == columnDescriptor.getMaxDefinitionLevel()){
-        if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.INT64)
-          ((BigIntVector)valueVec).getMutator().set(i + valuesReadInCurrentPass,
-              pageReadStatus.valueReader.readLong() );
+        if (!((NullableBitVector)valueVec).getMutator().setSafe(i + valuesReadInCurrentPass,
+            pageReadStatus.valueReader.readBoolean() ? 1 : 0 )) {
+          throw new RuntimeException();
+        }
       }
       // otherwise the value is skipped, because the bit vector indicating nullability is zero filled
     }
   }
+
 }

@@ -15,14 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.parquet;
+package org.apache.drill.exec.store.parquet.column_readers;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.NullableVectorDefinitionSetter;
 import org.apache.drill.exec.vector.ValueVector;
 import parquet.column.ColumnDescriptor;
-import parquet.format.ConvertedType;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
@@ -35,18 +34,22 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
   int rightBitShift;
   // used when copying less than a byte worth of data at a time, to indicate the number of used bits in the current byte
   int bitsUsed;
+  BaseValueVector castedBaseVector;
+  NullableVectorDefinitionSetter castedVectorMutator;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+    castedBaseVector = (BaseValueVector) v;
+    castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
   }
 
-  public void readAllFixedFields(long recordsToReadInThisPass, ColumnReader firstColumnStatus) throws IOException {
+  public void processPages(long recordsToReadInThisPass) throws IOException {
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
     recordsReadInThisIteration = 0;
-    vectorData = ((BaseValueVector)valueVec).getData();
+    vectorData = castedBaseVector.getData();
 
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
@@ -64,9 +67,9 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
 
       long runStart = pageReadStatus.readPosInBytes;
       int runLength;
-      int currentDefinitionLevel = 0;
+      int currentDefinitionLevel;
       int currentValueIndexInVector = (int) recordsReadInThisIteration;
-      boolean lastValueWasNull = true;
+      boolean lastValueWasNull;
       int definitionLevelsRead;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){
@@ -99,17 +102,17 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
               lastValueWasNull = false;
             }
             runLength++;
-            ((NullableVectorDefinitionSetter)valueVec.getMutator()).setIndexDefined(currentValueIndexInVector);
+            castedVectorMutator.setIndexDefined(currentValueIndexInVector);
           }
           currentValueIndexInVector++;
         }
         pageReadStatus.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
 
-        readField( runLength, firstColumnStatus);
+        readField( runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
-          ((BaseValueVector) valueVec).getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
+          castedBaseVector.getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
         }
         else if (dataTypeLengthInBits < 8){
           rightBitShift += dataTypeLengthInBits * nullsFound;
@@ -132,5 +135,5 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         valuesReadInCurrentPass);
   }
 
-  protected abstract void readField(long recordsToRead, ColumnReader firstColumnStatus);
+  protected abstract void readField(long recordsToRead);
 }
