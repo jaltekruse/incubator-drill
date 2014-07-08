@@ -164,6 +164,9 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
 
   protected void readRecords(int valuesToRead) {
     if (valuesToRead == 0) return;
+    // TODO - validate that this works in all cases, it fixes a bug when reading from multiple pages into
+    // a single vector
+    dataReader.valuesReadInCurrentPass = 0;
     dataReader.readValues(valuesToRead);
     valuesReadInCurrentPass += valuesToRead;
     castedRepeatedVector.getMutator().setValueCounts(repeatedGroupsReadInCurrentPass, valuesReadInCurrentPass);
