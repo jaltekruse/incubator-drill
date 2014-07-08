@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.store.parquet.column_readers;
 
+import io.netty.buffer.ByteBuf;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VariableWidthVector;
@@ -47,7 +48,7 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
     }
   }
 
-  public abstract boolean setSafe(int index, byte[] bytes, int start, int length);
+  public abstract boolean setSafe(int index, ByteBuf bytes, int start, int length);
 
   @Override
   protected void readField(long recordToRead) {
@@ -78,7 +79,7 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
   protected boolean readAndStoreValueSizeInformation() throws IOException {
     // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
     try {
-    dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
+    dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray.nioBuffer(),
         (int) pageReadStatus.readyToReadPosInBytes);
     } catch (Throwable t) {
       throw t;

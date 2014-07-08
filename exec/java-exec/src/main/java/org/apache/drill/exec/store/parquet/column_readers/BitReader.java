@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.store.parquet.column_readers;
 
+import io.netty.buffer.ByteBuf;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.ValueVector;
@@ -28,7 +29,7 @@ final class BitReader extends ColumnReader {
 
   private byte currentByte;
   private byte nextByte;
-  private byte[] bytes;
+  private ByteBuf bytebuf;
   
   BitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
             boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
@@ -45,15 +46,15 @@ final class BitReader extends ColumnReader {
     readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
     readLength = (int) Math.ceil(readLengthInBits / 8.0);
 
-    bytes = pageReadStatus.pageDataByteArray;
+    bytebuf = pageReadStatus.pageDataByteArray;
     // standard read, using memory mapping
     if (pageReadStatus.bitShift == 0) {
-      ((BaseDataValueVector) valueVec).getData().writeBytes(bytes,
+      ((BaseDataValueVector) valueVec).getData().writeBytes(bytebuf,
           (int) readStartInBytes, (int) readLength);
     } else { // read in individual values, because a bitshift is necessary with where the last page or batch ended
 
       vectorData = ((BaseDataValueVector) valueVec).getData();
-      nextByte = bytes[(int) Math.max(0, Math.ceil(pageReadStatus.valuesRead / 8.0) - 1)];
+      nextByte = bytebuf.getByte((int) Math.max(0, Math.ceil(pageReadStatus.valuesRead / 8.0) - 1));
       readLengthInBits = recordsReadInThisIteration + pageReadStatus.bitShift;
 
       int i = 0;
@@ -66,7 +67,7 @@ final class BitReader extends ColumnReader {
         // if we are not on the last byte
         if ((int) Math.ceil(pageReadStatus.valuesRead / 8.0) + i < pageReadStatus.byteLength) {
           // grab the next byte from the buffer, shift and mask it, and OR it with the leftover bits
-          nextByte = bytes[(int) Math.ceil(pageReadStatus.valuesRead / 8.0) + i];
+          nextByte = bytebuf.getByte((int) Math.ceil(pageReadStatus.valuesRead / 8.0) + i);
           currentByte = (byte) (currentByte | nextByte
               << (8 - pageReadStatus.bitShift)
               & ParquetRecordReader.endBitMasks[8 - pageReadStatus.bitShift - 1]);
