@@ -103,9 +103,12 @@ public class ScanBatch implements RecordBatch {
     this(subScanConfig, context, readers, Collections.<String[]> emptyList(), Collections.<Integer> emptyList());
   }
 
-  @Override
   public FragmentContext getContext() {
     return context;
+  }
+
+  public OperatorContext getOperatorContext() {
+    return oContext;
   }
 
   @Override

@@ -18,7 +18,12 @@
 package parquet.hadoop;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.WritableByteChannel;
 
+import io.netty.buffer.ByteBuf;
 import org.apache.hadoop.conf.Configuration;
 
 import parquet.bytes.BytesInput;
@@ -38,5 +43,44 @@ public class CodecFactoryExposer{
 
   public BytesInput decompress(BytesInput bytes, int uncompressedSize, CompressionCodecName codecName) throws IOException {
     return codecFactory.getDecompressor(codecName).decompress(bytes, uncompressedSize);
+  }
+  public BytesInput decompress(CompressionCodecName codecName, ByteBuf compressedByteBuf, ByteBuf uncompressedByteBuf) throws IOException {
+    ByteBuffer inpBuffer=compressedByteBuf.nioBuffer();
+    ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer();
+    ((DirectDecompressionCodec)codecFactory.getDecompressor(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
+  }
+
+  public class HadoopByteBufBytesInput extends BytesInput{
+
+    private final ByteBuffer byteBuf;
+    private final int length;
+    private final int offset;
+
+    private HadoopByteBufBytesInput(ByteBuffer byteBuf, int offset, int length) {
+      super();
+      this.byteBuf = byteBuf;
+      this.offset = offset;
+      this.length = length;
+    }
+
+    public void writeAllTo(OutputStream out) throws IOException {
+      final WritableByteChannel outputChannel = Channels.newChannel(out);
+      byteBuf.position(offset);
+      ByteBuffer tempBuf = byteBuf.slice();
+      tempBuf.limit(length);
+      outputChannel.write(tempBuf);
+    }
+
+    public ByteBuffer toByteBuffer() throws IOException {
+      byteBuf.position(offset);
+      ByteBuffer buf = byteBuf.slice();
+      buf.limit(length);
+      return buf;
+    }
+
+    public long size() {
+      return length;
+    }
   }
 }

@@ -96,11 +96,18 @@ final class PageReadStatus {
         f.seek(columnChunkMetaData.getDictionaryPageOffset());
         PageHeader pageHeader = Util.readPageHeader(f);
         assert pageHeader.type == PageType.DICTIONARY_PAGE;
+        ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+        ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
+        dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
         BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-            .decompress( //
-                dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
-                pageHeader.getUncompressed_page_size(), //
-                parentColumnReader.columnChunkMetaData.getCodec());
+          .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+            compressedData,
+            uncompressedData);
+        //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+        //    .decompress( //
+        //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
+        //        pageHeader.getUncompressed_page_size(), //
+        //        parentColumnReader.columnChunkMetaData.getCodec());
         DictionaryPage page = new DictionaryPage(
             bytesIn,
             pageHeader.uncompressed_page_size,
@@ -110,7 +117,7 @@ final class PageReadStatus {
         this.dictionary = page.getEncoding().initDictionary(parentStatus.columnDescriptor, page);
       }
     } catch (IOException e) {
-      throw new ExecutionSetupException("Error opening or reading metatdata for parquet file at location: " + path.getName(), e);
+      throw new ExecutionSetupException("Error opening or reading metadata for parquet file at location: " + path.getName(), e);
     }
     
   }
@@ -140,11 +147,18 @@ final class PageReadStatus {
     do {
       pageHeader = dataReader.readPageHeader();
       if (pageHeader.getType() == PageType.DICTIONARY_PAGE) {
+        ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+        ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
+        dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
         BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-            .decompress( //
-                dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
-                pageHeader.getUncompressed_page_size(), //
-                parentColumnReader.columnChunkMetaData.getCodec());
+          .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+            compressedData,
+            uncompressedData);
+        //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+        //    .decompress( //
+        //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
+        //        pageHeader.getUncompressed_page_size(), //
+        //        parentColumnReader.columnChunkMetaData.getCodec());
         DictionaryPage page = new DictionaryPage(
             bytesIn,
             pageHeader.uncompressed_page_size,
@@ -155,11 +169,18 @@ final class PageReadStatus {
       }
     } while (pageHeader.getType() == PageType.DICTIONARY_PAGE);
 
+    ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+    ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
+    dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
     BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-        .decompress( //
-            dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), // 
-            pageHeader.getUncompressed_page_size(), //
-            parentColumnReader.columnChunkMetaData.getCodec());
+      .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+        compressedData,
+        uncompressedData);
+    //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+    //    .decompress( //
+    //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
+    //        pageHeader.getUncompressed_page_size(), //
+    //        parentColumnReader.columnChunkMetaData.getCodec());
     currentPage = new Page(
         bytesIn,
         pageHeader.data_page_header.num_values,
@@ -222,5 +243,13 @@ final class PageReadStatus {
   
   public void clear(){
     this.dataReader.clear();
+  }
+
+  /*
+    Allocate direct memory to read data into
+   */
+  private ByteBuf allocateBuffer(int size) {
+    ByteBuf b= parentColumnReader.parentReader.getOperatorContext().getAllocator().buffer(size);
+    return b;
   }
 }
