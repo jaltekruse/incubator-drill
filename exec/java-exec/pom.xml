@@ -49,6 +49,11 @@
       <version>2.1</version>
     </dependency>
     <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-math</artifactId>
+        <version>2.2</version>
+    </dependency>
+    <dependency>
       <groupId>com.thoughtworks.paranamer</groupId>
       <artifactId>paranamer</artifactId>
       <version>2.5.6</version>
@@ -120,30 +125,119 @@
     <dependency>
       <groupId>com.twitter</groupId>
       <artifactId>parquet-column</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-column/target/parquet-column-1.5.1-SNAPSHOT.jar</systemPath>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
+          <artifactId>hadoop-client</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-client</artifactId>
+          <artifactId>hadoop-common</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
     <dependency>
       <groupId>com.twitter</groupId>
       <artifactId>parquet-hadoop</artifactId>
-      <version>1.5.0-SNAPSHOT</version>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-hadoop/target/parquet-hadoop-1.5.1-SNAPSHOT.jar</systemPath>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
+          <artifactId>hadoop-client</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-format</artifactId>
+      <version>2.1.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-format/target/parquet-format-2.1.1-SNAPSHOT.jar</systemPath>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-common</artifactId>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-common/target/parquet-common-1.5.1-SNAPSHOT.jar</systemPath>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-jackson</artifactId>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-jackson/target/parquet-jackson-1.5.1-SNAPSHOT.jar</systemPath>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-encoding</artifactId>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-encoding/target/parquet-encoding-1.5.1-SNAPSHOT.jar</systemPath>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>com.twitter</groupId>
+      <artifactId>parquet-generator</artifactId>
+      <version>1.5.1-SNAPSHOT</version>
+      <scope>system</scope>
+      <systemPath>/Users/pchandra/work/incubator-parquet-mr/parquet-generator/target/parquet-generator-1.5.1-SNAPSHOT.jar</systemPath>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
@@ -262,7 +356,7 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
+          <artifactId>hadoop-client</artifactId>
           <exclusions>
             <exclusion>
               <groupId>com.sun.jersey</groupId>
@@ -274,7 +368,6 @@
             </exclusion>
           </exclusions>
         </dependency>
-
       </dependencies>
     </profile>
     <profile>
@@ -282,7 +375,7 @@
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
+          <artifactId>hadoop-client</artifactId>
         </dependency>
         <dependency>
           <groupId>com.mapr.hadoop</groupId>
