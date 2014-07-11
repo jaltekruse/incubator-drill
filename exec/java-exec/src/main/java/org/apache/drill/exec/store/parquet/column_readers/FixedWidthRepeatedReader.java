@@ -24,6 +24,8 @@ import parquet.column.ColumnDescriptor;
 import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
+import java.io.IOException;
+
 public class FixedWidthRepeatedReader extends VarLengthColumn {
 
   RepeatedFixedWidthVector castedRepeatedVector;
@@ -34,7 +36,6 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   // of bytes to transfer and re-use the code from the non-repeated types)
   int valuesToRead;
   int repeatedGroupsReadInCurrentPass;
-  // stores the number of
   int repeatedValuesInCurrentList;
   // empty lists are notated by definition levels, to stop reading at the correct time, we must keep
   // track of the number of empty lists as well as the length of all of the defined lists together
@@ -43,6 +44,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   // tracking when this happens to stop some of the state updates until we know the full length of the repeated
   // value for the current record
   boolean notFishedReadingList;
+  byte[] leftOverBytes;
 
   FixedWidthRepeatedReader(ParquetRecordReader parentReader, ColumnReader dataReader, int dataTypeLengthInBytes, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector valueVector, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, valueVector, schemaElement);
@@ -50,6 +52,10 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     this.dataTypeLengthInBytes = dataTypeLengthInBytes;
     this.dataReader = dataReader;
     this.dataReader.pageReadStatus = this.pageReadStatus;
+    // this is not in the reset method because it needs to be initialized only for the very first page read
+    // in all other cases if a read ends at a page boundary we will need to keep track of this flag and not
+    // clear it at the start of the next read loop
+    notFishedReadingList = false;
   }
 
   public void reset() {
@@ -59,7 +65,6 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     dataReader.vectorData = castedRepeatedVector.getMutator().getDataVector().getData();
     dataReader.valuesReadInCurrentPass = 0;
     repeatedGroupsReadInCurrentPass = 0;
-    notFishedReadingList = false;
   }
 
   public int getRecordsReadInCurrentPass() {
@@ -80,7 +85,8 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     pageReadStatus.valuesReadyToRead += repeatedValuesInCurrentList;
     repeatedGroupsReadInCurrentPass++;
     currDictVal = null;
-    repeatedValuesInCurrentList = -1;
+    if ( ! notFishedReadingList)
+      repeatedValuesInCurrentList = -1;
   }
 
   public void updatePosition() {
@@ -96,11 +102,18 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
 
   public void postPageRead() {
     super.postPageRead();
-    repeatedValuesInCurrentList = -1;
+    // this is no longer correct as we figured out that lists can reach across pages
+    if ( ! notFishedReadingList)
+      repeatedValuesInCurrentList = -1;
     definitionLevelsRead = 0;
   }
 
   protected int totalValuesReadAndReadyToReadInPage() {
+    // we need to prevent the page reader from getting rid of the current page in the case where we have a repeated
+    // value split across a page boundary
+    if (notFishedReadingList) {
+      return definitionLevelsRead - repeatedValuesInCurrentList;
+    }
     return definitionLevelsRead;
   }
 
@@ -115,13 +128,31 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   }
 
   protected boolean readAndStoreValueSizeInformation() {
+    boolean readingValsAcrossPageBoundary = false;
+    int numLeftoverVals = 0;
+    if (notFishedReadingList) {
+      numLeftoverVals = repeatedValuesInCurrentList;
+      readRecords(numLeftoverVals);
+      readingValsAcrossPageBoundary = true;
+      notFishedReadingList = false;
+      pageReadStatus.valuesReadyToRead = 0;
+      try {
+        boolean stopReading = readPage();
+        if (stopReading) {
+          // hit the end of a row group
+          return false;
+        }
+      } catch (IOException e) {
+        throw new RuntimeException("Unexpected error reading parquet repeated column.", e);
+      }
+    }
     if ( currDefLevel == -1 ) {
       currDefLevel = pageReadStatus.definitionLevels.readInteger();
       definitionLevelsRead++;
     }
     int repLevel;
     if ( columnDescriptor.getMaxDefinitionLevel() == currDefLevel){
-      if (repeatedValuesInCurrentList == -1) {
+      if (repeatedValuesInCurrentList == -1 || notFishedReadingList) {
         repeatedValuesInCurrentList = 1;
         do {
           repLevel = pageReadStatus.repetitionLevels.readInteger();
@@ -141,7 +172,9 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
               // to add it to the read )
               if (totalValuesRead + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList != columnChunkMetaData.getValueCount()){
                 notFishedReadingList = true;
-                //return false;
+                // if we hit this case, we cut off the current batch at the previous value, these extra values as well
+                // as those that spill into the next page will be added to the next batch
+                return true;
               }
             }
           }
@@ -151,9 +184,13 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     else {
       repeatedValuesInCurrentList = 0;
     }
+    int currentValueListLength = repeatedValuesInCurrentList;
+    if (readingValsAcrossPageBoundary) {
+      currentValueListLength += numLeftoverVals;
+    }
     // this should not fail
     if (!castedRepeatedVector.getMutator().setRepetitionAtIndexSafe(repeatedGroupsReadInCurrentPass,
-        repeatedValuesInCurrentList)) {
+        currentValueListLength)) {
       return true;
     }
     // This field is being referenced in the superclass determineSize method, so we need to set it here

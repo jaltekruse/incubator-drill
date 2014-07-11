@@ -153,10 +153,21 @@ public class TestParquetWriter extends BaseTestQuery {
 
   // TODO - this is failing due to the parquet behavior of allowing repeated values to reach across
   // pages. This broke our reading model a bit, but it is possible to work around.
-  @Ignore
   @Test
-  public void testRepeatedPerformance() throws Exception {
-    String inputTable = "cp.`parquet/parquet_repeated_performance_test_input_data.json`";
+  public void testRepeatedDouble() throws Exception {
+    String inputTable = "cp.`parquet/repeated_double_data.json`";
+    runTestAndValidate("*", "*", inputTable, "repeated_performance");
+  }
+
+  @Test
+  public void testRepeatedLong() throws Exception {
+    String inputTable = "cp.`parquet/repeated_integer_data.json`";
+    runTestAndValidate("*", "*", inputTable, "repeated_performance");
+  }
+
+  @Test
+  public void testRepeatedBool() throws Exception {
+    String inputTable = "cp.`parquet/repeated_bool_data.json`";
     runTestAndValidate("*", "*", inputTable, "repeated_performance");
   }
 
@@ -259,7 +270,7 @@ public class TestParquetWriter extends BaseTestQuery {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     addToMaterializedResults(expectedRecords, expected, loader, schema);
     addToMaterializedResults(actualRecords, result, loader, schema);
-//    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
+    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
     String missing = "";
     int i = 0;
