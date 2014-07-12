@@ -22,19 +22,25 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
 import org.apache.hadoop.conf.Configuration;
 
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.util.ReflectionUtils;
 import parquet.bytes.BytesInput;
 import parquet.hadoop.metadata.CompressionCodecName;
 
 public class CodecFactoryExposer{
 
   private CodecFactory codecFactory;
+  private final Map<String, CompressionCodec> codecByName = new HashMap<String, CompressionCodec>();
+  private Configuration configuration;
 
   public CodecFactoryExposer(Configuration config){
-    codecFactory = new CodecFactory(config);
+    codecFactory = new CodecFactory(config);configuration = config;
   }
 
   public CodecFactory getCodecFactory() {
@@ -44,11 +50,35 @@ public class CodecFactoryExposer{
   public BytesInput decompress(BytesInput bytes, int uncompressedSize, CompressionCodecName codecName) throws IOException {
     return codecFactory.getDecompressor(codecName).decompress(bytes, uncompressedSize);
   }
-  public BytesInput decompress(CompressionCodecName codecName, ByteBuf compressedByteBuf, ByteBuf uncompressedByteBuf) throws IOException {
+  public BytesInput decompress(CompressionCodecName codecName,
+                               ByteBuf compressedByteBuf,
+                               ByteBuf uncompressedByteBuf,
+                               int uncompressedSize) throws IOException {
     ByteBuffer inpBuffer=compressedByteBuf.nioBuffer();
-    ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer();
-    ((DirectDecompressionCodec)codecFactory.getDecompressor(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer(0, uncompressedSize);
+    //((DirectDecompressionCodec)codecFactory.getDecompressor(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    ((DirectDecompressionCodec)getCodec(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
     return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
+  }
+
+  private CompressionCodec getCodec(CompressionCodecName codecName) {
+    String codecClassName = codecName.getHadoopCompressionCodecClassName();
+    if (codecClassName == null) {
+      return null;
+    }
+    CompressionCodec codec = codecByName.get(codecClassName);
+    if (codec != null) {
+      return codec;
+    }
+
+    try {
+      Class<?> codecClass = Class.forName(codecClassName);
+      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, configuration);
+      codecByName.put(codecClassName, codec);
+      return codec;
+    } catch (ClassNotFoundException e) {
+      throw new BadConfigurationException("Class " + codecClassName + " was not found", e);
+    }
   }
 
   public class HadoopByteBufBytesInput extends BytesInput{

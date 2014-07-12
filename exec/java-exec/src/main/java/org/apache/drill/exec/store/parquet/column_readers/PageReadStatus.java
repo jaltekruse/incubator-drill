@@ -102,7 +102,8 @@ final class PageReadStatus {
         BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
           .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
             compressedData,
-            uncompressedData);
+            uncompressedData,
+            pageHeader.getUncompressed_page_size());
         //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
         //    .decompress( //
         //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
@@ -153,7 +154,8 @@ final class PageReadStatus {
         BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
           .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
             compressedData,
-            uncompressedData);
+            uncompressedData,
+            pageHeader.getUncompressed_page_size());
         //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
         //    .decompress( //
         //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
@@ -175,7 +177,8 @@ final class PageReadStatus {
     BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
       .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
         compressedData,
-        uncompressedData);
+        uncompressedData,
+        pageHeader.getUncompressed_page_size());
     //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
     //    .decompress( //
     //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //

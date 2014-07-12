@@ -26,6 +26,7 @@ import java.nio.channels.WritableByteChannel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -84,10 +85,40 @@ public class ColumnDataReader {
   }
 
   public ByteBuf getPageAsBytesBuf(ByteBuf byteBuf, int pageLength) throws IOException{
-    ByteBuffer directBuffer=byteBuf.nioBuffer();
-    CompatibilityUtil.getBuf(input, directBuffer, pageLength);
-    //BytesInput bb= new HadoopByteBufBytesInput(directBuffer, 0, pageLength);
+    ByteBuffer directBuffer=byteBuf.nioBuffer(0, pageLength);
+    int l=directBuffer.remaining();
+    int bl=byteBuf.capacity();
+    try{
+      CompatibilityUtil.getBuf(input, directBuffer, pageLength);
+      //BytesInput bb= new HadoopByteBufBytesInput(directBuffer, 0, pageLength);
+    }catch(Exception e) {
+      logger.error("Failed to read data into Direct ByteBuffer with exception: "+e.getMessage());
+      throw new DrillRuntimeException(e.getMessage());
+      /*
+      ByteBuffer readBuffer = ByteBuffer.allocate(pageLength);
+      try {
+        CompatibilityUtil.getBuf(input, readBuffer, pageLength);
+        copyByteBufferAsMuchAsPossible(directBuffer, readBuffer);
+      }catch(Exception e2) {
+        logger.error("Failed to read data into ByteBuffer with exception: "+e2.getMessage());
+        throw new DrillRuntimeException(e.getMessage());
+      }
+      */
+    }
     return byteBuf;
+  }
+  public static int copyByteBufferAsMuchAsPossible(
+    ByteBuffer bbuf_dest, ByteBuffer bbuf_src)
+  {
+    int nTransfer = Math.min(bbuf_dest.remaining(), bbuf_src.remaining());
+    if (nTransfer > 0)
+    {
+      bbuf_dest.put(bbuf_src.array(),
+        bbuf_src.arrayOffset()+bbuf_src.position(),
+        nTransfer);
+      bbuf_src.position(bbuf_src.position()+nTransfer);
+    }
+    return nTransfer;
   }
 
   public void clear(){
