@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -50,17 +51,24 @@ public class CodecFactoryExposer{
   public BytesInput decompress(BytesInput bytes, int uncompressedSize, CompressionCodecName codecName) throws IOException {
     return codecFactory.getDecompressor(codecName).decompress(bytes, uncompressedSize);
   }
+
+  public BytesInput getBytesInput(ByteBuf uncompressedByteBuf, int uncompressedSize) throws IOException {
+    ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer(0, uncompressedSize);
+    return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
+  }
+
   public BytesInput decompress(CompressionCodecName codecName,
                                ByteBuf compressedByteBuf,
                                ByteBuf uncompressedByteBuf,
                                int uncompressedSize) throws IOException {
     ByteBuffer inpBuffer=compressedByteBuf.nioBuffer();
     ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer(0, uncompressedSize);
-    //((DirectDecompressionCodec)codecFactory.getDecompressor(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
-    //TODO: The getCodec function below may return NULL if the file is uncompressed. The decompress path should be short circuited
-    // anyway. Need to fix this code as well as the three places where this is called from PageReadStatus
-
-    ((DirectDecompressionCodec)getCodec(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    DirectDecompressionCodec d = ((DirectDecompressionCodec)getCodec(codecName));
+    if(d!=null) {
+      d.createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    }else{
+      throw new DrillRuntimeException("Cannot create a decompression codec for codec "+codecName.name());
+    }
     return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
   }
 

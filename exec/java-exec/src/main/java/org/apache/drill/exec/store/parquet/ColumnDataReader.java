@@ -94,16 +94,6 @@ public class ColumnDataReader {
     }catch(Exception e) {
       logger.error("Failed to read data into Direct ByteBuffer with exception: "+e.getMessage());
       throw new DrillRuntimeException(e.getMessage());
-      /*
-      ByteBuffer readBuffer = ByteBuffer.allocate(pageLength);
-      try {
-        CompatibilityUtil.getBuf(input, readBuffer, pageLength);
-        copyByteBufferAsMuchAsPossible(directBuffer, readBuffer);
-      }catch(Exception e2) {
-        logger.error("Failed to read data into ByteBuffer with exception: "+e2.getMessage());
-        throw new DrillRuntimeException(e.getMessage());
-      }
-      */
     }
     return byteBuf;
   }

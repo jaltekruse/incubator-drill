@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.store.parquet.ColumnDataReader;
 import org.apache.drill.exec.store.parquet.ParquetFormatPlugin;
@@ -96,19 +97,33 @@ final class PageReadStatus {
         f.seek(columnChunkMetaData.getDictionaryPageOffset());
         PageHeader pageHeader = Util.readPageHeader(f);
         assert pageHeader.type == PageType.DICTIONARY_PAGE;
-        ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+
+        BytesInput bytesIn;
         ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
-        dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
-        BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-          .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
-            compressedData,
-            uncompressedData,
+        if(parentColumnReader.columnChunkMetaData.getCodec().name()=="UNCOMPRESSED") {
+          dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
+          bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
             pageHeader.getUncompressed_page_size());
+
+        }else{
+          ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+          dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
+          bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+            .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+              compressedData,
+              uncompressedData,
+              pageHeader.getUncompressed_page_size());
+
+        }
+
+        //ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+        //ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
+        //dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
         //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-        //    .decompress( //
-        //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
-        //        pageHeader.getUncompressed_page_size(), //
-        //        parentColumnReader.columnChunkMetaData.getCodec());
+        //  .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+        //    compressedData,
+        //    uncompressedData,
+        //    pageHeader.getUncompressed_page_size());
         DictionaryPage page = new DictionaryPage(
             bytesIn,
             pageHeader.uncompressed_page_size,
@@ -148,19 +163,26 @@ final class PageReadStatus {
     do {
       pageHeader = dataReader.readPageHeader();
       if (pageHeader.getType() == PageType.DICTIONARY_PAGE) {
-        ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+
+        //TODO: Handle buffer allocation exception
+        BytesInput bytesIn;
         ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
-        dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
-        BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-          .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
-            compressedData,
-            uncompressedData,
+        if(parentColumnReader.columnChunkMetaData.getCodec().name()=="UNCOMPRESSED") {
+          dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
+          bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
             pageHeader.getUncompressed_page_size());
-        //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-        //    .decompress( //
-        //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
-        //        pageHeader.getUncompressed_page_size(), //
-        //        parentColumnReader.columnChunkMetaData.getCodec());
+
+        }else{
+          ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+          dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
+          bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+            .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+              compressedData,
+              uncompressedData,
+              pageHeader.getUncompressed_page_size());
+
+        }
+
         DictionaryPage page = new DictionaryPage(
             bytesIn,
             pageHeader.uncompressed_page_size,
@@ -171,19 +193,24 @@ final class PageReadStatus {
       }
     } while (pageHeader.getType() == PageType.DICTIONARY_PAGE);
 
-    ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+    //TODO: Handle buffer allocation exception
+    BytesInput bytesIn;
     ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
-    dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
-    BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-      .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
-        compressedData,
-        uncompressedData,
+    if(parentColumnReader.columnChunkMetaData.getCodec().name()=="UNCOMPRESSED") {
+      dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
+      bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
         pageHeader.getUncompressed_page_size());
-    //BytesInput bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
-    //    .decompress( //
-    //        dataReader.getPageAsBytesInput(pageHeader.compressed_page_size), //
-    //        pageHeader.getUncompressed_page_size(), //
-    //        parentColumnReader.columnChunkMetaData.getCodec());
+
+    }else{
+      ByteBuf compressedData=allocateBuffer(pageHeader.compressed_page_size);
+      dataReader.getPageAsBytesBuf(compressedData, pageHeader.compressed_page_size);
+      bytesIn = parentColumnReader.parentReader.getCodecFactoryExposer()
+        .decompress(parentColumnReader.columnChunkMetaData.getCodec(),
+          compressedData,
+          uncompressedData,
+          pageHeader.getUncompressed_page_size());
+
+    }
     currentPage = new Page(
         bytesIn,
         pageHeader.data_page_header.num_values,
@@ -252,7 +279,15 @@ final class PageReadStatus {
     Allocate direct memory to read data into
    */
   private ByteBuf allocateBuffer(int size) {
-    ByteBuf b= parentColumnReader.parentReader.getOperatorContext().getAllocator().buffer(size);
+    ByteBuf b;
+    try {
+      b = parentColumnReader.parentReader.getOperatorContext().getAllocator().buffer(size);
+    }catch(Exception e){
+      throw new DrillRuntimeException("Unable to allocate "+size+" bytes of memory in the Parquet Reader."+
+        "[Exception: "+e.getMessage()+"]"
+      );
+    }
     return b;
   }
+
 }
