@@ -57,6 +57,9 @@ public class CodecFactoryExposer{
     ByteBuffer inpBuffer=compressedByteBuf.nioBuffer();
     ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer(0, uncompressedSize);
     //((DirectDecompressionCodec)codecFactory.getDecompressor(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
+    //TODO: The getCodec function below may return NULL if the file is uncompressed. The decompress path should be short circuited
+    // anyway. Need to fix this code as well as the three places where this is called from PageReadStatus
+
     ((DirectDecompressionCodec)getCodec(codecName)).createDirectDecompressor().decompress(inpBuffer, outBuffer);
     return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
   }
