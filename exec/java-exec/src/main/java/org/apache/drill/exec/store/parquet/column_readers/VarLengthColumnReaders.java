@@ -175,8 +175,8 @@ public class VarLengthColumnReaders {
       if(index >= varCharVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = varCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
-            0, currDictVal.length());
+        success = varCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictValToWrite.getBytes(),
+            0, currDictValToWrite.length());
       }
       else {
         success = varCharVector.getMutator().setSafe(index, bytes, start, length);
@@ -209,8 +209,8 @@ public class VarLengthColumnReaders {
       if(index >= nullableVarCharVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = nullableVarCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictVal.getBytes(),
-            0, currDictVal.length());
+        success = nullableVarCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictValToWrite.getBytes(),
+            0, currDictValToWrite.length());
       }
       else {
         success = nullableVarCharVector.getMutator().setSafe(index, value, start, length);
@@ -242,8 +242,8 @@ public class VarLengthColumnReaders {
       if(index >= varBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = varBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
-            0, currDictVal.length());
+        success = varBinaryVector.getMutator().setSafe(index, currDictValToWrite.getBytes(),
+            0, currDictValToWrite.length());
       }
       else {
         success = varBinaryVector.getMutator().setSafe(index, bytes, start, length);
@@ -276,8 +276,8 @@ public class VarLengthColumnReaders {
       if(index >= nullableVarBinaryVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = nullableVarBinaryVector.getMutator().setSafe(index, currDictVal.getBytes(),
-            0, currDictVal.length());
+        success = nullableVarBinaryVector.getMutator().setSafe(index, currDictValToWrite.getBytes(),
+            0, currDictValToWrite.length());
       }
       else {
         success = nullableVarBinaryVector.getMutator().setSafe(index, value, start, length);

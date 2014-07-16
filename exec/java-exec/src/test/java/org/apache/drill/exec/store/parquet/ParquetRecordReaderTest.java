@@ -132,6 +132,12 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     testFull(QueryType.SQL, "select L_RECEIPTDATE from dfs.`/tmp/lineitem_null_dict.parquet`", "", 1, 1, recordsPerRowGroup, false);
   }
 
+  @Ignore
+  @Test
+  public void testDictionaryError_419() throws Exception {
+    testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, recordsPerRowGroup, false);
+  }
+
   @Test
   public void testLocalDistributed() throws Exception {
     String planName = "/parquet/parquet_scan_union_screen_physical.json";

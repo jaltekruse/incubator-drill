@@ -49,7 +49,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
   }
 
   protected void postPageRead() {
-    currDictVal = null;
+    currLengthDeterminingDictVal = null;
     pageReadStatus.valuesReadyToRead = 0;
   }
 
@@ -72,11 +72,12 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     }
 
     if (usingDictionary) {
-      if (currDictVal == null) {
-        currDictVal = pageReadStatus.dictionaryLengthDeterminingReader.readBytes();
+      if (currLengthDeterminingDictVal == null) {
+        currLengthDeterminingDictVal = pageReadStatus.dictionaryLengthDeterminingReader.readBytes();
       }
+      currDictValToWrite = currLengthDeterminingDictVal;
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
-      dataTypeLengthInBits = currDictVal.length();
+      dataTypeLengthInBits = currLengthDeterminingDictVal.length();
     }
     else {
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
@@ -98,7 +99,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
       pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
     }
     pageReadStatus.valuesReadyToRead++;
-    currDictVal = null;
+    currLengthDeterminingDictVal = null;
   }
 
   public void updatePosition() {
@@ -108,19 +109,17 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     }
     currDefLevel = -1;
     currentValNull = false;
-    currDictVal = null;
     valuesReadInCurrentPass++;
   }
 
   @Override
   protected void readField(long recordsToRead) {
     if (usingDictionary) {
-      currDictVal = pageReadStatus.dictionaryValueReader.readBytes();
+      currDictValToWrite = pageReadStatus.dictionaryValueReader.readBytes();
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
     }
     dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
     currentValNull = variableWidthVector.getAccessor().getObject(valuesReadInCurrentPass) == null;
-    // TODO - recall nullability into currentValNull
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
     if (! currentValNull){
       boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,

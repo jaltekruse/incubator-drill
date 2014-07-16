@@ -189,6 +189,7 @@ final class PageReadStatus {
     if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){
       parentColumnReader.currDefLevel = -1;
       if (!currentPage.getValueEncoding().usesDictionary()) {
+        parentColumnReader.usingDictionary = false;
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
         definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         readPosInBytes = definitionLevels.getNextOffset();
@@ -197,6 +198,7 @@ final class PageReadStatus {
           valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         }
       } else {
+        parentColumnReader.usingDictionary = true;
         definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
         definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
         readPosInBytes = definitionLevels.getNextOffset();

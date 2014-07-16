@@ -31,7 +31,8 @@ import java.io.IOException;
 
 public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLengthColumn {
 
-  Binary currDictVal;
+  Binary currLengthDeterminingDictVal;
+  Binary currDictValToWrite;
   VariableWidthVector variableWidthVector;
 
   VarLengthValuesColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
@@ -62,7 +63,7 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
   public void updateReadyToReadPosition() {
     pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
     pageReadStatus.valuesReadyToRead++;
-    currDictVal = null;
+    currLengthDeterminingDictVal = null;
   }
 
   public void updatePosition() {
