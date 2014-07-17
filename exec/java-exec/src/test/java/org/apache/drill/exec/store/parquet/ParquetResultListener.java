@@ -62,7 +62,7 @@ public class ParquetResultListener implements UserResultsListener {
 
   @Override
   public void submissionFailed(RpcException ex) {
-    logger.debug("Submission failed.", ex);
+    logger.error("Submission failed.", ex);
     future.setException(ex);
   }
 

@@ -173,6 +173,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     readLength = 0;
     readLengthInBits = 0;
     recordsReadInThisIteration = 0;
+    bytesReadInCurrentPass = 0;
     vectorData = ((BaseValueVector) valueVec).getData();
   }
 
