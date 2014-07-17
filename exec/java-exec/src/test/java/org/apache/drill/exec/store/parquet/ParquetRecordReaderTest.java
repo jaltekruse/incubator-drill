@@ -129,13 +129,13 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     String planText = Files.toString(FileUtils.getResourceAsFile("/parquet/parquet_scan_screen_read_entry_replace.json"), Charsets.UTF_8).replaceFirst( "&REPLACED_IN_PARQUET_TEST&", readEntries);
     //testParquetFullEngineLocalText(planText, fileName, 1, 1, 100000, false);
 
-    testFull(QueryType.SQL, "select L_RECEIPTDATE from dfs.`/tmp/lineitem_null_dict.parquet`", "", 1, 1, recordsPerRowGroup, false);
+    testFull(QueryType.SQL, "select L_RECEIPTDATE from dfs.`/tmp/lineitem_null_dict.parquet`", "", 1, 1, 100000, false);
   }
 
   @Ignore
   @Test
   public void testDictionaryError_419() throws Exception {
-    testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, recordsPerRowGroup, false);
+    testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, 150000, false);
   }
 
   @Test
@@ -273,7 +273,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   @Test
   public void testMultipleRowGroups() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(3, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(2, 300, DEFAULT_BYTES_PER_PAGE, fields);
     populateFieldInfoMap(props);
     testParquetFullEngineEventBased(true, "/parquet/parquet_scan_screen.json", "/tmp/test.parquet", 1, props);
   }
@@ -285,7 +285,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   @Test
   public void testNullableColumns() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 1500000, DEFAULT_BYTES_PER_PAGE, fields);
     Object[] boolVals = {true, null, null};
     props.fields.put("a", new FieldInfo("boolean", "a", 1, boolVals, TypeProtos.MinorType.BIT, props));
     testParquetFullEngineEventBased(false, "/parquet/parquet_nullable.json", "/tmp/nullable_test.parquet", 1, props);
@@ -299,7 +299,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
    */
 public void testNullableColumnsVarLen() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 300000, DEFAULT_BYTES_PER_PAGE, fields);
     byte[] val = {'b'};
     byte[] val2 = {'b', '2'};
     byte[] val3 = {'b', '3'};
@@ -311,7 +311,7 @@ public void testNullableColumnsVarLen() throws Exception {
     // pass strings instead of byte arrays
     Object[] textVals = { new org.apache.hadoop.io.Text("b"), new org.apache.hadoop.io.Text("b2"),
         new org.apache.hadoop.io.Text("b3")};
-    ParquetTestProperties props2 = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields2);
+    ParquetTestProperties props2 = new ParquetTestProperties(1, 30000, DEFAULT_BYTES_PER_PAGE, fields2);
     props2.fields.put("a", new FieldInfo("boolean", "a", 1, textVals, TypeProtos.MinorType.BIT, props2));
     testParquetFullEngineEventBased(false, "/parquet/parquet_scan_screen_read_entry_replace.json",
         "\"/tmp/varLen.parquet/a\"", "unused", 1, props2);
@@ -322,7 +322,7 @@ public void testNullableColumnsVarLen() throws Exception {
   @Test
   public void testFileWithNulls() throws Exception {
     HashMap<String, FieldInfo> fields3 = new HashMap<>();
-    ParquetTestProperties props3 = new ParquetTestProperties(1, 3000000, DEFAULT_BYTES_PER_PAGE, fields3);
+    ParquetTestProperties props3 = new ParquetTestProperties(1, 3000, DEFAULT_BYTES_PER_PAGE, fields3);
     // actually include null values
     Object[] valuesWithNull = {new Text(""), new Text("longer string"), null};
     props3.fields.put("a", new FieldInfo("boolean", "a", 1, valuesWithNull, TypeProtos.MinorType.BIT, props3));
@@ -380,7 +380,7 @@ public void testNullableColumnsVarLen() throws Exception {
   public void testReadError_Drill_901() throws Exception {
     // select cast( L_COMMENT as varchar) from  dfs.`/tmp/drilltest/employee_parquet`
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 120350, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 60175, DEFAULT_BYTES_PER_PAGE, fields);
     testParquetFullEngineEventBased(false, false, "/parquet/par_writer_test.json", null,
         "unused, no file is generated", 1, props, QueryType.PHYSICAL);
   }
@@ -390,7 +390,7 @@ public void testNullableColumnsVarLen() throws Exception {
   public void testReadError_Drill_839() throws Exception {
     // select cast( L_COMMENT as varchar) from  dfs.`/tmp/drilltest/employee_parquet`
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(1, 120350, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 150000, DEFAULT_BYTES_PER_PAGE, fields);
     String readEntries = "\"/tmp/customer_nonull.parquet\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
@@ -400,7 +400,7 @@ public void testNullableColumnsVarLen() throws Exception {
   @Test
   public void testReadBug_Drill_418() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(5, 300000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 150000, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populateDrill_418_fields(props);
     String readEntries = "\"/tmp/customer.plain.parquet\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
@@ -412,14 +412,14 @@ public void testNullableColumnsVarLen() throws Exception {
   @Test
   public void testMultipleRowGroupsAndReadsPigError() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(5, 300000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 1500000, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populatePigTPCHCustomerFields(props);
     String readEntries = "\"/tmp/tpc-h/customer\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
 
     fields = new HashMap();
-    props = new ParquetTestProperties(5, 300000, DEFAULT_BYTES_PER_PAGE, fields);
+    props = new ParquetTestProperties(1, 100000, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populatePigTPCHSupplierFields(props);
     readEntries = "\"/tmp/tpc-h/supplier\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
@@ -430,7 +430,7 @@ public void testNullableColumnsVarLen() throws Exception {
   @Test
   public void drill_958bugTest() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(5, 300000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(1, 2880404, DEFAULT_BYTES_PER_PAGE, fields);
     TestFileGenerator.populatePigTPCHCustomerFields(props);
     String readEntries = "\"/tmp/store_sales\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
@@ -440,7 +440,7 @@ public void testNullableColumnsVarLen() throws Exception {
   @Test
   public void testMultipleRowGroupsEvent() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();
-    ParquetTestProperties props = new ParquetTestProperties(4, 3000, DEFAULT_BYTES_PER_PAGE, fields);
+    ParquetTestProperties props = new ParquetTestProperties(2, 300, DEFAULT_BYTES_PER_PAGE, fields);
     populateFieldInfoMap(props);
     testParquetFullEngineEventBased(true, "/parquet/parquet_scan_screen.json", "/tmp/test.parquet", 1, props);
   }
