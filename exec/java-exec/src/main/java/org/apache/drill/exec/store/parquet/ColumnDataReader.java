@@ -36,8 +36,6 @@ import parquet.format.PageHeader;
 import parquet.format.Util;
 import parquet.hadoop.util.CompatibilityUtil;
 
-//import static parquet.bytes.BytesInput.ByteBufferBytesInput;
-
 public class ColumnDataReader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ColumnDataReader.class);
   
@@ -54,30 +52,6 @@ public class ColumnDataReader {
     return Util.readPageHeader(input);
   }
 
-/*  Based on implementation in Parquet's CompatibilityUtil
-  public static ByteBuf getBuf(FSDataInputStream f, int maxSize) throws IOException {
-    Class<?>[] ZCopyArgs = {ByteBuffer.class};
-    int res=0;
-    // TODO: ALLOCATE the buffer ...
-    ByteBuf readBuf;
-    try {
-      //Use Zero Copy API if available
-      f.getClass().getMethod("read", ZCopyArgs);
-      ByteBuffer buffer=readBuf.nioBuffer();
-      buffer.limit(maxSize);
-      res = f.read(buffer);
-    } catch (NoSuchMethodException e) {
-      byte[] buf = new byte[maxSize];
-      f.readFully(buf);
-      readBuf = Unpooled.wrappedBuffer(ByteBuffer.wrap(buf));
-    }
-    if (res == 0) {
-      throw new EOFException("Null ByteBuffer returned");
-    }
-    return readBuf;
-  }
-*/
-
   public BytesInput getPageAsBytesInput(int pageLength) throws IOException{
     byte[] b = new byte[pageLength];
     input.read(b);
@@ -90,25 +64,11 @@ public class ColumnDataReader {
     int bl=byteBuf.capacity();
     try{
       CompatibilityUtil.getBuf(input, directBuffer, pageLength);
-      //BytesInput bb= new HadoopByteBufBytesInput(directBuffer, 0, pageLength);
     }catch(Exception e) {
       logger.error("Failed to read data into Direct ByteBuffer with exception: "+e.getMessage());
       throw new DrillRuntimeException(e.getMessage());
     }
     return byteBuf;
-  }
-  public static int copyByteBufferAsMuchAsPossible(
-    ByteBuffer bbuf_dest, ByteBuffer bbuf_src)
-  {
-    int nTransfer = Math.min(bbuf_dest.remaining(), bbuf_src.remaining());
-    if (nTransfer > 0)
-    {
-      bbuf_dest.put(bbuf_src.array(),
-        bbuf_src.arrayOffset()+bbuf_src.position(),
-        nTransfer);
-      bbuf_src.position(bbuf_src.position()+nTransfer);
-    }
-    return nTransfer;
   }
 
   public void clear(){
@@ -149,38 +109,4 @@ public class ColumnDataReader {
     
   }
 
-  /*
-  public class HadoopByteBufBytesInput extends BytesInput{
-
-    private final ByteBuffer byteBuf;
-    private final int length;
-    private final int offset;
-
-    private HadoopByteBufBytesInput(ByteBuffer byteBuf, int offset, int length) {
-      super();
-      this.byteBuf = byteBuf;
-      this.offset = offset;
-      this.length = length;
-    }
-
-    public void writeAllTo(OutputStream out) throws IOException {
-      final WritableByteChannel outputChannel = Channels.newChannel(out);
-      byteBuf.position(offset);
-      ByteBuffer tempBuf = byteBuf.slice();
-      tempBuf.limit(length);
-      outputChannel.write(tempBuf);
-    }
-
-    public ByteBuffer toByteBuffer() throws IOException {
-      byteBuf.position(offset);
-      ByteBuffer buf = byteBuf.slice();
-      buf.limit(length);
-      return buf;
-    }
-
-    public long size() {
-      return length;
-    }
-  }
-  */
 }

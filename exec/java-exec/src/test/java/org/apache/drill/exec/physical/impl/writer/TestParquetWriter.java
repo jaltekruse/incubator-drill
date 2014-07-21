@@ -27,6 +27,7 @@ import org.apache.drill.BaseTestQuery;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
@@ -83,12 +84,14 @@ public class TestParquetWriter extends BaseTestQuery {
     }
 }
 
+  @Ignore
   @Test
   public void testTPCHReadWrite1() throws Exception {
     String inputTable = "cp.`tpch/lineitem.parquet`";
     runTestAndValidate("*", "*", inputTable, "lineitem_parquet");
   }
 
+  @Ignore
   @Test
   public void testTPCHReadWrite1_date_convertedType() throws Exception {
     String selection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
@@ -216,6 +219,7 @@ public class TestParquetWriter extends BaseTestQuery {
     }
 
     test("use dfs.tmp");
+//    test("ALTER SESSION SET `planner.add_producer_consumer` = false");
     String query = String.format("SELECT %s FROM %s", selection, inputTable);
     String create = "CREATE TABLE " + outputFile + " AS " + query;
     String validateQuery = String.format("SELECT %s FROM " + outputFile, validationSelection);

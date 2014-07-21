@@ -30,6 +30,7 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.hadoop.conf.Configuration;
 
 import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.DirectDecompressionCodec;
 import org.apache.hadoop.util.ReflectionUtils;
 import parquet.bytes.BytesInput;
 import parquet.hadoop.metadata.CompressionCodecName;
@@ -37,7 +38,7 @@ import parquet.hadoop.metadata.CompressionCodecName;
 public class CodecFactoryExposer{
 
   private CodecFactory codecFactory;
-  private final Map<String, CompressionCodec> codecByName = new HashMap<String, CompressionCodec>();
+  private final Map<String, org.apache.hadoop.io.compress.DirectDecompressionCodec> codecByName = new HashMap<String, org.apache.hadoop.io.compress.DirectDecompressionCodec>();
   private Configuration configuration;
 
   public CodecFactoryExposer(Configuration config){
@@ -60,10 +61,18 @@ public class CodecFactoryExposer{
   public BytesInput decompress(CompressionCodecName codecName,
                                ByteBuf compressedByteBuf,
                                ByteBuf uncompressedByteBuf,
+                               int compressedSize,
                                int uncompressedSize) throws IOException {
-    ByteBuffer inpBuffer=compressedByteBuf.nioBuffer();
+    ByteBuffer inpBuffer=compressedByteBuf.nioBuffer(0, compressedSize);
     ByteBuffer outBuffer=uncompressedByteBuf.nioBuffer(0, uncompressedSize);
-    DirectDecompressionCodec d = ((DirectDecompressionCodec)getCodec(codecName));
+    CompressionCodec c = getCodec(codecName);
+
+    Class<?> cx = c.getClass();
+    ClassLoader l = cx.getClassLoader();
+    Class<?>[] inf = cx.getInterfaces();
+
+    DirectDecompressionCodec d = (DirectDecompressionCodec)c;
+
     if(d!=null) {
       d.createDirectDecompressor().decompress(inpBuffer, outBuffer);
     }else{
@@ -72,19 +81,19 @@ public class CodecFactoryExposer{
     return new HadoopByteBufBytesInput(outBuffer, 0, outBuffer.limit());
   }
 
-  private CompressionCodec getCodec(CompressionCodecName codecName) {
+  private DirectDecompressionCodec getCodec(CompressionCodecName codecName) {
     String codecClassName = codecName.getHadoopCompressionCodecClassName();
     if (codecClassName == null) {
       return null;
     }
-    CompressionCodec codec = codecByName.get(codecClassName);
+    DirectDecompressionCodec codec = codecByName.get(codecClassName);
     if (codec != null) {
       return codec;
     }
 
     try {
       Class<?> codecClass = Class.forName(codecClassName);
-      codec = (CompressionCodec) ReflectionUtils.newInstance(codecClass, configuration);
+      codec = (DirectDecompressionCodec)ReflectionUtils.newInstance(codecClass, configuration);
       codecByName.put(codecClassName, codec);
       return codec;
     } catch (ClassNotFoundException e) {

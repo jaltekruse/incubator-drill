@@ -100,10 +100,12 @@ public abstract class ColumnReader<V extends ValueVector> {
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
     reset();
-    do {
-      determineSize(recordsToReadInThisPass, 0);
+    if(recordsToReadInThisPass>0) {
+      do {
+        determineSize(recordsToReadInThisPass, 0);
 
-    } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
+      } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
+    }
     valueVec.getMutator().setValueCount(valuesReadInCurrentPass);
   }
 

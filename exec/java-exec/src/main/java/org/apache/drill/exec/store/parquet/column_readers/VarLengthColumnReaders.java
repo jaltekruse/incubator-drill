@@ -189,7 +189,7 @@ public class VarLengthColumnReaders {
         holder.buffer=b;
         holder.start=0;
         holder.end=currDictVal.length();
-        success = varCharVector.getMutator().setSafe(valuesReadInCurrentPass, holder);
+        success = varCharVector.getMutator().setSafe(index, holder);
       }
       else {
         VarCharHolder holder = new VarCharHolder();
@@ -233,13 +233,15 @@ public class VarLengthColumnReaders {
         holder.buffer=b;
         holder.start=0;
         holder.end=currDictVal.length();
-        success = nullableVarCharVector.getMutator().setSafe(valuesReadInCurrentPass, holder);
+        success = nullableVarCharVector.getMutator().setSafe(index, holder);
+        holder.isSet=1;
       }
       else {
         NullableVarCharHolder holder = new NullableVarCharHolder();
         holder.buffer=value;
         holder.start=start;
         holder.end=start+length;
+        holder.isSet=1;
         success = nullableVarCharVector.getMutator().setSafe(index, holder);
       }
       return success;
@@ -276,7 +278,7 @@ public class VarLengthColumnReaders {
         holder.buffer=b;
         holder.start=0;
         holder.end=currDictVal.length();
-        success = varBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, holder);
+        success = varBinaryVector.getMutator().setSafe(index, holder);
       }
       else {
         VarBinaryHolder holder = new VarBinaryHolder();
@@ -320,7 +322,7 @@ public class VarLengthColumnReaders {
         holder.buffer=b;
         holder.start=0;
         holder.end=currDictVal.length();
-        success = nullableVarBinaryVector.getMutator().setSafe(valuesReadInCurrentPass, holder);
+        success = nullableVarBinaryVector.getMutator().setSafe(index, holder);
       }
       else {
         NullableVarBinaryHolder holder = new NullableVarBinaryHolder();

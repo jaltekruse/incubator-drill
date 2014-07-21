@@ -90,6 +90,7 @@ public class ScanBatch implements RecordBatch {
       throw new ExecutionSetupException("A scan batch must contain at least one reader.");
     this.currentReader = readers.next();
     this.oContext = new OperatorContext(subScanConfig, context);
+    this.currentReader.setOperatorContext(this.oContext);
     this.currentReader.setup(mutator);
     this.partitionColumns = partitionColumns.iterator();
     this.partitionValues = this.partitionColumns.hasNext() ? this.partitionColumns.next() : null;
