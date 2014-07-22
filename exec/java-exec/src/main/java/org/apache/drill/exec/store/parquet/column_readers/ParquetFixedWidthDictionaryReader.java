@@ -36,16 +36,16 @@ public class ParquetFixedWidthDictionaryReader extends ColumnReader{
   @Override
   public void readField(long recordsToReadInThisPass) {
 
-    recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-        - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
+    recordsReadInThisIteration = Math.min(pageReader.currentPage.getValueCount()
+        - pageReader.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
     int defLevel;
     for (int i = 0; i < recordsReadInThisIteration; i++){
-      defLevel = pageReadStatus.definitionLevels.readInteger();
+      defLevel = pageReader.definitionLevels.readInteger();
       // if the value is defined
       if (defLevel == columnDescriptor.getMaxDefinitionLevel()){
         if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.INT64)
           ((BigIntVector)valueVec).getMutator().set(i + valuesReadInCurrentPass,
-              pageReadStatus.valueReader.readLong() );
+              pageReader.valueReader.readLong() );
       }
       // otherwise the value is skipped, because the bit vector indicating nullability is zero filled
     }

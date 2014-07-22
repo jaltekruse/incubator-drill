@@ -51,7 +51,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     castedRepeatedVector = (RepeatedFixedWidthVector) valueVector;
     this.dataTypeLengthInBytes = dataTypeLengthInBytes;
     this.dataReader = dataReader;
-    this.dataReader.pageReadStatus = this.pageReadStatus;
+    this.dataReader.pageReader = this.pageReader;
     // this is not in the reset method because it needs to be initialized only for the very first page read
     // in all other cases if a read ends at a page boundary we will need to keep track of this flag and not
     // clear it at the start of the next read loop
@@ -61,7 +61,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   public void reset() {
     bytesReadInCurrentPass = 0;
     valuesReadInCurrentPass = 0;
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
     dataReader.vectorData = castedRepeatedVector.getMutator().getDataVector().getData();
     dataReader.valuesReadInCurrentPass = 0;
     repeatedGroupsReadInCurrentPass = 0;
@@ -82,7 +82,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
 
   public void updateReadyToReadPosition() {
     valuesToRead += repeatedValuesInCurrentList;
-    pageReadStatus.valuesReadyToRead += repeatedValuesInCurrentList;
+    pageReader.valuesReadyToRead += repeatedValuesInCurrentList;
     repeatedGroupsReadInCurrentPass++;
     currDictVal = null;
     if ( ! notFishedReadingList)
@@ -90,13 +90,13 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
   }
 
   public void updatePosition() {
-    pageReadStatus.readPosInBytes += dataTypeLengthInBits;
+    pageReader.readPosInBytes += dataTypeLengthInBits;
     bytesReadInCurrentPass += dataTypeLengthInBits;
     valuesReadInCurrentPass++;
   }
 
   public void hitRowGroupEnd() {
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
     definitionLevelsRead = 0;
   }
 
@@ -121,7 +121,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
     boolean doneReading = super.checkVectorCapacityReached();
     if (doneReading)
       return true;
-    if (valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList >= valueVec.getValueCapacity())
+    if (valuesReadInCurrentPass + pageReader.valuesReadyToRead + repeatedValuesInCurrentList >= valueVec.getValueCapacity())
       return true;
     else
       return false;
@@ -135,7 +135,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
       readRecords(numLeftoverVals);
       readingValsAcrossPageBoundary = true;
       notFishedReadingList = false;
-      pageReadStatus.valuesReadyToRead = 0;
+      pageReader.valuesReadyToRead = 0;
       try {
         boolean stopReading = readPage();
         if (stopReading) {
@@ -147,7 +147,7 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
       }
     }
     if ( currDefLevel == -1 ) {
-      currDefLevel = pageReadStatus.definitionLevels.readInteger();
+      currDefLevel = pageReader.definitionLevels.readInteger();
       definitionLevelsRead++;
     }
     int repLevel;
@@ -155,18 +155,18 @@ public class FixedWidthRepeatedReader extends VarLengthColumn {
       if (repeatedValuesInCurrentList == -1 || notFishedReadingList) {
         repeatedValuesInCurrentList = 1;
         do {
-          repLevel = pageReadStatus.repetitionLevels.readInteger();
+          repLevel = pageReader.repetitionLevels.readInteger();
           if (repLevel > 0) {
             repeatedValuesInCurrentList++;
-            currDefLevel = pageReadStatus.definitionLevels.readInteger();
+            currDefLevel = pageReader.definitionLevels.readInteger();
             definitionLevelsRead++;
 
             // we hit the end of this page, without confirmation that we reached the end of the current record
-            if (definitionLevelsRead == pageReadStatus.currentPage.getValueCount()) {
+            if (definitionLevelsRead == pageReader.currentPage.getValueCount()) {
               // check that we have not hit the end of the row group (in which case we will not find the repetition level indicating
               // the end of this record as there is no next page to check, we have read all the values in this repetition so it is okay
               // to add it to the read )
-              if (totalValuesRead + pageReadStatus.valuesReadyToRead + repeatedValuesInCurrentList != columnChunkMetaData.getValueCount()){
+              if (totalValuesRead + pageReader.valuesReadyToRead + repeatedValuesInCurrentList != columnChunkMetaData.getValueCount()){
                 notFishedReadingList = true;
                 // if we hit this case, we cut off the current batch at the previous value, these extra values as well
                 // as those that spill into the next page will be added to the next batch

@@ -46,7 +46,7 @@ public abstract class ColumnReader<V extends ValueVector> {
   // metadata of the column, from the parquet library
   final ColumnChunkMetaData columnChunkMetaData;
   // status information on the current page
-  PageReadStatus pageReadStatus;
+  PageReader pageReader;
 
   final SchemaElement schemaElement;
   boolean usingDictionary;
@@ -82,7 +82,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     this.isFixedLength = fixedLength;
     this.schemaElement = schemaElement;
     this.valueVec =  v;
-    this.pageReadStatus = new PageReadStatus(this, parentReader.getFileSystem(), parentReader.getHadoopPath(), columnChunkMetaData);
+    this.pageReader = new PageReader(this, parentReader.getFileSystem(), parentReader.getHadoopPath(), columnChunkMetaData);
 
     if (columnDescriptor.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
       if (columnDescriptor.getType() == PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY) {
@@ -103,13 +103,13 @@ public abstract class ColumnReader<V extends ValueVector> {
     do {
       determineSize(recordsToReadInThisPass, 0);
 
-    } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReadStatus.currentPage != null);
+    } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReader.currentPage != null);
     valueVec.getMutator().setValueCount(valuesReadInCurrentPass);
   }
 
   public void clear() {
     valueVec.clear();
-    this.pageReadStatus.clear();
+    this.pageReader.clear();
   }
 
   public void readValues(long recordsToRead) {
@@ -117,8 +117,8 @@ public abstract class ColumnReader<V extends ValueVector> {
 
     valuesReadInCurrentPass += recordsReadInThisIteration;
     totalValuesRead += recordsReadInThisIteration;
-    pageReadStatus.valuesRead += recordsReadInThisIteration;
-    pageReadStatus.readPosInBytes = readStartInBytes + readLength;
+    pageReader.valuesRead += recordsReadInThisIteration;
+    pageReader.readPosInBytes = readStartInBytes + readLength;
   }
 
   protected abstract void readField(long recordsToRead);
@@ -156,7 +156,7 @@ public abstract class ColumnReader<V extends ValueVector> {
     for (int i = 0; i < recordsToRead; i++) {
       readField(i);
     }
-    pageReadStatus.valuesRead += recordsToRead;
+    pageReader.valuesRead += recordsToRead;
   }
 
   protected boolean processPageData(int recordsToReadInThisPass) throws IOException {
@@ -183,12 +183,12 @@ public abstract class ColumnReader<V extends ValueVector> {
 
   // Read a page if we need more data, returns true if we need to exit the read loop
   public boolean readPage() throws IOException {
-    if (pageReadStatus.currentPage == null
-        || totalValuesReadAndReadyToReadInPage() == pageReadStatus.currentPage.getValueCount()) {
-      readRecords(pageReadStatus.valuesReadyToRead);
-      if (pageReadStatus.currentPage != null)
-        totalValuesRead += pageReadStatus.currentPage.getValueCount();
-      if (!pageReadStatus.next()) {
+    if (pageReader.currentPage == null
+        || totalValuesReadAndReadyToReadInPage() == pageReader.currentPage.getValueCount()) {
+      readRecords(pageReader.valuesReadyToRead);
+      if (pageReader.currentPage != null)
+        totalValuesRead += pageReader.currentPage.getValueCount();
+      if (!pageReader.next()) {
         hitRowGroupEnd();
         return true;
       }
@@ -198,11 +198,11 @@ public abstract class ColumnReader<V extends ValueVector> {
   }
 
   protected int totalValuesReadAndReadyToReadInPage() {
-    return pageReadStatus.valuesRead + pageReadStatus.valuesReadyToRead;
+    return pageReader.valuesRead + pageReader.valuesReadyToRead;
   }
 
   protected void postPageRead() {
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
   }
 
   protected void hitRowGroupEnd() {}

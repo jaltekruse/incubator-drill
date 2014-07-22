@@ -50,7 +50,7 @@ public abstract class VarLengthColumn<V extends ValueVector> extends ColumnReade
 
   public void reset() {
     super.reset();
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
   }
 
   protected abstract boolean readAndStoreValueSizeInformation() throws IOException;

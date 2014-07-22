@@ -45,12 +45,12 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     bytesReadInCurrentPass = 0;
     valuesReadInCurrentPass = 0;
     nullsRead = 0;
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
   }
 
   protected void postPageRead() {
     currLengthDeterminingDictVal = null;
-    pageReadStatus.valuesReadyToRead = 0;
+    pageReader.valuesReadyToRead = 0;
   }
 
   protected boolean readAndStoreValueSizeInformation() throws IOException {
@@ -60,20 +60,20 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     // that it will not fit in this batch
     currentValNull = false;
     if ( currDefLevel == -1 ) {
-      currDefLevel = pageReadStatus.definitionLevels.readInteger();
+      currDefLevel = pageReader.definitionLevels.readInteger();
     }
     if ( columnDescriptor.getMaxDefinitionLevel() > currDefLevel){
       nullsRead++;
       // set length of zero, each index in the vector defaults to null so no need to set the nullability
       variableWidthVector.getMutator().setValueLengthSafe(
-          valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, 0);
+          valuesReadInCurrentPass + pageReader.valuesReadyToRead, 0);
       currentValNull = true;
       return false;// field is null, no length to add to data vector
     }
 
     if (usingDictionary) {
       if (currLengthDeterminingDictVal == null) {
-        currLengthDeterminingDictVal = pageReadStatus.dictionaryLengthDeterminingReader.readBytes();
+        currLengthDeterminingDictVal = pageReader.dictionaryLengthDeterminingReader.readBytes();
       }
       currDictValToWrite = currLengthDeterminingDictVal;
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
@@ -81,30 +81,30 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     }
     else {
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
-      dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
-          (int) pageReadStatus.readyToReadPosInBytes);
+      dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReader.pageDataByteArray,
+          (int) pageReader.readyToReadPosInBytes);
     }
     // I think this also needs to happen if it is null for the random access
-    if (! variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, dataTypeLengthInBits)) {
+    if (! variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReader.valuesReadyToRead, dataTypeLengthInBits)) {
       return true;
     }
-    boolean success = setSafe(valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead, pageReadStatus.pageDataByteArray,
-        (int) pageReadStatus.readyToReadPosInBytes + 4, dataTypeLengthInBits);
+    boolean success = setSafe(valuesReadInCurrentPass + pageReader.valuesReadyToRead, pageReader.pageDataByteArray,
+        (int) pageReader.readyToReadPosInBytes + 4, dataTypeLengthInBits);
     assert success;
     return false;
   }
 
   public void updateReadyToReadPosition() {
     if (! currentValNull){
-      pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
+      pageReader.readyToReadPosInBytes += dataTypeLengthInBits + 4;
     }
-    pageReadStatus.valuesReadyToRead++;
+    pageReader.valuesReadyToRead++;
     currLengthDeterminingDictVal = null;
   }
 
   public void updatePosition() {
     if (! currentValNull){
-      pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
+      pageReader.readPosInBytes += dataTypeLengthInBits + 4;
       bytesReadInCurrentPass += dataTypeLengthInBits;
     }
     currDefLevel = -1;
@@ -115,15 +115,15 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
   @Override
   protected void readField(long recordsToRead) {
     if (usingDictionary) {
-      currDictValToWrite = pageReadStatus.dictionaryValueReader.readBytes();
+      currDictValToWrite = pageReader.dictionaryValueReader.readBytes();
       // re-purposing  this field here for length in BYTES to prevent repetitive multiplication/division
     }
     dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
     currentValNull = variableWidthVector.getAccessor().getObject(valuesReadInCurrentPass) == null;
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
     if (! currentValNull){
-      boolean success = setSafe(valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
-          (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+      boolean success = setSafe(valuesReadInCurrentPass, pageReader.pageDataByteArray,
+          (int) pageReader.readPosInBytes + 4, dataTypeLengthInBits);
       assert success;
     }
     updatePosition();

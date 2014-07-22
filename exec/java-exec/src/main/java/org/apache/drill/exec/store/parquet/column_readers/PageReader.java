@@ -40,8 +40,8 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.schema.PrimitiveType;
 
 // class to keep track of the read position of variable length columns
-final class PageReadStatus {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReadStatus.class);
+final class PageReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PageReader.class);
 
   private final ColumnReader parentColumnReader;
   private final ColumnDataReader dataReader;
@@ -81,7 +81,7 @@ final class PageReadStatus {
   Dictionary dictionary;
   PageHeader pageHeader = null;
 
-  PageReadStatus(ColumnReader parentStatus, FileSystem fs, Path path, ColumnChunkMetaData columnChunkMetaData) throws ExecutionSetupException{
+  PageReader(ColumnReader parentStatus, FileSystem fs, Path path, ColumnChunkMetaData columnChunkMetaData) throws ExecutionSetupException{
     this.parentColumnReader = parentStatus;
 
     long totalByteLength = columnChunkMetaData.getTotalUncompressedSize();

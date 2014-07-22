@@ -47,14 +47,14 @@ class FixedByteAlignedReader extends ColumnReader {
   @Override
   protected void readField(long recordsToReadInThisPass) {
 
-    recordsReadInThisIteration = Math.min(pageReadStatus.currentPage.getValueCount()
-        - pageReadStatus.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
+    recordsReadInThisIteration = Math.min(pageReader.currentPage.getValueCount()
+        - pageReader.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
 
-    readStartInBytes = pageReadStatus.readPosInBytes;
+    readStartInBytes = pageReader.readPosInBytes;
     readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
     readLength = (int) Math.ceil(readLengthInBits / 8.0);
 
-    bytes = pageReadStatus.pageDataByteArray;
+    bytes = pageReader.pageDataByteArray;
     // vectorData is assigned by the superclass read loop method
     writeData();
   }

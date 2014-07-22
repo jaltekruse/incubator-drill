@@ -175,7 +175,7 @@ public class VarLengthColumnReaders {
       if(index >= varCharVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = varCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictValToWrite.getBytes(),
+        success = varCharVector.getMutator().setSafe(index, currDictValToWrite.getBytes(),
             0, currDictValToWrite.length());
       }
       else {
@@ -209,7 +209,7 @@ public class VarLengthColumnReaders {
       if(index >= nullableVarCharVector.getValueCapacity()) return false;
 
       if (usingDictionary) {
-        success = nullableVarCharVector.getMutator().setSafe(valuesReadInCurrentPass, currDictValToWrite.getBytes(),
+        success = nullableVarCharVector.getMutator().setSafe(index, currDictValToWrite.getBytes(),
             0, currDictValToWrite.length());
       }
       else {

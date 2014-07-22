@@ -54,20 +54,20 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
   protected void readField(long recordToRead) {
     dataTypeLengthInBits = variableWidthVector.getAccessor().getValueLength(valuesReadInCurrentPass);
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
-    boolean success = setSafe((int) valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
-        (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+    boolean success = setSafe((int) valuesReadInCurrentPass, pageReader.pageDataByteArray,
+        (int) pageReader.readPosInBytes + 4, dataTypeLengthInBits);
     assert success;
     updatePosition();
   }
 
   public void updateReadyToReadPosition() {
-    pageReadStatus.readyToReadPosInBytes += dataTypeLengthInBits + 4;
-    pageReadStatus.valuesReadyToRead++;
+    pageReader.readyToReadPosInBytes += dataTypeLengthInBits + 4;
+    pageReader.valuesReadyToRead++;
     currLengthDeterminingDictVal = null;
   }
 
   public void updatePosition() {
-    pageReadStatus.readPosInBytes += dataTypeLengthInBits + 4;
+    pageReader.readPosInBytes += dataTypeLengthInBits + 4;
     bytesReadInCurrentPass += dataTypeLengthInBits;
     valuesReadInCurrentPass++;
   }
@@ -79,14 +79,14 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
   protected boolean readAndStoreValueSizeInformation() throws IOException {
     // re-purposing this field here for length in BYTES to prevent repetitive multiplication/division
     try {
-    dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReadStatus.pageDataByteArray,
-        (int) pageReadStatus.readyToReadPosInBytes);
+    dataTypeLengthInBits = BytesUtils.readIntLittleEndian(pageReader.pageDataByteArray,
+        (int) pageReader.readyToReadPosInBytes);
     } catch (Throwable t) {
       throw t;
     }
 
     // this should not fail
-    if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReadStatus.valuesReadyToRead,
+    if (!variableWidthVector.getMutator().setValueLengthSafe((int) valuesReadInCurrentPass + pageReader.valuesReadyToRead,
         dataTypeLengthInBits)) {
       return true;
     }

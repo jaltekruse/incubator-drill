@@ -54,10 +54,10 @@ public class NullableFixedByteAlignedReaders {
       this.recordsReadInThisIteration = recordsToReadInThisPass;
 
       // set up metadata
-      this.readStartInBytes = pageReadStatus.readPosInBytes;
+      this.readStartInBytes = pageReader.readPosInBytes;
       this.readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
       this.readLength = (int) Math.ceil(readLengthInBits / 8.0);
-      this.bytes = pageReadStatus.pageDataByteArray;
+      this.bytes = pageReader.pageDataByteArray;
 
       // fill in data.
       vectorData.writeBytes(bytes, (int) readStartInBytes, (int) readLength);
@@ -79,7 +79,7 @@ public class NullableFixedByteAlignedReaders {
     protected void readField(long recordsToReadInThisPass) {
       if (usingDictionary) {
         for (int i = 0; i < recordsToReadInThisPass; i++){
-          valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readInteger());
+          valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readInteger());
         }
       }
     }
@@ -99,7 +99,7 @@ public class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readLong());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readLong());
       }
     }
   }
@@ -118,7 +118,7 @@ public class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readFloat());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readFloat());
       }
     }
   }
@@ -137,7 +137,7 @@ public class NullableFixedByteAlignedReaders {
     @Override
     protected void readField(long recordsToReadInThisPass) {
       for (int i = 0; i < recordsToReadInThisPass; i++){
-        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReadStatus.dictionaryValueReader.readDouble());
+        valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readDouble());
       }
     }
   }
@@ -157,10 +157,10 @@ public class NullableFixedByteAlignedReaders {
       this.recordsReadInThisIteration = recordsToReadInThisPass;
 
       // set up metadata
-      this.readStartInBytes = pageReadStatus.readPosInBytes;
+      this.readStartInBytes = pageReader.readPosInBytes;
       this.readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
       this.readLength = (int) Math.ceil(readLengthInBits / 8.0);
-      this.bytes = pageReadStatus.pageDataByteArray;
+      this.bytes = pageReader.pageDataByteArray;
 
       dataTypeLengthInBytes = (int) Math.ceil(dataTypeLengthInBits / 8.0);
       for (int i = 0; i < recordsReadInThisIteration; i++) {
