@@ -182,7 +182,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   @Override
   public void cleanup() throws IOException {
     if (recordCount > 0) {
-      flush();
+//      flush();
     }
   }
 }

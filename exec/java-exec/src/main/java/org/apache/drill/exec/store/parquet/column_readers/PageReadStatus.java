@@ -44,6 +44,7 @@ import parquet.format.PageHeader;
 import parquet.format.PageType;
 import parquet.format.Util;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
+import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.schema.PrimitiveType;
 
 // class to keep track of the read position of variable length columns
@@ -168,7 +169,7 @@ final class PageReadStatus {
         BytesInput bytesIn;
         ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
         allocatedBuffers.add(uncompressedData);
-        if(parentColumnReader.columnChunkMetaData.getCodec().name()=="UNCOMPRESSED") {
+        if(parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
           dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
           bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
             pageHeader.getUncompressed_page_size());
@@ -197,7 +198,7 @@ final class PageReadStatus {
     BytesInput bytesIn;
     ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
     allocatedBuffers.add(uncompressedData);
-    if(parentColumnReader.columnChunkMetaData.getCodec().name()=="UNCOMPRESSED") {
+    if(parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
       dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
       bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
         pageHeader.getUncompressed_page_size());

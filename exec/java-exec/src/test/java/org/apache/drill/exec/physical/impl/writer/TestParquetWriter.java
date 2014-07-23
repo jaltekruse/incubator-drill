@@ -84,11 +84,18 @@ public class TestParquetWriter extends BaseTestQuery {
     }
 }
 
-  @Ignore
   @Test
   public void testTPCHReadWrite1() throws Exception {
     String inputTable = "cp.`tpch/lineitem.parquet`";
+    String selection = "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_RECEIPTDATE,  L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_COMMENT ";
+    String validationSelection = "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_RECEIPTDATE, L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_COMMENT";
+//    runTestAndValidate(selection, validationSelection, inputTable, "lineitem_parquet");
     runTestAndValidate("*", "*", inputTable, "lineitem_parquet");
+  }
+
+  @Test
+  public void testTPCHReadWrite1_JVM_crash() throws Exception {
+    test("select * from cp.`tpch/lineitem.parquet`");
   }
 
   @Ignore
