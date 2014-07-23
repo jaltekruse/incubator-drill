@@ -56,6 +56,10 @@ public abstract class VarLengthValuesColumn<V extends ValueVector> extends VarLe
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
     boolean success = setSafe((int) valuesReadInCurrentPass, pageReadStatus.pageDataByteArray,
         (int) pageReadStatus.readPosInBytes + 4, dataTypeLengthInBits);
+    // TODO- DELETE ME JUST FOR DEBUGGING
+    if ( ! success ) {
+      throw new RuntimeException();
+    }
     assert success;
     updatePosition();
   }

@@ -268,7 +268,8 @@ public class VarLengthColumnReaders {
     @Override
     public boolean setSafe(int index, ByteBuf value, int start, int length) {
       boolean success;
-      if(index >= varBinaryVector.getValueCapacity()) return false;
+      if(index >= varBinaryVector.getValueCapacity())
+        return false;
 
       if (usingDictionary) {
         ByteBuf b = Unpooled.wrappedBuffer(currDictVal.toByteBuffer());

@@ -133,6 +133,15 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   }
 
   @Test
+  public void testOffHeapParquetWriterAssertionError() throws Exception {
+    String readEntries;
+    readEntries = "\"/tmp/drilltest/lineitem_parquet\"";
+
+    String planText = Files.toString(FileUtils.getResourceAsFile("/parquet/parquet_scan_screen_read_entry_replace.json"), Charsets.UTF_8).replaceFirst( "&REPLACED_IN_PARQUET_TEST&", readEntries);
+    testParquetFullEngineLocalText(planText, fileName, 1, 1, 100000, false);
+  }
+
+  @Test
   public void testLocalDistributed() throws Exception {
     String planName = "/parquet/parquet_scan_union_screen_physical.json";
     testParquetFullEngineLocalTextDistributed(planName, fileName, 1, numberRowGroups, recordsPerRowGroup);

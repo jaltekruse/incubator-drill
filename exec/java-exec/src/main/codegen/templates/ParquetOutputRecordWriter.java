@@ -198,19 +198,8 @@ public abstract class ParquetOutputRecordWriter implements RecordWriter {
       consumer.endField(schema.getFieldName(fieldId), fieldId);
     <#else>
     ByteBuf buf = valueHolder.buffer;
-    System.out.println(valueHolder.start + " " + valueHolder.end);
     consumer.startField(schema.getFieldName(fieldId), fieldId);
-      ByteBufBinary bbb = new ByteBufBinary(buf.slice(valueHolder.start, valueHolder.end));
-      try {
-        bbb.getBytes();
-      } catch (Throwable t){
-        throw t;
-      }
-     try {
-      consumer.addBinary(bbb);
-     } catch (Throwable t){
-       throw t;
-     }
+    consumer.addBinary(new ByteBufBinary(buf.slice(valueHolder.start, valueHolder.end)));
     consumer.endField(schema.getFieldName(fieldId), fieldId);
     </#if>
   </#if>
