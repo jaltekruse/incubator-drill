@@ -107,7 +107,6 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
       pageReader.readPosInBytes += dataTypeLengthInBits + 4;
       bytesReadInCurrentPass += dataTypeLengthInBits;
     }
-    currDefLevel = -1;
     currentValNull = false;
     valuesReadInCurrentPass++;
   }

@@ -47,8 +47,6 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final String EMPLOYEE_PARQUET_PATH = "employee_parquet";
-
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
@@ -61,7 +59,7 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testSimple() throws Exception {
     String selection = "*";
     String inputTable = "cp.`employee.json`";
-    runTestAndValidate(selection, selection, inputTable, EMPLOYEE_PARQUET_PATH);
+    runTestAndValidate(selection, selection, inputTable, "employee_parquet");
   }
 
   @Test
@@ -156,19 +154,19 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testRepeatedDouble() throws Exception {
     String inputTable = "cp.`parquet/repeated_double_data.json`";
-    runTestAndValidate("*", "*", inputTable, "repeated_performance");
+    runTestAndValidate("*", "*", inputTable, "repeated_double_parquet");
   }
 
   @Test
   public void testRepeatedLong() throws Exception {
     String inputTable = "cp.`parquet/repeated_integer_data.json`";
-    runTestAndValidate("*", "*", inputTable, "repeated_performance");
+    runTestAndValidate("*", "*", inputTable, "repeated_int_parquet");
   }
 
   @Test
   public void testRepeatedBool() throws Exception {
     String inputTable = "cp.`parquet/repeated_bool_data.json`";
-    runTestAndValidate("*", "*", inputTable, "repeated_performance");
+    runTestAndValidate("*", "*", inputTable, "repeated_bool_parquet");
   }
 
   @Test
@@ -184,7 +182,7 @@ public class TestParquetWriter extends BaseTestQuery {
         "cast(salary as decimal(24,2)) as decimal24, cast(salary as decimal(38,2)) as decimal38";
     String validateSelection = "decimal8, decimal15, decimal24, decimal38";
     String inputTable = "cp.`employee.json`";
-    runTestAndValidate(selection, validateSelection, inputTable, EMPLOYEE_PARQUET_PATH);
+    runTestAndValidate(selection, validateSelection, inputTable, "parquet_decimal");
   }
 
   @Test
@@ -193,7 +191,7 @@ public class TestParquetWriter extends BaseTestQuery {
       //test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
       String selection = "mi";
       String inputTable = "cp.`customer.json`";
-      runTestAndValidate(selection, selection, inputTable, EMPLOYEE_PARQUET_PATH);
+      runTestAndValidate(selection, selection, inputTable, "foodmart_customer_parquet");
     } finally {
       test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 512*1024*1024));
     }
@@ -205,7 +203,7 @@ public class TestParquetWriter extends BaseTestQuery {
     String selection = "cast(hire_date as DATE) as hire_date";
     String validateSelection = "hire_date";
     String inputTable = "cp.`employee.json`";
-    runTestAndValidate(selection, validateSelection, inputTable, EMPLOYEE_PARQUET_PATH);
+    runTestAndValidate(selection, validateSelection, inputTable, "foodmart_employee_parquet");
   }
 
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
