@@ -67,7 +67,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private boolean enableDictionary = false;
   private boolean validating = false;
   private CompressionCodecName codec = CompressionCodecName.SNAPPY;
-  private WriterVersion writerVersion = WriterVersion.PARQUET_1_0;
+  private WriterVersion writerVersion = WriterVersion.PARQUET_2_0;
 
   private long recordCount = 0;
   private long recordCountForNextMemCheck = MINIMUM_RECORD_COUNT_FOR_CHECK;
