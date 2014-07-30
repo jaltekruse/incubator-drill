@@ -27,7 +27,7 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 
 import java.io.IOException;
 
-abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
+class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
 
   int nullsFound;
   // used to skip nulls found
@@ -36,12 +36,25 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
   int bitsUsed;
   BaseValueVector castedBaseVector;
   NullableVectorDefinitionSetter castedVectorMutator;
+  FixedByteAlignedReader nonNullableReader;
+  FixedByteAlignedReader nonNullableDictionaryReader;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
-               boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
+               boolean fixedLength, V v, SchemaElement schemaElement,
+               FixedByteAlignedReader nonNullableDictionaryReader, FixedByteAlignedReader nonNullableReader) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     castedBaseVector = (BaseValueVector) v;
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
+    this.nonNullableReader = nonNullableReader;
+    this.nonNullableDictionaryReader = nonNullableDictionaryReader;
+    // clear the data allocated by default before replacing it with the new pageReader
+    this.nonNullableReader.pageReader.clear();
+    this.nonNullableReader.pageReader = this.pageReader;
+    if (this.nonNullableDictionaryReader != null) {
+      // clear the data allocated by default before replacing it with the new pageReader
+      this.nonNullableDictionaryReader.pageReader.clear();
+      this.nonNullableDictionaryReader.pageReader = this.pageReader;
+    }
   }
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
@@ -109,7 +122,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         pageReader.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
 
-        readField( runLength);
+        readField(runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
           castedBaseVector.getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
@@ -135,5 +148,20 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         valuesReadInCurrentPass);
   }
 
-  protected abstract void readField(long recordsToRead);
+  @Override
+  protected void readField(long recordsToRead) {
+    FixedByteAlignedReader currNonNullableReader;
+    if (usingDictionary)
+      currNonNullableReader = nonNullableDictionaryReader;
+    else
+      currNonNullableReader = nonNullableReader;
+    currNonNullableReader.vectorData = castedBaseVector.getData();
+    currNonNullableReader.readField(recordsToRead);
+  }
+
+  public void clear() {
+    super.clear();
+    nonNullableDictionaryReader.clear();
+    nonNullableReader.clear();
+  }
 }
