@@ -134,6 +134,28 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
 
   @Ignore
   @Test
+  public void testFixedBinary() throws Exception {
+    String readEntries = "\"/tmp/drilltest/fixed_binary.parquet\"";
+
+    String planText = Files.toString(FileUtils.getResourceAsFile("/parquet/parquet_scan_screen_read_entry_replace.json"), Charsets.UTF_8).replaceFirst( "&REPLACED_IN_PARQUET_TEST&", readEntries);
+    testParquetFullEngineLocalText(planText, fileName, 1, 1, 1000000, false);
+  }
+
+  @Ignore
+  @Test
+  public void testNonNullableDictionaries() throws Exception {
+    testFull(QueryType.SQL, "select myint from dfs.`/tmp/drilltest/non_nullable_dictionary.parquet`", "", 1, 1, 100000, false);
+  }
+
+  @Ignore
+  @Test
+  public void testDrill_1314() throws Exception {
+    testFull(QueryType.SQL, "select l_partkey " +
+        "from dfs.`/tmp/drill_1314.parquet`", "", 1,1, 10000, false);
+  }
+
+  @Ignore
+  @Test
   public void testDictionaryError_419() throws Exception {
     testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, 150000, false);
   }
