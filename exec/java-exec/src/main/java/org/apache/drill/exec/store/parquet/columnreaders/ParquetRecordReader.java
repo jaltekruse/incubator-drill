@@ -255,13 +255,15 @@ public class ParquetRecordReader implements RecordReader {
         v = output.addField(field, (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(type.getMinorType(), type.getMode()));
         if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
           if (column.getMaxRepetitionLevel() > 0) {
-            ColumnReader dataReader = ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength, column, columnChunkMetaData, recordsPerBatch,
+            ColumnReader dataReader = ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength,
+                column.getMaxDefinitionLevel(), column.getMaxRepetitionLevel(), column, columnChunkMetaData, recordsPerBatch,
                 ((RepeatedFixedWidthVector) v).getMutator().getDataVector(), schemaElement);
             varLengthColumns.add(new FixedWidthRepeatedReader(this, dataReader,
                 getTypeLengthInBits(column.getType()), -1, column, columnChunkMetaData, false, v, schemaElement));
           }
           else {
-            columnStatuses.add(ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength, column, columnChunkMetaData, recordsPerBatch, v,
+            columnStatuses.add(ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength,
+                column.getMaxDefinitionLevel(), column.getMaxRepetitionLevel(), column, columnChunkMetaData, recordsPerBatch, v,
                 schemaElement));
           }
         } else {

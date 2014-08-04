@@ -124,9 +124,17 @@ class FixedByteAlignedReader extends ColumnReader {
 
     @Override
     void addNext(int start, int index) {
-      dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(
-          NullableFixedByteAlignedReaders.NullableDateReader.readIntLittleEndian(bytes, start)
+      dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(readIntLittleEndian(bytes, start)
               - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+    }
+
+    // copied out of parquet library, didn't want to deal with the unneeded throws statement they had declared
+    public static int readIntLittleEndian(byte[] in, int offset) {
+      int ch4 = in[offset] & 0xff;
+      int ch3 = in[offset + 1] & 0xff;
+      int ch2 = in[offset + 2] & 0xff;
+      int ch1 = in[offset + 3] & 0xff;
+      return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
     }
   }
 

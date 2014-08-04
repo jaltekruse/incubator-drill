@@ -188,28 +188,24 @@ final class PageReader {
     }
     if (parentColumnReader.columnDescriptor.getMaxDefinitionLevel() != 0){
       parentColumnReader.currDefLevel = -1;
-      if (!currentPage.getValueEncoding().usesDictionary()) {
-        parentColumnReader.usingDictionary = false;
-        definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
-        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
-        readPosInBytes = definitionLevels.getNextOffset();
-        if (parentColumnReader.columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN) {
-          valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.VALUES);
-          valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
-        }
-      } else {
-        parentColumnReader.usingDictionary = true;
-        definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
-        definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
-        readPosInBytes = definitionLevels.getNextOffset();
-        // initialize two of the dictionary readers, one is for determining the lengths of each value, the second is for
-        // actually copying the values out into the vectors
-        dictionaryLengthDeterminingReader = new DictionaryValuesReader(dictionary);
-        dictionaryLengthDeterminingReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
-        dictionaryValueReader = new DictionaryValuesReader(dictionary);
-        dictionaryValueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
-        this.parentColumnReader.usingDictionary = true;
-      }
+      definitionLevels = currentPage.getDlEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.DEFINITION_LEVEL);
+      definitionLevels.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+      readPosInBytes = definitionLevels.getNextOffset();
+    }
+    if (parentColumnReader.columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN) {
+      valueReader = currentPage.getValueEncoding().getValuesReader(parentColumnReader.columnDescriptor, ValuesType.VALUES);
+      valueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+    }
+    if (currentPage.getValueEncoding().usesDictionary()) {
+      // initialize two of the dictionary readers, one is for determining the lengths of each value, the second is for
+      // actually copying the values out into the vectors
+      dictionaryLengthDeterminingReader = new DictionaryValuesReader(dictionary);
+      dictionaryLengthDeterminingReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+      dictionaryValueReader = new DictionaryValuesReader(dictionary);
+      dictionaryValueReader.initFromPage(currentPage.getValueCount(), pageDataByteArray, (int) readPosInBytes);
+      parentColumnReader.usingDictionary = true;
+    } else {
+      parentColumnReader.usingDictionary = false;
     }
     // readPosInBytes is used for actually reading the values after we determine how many will fit in the vector
     // readyToReadPosInBytes serves a similar purpose for the vector types where we must count up the values that will

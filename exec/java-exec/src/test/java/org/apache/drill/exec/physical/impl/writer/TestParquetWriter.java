@@ -175,7 +175,13 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "nullable_test");
   }
 
-  @Ignore // fails intermittenly when being run with other tests, a patch in DRILL
+  // TODO - This was previously experiencing intermittent issues when run with other tests, it was related to
+  // the buffers not being cleared before they were written into.
+  // This appears to be solved, but I do not know which JIRA fixed it
+  // there was previously Drill-722 out with a hacky solution that zeroed out the vectors in each of
+  // the decimal readers itself. Considering we have guarentees that the other vector types are zero filled
+  // upon allocation it seemed like the best idea to fix this at a higher level, which is what appears to have been
+  // done.
   @Test
   public void testDecimal() throws Exception {
     String selection = "cast(salary as decimal(8,2)) as decimal8, cast(salary as decimal(15,2)) as decimal15, " +
