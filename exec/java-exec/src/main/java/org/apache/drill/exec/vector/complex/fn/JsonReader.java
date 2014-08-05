@@ -23,11 +23,14 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.List;
 
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.expr.holders.BigIntHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.Float8Holder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
+import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
@@ -46,10 +49,31 @@ public class JsonReader {
 
   private final JsonFactory factory = new JsonFactory();
   private JsonParser parser;
+  private List<SchemaPath> columns;
 
-  public JsonReader() throws JsonParseException, IOException {
+  public JsonReader() throws IOException {
+    this(null);
+  }
+
+  public JsonReader(List<SchemaPath> columns) throws JsonParseException, IOException {
     factory.configure(Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
     factory.configure(Feature.ALLOW_COMMENTS, true);
+    this.columns = columns;
+  }
+
+  private boolean fieldSelected(MaterializedField field){
+    // TODO - not sure if this is how we want to represent this
+    // for now it makes the existing tests pass, simply selecting
+    // all available data if no columns are provided
+    if (this.columns != null){
+      for (SchemaPath expr : this.columns){
+        if ( field.matches(expr)){
+          return true;
+        }
+      }
+      return false;
+    }
+    return true;
   }
 
   public boolean write(Reader reader, ComplexWriter writer) throws JsonParseException, IOException {

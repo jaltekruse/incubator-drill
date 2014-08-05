@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
 
+import org.apache.drill.BaseTestQuery;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.vector.complex.MapVector;
@@ -40,7 +41,7 @@ import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 
-public class TestJsonReader {
+public class TestJsonReader extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestJsonReader.class);
 
   private static BufferAllocator allocator;
@@ -53,6 +54,22 @@ public class TestJsonReader {
   @AfterClass
   public static void destroyAllocator(){
     allocator.close();
+  }
+
+  @Test
+  public void testDecimalAndIntegerInSameList() throws Exception {
+    test("select * from cp.`store/json/decimal_and_integer_in_same_list.json`");
+  }
+
+  @Test
+  public void testSchemaChangeIntToString() throws Exception {
+    test("select field_1 from cp.`store/json/schema_change_int_to_string.json`");
+  }
+
+  @Test
+  public void testDrill595() throws Exception {
+    test("with x as (select * from cp.`region.json`) select region_id, sales_city from x;" +
+         "select region_id, sales_city from ( select * from cp.`region.json`)");
   }
 
   @Test
