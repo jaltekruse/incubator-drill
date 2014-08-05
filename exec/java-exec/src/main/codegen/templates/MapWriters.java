@@ -41,6 +41,7 @@ import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 import com.google.common.collect.Maps;
 
+/* This class is generated using freemarker and the MapWriters.java template */
 @SuppressWarnings("unused")
 public class ${mode}MapWriter extends AbstractFieldWriter{
   
@@ -53,7 +54,10 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
     this.container = container;
   }
 
-  
+  public MaterializedField getField() {
+      return container.getField();
+  }
+
   public MapWriter map(String name){
     FieldWriter writer = fields.get(name);
     if(writer == null){
