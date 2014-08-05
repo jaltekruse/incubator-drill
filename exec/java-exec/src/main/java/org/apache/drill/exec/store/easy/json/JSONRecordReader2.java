@@ -23,17 +23,21 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.store.RecordReader;
+import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.complex.fn.JsonReader;
 import org.apache.drill.exec.vector.complex.fn.JsonReaderWithState;
 import org.apache.drill.exec.vector.complex.fn.JsonRecordSplitter;
 import org.apache.drill.exec.vector.complex.fn.UTF8JsonRecordSplitter;
 import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -48,11 +52,13 @@ public class JSONRecordReader2 implements RecordReader{
   private FileSystem fileSystem;
   private InputStream stream;
   private JsonReaderWithState jsonReader;
+  private List<SchemaPath> columns;
 
   public JSONRecordReader2(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem,
                           List<SchemaPath> columns) throws OutOfMemoryException {
     this.hadoopPath = new Path(inputPath);
     this.fileSystem = fileSystem;
+    this.columns = columns;
   }
 
   @Override
@@ -62,7 +68,7 @@ public class JSONRecordReader2 implements RecordReader{
       JsonRecordSplitter splitter = new UTF8JsonRecordSplitter(stream);
       this.writer = new VectorContainerWriter(output);
       this.mutator = output;
-      jsonReader = new JsonReaderWithState(splitter);
+      jsonReader = new JsonReaderWithState(splitter, columns);
     }catch(IOException e){
       throw new ExecutionSetupException("Failure reading JSON file.", e);
     }
@@ -76,8 +82,12 @@ public class JSONRecordReader2 implements RecordReader{
     int i =0;
 
     try{
-      outside: while(true){
+      outside: while(true && i < BaseValueVector.INITIAL_VALUE_ALLOCATION){
         writer.setPosition(i);
+        // TODO - DELETE ME, THIS IS JUST FASTER THAN USING A BREAKPOINT WITH A CONTITION IN THE IDE
+        if (i == 1000) {
+          Math.min(3,5);
+        }
 
         switch(jsonReader.write(writer)){
         case WRITE_SUCCEED:
@@ -94,9 +104,27 @@ public class JSONRecordReader2 implements RecordReader{
           break outside;
         };
       }
+      for (SchemaPath sp :jsonReader.getNullColumns() ) {
+        PathSegment root = sp.getRootSegment();
+        BaseWriter.MapWriter fieldWriter = writer.rootAsMap();
+        if (root.getChild() != null) {
+          fieldWriter = fieldWriter.map(root.getNameSegment().getPath());
+          while ( root.getChild().getChild() != null && ! root.getChild().getChild().isArray() ) {
+            fieldWriter = fieldWriter.map(root.getChild().getNameSegment().getPath());
+            root = root.getChild();
+          }
+          fieldWriter.integer(root.getChild().getNameSegment().getPath());
+        } else  {
+          fieldWriter.integer(root.getNameSegment().getPath());
+        }
+      }
 
-
+      // TODO - DELETE ME, FOR DEBUGGING
+      try {
       writer.setValueCount(i);
+      } catch (Throwable t) {
+        throw t;
+      }
       return i;
 
     }catch(IOException e){

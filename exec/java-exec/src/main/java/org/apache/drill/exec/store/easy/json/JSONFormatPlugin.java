@@ -95,7 +95,7 @@ public class JSONFormatPlugin extends EasyFormatPlugin<JSONFormatConfig> {
 
   @Override
   public boolean supportsPushDown() {
-    return false;
+    return true;
   }
 
 
