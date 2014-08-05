@@ -239,4 +239,27 @@ public abstract class PathSegment{
     } else return child.equals(other.child);
   }
 
+  public boolean containedBy(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (obj instanceof ArraySegment)
+      return true;
+    if (getClass() != obj.getClass())
+      return false;
+
+    PathSegment other = (PathSegment) obj;
+    if (!segmentEquals(other)) {
+      return false;
+    }
+    // this is what changed relative to the equals method
+    // if the other object has no child it is considered a
+    // match
+    else if (child == null || other.child == null) {
+      return true;
+    } else return child.containedBy(other.child);
+
+  }
+
 }
