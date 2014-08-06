@@ -40,6 +40,10 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
     this.mapRoot = new SingleMapWriter(mapVector, this);
   }
 
+  public MaterializedField getField() {
+    return mapVector.getField();
+  }
+
   public MapVector getMapVector() {
     return mapVector;
   }

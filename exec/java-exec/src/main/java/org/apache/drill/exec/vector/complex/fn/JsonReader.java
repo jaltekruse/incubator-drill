@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.util.List;
 
+import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.expr.holders.BigIntHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
@@ -61,13 +62,13 @@ public class JsonReader {
     this.columns = columns;
   }
 
-  private boolean fieldSelected(MaterializedField field){
+  private boolean fieldSelected(SchemaPath field){
     // TODO - not sure if this is how we want to represent this
     // for now it makes the existing tests pass, simply selecting
     // all available data if no columns are provided
     if (this.columns != null){
       for (SchemaPath expr : this.columns){
-        if ( field.matches(expr)){
+        if ( field.containedBy(expr)){
           return true;
         }
       }
@@ -114,7 +115,16 @@ public class JsonReader {
 
       assert t == JsonToken.FIELD_NAME : String.format("Expected FIELD_NAME but got %s.", t.name());
       final String fieldName = parser.getText();
-
+      SchemaPath path = null;
+      if (map.getField().getPath().getRootSegment().getPath().equals("")) {
+        path = new SchemaPath(new PathSegment.NameSegment(fieldName));
+      } else {
+        path = map.getField().getPath().getChild(fieldName);
+      }
+      if ( ! fieldSelected(path) ) {
+        parser.nextToken();
+        continue;
+      }
 
       switch(parser.nextToken()){
       case START_ARRAY:

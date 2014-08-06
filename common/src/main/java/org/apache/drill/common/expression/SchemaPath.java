@@ -199,6 +199,22 @@ public class SchemaPath extends LogicalExpressionBase {
     return rootSegment.equals(other.rootSegment);
   }
 
+  public boolean containedBy(Object obj) {
+    if (this == obj)
+      return true;
+    if (obj == null)
+      return false;
+    if (!(obj instanceof SchemaPath))
+      return false;
+
+    SchemaPath other = (SchemaPath) obj;
+    if (rootSegment == null) {
+      return true;
+    }
+    return rootSegment.containedBy(other.rootSegment);
+
+  }
+
   @Override
   public Iterator<LogicalExpression> iterator() {
     return Iterators.emptyIterator();

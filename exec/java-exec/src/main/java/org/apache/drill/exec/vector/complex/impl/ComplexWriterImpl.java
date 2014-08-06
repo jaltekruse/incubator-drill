@@ -48,6 +48,10 @@ public class ComplexWriterImpl extends AbstractFieldWriter implements ComplexWri
     this.container = container;
   }
 
+  public MaterializedField getField() {
+    return container.getField();
+  }
+
   private void check(Mode... modes){
     StateTool.check(mode, modes);
   }

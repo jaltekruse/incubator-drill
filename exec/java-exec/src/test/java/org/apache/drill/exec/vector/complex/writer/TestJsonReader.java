@@ -63,7 +63,8 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void testSchemaChangeIntToString() throws Exception {
-    test("select field_1 from cp.`store/json/schema_change_int_to_string.json`");
+    test("select field_1, json_table.field_3.inner_1, json_table.field_3.inner_2, json_table.field_4 from cp.`store/json/schema_change_int_to_string.json` as json_table");
+//    test("select * from cp.`store/json/schema_change_int_to_string.json` as json_table");
   }
 
   @Test

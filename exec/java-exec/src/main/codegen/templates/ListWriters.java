@@ -36,7 +36,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
-
+/* This class is generated using freemarker and the ListWriters.java template */
 @SuppressWarnings("unused")
 public class ${mode}ListWriter extends AbstractFieldWriter{
   
@@ -136,6 +136,10 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
   }
   </#list></#list>
 
+  public MaterializedField getField() {
+      return container.getField();
+  }
+
   <#if mode == "Repeated">
   public void start(){
     if(ok()){
@@ -153,14 +157,12 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
       }
     }
   }
-  
-  
-  
+
   public void end(){
     // noop, we initialize state at start rather than end.
   }
   <#else>
-  
+
   public void setPosition(int index){
     super.setPosition(index);
     if(writer != null) writer.setPosition(index);
