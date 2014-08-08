@@ -32,6 +32,7 @@ import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.Float8Holder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ListWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
@@ -51,6 +52,8 @@ public class JsonReader {
   private final JsonFactory factory = new JsonFactory();
   private JsonParser parser;
   private List<SchemaPath> columns;
+  // TODO - set this up as a configuration parameter
+  private boolean allTextMode = false;
 
   public JsonReader() throws IOException {
     this(null);
@@ -122,8 +125,44 @@ public class JsonReader {
         path = map.getField().getPath().getChild(fieldName);
       }
       if ( ! fieldSelected(path) ) {
-        parser.nextToken();
-        continue;
+        switch(parser.nextToken()){
+          case START_ARRAY:
+            int arrayCounter = 1;
+            skipArrayLoop: while (true) {
+              switch(parser.nextToken()) {
+                case START_ARRAY:
+                  arrayCounter++;
+                  break;
+                case END_ARRAY:
+                  arrayCounter--;
+                  if (arrayCounter == 0) {
+                    break skipArrayLoop;
+                  }
+                  break;
+              }
+            }
+            continue outside;
+          case START_OBJECT:
+            int objectCounter = 1;
+            skipObjectLoop: while (true) {
+              switch(parser.nextToken()) {
+                case START_OBJECT:
+                  objectCounter++;
+                  break;
+                case END_OBJECT:
+                  objectCounter--;
+                  if (objectCounter == 0) {
+                    break skipObjectLoop;
+                  }
+                  break;
+              }
+            }
+            continue outside;
+          default:
+            // hit a single value, do nothing as the token was already read
+            // in the switch statement
+            continue outside;
+        }
       }
 
       switch(parser.nextToken()){
@@ -138,12 +177,20 @@ public class JsonReader {
 
       case VALUE_EMBEDDED_OBJECT:
       case VALUE_FALSE: {
+        if (allTextMode) {
+          handleString(parser, map, fieldName);
+          break;
+        }
         BitHolder h = new BitHolder();
         h.value = 0;
         map.bit(fieldName).write(h);
         break;
       }
       case VALUE_TRUE: {
+        if (allTextMode) {
+          handleString(parser, map, fieldName);
+          break;
+        }
         BitHolder h = new BitHolder();
         h.value = 1;
         map.bit(fieldName).write(h);
@@ -153,25 +200,25 @@ public class JsonReader {
         // do nothing as we don't have a type.
         break;
       case VALUE_NUMBER_FLOAT:
+        if (allTextMode) {
+          handleString(parser, map, fieldName);
+          break;
+        }
         Float8Holder fh = new Float8Holder();
         fh.value = parser.getDoubleValue();
         map.float8(fieldName).write(fh);
         break;
       case VALUE_NUMBER_INT:
+        if (allTextMode) {
+          handleString(parser, map, fieldName);
+          break;
+        }
         BigIntHolder bh = new BigIntHolder();
         bh.value = parser.getLongValue();
         map.bigInt(fieldName).write(bh);
         break;
       case VALUE_STRING:
-        VarCharHolder vh = new VarCharHolder();
-        String value = parser.getText();
-        byte[] b = value.getBytes(Charsets.UTF_8);
-        ByteBuf d = UnpooledByteBufAllocator.DEFAULT.buffer(b.length);
-        d.setBytes(0, b);
-        vh.buffer = d;
-        vh.start = 0;
-        vh.end = b.length;
-        map.varChar(fieldName).write(vh);
+        handleString(parser, map, fieldName);
         break;
 
       default:
@@ -182,6 +229,27 @@ public class JsonReader {
     }
     map.end();
 
+  }
+
+  private VarCharHolder prepareVarCharHolder(VarCharHolder vh, JsonParser parser) throws IOException {
+    String value = parser.getText();
+    byte[] b = value.getBytes(Charsets.UTF_8);
+    ByteBuf d = UnpooledByteBufAllocator.DEFAULT.buffer(b.length);
+    d.setBytes(0, b);
+    vh.buffer = d;
+    vh.start = 0;
+    vh.end = b.length;
+    return vh;
+  }
+
+  private void handleString(JsonParser parser, MapWriter writer, String fieldName) throws IOException {
+    VarCharHolder vh = new VarCharHolder();
+    writer.varChar(fieldName).write(prepareVarCharHolder(vh, parser));
+  }
+
+  private void handleString(JsonParser parser, ListWriter writer) throws IOException {
+    VarCharHolder vh = new VarCharHolder();
+    writer.varChar().write(prepareVarCharHolder(vh, parser));
   }
 
   private void writeData(ListWriter list) throws JsonParseException, IOException {
@@ -201,12 +269,20 @@ public class JsonReader {
 
       case VALUE_EMBEDDED_OBJECT:
       case VALUE_FALSE:{
+        if (allTextMode) {
+          handleString(parser, list);
+          break;
+        }
         BitHolder h = new BitHolder();
         h.value = 0;
         list.bit().write(h);
         break;
       }
       case VALUE_TRUE: {
+        if (allTextMode) {
+          handleString(parser, list);
+          break;
+        }
         BitHolder h = new BitHolder();
         h.value = 1;
         list.bit().write(h);
@@ -216,25 +292,25 @@ public class JsonReader {
         // do nothing as we don't have a type.
         break;
       case VALUE_NUMBER_FLOAT:
+        if (allTextMode) {
+          handleString(parser, list);
+          break;
+        }
         Float8Holder fh = new Float8Holder();
         fh.value = parser.getDoubleValue();
         list.float8().write(fh);
         break;
       case VALUE_NUMBER_INT:
+        if (allTextMode) {
+          handleString(parser, list);
+          break;
+        }
         BigIntHolder bh = new BigIntHolder();
         bh.value = parser.getLongValue();
         list.bigInt().write(bh);
         break;
       case VALUE_STRING:
-        VarCharHolder vh = new VarCharHolder();
-        String value = parser.getText();
-        byte[] b = value.getBytes(Charsets.UTF_8);
-        ByteBuf d = UnpooledByteBufAllocator.DEFAULT.buffer(b.length);
-        d.setBytes(0, b);
-        vh.buffer = d;
-        vh.start = 0;
-        vh.end = b.length;
-        list.varChar().write(vh);
+        handleString(parser, list);
         break;
       default:
         throw new IllegalStateException("Unexpected token " + parser.getCurrentToken());

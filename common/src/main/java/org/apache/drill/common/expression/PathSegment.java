@@ -254,9 +254,9 @@ public abstract class PathSegment{
     // this is what changed relative to the equals method
     // if the other object has no child it is considered a
     // match
-    else if (child == null) {
+    else if (child == null || other.child == null) {
       return true;
-    } else return child.equals(other.child);
+    } else return child.containedBy(other.child);
 
   }
 

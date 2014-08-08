@@ -20,9 +20,12 @@ package org.apache.drill.exec.vector.complex.writer;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
 
+import com.google.common.io.Files;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.vector.complex.MapVector;
@@ -61,10 +64,66 @@ public class TestJsonReader extends BaseTestQuery {
     test("select * from cp.`store/json/decimal_and_integer_in_same_list.json`");
   }
 
+  public void runTestsOnFile(String filename, String[] queries) throws Exception {
+    System.out.println("===================");
+    System.out.println("source data in json");
+    System.out.println("===================");
+    String file = "/store/json/schema_change_int_to_string.json";
+    System.out.println(Files.toString(FileUtils.getResourceAsFile(file), Charsets.UTF_8));
+
+    for (String query : queries) {
+      System.out.println("=====");
+      System.out.println("query");
+      System.out.println("=====");
+      System.out.println(query);
+      System.out.println("======");
+      System.out.println("result");
+      System.out.println("======");
+      test(query);
+      System.out.println();
+    }
+  }
+
   @Test
   public void testSchemaChangeIntToString() throws Exception {
-    test("select field_1, json_table.field_3.inner_1, json_table.field_3.inner_2, json_table.field_4 from cp.`store/json/schema_change_int_to_string.json` as json_table");
-//    test("select * from cp.`store/json/schema_change_int_to_string.json` as json_table");
+    String file = "/store/json/schema_change_int_to_string.json";
+    String[] queries = {
+        "select * from cp.`" + file + "` as json_table",
+//        "select field_1, json_table.field_3.inner_1, json_table.field_3.inner_2, json_table.field_4 from cp.`" + file + "` as json_table",
+//        "select field_1, json_table.field_3.inner_1, json_table.field_4 from cp.`" + "` as json_table",
+//        "select field_1, json_table.field_3.inner_1, json_table.field_4.inner_1[0], json_table.field_5 from cp.`" + file + "` as json_table"
+    };
+    runTestsOnFile(file, queries);
+  }
+
+  @Test
+  public void testSelectMapInList() throws Exception {
+    String file = "/store/json/repeated_map.json";
+    String[] queries = {
+        "select json_table.field_1[1] from cp.`store/json/repeated_map.json` as json_table"
+    };
+    for (String query : queries) {
+      System.out.println("=====");
+      System.out.println("query");
+      System.out.println("=====");
+      System.out.println(query);
+      System.out.println("======");
+      System.out.println("result");
+      System.out.println("======");
+      test(query);
+      System.out.println();
+    }
+  }
+
+  // The project pushdown rule is correctly adding the projected columns to the scan, however it is not removing
+  // the redundant project operator after the scan, this tests runs a physical plan generated from one of the tests to
+  // ensure that the project is filtering out the correct data in the scan alone
+  @Test
+  public void testProjectPushdown() throws Exception {
+    String plan = Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8);
+//    testPhysical(plan);
+    plan = Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_with_array_index_plan.json"), Charsets.UTF_8);
+    testPhysical(plan);
   }
 
   @Test
