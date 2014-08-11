@@ -45,9 +45,14 @@ public class ParquetFixedWidthDictionaryReaders {
     // this method is called by its superclass during a read loop
     @Override
     protected void readField(long recordsToReadInThisPass) {
+      recordsReadInThisIteration = recordsToReadInThisPass;
       if (usingDictionary) {
         for (int i = 0; i < recordsToReadInThisPass; i++){
+          try {
           castedVector.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readInteger());
+          } catch (Exception ex) {
+            throw ex;
+          }
         }
       }
     }
