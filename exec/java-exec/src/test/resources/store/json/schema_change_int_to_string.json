@@ -3,22 +3,24 @@
 }
 {
     "field_1": [5],
-    "field_2": "A wild string appears!",
+    "field_2": 2,
     "field_3": {
         "inner_1" : 2
     },
     "field_4" : {
         "inner_1" : [1,2,3],
-        "inner_2" : 3
+        "inner_2" : 3,
+        "inner_3" :  { "inner_object_field_1" : 2}
     },
     "field_5" : [ { "inner_list" : [1,6] }, { "inner_list":[3,8]}, { "inner_list":[12,4,5]} ]
 }
 {
     "field_1": [5,10,15],
-    "field_2": 2,
+    "field_2": "A wild string appears!",
     "field_3": {
         "inner_1" : 5,
-        "inner_2" : 3
+        "inner_2" : 3,
+        "inner_3" : [ { "inner_object_field_1" : 2}, {"inner_object_field_1" : 10} ]
     },
     "field_4" : {
         "inner_1" : [4,5,6],

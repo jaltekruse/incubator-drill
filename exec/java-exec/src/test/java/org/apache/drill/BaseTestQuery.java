@@ -142,12 +142,12 @@ public class BaseTestQuery extends ExecTest{
     return testRunAndReturn(QueryType.PHYSICAL, physical);
   }
 
-  protected List<QueryResultBatch>  testRunAndReturn(QueryType type, String query) throws Exception{
+  protected List<QueryResultBatch> testRunAndReturn(QueryType type, String query) throws Exception{
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
     return client.runQuery(type, query);
   }
 
-  private int testRunAndPrint(QueryType type, String query) throws Exception{
+  public int testRunAndPrint(QueryType type, String query) throws Exception{
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
     PrintingResultsListener resultListener = new PrintingResultsListener(client.getConfig(), Format.TSV, VectorUtil.DEFAULT_COLUMN_WIDTH);
     client.runQuery(type, query, resultListener);

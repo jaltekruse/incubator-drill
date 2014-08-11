@@ -17,7 +17,9 @@
  */
 package org.apache.drill.exec.vector.complex.writer;
 
+import static org.jgroups.util.Util.assertTrue;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -25,9 +27,19 @@ import java.util.List;
 
 import com.google.common.io.Files;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.common.expression.PathSegment;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.proto.UserBitShared;
+import org.apache.drill.exec.record.RecordBatchLoader;
+import org.apache.drill.exec.record.VectorWrapper;
+import org.apache.drill.exec.rpc.user.QueryResultBatch;
+import org.apache.drill.exec.vector.IntVector;
+import org.apache.drill.exec.vector.NullableBigIntVector;
+import org.apache.drill.exec.vector.RepeatedBigIntVector;
+import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
 import org.apache.drill.exec.vector.complex.fn.JsonReader;
 import org.apache.drill.exec.vector.complex.fn.JsonReaderWithState;
@@ -64,11 +76,11 @@ public class TestJsonReader extends BaseTestQuery {
     test("select * from cp.`store/json/decimal_and_integer_in_same_list.json`");
   }
 
-  public void runTestsOnFile(String filename, String[] queries) throws Exception {
+  public void runTestsOnFile(String filename, UserBitShared.QueryType queryType, String[] queries) throws Exception {
     System.out.println("===================");
     System.out.println("source data in json");
     System.out.println("===================");
-    String file = "/store/json/schema_change_int_to_string.json";
+    String file = filename;
     System.out.println(Files.toString(FileUtils.getResourceAsFile(file), Charsets.UTF_8));
 
     for (String query : queries) {
@@ -79,7 +91,7 @@ public class TestJsonReader extends BaseTestQuery {
       System.out.println("======");
       System.out.println("result");
       System.out.println("======");
-      test(query);
+      testRunAndPrint(queryType, query);
       System.out.println();
     }
   }
@@ -88,12 +100,12 @@ public class TestJsonReader extends BaseTestQuery {
   public void testSchemaChangeIntToString() throws Exception {
     String file = "/store/json/schema_change_int_to_string.json";
     String[] queries = {
-        "select * from cp.`" + file + "` as json_table",
-//        "select field_1, json_table.field_3.inner_1, json_table.field_3.inner_2, json_table.field_4 from cp.`" + file + "` as json_table",
+//        "select * from cp.`" + file + "` as json_table",
+        "select field_1, json_table.field_3.inner_1, json_table.field_3.inner_2, json_table.field_4.inner_1 from cp.`" + file + "` as json_table",
 //        "select field_1, json_table.field_3.inner_1, json_table.field_4 from cp.`" + "` as json_table",
 //        "select field_1, json_table.field_3.inner_1, json_table.field_4.inner_1[0], json_table.field_5 from cp.`" + file + "` as json_table"
     };
-    runTestsOnFile(file, queries);
+    runTestsOnFile(file, UserBitShared.QueryType.SQL, queries);
   }
 
   @Test
@@ -120,16 +132,61 @@ public class TestJsonReader extends BaseTestQuery {
   // ensure that the project is filtering out the correct data in the scan alone
   @Test
   public void testProjectPushdown() throws Exception {
-    String plan = Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8);
-//    testPhysical(plan);
-    plan = Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_with_array_index_plan.json"), Charsets.UTF_8);
-    testPhysical(plan);
+    String[] queries = {Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_with_array_index_plan.json"), Charsets.UTF_8)};
+    String filename = "/store/json/schema_change_int_to_string.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.PHYSICAL, queries);
+
+    List<QueryResultBatch> results = testPhysicalWithResults(queries[0]);
+    assertEquals(2, results.size());
+    // "`field_1`", "`field_3`.`inner_1`", "`field_3`.`inner_2`", "`field_4`.`inner_1`"
+
+    RecordBatchLoader batchLoader = new RecordBatchLoader(getAllocator());
+
+    QueryResultBatch batch = results.get(0);
+    assertTrue(batchLoader.load(batch.getHeader().getDef(), batch.getData()));
+    assertEquals(3, batchLoader.getSchema().getFieldCount());
+
+    VectorWrapper<?> vw = batchLoader.getValueAccessorById(
+        RepeatedBigIntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("field_1")).getFieldIds() //
+    );
+    assertEquals("[1]", vw.getValueVector().getAccessor().getObject(0).toString());
+    assertEquals("[5]", vw.getValueVector().getAccessor().getObject(1).toString());
+    assertEquals("[5,10,15]", vw.getValueVector().getAccessor().getObject(2).toString());
+
+    vw = batchLoader.getValueAccessorById(
+        IntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("field_3", "inner_1")).getFieldIds() //
+    );
+    assertNull(vw.getValueVector().getAccessor().getObject(0));
+    assertEquals(2l, vw.getValueVector().getAccessor().getObject(1));
+    assertEquals(5l, vw.getValueVector().getAccessor().getObject(2));
+
+    vw = batchLoader.getValueAccessorById(
+        IntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("field_3", "inner_2")).getFieldIds() //
+    );
+    assertNull(vw.getValueVector().getAccessor().getObject(0));
+    assertNull(vw.getValueVector().getAccessor().getObject(1));
+    assertEquals(3l, vw.getValueVector().getAccessor().getObject(2));
+
+    vw = batchLoader.getValueAccessorById(
+        RepeatedBigIntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("field_4", "inner_1")).getFieldIds() //
+    );
+    assertEquals("[]", vw.getValueVector().getAccessor().getObject(0).toString());
+    assertEquals("[1,2,3]", vw.getValueVector().getAccessor().getObject(1).toString());
+    assertEquals("[4,5,6]", vw.getValueVector().getAccessor().getObject(2).toString());
+
+    vw.getValueVector().clear();
+    batch.release();
+    batchLoader.clear();
   }
 
   @Test
   public void testDrill595() throws Exception {
     test("with x as (select * from cp.`region.json`) select region_id, sales_city from x;" +
-         "select region_id, sales_city from ( select * from cp.`region.json`)");
+        "select region_id, sales_city from ( select * from cp.`region.json`)");
   }
 
   @Test
