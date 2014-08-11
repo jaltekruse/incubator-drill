@@ -52,8 +52,6 @@ public class JsonReader {
   private final JsonFactory factory = new JsonFactory();
   private JsonParser parser;
   private List<SchemaPath> columns;
-  // TODO - set this up as a configuration parameter
-  private boolean allTextMode = false;
 
   public JsonReader() throws IOException {
     this(null);
@@ -66,9 +64,6 @@ public class JsonReader {
   }
 
   private boolean fieldSelected(SchemaPath field){
-    // TODO - not sure if this is how we want to represent this
-    // for now it makes the existing tests pass, simply selecting
-    // all available data if no columns are provided
     if (this.columns != null){
       for (SchemaPath expr : this.columns){
         if ( field.containedBy(expr)){
@@ -177,20 +172,12 @@ public class JsonReader {
 
       case VALUE_EMBEDDED_OBJECT:
       case VALUE_FALSE: {
-        if (allTextMode) {
-          handleString(parser, map, fieldName);
-          break;
-        }
         BitHolder h = new BitHolder();
         h.value = 0;
         map.bit(fieldName).write(h);
         break;
       }
       case VALUE_TRUE: {
-        if (allTextMode) {
-          handleString(parser, map, fieldName);
-          break;
-        }
         BitHolder h = new BitHolder();
         h.value = 1;
         map.bit(fieldName).write(h);
@@ -200,25 +187,18 @@ public class JsonReader {
         // do nothing as we don't have a type.
         break;
       case VALUE_NUMBER_FLOAT:
-        if (allTextMode) {
-          handleString(parser, map, fieldName);
-          break;
-        }
         Float8Holder fh = new Float8Holder();
         fh.value = parser.getDoubleValue();
         map.float8(fieldName).write(fh);
         break;
       case VALUE_NUMBER_INT:
-        if (allTextMode) {
-          handleString(parser, map, fieldName);
-          break;
-        }
         BigIntHolder bh = new BigIntHolder();
         bh.value = parser.getLongValue();
         map.bigInt(fieldName).write(bh);
         break;
       case VALUE_STRING:
-        handleString(parser, map, fieldName);
+        VarCharHolder vh = new VarCharHolder();
+        map.varChar(fieldName).write(prepareVarCharHolder(vh, parser));
         break;
 
       default:
@@ -242,16 +222,6 @@ public class JsonReader {
     return vh;
   }
 
-  private void handleString(JsonParser parser, MapWriter writer, String fieldName) throws IOException {
-    VarCharHolder vh = new VarCharHolder();
-    writer.varChar(fieldName).write(prepareVarCharHolder(vh, parser));
-  }
-
-  private void handleString(JsonParser parser, ListWriter writer) throws IOException {
-    VarCharHolder vh = new VarCharHolder();
-    writer.varChar().write(prepareVarCharHolder(vh, parser));
-  }
-
   private void writeData(ListWriter list) throws JsonParseException, IOException {
     list.start();
     outside: while(true){
@@ -269,20 +239,12 @@ public class JsonReader {
 
       case VALUE_EMBEDDED_OBJECT:
       case VALUE_FALSE:{
-        if (allTextMode) {
-          handleString(parser, list);
-          break;
-        }
         BitHolder h = new BitHolder();
         h.value = 0;
         list.bit().write(h);
         break;
       }
       case VALUE_TRUE: {
-        if (allTextMode) {
-          handleString(parser, list);
-          break;
-        }
         BitHolder h = new BitHolder();
         h.value = 1;
         list.bit().write(h);
@@ -292,25 +254,18 @@ public class JsonReader {
         // do nothing as we don't have a type.
         break;
       case VALUE_NUMBER_FLOAT:
-        if (allTextMode) {
-          handleString(parser, list);
-          break;
-        }
         Float8Holder fh = new Float8Holder();
         fh.value = parser.getDoubleValue();
         list.float8().write(fh);
         break;
       case VALUE_NUMBER_INT:
-        if (allTextMode) {
-          handleString(parser, list);
-          break;
-        }
         BigIntHolder bh = new BigIntHolder();
         bh.value = parser.getLongValue();
         list.bigInt().write(bh);
         break;
       case VALUE_STRING:
-        handleString(parser, list);
+        VarCharHolder vh = new VarCharHolder();
+        list.varChar().write(prepareVarCharHolder(vh, parser));
         break;
       default:
         throw new IllegalStateException("Unexpected token " + parser.getCurrentToken());

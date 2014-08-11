@@ -49,14 +49,12 @@ public class JSONRecordReader2 implements RecordReader{
   private InputStream stream;
   private JsonReaderWithState jsonReader;
   private List<SchemaPath> columns;
-  private boolean enableAllTextMode;
 
   public JSONRecordReader2(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem,
                           List<SchemaPath> columns) throws OutOfMemoryException {
     this.hadoopPath = new Path(inputPath);
     this.fileSystem = fileSystem;
     this.columns = columns;
-    fragmentContext.getDrillbitContext().getOptionManager().getOption("json_all_text_mode");
   }
 
   @Override
