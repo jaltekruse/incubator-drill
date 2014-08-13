@@ -17,14 +17,25 @@
  */
 <@pp.dropOutputFile />
 
+<#assign empty_string_behaviors = ["empty_string_errors", "empty_string_produces_null"]>
+<#list empty_string_behaviors as empty_string_behavior >
 <#list cast.types as type>
 
 <#if type.major == "VarCharDecimalSimple">  <#-- Cast function template for conversion from VarChar to Decimal9, Decimal18 -->
+
+<#if empty_string_behavior == "empty_string_errors">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/Cast${type.from}${type.to}.java" />
+<#elseif empty_string_behavior == "empty_string_produces_null">
+<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/Read${type.to}.java" />
+</#if>
 
 <#include "/@includes/license.ftl" />
 
+<#if empty_string_behavior == "empty_string_errors">
 package org.apache.drill.exec.expr.fn.impl.gcast;
+<#elseif empty_string_behavior == "empty_string_produces_null">
+package org.apache.drill.exec.expr.fn.impl;
+</#if>
 
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -39,18 +50,35 @@ import io.netty.buffer.ByteBuf;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("unused")
+<#if empty_string_behavior == "empty_string_errors">
 @FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.DECIMAL_CAST, nulls=NullHandling.NULL_IF_NULL)
 public class Cast${type.from}${type.to} implements DrillSimpleFunc {
+<#elseif empty_string_behavior == "empty_string_produces_null">
+@FunctionTemplate(name = "read_${type.to}", scope = FunctionTemplate.FunctionScope.DECIMAL_CAST, nulls=NullHandling.NULL_IF_NULL)
+public class Read${type.to} implements DrillSimpleFunc {
+</#if>
 
     @Param ${type.from}Holder in;
     @Param BigIntHolder precision;
     @Param BigIntHolder scale;
+    <#if empty_string_behavior == "empty_string_errors">
     @Output ${type.to}Holder out;
+    <#elseif empty_string_behavior == "empty_string_produces_null">
+    @Output Nullable${type.to}Holder out;
+    </#if>
 
     public void setup(RecordBatch incoming) {
     }
 
     public void eval() {
+
+
+        <#if empty_string_behavior == "empty_string_produces_null">
+          if (in.start == in.end) {
+            out.isSet = 0;
+            return;
+          } else {
+        </#if>
 
         // Assign the scale and precision
         out.scale = (int) scale.value;
@@ -159,15 +187,29 @@ public class Cast${type.from}${type.to} implements DrillSimpleFunc {
         if (negative == true) {
             out.value *= -1;
         }
+
+        <#if empty_string_behavior == "empty_string_produces_null">
+            out.isSet = 1;
+          }
+        </#if>
     }
 }
 
+
 <#elseif type.major == "VarCharDecimalComplex">  <#-- Cast function template for conversion from VarChar to Decimal28, Decimal38 -->
+<#if empty_string_behavior == "empty_string_errors">
 <@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/gcast/Cast${type.from}${type.to}.java" />
+<#elseif empty_string_behavior == "empty_string_produces_null">
+<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/Read${type.to}.java" />
+</#if>
 
 <#include "/@includes/license.ftl" />
 
+<#if empty_string_behavior == "empty_string_errors">
 package org.apache.drill.exec.expr.fn.impl.gcast;
+<#elseif empty_string_behavior == "empty_string_produces_null">
+package org.apache.drill.exec.expr.fn.impl;
+</#if>
 
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -182,14 +224,23 @@ import io.netty.buffer.ByteBuf;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("unused")
+<#if empty_string_behavior == "empty_string_errors">
 @FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.DECIMAL_CAST, nulls=NullHandling.NULL_IF_NULL)
 public class Cast${type.from}${type.to} implements DrillSimpleFunc {
+<#elseif empty_string_behavior == "empty_string_produces_null">
+@FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.DECIMAL_CAST, nulls=NullHandling.NULL_IF_NULL)
+public class Read${type.to} implements DrillSimpleFunc {
+</#if>
 
     @Param ${type.from}Holder in;
     @Workspace ByteBuf buffer;
     @Param BigIntHolder precision;
     @Param BigIntHolder scale;
+    <#if empty_string_behavior == "empty_string_errors">
     @Output ${type.to}Holder out;
+    <#elseif empty_string_behavior == "empty_string_produces_null">
+    @Output Nullable${type.to}Holder out;
+    </#if>
 
     public void setup(RecordBatch incoming) {
         int size = ${type.arraySize} * (org.apache.drill.common.util.DecimalUtility.integerSize);
@@ -198,6 +249,15 @@ public class Cast${type.from}${type.to} implements DrillSimpleFunc {
     }
 
     public void eval() {
+
+
+        <#if empty_string_behavior == "empty_string_produces_null">
+            if (in.start == in.end) {
+            out.isSet = 0;
+        return;
+        } else {
+        </#if>
+
         out.buffer = buffer;
         out.start  = 0;
 
@@ -243,7 +303,7 @@ public class Cast${type.from}${type.to} implements DrillSimpleFunc {
         int radix = 10;
         boolean leadingDigitFound = false;
         boolean round = false;
-    
+
         /* This is the first pass, we get the number of integer digits and based on the provided scale
          * we compute which index into the ByteBuf we start storing the integer part of the Decimal
          */
@@ -397,7 +457,13 @@ public class Cast${type.from}${type.to} implements DrillSimpleFunc {
             } while (carry > 0 && decimalBufferIndex >= 0);
         }
         out.setSign(sign);
+
+        <#if empty_string_behavior == "empty_string_produces_null">
+            out.isSet = 1;
+        }
+        </#if>
     }
 }
 </#if> <#-- type.major -->
+</#list>
 </#list>
