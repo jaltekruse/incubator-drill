@@ -97,7 +97,6 @@ public class JSONRecordReader2 implements RecordReader{
           if (i == 0) {
             throw new DrillRuntimeException("Record is too big to fit into allocated ValueVector");
           }
-          i--;
           break outside;
         };
       }

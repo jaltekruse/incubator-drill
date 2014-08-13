@@ -71,12 +71,13 @@ public class TestJsonReader extends BaseTestQuery {
     allocator.close();
   }
 
-  public void runTestsOnFile(String filename, UserBitShared.QueryType queryType, String[] queries) throws Exception {
+  public void runTestsOnFile(String filename, UserBitShared.QueryType queryType, String[] queries, long[] rowCounts) throws Exception {
     System.out.println("===================");
     System.out.println("source data in json");
     System.out.println("===================");
     System.out.println(Files.toString(FileUtils.getResourceAsFile(filename), Charsets.UTF_8));
 
+    int i = 0;
     for (String query : queries) {
       System.out.println("=====");
       System.out.println("query");
@@ -85,16 +86,19 @@ public class TestJsonReader extends BaseTestQuery {
       System.out.println("======");
       System.out.println("result");
       System.out.println("======");
-      testRunAndPrint(queryType, query);
+      int rowCount = testRunAndPrint(queryType, query);
+      assertEquals( rowCount, rowCounts[i]);
       System.out.println();
+      i++;
     }
   }
 
   @Test
   public void testSingleColumnRead_vector_fill_bug() throws Exception {
     String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
+    long[] rowCounts = {3377};
     String filename = "/store/json/single_column_long_file.json";
-    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries);
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
 
   // The project pushdown rule is correctly adding the projected columns to the scan, however it is not removing
@@ -103,8 +107,9 @@ public class TestJsonReader extends BaseTestQuery {
   @Test
   public void testProjectPushdown() throws Exception {
     String[] queries = {Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8)};
+    long[] rowCounts = {2};
     String filename = "/store/json/schema_change_int_to_string.json";
-    runTestsOnFile(filename, UserBitShared.QueryType.PHYSICAL, queries);
+    runTestsOnFile(filename, UserBitShared.QueryType.PHYSICAL, queries, rowCounts);
 
     List<QueryResultBatch> results = testPhysicalWithResults(queries[0]);
     assertEquals(2, results.size());
