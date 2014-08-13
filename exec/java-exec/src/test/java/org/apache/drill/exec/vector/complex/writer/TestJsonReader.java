@@ -90,6 +90,13 @@ public class TestJsonReader extends BaseTestQuery {
     }
   }
 
+  @Test
+  public void testSingleColumnRead_vector_fill_bug() throws Exception {
+    String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
+    String filename = "/store/json/single_column_long_file.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries);
+  }
+
   // The project pushdown rule is correctly adding the projected columns to the scan, however it is not removing
   // the redundant project operator after the scan, this tests runs a physical plan generated from one of the tests to
   // ensure that the project is filtering out the correct data in the scan alone

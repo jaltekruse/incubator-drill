@@ -140,6 +140,11 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
       return container.getField();
   }
 
+
+  public int getValueCapacity(){
+      return container.getValueCapacity();
+  }
+
   <#if mode == "Repeated">
   public void start(){
     if(ok()){

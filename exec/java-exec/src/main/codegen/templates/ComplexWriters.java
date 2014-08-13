@@ -54,7 +54,11 @@ public class ${eName}WriterImpl extends AbstractFieldWriter {
   }
 
   public MaterializedField getField(){
-      return vector.getField();
+    return vector.getField();
+  }
+
+  public int getValueCapacity(){
+    return vector.getValueCapacity();
   }
 
   public void allocate(){

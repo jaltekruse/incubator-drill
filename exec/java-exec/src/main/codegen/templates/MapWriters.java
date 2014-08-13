@@ -58,6 +58,10 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
       return container.getField();
   }
 
+  public int getValueCapacity(){
+    return container.getValueCapacity();
+  }
+
   public MapWriter map(String name){
     FieldWriter writer = fields.get(name);
     if(writer == null){

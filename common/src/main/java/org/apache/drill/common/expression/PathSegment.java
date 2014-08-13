@@ -244,6 +244,8 @@ public abstract class PathSegment{
       return true;
     if (obj == null)
       return false;
+    if (obj instanceof ArraySegment)
+      return true;
     if (getClass() != obj.getClass())
       return false;
 

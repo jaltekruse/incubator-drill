@@ -80,6 +80,10 @@ public class JSONRecordReader2 implements RecordReader{
     try{
       outside: while(true){
         writer.setPosition(i);
+        // TODO - DELETE ME, THIS IS JUST FASTER THAN USING A BREAKPOINT WITH A CONTITION IN THE IDE
+        if (i == 1000) {
+          Math.min(3,5);
+        }
 
         switch(jsonReader.write(writer)){
         case WRITE_SUCCEED:
@@ -93,12 +97,17 @@ public class JSONRecordReader2 implements RecordReader{
           if (i == 0) {
             throw new DrillRuntimeException("Record is too big to fit into allocated ValueVector");
           }
+          i--;
           break outside;
         };
       }
 
-
+      // TODO - DELETE ME, FOR DEBUGGING
+      try {
       writer.setValueCount(i);
+      } catch (Throwable t) {
+        throw t;
+      }
       return i;
 
     }catch(IOException e){

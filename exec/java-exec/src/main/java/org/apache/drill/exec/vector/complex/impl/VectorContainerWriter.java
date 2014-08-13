@@ -44,6 +44,10 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
     return mapVector.getField();
   }
 
+  public int getValueCapacity(){
+    return mapVector.getValueCapacity();
+  }
+
   public MapVector getMapVector() {
     return mapVector;
   }

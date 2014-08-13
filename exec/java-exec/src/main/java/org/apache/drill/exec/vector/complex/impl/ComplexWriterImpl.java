@@ -52,6 +52,10 @@ public class ComplexWriterImpl extends AbstractFieldWriter implements ComplexWri
     return container.getField();
   }
 
+  public int getValueCapacity(){
+    return container.getValueCapacity();
+  }
+
   private void check(Mode... modes){
     StateTool.check(mode, modes);
   }
@@ -168,7 +172,6 @@ public class ComplexWriterImpl extends AbstractFieldWriter implements ComplexWri
 
     return listRoot;
   }
-  
 
   private static class VectorAccessibleFacade extends MapVector {
 
