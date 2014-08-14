@@ -23,17 +23,21 @@ import java.util.List;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.store.RecordReader;
+import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.complex.fn.JsonReader;
 import org.apache.drill.exec.vector.complex.fn.JsonReaderWithState;
 import org.apache.drill.exec.vector.complex.fn.JsonRecordSplitter;
 import org.apache.drill.exec.vector.complex.fn.UTF8JsonRecordSplitter;
 import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
+import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
@@ -78,7 +82,7 @@ public class JSONRecordReader2 implements RecordReader{
     int i =0;
 
     try{
-      outside: while(true){
+      outside: while(true && i < BaseValueVector.INITIAL_VALUE_ALLOCATION){
         writer.setPosition(i);
         // TODO - DELETE ME, THIS IS JUST FASTER THAN USING A BREAKPOINT WITH A CONTITION IN THE IDE
         if (i == 1000) {
@@ -99,6 +103,20 @@ public class JSONRecordReader2 implements RecordReader{
           }
           break outside;
         };
+      }
+      for (SchemaPath sp :jsonReader.getNullColumns() ) {
+        BaseWriter.MapWriter fieldWriter = writer.rootAsMap();
+        PathSegment root = sp.getRootSegment();
+        while ( root.getChild() != null && ! root.getChild().isArray() ) {
+          if (root.getChild().getChild() == null || root.getChild().getChild().getArraySegment() != null) {
+            break;
+          }
+          else {
+            fieldWriter = fieldWriter.map(root.getChild().getNameSegment().getPath());
+            root = root.getChild();
+          }
+        }
+        fieldWriter.integer(root.getNameSegment().getPath());
       }
 
       // TODO - DELETE ME, FOR DEBUGGING

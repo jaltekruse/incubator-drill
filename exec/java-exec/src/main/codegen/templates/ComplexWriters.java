@@ -57,8 +57,8 @@ public class ${eName}WriterImpl extends AbstractFieldWriter {
     return vector.getField();
   }
 
-  public int getValueCapacity(){
-    return vector.getValueCapacity();
+  public void checkValueCapacity() {
+    inform(vector.getValueCapacity() > idx());
   }
 
   public void allocate(){
@@ -118,7 +118,7 @@ public class ${eName}WriterImpl extends AbstractFieldWriter {
       vector.setCurrentValueCount(idx());
     }
   }
-  
+
   </#if>
 
 }

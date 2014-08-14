@@ -44,8 +44,8 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
     return mapVector.getField();
   }
 
-  public int getValueCapacity(){
-    return mapVector.getValueCapacity();
+  public void checkValueCapacity(){
+    inform(mapVector.getValueCapacity() > idx());
   }
 
   public MapVector getMapVector() {

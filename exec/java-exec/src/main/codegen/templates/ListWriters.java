@@ -137,7 +137,11 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
   </#list></#list>
 
   public MaterializedField getField() {
-      return container.getField();
+    return container.getField();
+  }
+
+  public void checkValueCapacity() {
+    inform(container.getValueCapacity() > idx());
   }
 
 

@@ -23,6 +23,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.drill.common.expression.PathSegment;
@@ -52,6 +53,12 @@ public class JsonReader {
   private final JsonFactory factory = new JsonFactory();
   private JsonParser parser;
   private List<SchemaPath> columns;
+  // This is a parallel array for the field above to indicate if we have found any values in a
+  // given selected column. This allows for columns that are requested to receive a vector full of
+  // null values if no values were found in an entire read. The reason this needs to happen after
+  // all of the records have been read in a batch is to prevent a schema change when we actually find
+  // data in that column.
+  private boolean[] columnsFound;
 
   public JsonReader() throws IOException {
     this(null);
@@ -61,18 +68,37 @@ public class JsonReader {
     factory.configure(Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
     factory.configure(Feature.ALLOW_COMMENTS, true);
     this.columns = columns;
+    if (columns != null) {
+      this.columnsFound = new boolean[columns.size()];
+    }
   }
 
   private boolean fieldSelected(SchemaPath field){
     if (this.columns != null){
+      int i = 0;
       for (SchemaPath expr : this.columns){
         if ( field.containedBy(expr)){
+          columnsFound[i] = true;
           return true;
         }
+        i++;
       }
       return false;
     }
     return true;
+  }
+
+  public List<SchemaPath> getNullColumns() {
+    ArrayList<SchemaPath> nullColumns = new ArrayList<SchemaPath>();
+    if (columns == null ) {
+      return nullColumns;
+    }
+    for (int i = 0; i < columnsFound.length; i++ ) {
+      if ( ! columnsFound[i] ) {
+        nullColumns.add(columns.get(i));
+      }
+    }
+    return nullColumns;
   }
 
   public boolean write(Reader reader, ComplexWriter writer) throws JsonParseException, IOException {
@@ -184,6 +210,7 @@ public class JsonReader {
         break;
       }
       case VALUE_NULL:
+        map.checkValueCapacity();
         // do nothing as we don't have a type.
         break;
       case VALUE_NUMBER_FLOAT:

@@ -35,7 +35,7 @@ public interface BaseWriter extends Positionable{
   public interface MapWriter extends BaseWriter{
 
     MaterializedField getField();
-    int getValueCapacity();
+    void checkValueCapacity();
 
     <#list vv.types as type><#list type.minor as minor>
     <#assign lowerName = minor.class?uncap_first />

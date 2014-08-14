@@ -52,8 +52,8 @@ public class ComplexWriterImpl extends AbstractFieldWriter implements ComplexWri
     return container.getField();
   }
 
-  public int getValueCapacity(){
-    return container.getValueCapacity();
+  public void checkValueCapacity(){
+    inform(container.getValueCapacity() > idx());
   }
 
   private void check(Mode... modes){

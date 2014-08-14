@@ -47,6 +47,10 @@ public class JsonReaderWithState {
     this(splitter, null);
   }
 
+  public List<SchemaPath> getNullColumns() {
+    return jsonReader.getNullColumns();
+  }
+
   public WriteState write(ComplexWriter writer) throws JsonParseException, IOException {
     if (reader == null) {
       reader = splitter.getNextReader();

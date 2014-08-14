@@ -58,8 +58,8 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
       return container.getField();
   }
 
-  public int getValueCapacity(){
-    return container.getValueCapacity();
+  public void checkValueCapacity(){
+    inform(container.getValueCapacity() > idx());
   }
 
   public MapWriter map(String name){
@@ -161,7 +161,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
     FieldWriter writer = fields.get(name);
     if(writer == null){
       ${vectName}Vector vector = container.addOrGet(name, ${upperName}_TYPE, ${vectName}Vector.class);
-      AllocationHelper.allocate(vector, 1000, 100, 10);
+      vector.allocateNewSafe();
       writer = new ${vectName}WriterImpl(vector, this);
       writer.setPosition(${index});
       fields.put(name, writer);

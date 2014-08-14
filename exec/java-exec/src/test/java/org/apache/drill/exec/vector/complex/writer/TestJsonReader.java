@@ -49,6 +49,7 @@ import org.apache.drill.exec.vector.complex.impl.ComplexWriterImpl;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,7 +97,7 @@ public class TestJsonReader extends BaseTestQuery {
   @Test
   public void testSingleColumnRead_vector_fill_bug() throws Exception {
     String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
-    long[] rowCounts = {3377};
+    long[] rowCounts = {13512};
     String filename = "/store/json/single_column_long_file.json";
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
@@ -107,7 +108,7 @@ public class TestJsonReader extends BaseTestQuery {
   @Test
   public void testProjectPushdown() throws Exception {
     String[] queries = {Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8)};
-    long[] rowCounts = {2};
+    long[] rowCounts = {3};
     String filename = "/store/json/schema_change_int_to_string.json";
     runTestsOnFile(filename, UserBitShared.QueryType.PHYSICAL, queries, rowCounts);
 
@@ -156,12 +157,6 @@ public class TestJsonReader extends BaseTestQuery {
     vw.getValueVector().clear();
     batch.release();
     batchLoader.clear();
-  }
-
-  @Test
-  public void testDrill595() throws Exception {
-    test("with x as (select * from cp.`region.json`) select region_id, sales_city from x;" +
-        "select region_id, sales_city from ( select * from cp.`region.json`)");
   }
 
   @Test
