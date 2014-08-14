@@ -105,18 +105,18 @@ public class JSONRecordReader2 implements RecordReader{
         };
       }
       for (SchemaPath sp :jsonReader.getNullColumns() ) {
-        BaseWriter.MapWriter fieldWriter = writer.rootAsMap();
         PathSegment root = sp.getRootSegment();
-        while ( root.getChild() != null && ! root.getChild().isArray() ) {
-          if (root.getChild().getChild() == null || root.getChild().getChild().getArraySegment() != null) {
-            break;
-          }
-          else {
+        BaseWriter.MapWriter fieldWriter = writer.rootAsMap();
+        if (root.getChild() != null) {
+          fieldWriter = fieldWriter.map(root.getNameSegment().getPath());
+          while ( root.getChild().getChild() != null && ! root.getChild().getChild().isArray() ) {
             fieldWriter = fieldWriter.map(root.getChild().getNameSegment().getPath());
             root = root.getChild();
           }
+          fieldWriter.integer(root.getChild().getNameSegment().getPath());
+        } else  {
+          fieldWriter.integer(root.getNameSegment().getPath());
         }
-        fieldWriter.integer(root.getNameSegment().getPath());
       }
 
       // TODO - DELETE ME, FOR DEBUGGING

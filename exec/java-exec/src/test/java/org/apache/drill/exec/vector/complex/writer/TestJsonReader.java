@@ -38,6 +38,7 @@ import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.vector.IntVector;
 import org.apache.drill.exec.vector.NullableBigIntVector;
+import org.apache.drill.exec.vector.NullableIntVector;
 import org.apache.drill.exec.vector.RepeatedBigIntVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.MapVector;
@@ -120,7 +121,7 @@ public class TestJsonReader extends BaseTestQuery {
 
     QueryResultBatch batch = results.get(0);
     assertTrue(batchLoader.load(batch.getHeader().getDef(), batch.getData()));
-    assertEquals(3, batchLoader.getSchema().getFieldCount());
+    assertEquals(5, batchLoader.getSchema().getFieldCount());
 
     VectorWrapper<?> vw = batchLoader.getValueAccessorById(
         RepeatedBigIntVector.class, //
@@ -153,6 +154,22 @@ public class TestJsonReader extends BaseTestQuery {
     assertEquals("[]", vw.getValueVector().getAccessor().getObject(0).toString());
     assertEquals("[1,2,3]", vw.getValueVector().getAccessor().getObject(1).toString());
     assertEquals("[4,5,6]", vw.getValueVector().getAccessor().getObject(2).toString());
+
+    vw = batchLoader.getValueAccessorById(
+        NullableIntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("non_existent_at_root")).getFieldIds() //
+    );
+    assertNull(vw.getValueVector().getAccessor().getObject(0));
+    assertNull(vw.getValueVector().getAccessor().getObject(1));
+    assertNull(vw.getValueVector().getAccessor().getObject(2));
+
+    vw = batchLoader.getValueAccessorById(
+        NullableIntVector.class, //
+        batchLoader.getValueVectorId(SchemaPath.getCompoundPath("non_existent", "nested","field")).getFieldIds() //
+    );
+    assertNull(vw.getValueVector().getAccessor().getObject(0));
+    assertNull(vw.getValueVector().getAccessor().getObject(1));
+    assertNull(vw.getValueVector().getAccessor().getObject(2));
 
     vw.getValueVector().clear();
     batch.release();
