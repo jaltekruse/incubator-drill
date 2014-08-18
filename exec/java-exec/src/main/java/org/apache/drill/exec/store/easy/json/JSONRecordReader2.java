@@ -55,12 +55,14 @@ public class JSONRecordReader2 implements RecordReader{
   private JsonReaderWithState jsonReader;
   private int recordCount;
   private List<SchemaPath> columns;
+  private boolean enableAllTextMode;
 
   public JSONRecordReader2(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem,
                           List<SchemaPath> columns) throws OutOfMemoryException {
     this.hadoopPath = new Path(inputPath);
     this.fileSystem = fileSystem;
     this.columns = columns;
+    enableAllTextMode = fragmentContext.getDrillbitContext().getOptionManager().getOption("store.json.all_text_mode").bool_val;
   }
 
   @Override
@@ -70,7 +72,7 @@ public class JSONRecordReader2 implements RecordReader{
       JsonRecordSplitter splitter = new UTF8JsonRecordSplitter(stream);
       this.writer = new VectorContainerWriter(output);
       this.mutator = output;
-      jsonReader = new JsonReaderWithState(splitter, columns);
+      jsonReader = new JsonReaderWithState(splitter, columns, enableAllTextMode);
     }catch(IOException e){
       throw new ExecutionSetupException("Failure reading JSON file.", e);
     }

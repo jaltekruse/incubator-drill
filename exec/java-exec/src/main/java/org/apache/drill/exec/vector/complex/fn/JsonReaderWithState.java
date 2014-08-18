@@ -37,14 +37,14 @@ public class JsonReaderWithState {
   private JsonRecordSplitter splitter;
   private JsonReader jsonReader;
 
-  public JsonReaderWithState(JsonRecordSplitter splitter, List<SchemaPath> columns) throws IOException {
+  public JsonReaderWithState(JsonRecordSplitter splitter, List<SchemaPath> columns, boolean allTextMode) throws IOException {
     this.splitter = splitter;
     reader = splitter.getNextReader();
-    jsonReader = new JsonReader(columns);
+    jsonReader = new JsonReader(columns, allTextMode);
   }
 
   public JsonReaderWithState(JsonRecordSplitter splitter) throws IOException{
-    this(splitter, null);
+    this(splitter, null, false);
   }
 
   public List<SchemaPath> getNullColumns() {
