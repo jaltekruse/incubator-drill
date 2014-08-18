@@ -94,7 +94,7 @@ public class TestJsonReader extends BaseTestQuery {
         System.out.println("======");
       }
       int rowCount = testRunAndPrint(queryType, query);
-      assertEquals( rowCount, rowCounts[i]);
+      assertEquals(rowCounts[i], rowCount);
       System.out.println();
       i++;
     }
@@ -105,6 +105,33 @@ public class TestJsonReader extends BaseTestQuery {
     String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
     long[] rowCounts = {13512};
     String filename = "/store/json/single_column_long_file.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testAllTextMode() throws Exception {
+    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/schema_change_int_to_string.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testNullWhereListExpected() throws Exception {
+    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/null_where_list_expected.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/null_where_list_expected.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testNullWhereMapExpected() throws Exception {
+//    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/null_where_map_expected.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/null_where_map_expected.json";
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
 
