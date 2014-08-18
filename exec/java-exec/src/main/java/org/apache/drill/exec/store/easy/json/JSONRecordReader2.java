@@ -59,6 +59,7 @@ public class JSONRecordReader2 extends AbstractRecordReader {
   private FragmentContext fragmentContext;
   private OperatorContext operatorContext;
   private List<SchemaPath> columns;
+  private boolean enableAllTextMode;
 
   public JSONRecordReader2(FragmentContext fragmentContext, String inputPath, FileSystem fileSystem,
                           List<SchemaPath> columns) throws OutOfMemoryException {
@@ -66,6 +67,7 @@ public class JSONRecordReader2 extends AbstractRecordReader {
     this.fileSystem = fileSystem;
     this.fragmentContext = fragmentContext;
     this.columns = columns;
+    enableAllTextMode = fragmentContext.getDrillbitContext().getOptionManager().getOption("store.json.all_text_mode").bool_val;
   }
 
   @Override
@@ -75,7 +77,7 @@ public class JSONRecordReader2 extends AbstractRecordReader {
       JsonRecordSplitter splitter = new UTF8JsonRecordSplitter(stream);
       this.writer = new VectorContainerWriter(output);
       this.mutator = output;
-      jsonReader = new JsonReaderWithState(splitter, fragmentContext.getManagedBuffer(), columns);
+      jsonReader = new JsonReaderWithState(splitter, fragmentContext.getManagedBuffer(), columns, enableAllTextMode);
     }catch(Exception e){
       handleAndRaise("Failure reading JSON file.", e);
     }
