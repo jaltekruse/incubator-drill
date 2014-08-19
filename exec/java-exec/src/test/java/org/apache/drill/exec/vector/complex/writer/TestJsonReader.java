@@ -108,6 +108,42 @@ public class TestJsonReader extends BaseTestQuery {
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
 
+  @Test
+  public void testAllTextMode() throws Exception {
+    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/schema_change_int_to_string.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testNullWhereListExpected() throws Exception {
+    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/null_where_list_expected.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/null_where_list_expected.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testNullWhereMapExpected() throws Exception {
+//    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/null_where_map_expected.json`"};
+    long[] rowCounts = {3};
+    String filename = "/store/json/null_where_map_expected.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
+  public void testDrill_1258() throws Exception {
+//    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select t.a[1].x from cp.`/store/json/drill_1258_data.json` t"};
+    long[] rowCounts = {2};
+    String filename = "/store/json/drill_1258_data.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
   // The project pushdown rule is correctly adding the projected columns to the scan, however it is not removing
   // the redundant project operator after the scan, this tests runs a physical plan generated from one of the tests to
   // ensure that the project is filtering out the correct data in the scan alone
