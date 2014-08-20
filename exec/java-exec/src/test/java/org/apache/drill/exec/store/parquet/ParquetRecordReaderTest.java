@@ -146,6 +146,12 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   }
 
   @Test
+  public void testDrill_1314() throws Exception {
+    testFull(QueryType.SQL, "select l_partkey " +
+        "from dfs.`/tmp/drill_1314.parquet`", "", 1,1, 10000, false);
+  }
+
+  @Test
   public void testDictionaryError_419() throws Exception {
     testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, 150000, false);
   }

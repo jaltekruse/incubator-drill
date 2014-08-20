@@ -58,7 +58,7 @@ public class ColumnReaderFactory {
    */
   static ColumnReader createFixedColumnReader(ParquetRecordReader recordReader, boolean fixedLength, int maxDefinitionLevel,
                                               int maxRepetitionLevel, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, int allocateSize, ValueVector v,
-                                              SchemaElement schemaElement)
+                                              SchemaElement schemaElement, boolean generateDictionaryReader)
       throws Exception {
     ConvertedType convertedType = schemaElement.getConverted_type();
     // if the column is required, or repeated (in which case we just want to use this to generate our appropriate
@@ -82,7 +82,7 @@ public class ColumnReaderFactory {
       } else if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
         return new FixedByteAlignedReader.DateReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       } else{
-        if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
+        if ( generateDictionaryReader && columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
           switch (columnChunkMetaData.getType()) {
             case INT32:
               return new ParquetFixedWidthDictionaryReaders.DictionaryIntReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (IntVector) v, schemaElement);
@@ -182,7 +182,15 @@ public class ColumnReaderFactory {
                                         columnChunkMetaData,
                                         allocateSize,
                                         valueVec.getValuesVector(),
-                                        schemaElement));
+                                        schemaElement, true),
+                                     (FixedByteAlignedReader) createFixedColumnReader(parentReader, fixedLength,
+                                        0,
+                                        0,
+                                        columnDescriptor,
+                                        columnChunkMetaData,
+                                        allocateSize,
+                                        valueVec.getValuesVector(),
+                                        schemaElement, false));
 //    if (! columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
 //      return new NullableFixedByteAlignedReaders.NullableFixedByteAlignedReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
 //          fixedLength, valueVec, schemaElement);

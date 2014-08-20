@@ -257,14 +257,14 @@ public class ParquetRecordReader implements RecordReader {
           if (column.getMaxRepetitionLevel() > 0) {
             ColumnReader dataReader = ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength,
                 column.getMaxDefinitionLevel(), column.getMaxRepetitionLevel(), column, columnChunkMetaData, recordsPerBatch,
-                ((RepeatedFixedWidthVector) v).getMutator().getDataVector(), schemaElement);
+                ((RepeatedFixedWidthVector) v).getMutator().getDataVector(), schemaElement, false);
             varLengthColumns.add(new FixedWidthRepeatedReader(this, dataReader,
                 getTypeLengthInBits(column.getType()), -1, column, columnChunkMetaData, false, v, schemaElement));
           }
           else {
             columnStatuses.add(ColumnReaderFactory.createFixedColumnReader(this, fieldFixedLength,
                 column.getMaxDefinitionLevel(), column.getMaxRepetitionLevel(), column, columnChunkMetaData, recordsPerBatch, v,
-                schemaElement));
+                schemaElement, false));
           }
         } else {
           // create a reader and add it to the appropriate list

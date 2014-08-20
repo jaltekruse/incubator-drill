@@ -37,15 +37,20 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
   BaseValueVector castedBaseVector;
   NullableVectorDefinitionSetter castedVectorMutator;
   FixedByteAlignedReader nonNullableReader;
+  FixedByteAlignedReader nonNullableDictionaryReader;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                boolean fixedLength, V v, SchemaElement schemaElement,
-               FixedByteAlignedReader nonNullableReader) throws ExecutionSetupException {
+               FixedByteAlignedReader nonNullableDictionaryReader, FixedByteAlignedReader nonNullableReader) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     castedBaseVector = (BaseValueVector) v;
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
     this.nonNullableReader = nonNullableReader;
+    this.nonNullableDictionaryReader = nonNullableDictionaryReader;
     this.nonNullableReader.pageReader = this.pageReader;
+    if (this.nonNullableDictionaryReader != null) {
+      this.nonNullableDictionaryReader.pageReader = this.pageReader;
+    }
   }
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
@@ -113,7 +118,6 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         pageReader.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
 
-        nonNullableReader.vectorData = castedBaseVector.getData();
         readField(runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
@@ -142,6 +146,12 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
 
   @Override
   protected void readField(long recordsToRead) {
-    nonNullableReader.readField(recordsToRead);
+    FixedByteAlignedReader currNonNullableReader;
+    if (usingDictionary)
+      currNonNullableReader = nonNullableDictionaryReader;
+    else
+      currNonNullableReader = nonNullableReader;
+    currNonNullableReader.vectorData = castedBaseVector.getData();
+    currNonNullableReader.readField(recordsToRead);
   }
 }
