@@ -49,13 +49,21 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
   protected ValueVector innerVector;
   
   <#if mode == "Repeated">private int currentChildIndex = 0;</#if>
-  ${mode}ListWriter(String name, ${containerClass} container, FieldWriter parent){
-    super(parent);
-    this.name = name;
-    this.container = container;
-  }
-  
-  
+
+  <#if mode == "Single">
+    public ${mode}ListWriter(String name, ${containerClass} container, FieldWriter parent){
+      super(parent);
+      this.name = name;
+      this.container = container;
+    }
+  <#else>
+    public ${mode}ListWriter(${containerClass} container, FieldWriter parent){
+      super(parent);
+      this.name = null;
+      this.container = container;
+    }
+  </#if>
+
   public void allocate(){
     if(writer != null) writer.allocate();
     <#if mode == "Repeated">
@@ -96,7 +104,7 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
       int vectorCount = container.size();
       RepeatedListVector vector = container.addOrGet(name, RepeatedListVector.TYPE, RepeatedListVector.class);
       innerVector = vector;
-      writer = new RepeatedListWriter(null, vector, this);
+      writer = new RepeatedListWriter(vector, this);
       if(vectorCount != container.size()) writer.allocate();
       writer.setPosition(${index});
       mode = Mode.IN_LIST;
