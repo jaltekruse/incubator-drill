@@ -43,7 +43,8 @@ public interface BaseReader extends Positionable{
   }
   
   public interface ListReader extends BaseReader{
-    FieldReader reader(); 
+    FieldReader reader();
+    void copyAsValue(ListWriter writer);
   }
   
   public interface RepeatedListReader extends ListReader{

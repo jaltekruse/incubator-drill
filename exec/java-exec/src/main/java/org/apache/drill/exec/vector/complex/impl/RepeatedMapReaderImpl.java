@@ -28,6 +28,7 @@ import org.apache.drill.exec.expr.holders.RepeatedMapHolder;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.RepeatedMapVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.MapWriter;
 
 import com.google.common.collect.Maps;
