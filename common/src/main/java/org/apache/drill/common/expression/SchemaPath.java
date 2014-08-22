@@ -199,7 +199,7 @@ public class SchemaPath extends LogicalExpressionBase {
     return rootSegment.equals(other.rootSegment);
   }
 
-  public boolean containedBy(Object obj) {
+  public boolean contains(Object obj) {
     if (this == obj)
       return true;
     if (obj == null)
@@ -211,7 +211,7 @@ public class SchemaPath extends LogicalExpressionBase {
     if (rootSegment == null) {
       return true;
     }
-    return rootSegment.containedBy(other.rootSegment);
+    return rootSegment.contains(other.rootSegment);
 
   }
 

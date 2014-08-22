@@ -144,11 +144,6 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
     inform(container.getValueCapacity() > idx());
   }
 
-
-  public int getValueCapacity(){
-      return container.getValueCapacity();
-  }
-
   <#if mode == "Repeated">
   public void start(){
     if(ok()){

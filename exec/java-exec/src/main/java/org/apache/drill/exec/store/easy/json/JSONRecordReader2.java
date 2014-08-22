@@ -72,7 +72,7 @@ public class JSONRecordReader2 implements RecordReader{
       this.mutator = output;
       jsonReader = new JsonReaderWithState(splitter, columns);
     }catch(IOException e){
-      throw new ExecutionSetupException("Failure reading JSON file.", e);
+      handleAndRaise("Failure reading JSON file.", e);
     }
   }
 
@@ -131,10 +131,12 @@ public class JSONRecordReader2 implements RecordReader{
       return recordCount;
 
     } catch (JsonParseException e) {
-      throw new RuntimeException(e);
+      handleAndRaise("Error parsing JSON.", e);
     } catch (IOException e) {
-      throw new RuntimeException(e);
+      handleAndRaise("Error reading JSON.", e);
     }
+    // this is never reached
+    return 0;
   }
 
   @Override

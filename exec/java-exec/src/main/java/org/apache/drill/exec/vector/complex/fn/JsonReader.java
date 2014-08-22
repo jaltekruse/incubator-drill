@@ -61,6 +61,9 @@ public class JsonReader {
   // all of the records have been read in a batch is to prevent a schema change when we actually find
   // data in that column.
   private boolean[] columnsFound;
+  // A flag set at setup time if the start column is in the requested column list, prevents
+  // doing a more computational intensive check if we are supposed to be reading a column
+  private boolean starRequested;
 
   public JsonReader() throws IOException {
     this(null);
@@ -70,31 +73,39 @@ public class JsonReader {
     factory.configure(Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
     factory.configure(Feature.ALLOW_COMMENTS, true);
     this.columns = columns;
-    if (columns != null) {
-      this.columnsFound = new boolean[columns.size()];
+    // TODO - remove this check once the optimizer is updated to push down * instead of a null list
+    if (this.columns == null) {
+      this.columns = new ArrayList();
+      this.columns.add(new SchemaPath(new PathSegment.NameSegment("*")));
     }
+    this.columnsFound = new boolean[this.columns.size()];
+    this.starRequested = containsStar();
+  }
+
+  private boolean containsStar() {
+    for (SchemaPath expr : this.columns){
+      if (expr.getRootSegment().getPath().equals("*"))
+        return true;
+    }
+    return false;
   }
 
   private boolean fieldSelected(SchemaPath field){
-    if (this.columns != null){
-      int i = 0;
-      for (SchemaPath expr : this.columns){
-        if ( field.containedBy(expr)){
-          columnsFound[i] = true;
-          return true;
-        }
-        i++;
+    if (starRequested)
+      return true;
+    int i = 0;
+    for (SchemaPath expr : this.columns){
+      if ( expr.contains(field)){
+        columnsFound[i] = true;
+        return true;
       }
-      return false;
+      i++;
     }
-    return true;
+    return false;
   }
 
   public List<SchemaPath> getNullColumns() {
     ArrayList<SchemaPath> nullColumns = new ArrayList<SchemaPath>();
-    if (columns == null ) {
-      return nullColumns;
-    }
     for (int i = 0; i < columnsFound.length; i++ ) {
       if ( ! columnsFound[i] ) {
         nullColumns.add(columns.get(i));
@@ -131,6 +142,33 @@ public class JsonReader {
     return true;
   }
 
+  private void consumeEntireNextValue(JsonParser parser) throws IOException {
+    switch(parser.nextToken()){
+      case START_ARRAY:
+      case START_OBJECT:
+        int arrayAndObjectCounter = 1;
+        skipArrayLoop: while (true) {
+          switch(parser.nextToken()) {
+            case START_ARRAY:
+            case START_OBJECT:
+              arrayAndObjectCounter++;
+              break;
+            case END_ARRAY:
+            case END_OBJECT:
+              arrayAndObjectCounter--;
+              if (arrayAndObjectCounter == 0) {
+                break skipArrayLoop;
+              }
+              break;
+          }
+        }
+        break;
+      default:
+        // hit a single value, do nothing as the token was already read
+        // in the switch statement
+        break;
+    }
+  }
 
   private void writeData(MapWriter map) throws JsonParseException, IOException {
     //
@@ -141,51 +179,15 @@ public class JsonReader {
 
       assert t == JsonToken.FIELD_NAME : String.format("Expected FIELD_NAME but got %s.", t.name());
       final String fieldName = parser.getText();
-      SchemaPath path = null;
+      SchemaPath path;
       if (map.getField().getPath().getRootSegment().getPath().equals("")) {
         path = new SchemaPath(new PathSegment.NameSegment(fieldName));
       } else {
         path = map.getField().getPath().getChild(fieldName);
       }
       if ( ! fieldSelected(path) ) {
-        switch(parser.nextToken()){
-          case START_ARRAY:
-            int arrayCounter = 1;
-            skipArrayLoop: while (true) {
-              switch(parser.nextToken()) {
-                case START_ARRAY:
-                  arrayCounter++;
-                  break;
-                case END_ARRAY:
-                  arrayCounter--;
-                  if (arrayCounter == 0) {
-                    break skipArrayLoop;
-                  }
-                  break;
-              }
-            }
-            continue outside;
-          case START_OBJECT:
-            int objectCounter = 1;
-            skipObjectLoop: while (true) {
-              switch(parser.nextToken()) {
-                case START_OBJECT:
-                  objectCounter++;
-                  break;
-                case END_OBJECT:
-                  objectCounter--;
-                  if (objectCounter == 0) {
-                    break skipObjectLoop;
-                  }
-                  break;
-              }
-            }
-            continue outside;
-          default:
-            // hit a single value, do nothing as the token was already read
-            // in the switch statement
-            continue outside;
-        }
+        consumeEntireNextValue(parser);
+        continue outside;
       }
 
       switch(parser.nextToken()){
