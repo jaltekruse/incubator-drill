@@ -91,10 +91,14 @@ final class PageReader {
 
   List<ByteBuf> allocatedBuffers;
 
+  // These need to be held throughout reading of the entire column chunk
+  List<ByteBuf> allocatedDictionaryBuffers;
+
   PageReader(ColumnReader parentStatus, FileSystem fs, Path path, ColumnChunkMetaData columnChunkMetaData)
     throws ExecutionSetupException{
     this.parentColumnReader = parentStatus;
     allocatedBuffers = new ArrayList<ByteBuf>();
+    allocatedDictionaryBuffers = new ArrayList<ByteBuf>();
 
     long totalByteLength = columnChunkMetaData.getTotalUncompressedSize();
     long start = columnChunkMetaData.getFirstDataPageOffset();
@@ -108,7 +112,7 @@ final class PageReader {
 
         BytesInput bytesIn;
         ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
-        allocatedBuffers.add(uncompressedData);
+        allocatedDictionaryBuffers.add(uncompressedData);
         if(parentColumnReader.columnChunkMetaData.getCodec()==CompressionCodecName.UNCOMPRESSED) {
           dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
           bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
@@ -157,6 +161,7 @@ final class PageReader {
     if(!dataReader.hasRemainder() || parentColumnReader.totalValuesRead == parentColumnReader.columnChunkMetaData.getValueCount()) {
       return false;
     }
+    clearBuffers();
 
     // next, we need to decompress the bytes
     // TODO - figure out if we need multiple dictionary pages, I believe it may be limited to one
@@ -168,7 +173,7 @@ final class PageReader {
         //TODO: Handle buffer allocation exception
         BytesInput bytesIn;
         ByteBuf uncompressedData=allocateBuffer(pageHeader.getUncompressed_page_size());
-        allocatedBuffers.add(uncompressedData);
+        allocatedDictionaryBuffers.add(uncompressedData);
         if( parentColumnReader.columnChunkMetaData.getCodec()== CompressionCodecName.UNCOMPRESSED) {
           dataReader.getPageAsBytesBuf(uncompressedData, pageHeader.compressed_page_size);
           bytesIn=parentColumnReader.parentReader.getCodecFactoryExposer().getBytesInput(uncompressedData,
@@ -275,13 +280,27 @@ final class PageReader {
     return true;
   }
 
+  public void clearBuffers() {
+    for (ByteBuf b : allocatedBuffers) {
+      b.release();
+    }
+    allocatedBuffers.clear();
+  }
+
+  public void clearDictionaryBuffers() {
+    for (ByteBuf b : allocatedDictionaryBuffers) {
+      b.release();
+    }
+    allocatedDictionaryBuffers.clear();
+
+  }
+
   public void clear(){
     this.dataReader.clear();
     // Free all memory, including fixed length types. (Data is being copied for all types not just var length types)
     //if(!this.parentColumnReader.isFixedLength) {
-      for (ByteBuf b : allocatedBuffers) {
-        b.release();
-      }
+    clearBuffers();
+    clearDictionaryBuffers();
     //}
   }
 
