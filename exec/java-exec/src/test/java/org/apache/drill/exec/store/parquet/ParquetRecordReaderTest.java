@@ -82,7 +82,7 @@ import com.google.common.io.Files;
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
-  static boolean VERBOSE_DEBUG = true;
+  static boolean VERBOSE_DEBUG = false;
 
   static final int numberRowGroups = 1;
   static final int recordsPerRowGroup = 300;
