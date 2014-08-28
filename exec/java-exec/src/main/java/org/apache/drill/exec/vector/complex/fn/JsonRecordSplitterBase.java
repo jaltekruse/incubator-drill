@@ -29,6 +29,7 @@ public abstract class JsonRecordSplitterBase implements JsonRecordSplitter {
   private static final int OPEN_CBRACKET = '{';
   private static final int OPEN_BRACKET = '[';
   private static final int CLOSE_CBRACKET = '}';
+  private static final int COMMA = ',';
   private static final int CLOSE_BRACKET = ']';
   private static final int ESCAPE = '\\';
   private static final int LITERAL = '"';
@@ -62,6 +63,7 @@ public abstract class JsonRecordSplitterBase implements JsonRecordSplitter {
     long endOffset = start;
     long curBytes = 0;
     int cur;
+    int bracketCount = 0;
     outside: while(true) {
       cur = readNext();
       endOffset++;
@@ -89,15 +91,20 @@ public abstract class JsonRecordSplitterBase implements JsonRecordSplitter {
           break;
         case CLOSE_BRACKET:
         case CLOSE_CBRACKET:
+          bracketCount--;
           inCandidate = !inLiteral;
           break;
         case OPEN_BRACKET:
         case OPEN_CBRACKET:
-          if(inCandidate){
+          bracketCount++;
+          if(bracketCount == 1 && inCandidate){
             found = true;
             break outside;
           }
           break;
+        case COMMA:
+          if (bracketCount == 0)
+            break;
 
         case SPACE:
         case TAB:

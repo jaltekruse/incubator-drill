@@ -1,0 +1,10 @@
+{"name":"trans_id","class":"id", "start":24100 },
+ {"name":"date", "class":"date", "format":"MM/dd/yyyy", "start":"01/01/2014", "end":"08/05/2014"},
+  {"name":"time", "class":"date", "format":"HH:mm:ss"},
+    {"name":"cust_id", "class":"foreign-key", "size":200000,"skew":1},
+    {"name":"device", "class":"string", "dist":{"IOS5":0.90, "IOS6":0.10, "IOS7":0.10, "AOS4.2":0.10, "AOS4.3":0.10, "AOS4.4":0.10 }},
+    {"name":"state", "class":"state"},
+    {"name":"camp_id", "class":"foreign-key", "size":19},
+    {"name":"keywords", "class":"word" },
+    {"name":"prod_id", "class": "foreign-key", "size":549},
+    {"name":"purch_flag", "class":"string", "dist":{"false":0.90, "true":0.10 }}

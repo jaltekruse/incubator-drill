@@ -64,7 +64,7 @@ public class TestJsonReader extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestJsonReader.class);
 
   private static BufferAllocator allocator;
-  private static final boolean VERBOSE_DEBUG = false;
+  private static final boolean VERBOSE_DEBUG = true;
 
   @BeforeClass
   public static void setupAllocator(){
@@ -103,7 +103,27 @@ public class TestJsonReader extends BaseTestQuery {
   }
 
   @Test
+  public void testRecordsWithCommaSeparators() throws Exception {
+    test("alter system set `store.json.all_text_mode` = false");
+    String[] queries = {"select * from cp.`/store/json/json_records_comma_separated.json`"};
+    long[] rowCounts = {2};
+    String filename = "/store/json/json_records_comma_separated.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+
+  @Test
+  public void testRecordsWithCommaSeparatorsLonger() throws Exception {
+    test("alter system set `store.json.all_text_mode` = true");
+    String[] queries = {"select * from cp.`/store/json/json_comma_separated_records_longer.json`"};
+    long[] rowCounts = {10};
+    String filename = "/store/json/json_comma_separated_records_longer.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
   public void testSingleColumnRead_vector_fill_bug() throws Exception {
+    test("alter system set `store.json.all_text_mode` = false");
     String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
     long[] rowCounts = {13512};
     String filename = "/store/json/single_column_long_file.json";
@@ -112,12 +132,14 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void testNonExistentColumnReadAlone() throws Exception {
+    test("alter system set `store.json.all_text_mode` = false");
     String[] queries = {"select non_existent_column from cp.`/store/json/single_column_long_file.json`"};
     long[] rowCounts = {13512};
     String filename = "/store/json/single_column_long_file.json";
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
 
+  @Test
   public void testAllTextMode() throws Exception {
     test("alter system set `store.json.all_text_mode` = true");
     String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
@@ -128,6 +150,7 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void readComplexWithStar() throws Exception {
+    test("alter system set `store.json.all_text_mode` = false");
     List<QueryResultBatch> results = testSqlWithResults("select * from cp.`/store/json/test_complex_read_with_star.json`");
     assertEquals(2, results.size());
 
@@ -165,6 +188,7 @@ public class TestJsonReader extends BaseTestQuery {
   // ensure that the project is filtering out the correct data in the scan alone
   @Test
   public void testProjectPushdown() throws Exception {
+    test("alter system set `store.json.all_text_mode` = false");
     String[] queries = {Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8)};
     long[] rowCounts = {3};
     String filename = "/store/json/schema_change_int_to_string.json";
@@ -240,6 +264,7 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void testReader() throws Exception{
+    test("alter system set `store.json.all_text_mode` = false");
     final int repeatSize = 10;
 
     String simple = " { \"b\": \"hello\", \"c\": \"goodbye\"}\n " +

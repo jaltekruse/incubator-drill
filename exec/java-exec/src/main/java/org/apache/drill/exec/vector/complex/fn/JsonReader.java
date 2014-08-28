@@ -333,7 +333,7 @@ public class JsonReader {
           handleString("null", list);
           break;
         }
-        throw new DrillRuntimeException("Null values are not supported in lists be default. " +
+        throw new DrillRuntimeException("Null values are not supported in lists by default. " +
             "Please set jason_all_text_mode to true to read lists containing nulls. " +
             "Be advised that this will treat JSON null values as string containing the word 'null'.");
       case VALUE_NUMBER_FLOAT:
