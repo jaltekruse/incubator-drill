@@ -33,7 +33,6 @@ import org.apache.drill.jdbc.Driver;
 import org.apache.drill.jdbc.JdbcTest;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -111,7 +110,6 @@ public class TestJdbcDistQuery extends JdbcTest{
         + "ORDER BY R_REGIONKEY", WORKING_PATH));
   }
 
-  @Ignore
   @Test
   public void testJoinSingleFile() throws Exception{
     testQuery(String.format("select T1.R_REGIONKEY "
@@ -120,7 +118,6 @@ public class TestJdbcDistQuery extends JdbcTest{
         + "on T1.R_REGIONKEY = T2.N_REGIONKEY", WORKING_PATH, WORKING_PATH));
   }
 
-  @Ignore
   @Test
   public void testJoinMultiFile() throws Exception{
     testQuery(String.format("select T1.R_REGIONKEY "
@@ -129,7 +126,6 @@ public class TestJdbcDistQuery extends JdbcTest{
         + "on T1.R_REGIONKEY = T2.N_REGIONKEY", WORKING_PATH, WORKING_PATH));
   }
 
-  @Ignore
   @Test
   public void testJoinMFileWhere() throws Exception{
     testQuery(String.format("select T1.R_REGIONKEY, T1.R_NAME "
@@ -163,7 +159,6 @@ public class TestJdbcDistQuery extends JdbcTest{
         + "order by R_REGIONKEY ", WORKING_PATH ));
   }
 
-  @Ignore
   @Test
   public void testJoinAggSortWhere() throws Exception{
     testQuery(String.format("select T1.R_REGIONKEY, COUNT(1) as CNT "
