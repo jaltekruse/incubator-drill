@@ -147,7 +147,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
 
   @Test
   public void testNonNullableDictionaries() throws Exception {
-    testFull(QueryType.SQL, "select myint from dfs.`/tmp/drilltest/non_nullable_dictionary.parquet`", "", 1, 1, 100000, false);
+    testFull(QueryType.SQL, "select * from dfs.`/tmp/drilltest/non_nullable_dictionary.parquet`", "", 1, 1, 30000000, false);
   }
 
   @Test
