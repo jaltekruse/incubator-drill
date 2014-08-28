@@ -161,7 +161,8 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
 
   public void clear() {
     super.clear();
-    nonNullableDictionaryReader.clear();
+    if (nonNullableDictionaryReader != null)
+      nonNullableDictionaryReader.clear();
     nonNullableReader.clear();
   }
 }

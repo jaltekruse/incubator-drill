@@ -58,7 +58,7 @@ public class ColumnReaderFactory {
    */
   static ColumnReader createFixedColumnReader(ParquetRecordReader recordReader, boolean fixedLength, int maxDefinitionLevel,
                                               int maxRepetitionLevel, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData, int allocateSize, ValueVector v,
-                                              SchemaElement schemaElement, boolean generateDictionaryReader)
+                                              SchemaElement schemaElement, boolean avoidDictionary)
       throws Exception {
     ConvertedType convertedType = schemaElement.getConverted_type();
     // if the column is required, or repeated (in which case we just want to use this to generate our appropriate
@@ -82,19 +82,9 @@ public class ColumnReaderFactory {
       } else if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
         return new FixedByteAlignedReader.DateReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
       } else{
-        if ( generateDictionaryReader || columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
-          switch (columnChunkMetaData.getType()) {
-            case INT32:
-              return new ParquetFixedWidthDictionaryReaders.DictionaryIntReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (IntVector) v, schemaElement);
-            case INT64:
-              return new ParquetFixedWidthDictionaryReaders.DictionaryBigIntReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (BigIntVector) v, schemaElement);
-            case FLOAT:
-              return new ParquetFixedWidthDictionaryReaders.DictionaryFloat4Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Float4Vector) v, schemaElement);
-            case DOUBLE:
-              return new ParquetFixedWidthDictionaryReaders.DictionaryFloat8Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Float8Vector) v, schemaElement);
-            default:
-              throw new ExecutionSetupException("Unsupported dictionary column type " + descriptor.getType().name() );
-          }
+        if ( columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY) && ! avoidDictionary ) {
+          return getDictionaryReader(recordReader, allocateSize, descriptor, columnChunkMetaData,
+              fixedLength, v, schemaElement);
         } else {
           return new FixedByteAlignedReader(recordReader, allocateSize, descriptor, columnChunkMetaData,
               fixedLength, v, schemaElement);
@@ -105,26 +95,29 @@ public class ColumnReaderFactory {
       if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.BOOLEAN){
         return new NullableBitReader(recordReader, allocateSize, descriptor, columnChunkMetaData,
             fixedLength, v, schemaElement);
-//      } else if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.INT32 && convertedType == ConvertedType.DATE){
-//        return new NullableFixedByteAlignedReaders.NullableDateReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-//      } else if (columnChunkMetaData.getType() == PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY ) {
-//        if (convertedType == null ) {
-//          // TODO - implement this
-//          throw new Exception("Nullable fixed binary not yet implemented");
-//        } else if ( convertedType == ConvertedType.DECIMAL) {
-//          int length = schemaElement.type_length;
-//          if (length <= 12) {
-//            return new NullableFixedByteAlignedReaders.NullableDecimal28Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-//          } else if (length <= 16) {
-//            return new NullableFixedByteAlignedReaders.NullableDecimal38Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
-//          }
-//        }
       } else {
         return getNullableColumnReader(recordReader, allocateSize, descriptor,
             columnChunkMetaData, fixedLength, (NullableVector) v, schemaElement);
       }
     }
     throw new Exception("Unexpected parquet metadata configuration.");
+  }
+
+  static ColumnReader getDictionaryReader(ParquetRecordReader recordReader, int allocateSize, ColumnDescriptor descriptor,
+                                         ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, ValueVector v,
+                                         SchemaElement schemaElement) throws ExecutionSetupException {
+    switch (columnChunkMetaData.getType()) {
+      case INT32:
+        return new ParquetFixedWidthDictionaryReaders.DictionaryIntReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (IntVector) v, schemaElement);
+      case INT64:
+        return new ParquetFixedWidthDictionaryReaders.DictionaryBigIntReader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (BigIntVector) v, schemaElement);
+      case FLOAT:
+        return new ParquetFixedWidthDictionaryReaders.DictionaryFloat4Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Float4Vector) v, schemaElement);
+      case DOUBLE:
+        return new ParquetFixedWidthDictionaryReaders.DictionaryFloat8Reader(recordReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, (Float8Vector) v, schemaElement);
+      default:
+        throw new ExecutionSetupException("Unsupported dictionary column type " + descriptor.getType().name() );
+    }
   }
 
   static VarLengthValuesColumn getReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
@@ -173,16 +166,20 @@ public class ColumnReaderFactory {
                                                              boolean fixedLength,
                                                              NullableVector valueVec,
                                                              SchemaElement schemaElement) throws Exception {
+    FixedByteAlignedReader dictionaryReader = null;
+
+    if (columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
+      getDictionaryReader(parentReader,
+          0,
+          columnDescriptor,
+          columnChunkMetaData,
+          fixedLength,
+          valueVec.getValuesVector(),
+          schemaElement);
+    }
     return new NullableColumnReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
                                     fixedLength, valueVec, schemaElement,
-                                    (FixedByteAlignedReader) createFixedColumnReader(parentReader, fixedLength,
-                                        0,
-                                        0,
-                                        columnDescriptor,
-                                        columnChunkMetaData,
-                                        allocateSize,
-                                        valueVec.getValuesVector(),
-                                        schemaElement, true),
+                                    dictionaryReader,
                                      (FixedByteAlignedReader) createFixedColumnReader(parentReader, fixedLength,
                                         0,
                                         0,
@@ -190,30 +187,6 @@ public class ColumnReaderFactory {
                                         columnChunkMetaData,
                                         allocateSize,
                                         valueVec.getValuesVector(),
-                                        schemaElement, false));
-//    if (! columnChunkMetaData.getEncodings().contains(Encoding.PLAIN_DICTIONARY)) {
-//      return new NullableFixedByteAlignedReaders.NullableFixedByteAlignedReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
-//          fixedLength, valueVec, schemaElement);
-//    } else {
-//      if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.INT64) {
-//        return new NullableFixedByteAlignedReaders.NullableDictionaryBigIntReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
-//            fixedLength, (NullableBigIntVector)valueVec, schemaElement);
-//      }
-//      else if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.INT32) {
-//        return new NullableFixedByteAlignedReaders.NullableDictionaryIntReader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
-//            fixedLength, (NullableIntVector)valueVec, schemaElement);
-//      }
-//      else if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.FLOAT) {
-//        return new NullableFixedByteAlignedReaders.NullableDictionaryFloat4Reader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
-//            fixedLength, (NullableFloat4Vector)valueVec, schemaElement);
-//      }
-//      else if (columnDescriptor.getType() == PrimitiveType.PrimitiveTypeName.DOUBLE) {
-//        return new NullableFixedByteAlignedReaders.NullableDictionaryFloat8Reader(parentReader, allocateSize, columnDescriptor, columnChunkMetaData,
-//            fixedLength, (NullableFloat8Vector)valueVec, schemaElement);
-//      }
-//      else{
-//        throw new ExecutionSetupException("Unsupported nullable column type " + columnDescriptor.getType().name() );
-//      }
-//    }
+                                        schemaElement, true));
   }
 }

@@ -51,11 +51,7 @@ public class ParquetFixedWidthDictionaryReaders {
 
       if (usingDictionary) {
         for (int i = 0; i < recordsReadInThisIteration; i++){
-          try {
           castedVector.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readInteger());
-          } catch (Exception ex) {
-            throw ex;
-          }
         }
       }
     }
@@ -80,7 +76,11 @@ public class ParquetFixedWidthDictionaryReaders {
           - pageReader.valuesRead, recordsToReadInThisPass - valuesReadInCurrentPass);
 
       for (int i = 0; i < recordsReadInThisIteration; i++){
+        try {
         castedVector.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readLong());
+        } catch ( Exception ex) {
+          throw ex;
+        }
       }
     }
   }
