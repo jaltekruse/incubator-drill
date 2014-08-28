@@ -410,7 +410,9 @@ public class ParquetRecordReader implements RecordReader {
   @Override
   public void cleanup() {
     logger.debug("Read {} records out of row group({}) in file '{}'", totalRecordsRead, rowGroupIndex, hadoopPath.toUri().getPath());
-    assert totalRecordsRead == footer.getBlocks().get(rowGroupIndex).getRowCount();
+    // enable this for debugging when it is know that a whole file will be read
+    // limit kills upstream operators once it has enough records, so this assert will fail
+//    assert totalRecordsRead == footer.getBlocks().get(rowGroupIndex).getRowCount();
     for (ColumnReader column : columnStatuses) {
       column.clear();
     }
