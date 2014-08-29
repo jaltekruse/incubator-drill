@@ -27,34 +27,21 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 
 import java.io.IOException;
 
-class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
+abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
 
-  int totalNullsFoundInCurrentPage;
+  int nullsFound;
   // used to skip nulls found
   int rightBitShift;
   // used when copying less than a byte worth of data at a time, to indicate the number of used bits in the current byte
   int bitsUsed;
   BaseValueVector castedBaseVector;
   NullableVectorDefinitionSetter castedVectorMutator;
-  FixedByteAlignedReader nonNullableReader;
-  FixedByteAlignedReader nonNullableDictionaryReader;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
-               boolean fixedLength, V v, SchemaElement schemaElement,
-               FixedByteAlignedReader nonNullableDictionaryReader, FixedByteAlignedReader nonNullableReader) throws ExecutionSetupException {
+               boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     castedBaseVector = (BaseValueVector) v;
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
-    this.nonNullableReader = nonNullableReader;
-    this.nonNullableDictionaryReader = nonNullableDictionaryReader;
-    // clear the data allocated by default before replacing it with the new pageReader
-    this.nonNullableReader.pageReader.clear();
-    this.nonNullableReader.pageReader = this.pageReader;
-    if (this.nonNullableDictionaryReader != null) {
-      // clear the data allocated by default before replacing it with the new pageReader
-      this.nonNullableDictionaryReader.pageReader.clear();
-      this.nonNullableDictionaryReader.pageReader = this.pageReader;
-    }
   }
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
@@ -71,9 +58,6 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         if (!pageReader.next()) {
           break;
         }
-        else {
-          totalNullsFoundInCurrentPage = 0;
-        }
       }
 
       // values need to be spaced out where nulls appear in the column
@@ -87,7 +71,6 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
       int currentValueIndexInVector = (int) recordsReadInThisIteration;
       boolean lastValueWasNull;
       int definitionLevelsRead;
-      int nullsFound;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){
         definitionLevelsRead = 0;
@@ -125,11 +108,8 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         }
         pageReader.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
-        if (pageReader.valuesRead + totalNullsFoundInCurrentPage + runLength > pageReader.currentPage.getValueCount()){
-          runLength -= (pageReader.valuesRead + totalNullsFoundInCurrentPage + runLength) - pageReader.currentPage.getValueCount();
-        }
 
-        readField(runLength);
+        readField( runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
         if ( dataTypeLengthInBits > 8  || (dataTypeLengthInBits < 8 && totalValuesRead + runLength % 8 == 0)){
           castedBaseVector.getData().setIndex(0, writerIndex + (int) Math.ceil( nullsFound * dataTypeLengthInBits / 8.0));
@@ -137,20 +117,17 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         else if (dataTypeLengthInBits < 8){
           rightBitShift += dataTypeLengthInBits * nullsFound;
         }
-        totalNullsFoundInCurrentPage += nullsFound;
         recordsReadInThisIteration += nullsFound;
         valuesReadInCurrentPass += recordsReadInThisIteration;
         totalValuesRead += recordsReadInThisIteration;
-        //pageReader.valuesRead += recordsReadInThisIteration;
+        pageReader.valuesRead += recordsReadInThisIteration;
         if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0)
-            || pageReader.valuesRead + totalNullsFoundInCurrentPage >= pageReader.currentPage.getValueCount()) {
+            || pageReader.valuesRead == pageReader.currentPage.getValueCount()) {
           if (!pageReader.next()) {
             break;
-          } else {
-            totalNullsFoundInCurrentPage = 0;
           }
         } else {
-          //pageReader.readPosInBytes = readStartInBytes + readLength;
+          pageReader.readPosInBytes = readStartInBytes + readLength;
         }
       }
     } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReader.currentPage != null);
@@ -158,22 +135,5 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         valuesReadInCurrentPass);
   }
 
-  @Override
-  protected void readField(long recordsToRead) {
-    FixedByteAlignedReader currNonNullableReader;
-    if (usingDictionary)
-      currNonNullableReader = nonNullableDictionaryReader;
-    else
-      currNonNullableReader = nonNullableReader;
-    currNonNullableReader.vectorData = castedBaseVector.getData();
-    currNonNullableReader.valuesReadInCurrentPass = 0;
-    currNonNullableReader.readValues(recordsToRead);
-  }
-
-  public void clear() {
-    super.clear();
-    if (nonNullableDictionaryReader != null)
-      nonNullableDictionaryReader.clear();
-    nonNullableReader.clear();
-  }
+  protected abstract void readField(long recordsToRead);
 }
