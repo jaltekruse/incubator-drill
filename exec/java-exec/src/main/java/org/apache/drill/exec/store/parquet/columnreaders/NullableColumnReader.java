@@ -29,7 +29,7 @@ import java.io.IOException;
 
 class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
 
-  int nullsFound;
+  int totalNullsFoundInCurrentPage;
   // used to skip nulls found
   int rightBitShift;
   // used when copying less than a byte worth of data at a time, to indicate the number of used bits in the current byte
@@ -71,6 +71,9 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         if (!pageReader.next()) {
           break;
         }
+        else {
+          totalNullsFoundInCurrentPage = 0;
+        }
       }
 
       // values need to be spaced out where nulls appear in the column
@@ -84,6 +87,7 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
       int currentValueIndexInVector = (int) recordsReadInThisIteration;
       boolean lastValueWasNull;
       int definitionLevelsRead;
+      int nullsFound;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){
         definitionLevelsRead = 0;
@@ -121,6 +125,9 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         }
         pageReader.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
+        if (pageReader.valuesRead + totalNullsFoundInCurrentPage + runLength > pageReader.currentPage.getValueCount()){
+          runLength -= (pageReader.valuesRead + totalNullsFoundInCurrentPage + runLength) - pageReader.currentPage.getValueCount();
+        }
 
         readField(runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
@@ -130,17 +137,20 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
         else if (dataTypeLengthInBits < 8){
           rightBitShift += dataTypeLengthInBits * nullsFound;
         }
+        totalNullsFoundInCurrentPage += nullsFound;
         recordsReadInThisIteration += nullsFound;
         valuesReadInCurrentPass += recordsReadInThisIteration;
         totalValuesRead += recordsReadInThisIteration;
-        pageReader.valuesRead += recordsReadInThisIteration;
+        //pageReader.valuesRead += recordsReadInThisIteration;
         if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0)
-            || pageReader.valuesRead == pageReader.currentPage.getValueCount()) {
+            || pageReader.valuesRead + totalNullsFoundInCurrentPage >= pageReader.currentPage.getValueCount()) {
           if (!pageReader.next()) {
             break;
+          } else {
+            totalNullsFoundInCurrentPage = 0;
           }
         } else {
-          pageReader.readPosInBytes = readStartInBytes + readLength;
+          //pageReader.readPosInBytes = readStartInBytes + readLength;
         }
       }
     } while (valuesReadInCurrentPass < recordsToReadInThisPass && pageReader.currentPage != null);
@@ -156,7 +166,8 @@ class NullableColumnReader<V extends ValueVector> extends ColumnReader<V>{
     else
       currNonNullableReader = nonNullableReader;
     currNonNullableReader.vectorData = castedBaseVector.getData();
-    currNonNullableReader.readField(recordsToRead);
+    currNonNullableReader.valuesReadInCurrentPass = 0;
+    currNonNullableReader.readValues(recordsToRead);
   }
 
   public void clear() {

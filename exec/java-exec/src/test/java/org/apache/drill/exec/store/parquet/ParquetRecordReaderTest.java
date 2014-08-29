@@ -79,7 +79,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
-@Ignore
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
@@ -149,6 +148,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   @Test
   public void testNonNullableDictionaries() throws Exception {
     testFull(QueryType.SQL, "select * from dfs.`/tmp/drilltest/non_nullable_dictionary.parquet`", "", 1, 1, 30000000, false);
+  }
+
+  @Test
+  public void testReadVoter() throws Exception {
+    testFull(QueryType.SQL, "select * from dfs.`/tmp/voter.parquet`", "", 1, 1, 1000, false);
   }
 
   @Test
@@ -475,6 +479,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     readEntries = "\"/tmp/tpc-h/supplier\"";
     testParquetFullEngineEventBased(false, false, "/parquet/parquet_scan_screen_read_entry_replace.json", readEntries,
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
+  }
+
+  @Test
+  public void test958_sql() throws Exception {
+    testFull(QueryType.SQL, "select ss_ext_sales_price from dfs.`/tmp/store_sales`", "", 1, 1, 30000000, false);
   }
 
 
