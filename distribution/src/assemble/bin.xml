@@ -43,11 +43,39 @@
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
       <includes>
-        <include>org.glassfish.jersey.containers</include>
-        <include>org.glassfish.jersey.core</include>
 
+          <include>org.glassfish.jersey.containers</include>
+          <include>org.glassfish.jersey.core</include>
+          <include>org.reflections</include>
 
+          <include>org.glassfish.hk2.external</include>
+          <include>org.mortbay.jetty</include>
+          <include>org.jboss.spec.javax.transaction</include>
+          <include>javax.activation</include>
+          <include>javax.annotation</include>
+          <include>org.glassfish.jersey.containers</include>
+          <include>org.glassfish.jersey.core</include>
+          <include>org.glassfish.jersey.ext</include>
+          <include>org.glassfish.jersey.media</include>
+          <include>org.glassfish.jersey.bundles.repackaged</include>
+          <include>org.glassfish.hk2</include>
+          <include>javax.servlet</include>
 
+          <include>javax.ws.rs </include>
+          <include>com.sun.xml.bind  </include>
+          <include>com.sun.jersey  </include>
+          <include>org.jvnet.mimepull  </include>
+          <include>com.sun.codemodel  </include>
+          <include>javax.xml.bind</include>
+
+          <include>org.jruby</include>
+          <include>ch.qos.logback </include>
+          <include>ch.qos.logback</include>
+          <include>org.eclipse.jdt</include>
+          <include>com.github.stephenc.high-scale-lib</include>
+
+          <include>org.jamon</include>
+          
       </includes>
       <scope>test</scope>
     </dependencySet>
@@ -92,7 +120,36 @@
         
         <exclude>org.glassfish.jersey.containers</exclude>
         <exclude>org.glassfish.jersey.core</exclude>
-        
+        <exclude>org.reflections</exclude>
+
+		<exclude>org.glassfish.hk2.external</exclude>
+		<exclude>org.mortbay.jetty</exclude>
+		<exclude>org.jboss.spec.javax.transaction</exclude>
+		<exclude>javax.activation</exclude>
+		<exclude>javax.annotation</exclude>
+		<exclude>org.glassfish.jersey.containers</exclude>
+		<exclude>org.glassfish.jersey.core</exclude>
+		<exclude>org.glassfish.jersey.ext</exclude>
+		<exclude>org.glassfish.jersey.media</exclude>
+		<exclude>org.glassfish.jersey.bundles.repackaged</exclude>
+		<exclude>org.glassfish.hk2</exclude>
+		<exclude>javax.servlet</exclude>
+
+        <exclude>javax.ws.rs </exclude>
+        <exclude>com.sun.xml.bind  </exclude>
+        <exclude>com.sun.jersey  </exclude>
+        <exclude>org.jvnet.mimepull  </exclude>
+        <exclude>com.sun.codemodel  </exclude>
+        <exclude>javax.xml.bind</exclude>
+
+        <exclude>org.jruby</exclude>
+        <exclude>ch.qos.logback </exclude>
+        <exclude>ch.qos.logback</exclude>
+        <exclude>org.eclipse.jdt</exclude>
+        <exclude>com.github.stephenc.high-scale-lib</exclude>
+
+        <exclude>org.jamon</exclude>
+
       </excludes>
       <scope>test</scope>
     </dependencySet>
