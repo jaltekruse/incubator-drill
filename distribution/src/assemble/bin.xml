@@ -34,10 +34,24 @@
       <includes>
         <include>org.apache.drill.exec:drill-jdbc-all:jar</include>
       </includes>
-      <outputDirectory>jdbc-driver</outputDirectory>
+      <outputDirectory>jars/jdbc-driver</outputDirectory>
       <useProjectArtifact>false</useProjectArtifact>
     </dependencySet>
 
+    <dependencySet>
+      <outputDirectory>jars/classb</outputDirectory>
+      <unpack>false</unpack>
+      <useProjectArtifact>false</useProjectArtifact>
+      <includes>
+        <include>org.glassfish.jersey.containers</include>
+        <include>org.glassfish.jersey.core</include>
+
+
+
+      </includes>
+      <scope>test</scope>
+    </dependencySet>
+    
     <dependencySet>
       <!-- Now, select which projects to include in this module-set. -->
       <includes>
@@ -55,10 +69,12 @@
       </excludes>
       <outputDirectory>jars</outputDirectory>
       <useProjectArtifact>false</useProjectArtifact>
-    </dependencySet>  
+    </dependencySet>
+
+
 
     <dependencySet>
-      <outputDirectory>lib</outputDirectory>
+      <outputDirectory>jars/3rdparty/</outputDirectory>
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
       <excludes>
@@ -68,15 +84,21 @@
         <exclude>org.apache.drill.contrib</exclude>
         <exclude>org.apache.drill.contrib.storage-hive</exclude>
         <exclude>org.hsqldb:hsqldb</exclude>
+        <exclude>junit:junit:jar</exclude>
+        <exclude>com.googlecode.jmockit:jmockit:jar</exclude>
         <!-- exclude or sqlline has problems -->
         <exclude>hsqldb:hsqldb</exclude>
         <!-- exclude or sqlline has problems -->
+        
+        <exclude>org.glassfish.jersey.containers</exclude>
+        <exclude>org.glassfish.jersey.core</exclude>
+        
       </excludes>
       <scope>test</scope>
     </dependencySet>
 
     <dependencySet>
-      <outputDirectory>extlib</outputDirectory>
+      <outputDirectory>jars/ext</outputDirectory>
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
       <includes>
@@ -86,7 +108,7 @@
     </dependencySet>
 
     <dependencySet>
-      <outputDirectory>lib</outputDirectory>
+      <outputDirectory>jars/3rdparty</outputDirectory>
       <unpack>false</unpack>
       <useProjectArtifact>false</useProjectArtifact>
       <includes>
@@ -101,33 +123,33 @@
     <fileSet>
       <directory>../sample-data</directory>
       <outputDirectory>sample-data</outputDirectory>
-    </fileSet>    
+    </fileSet>
   </fileSets>
 
   <files>
     <file>
       <source>../KEYS</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>src/resources/LICENSE</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>src/resources/README.md</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>../NOTICE</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>../DISCLAIMER</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>../git.properties</source>
-      <outputDirectory/>
+      <outputDirectory />
     </file>
     <file>
       <source>src/resources/runbit</source>
@@ -184,5 +206,5 @@
       <source>src/resources/drill-override-example.conf</source>
       <outputDirectory>conf</outputDirectory>
     </file>
-  </files>   
+  </files>
 </assembly>
