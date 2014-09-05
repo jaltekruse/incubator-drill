@@ -137,6 +137,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     testFull(QueryType.SQL, "select L_RECEIPTDATE from dfs.`/tmp/lineitem_null_dict.parquet`", "", 1, 1, 100000, false);
   }
 
+  @Test
+  public void testNullableAgg() throws Exception {
+    test("select sum(a) from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
+  }
+
 
   @Test
   public void testFixedBinary() throws Exception {
