@@ -54,16 +54,14 @@ public class NullableFixedByteAlignedReaders {
     // this method is called by its superclass during a read loop
     @Override
     protected void readField(long recordsToReadInThisPass) {
-      this.recordsReadInThisIteration = recordsToReadInThisPass;
-
-      // set up metadata
-      this.readStartInBytes = pageReader.readPosInBytes;
-      this.readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
-      this.readLength = (int) Math.ceil(readLengthInBits / 8.0);
       this.bytebuf = pageReader.pageDataByteArray;
 
       // fill in data.
+      try {
       vectorData.writeBytes(bytebuf, (int) readStartInBytes, (int) readLength);
+      } catch (Throwable t) {
+        throw t;
+      }
     }
   }
 
@@ -80,7 +78,11 @@ public class NullableFixedByteAlignedReaders {
     protected void readField(long recordsToReadInThisPass) {
       if (usingDictionary) {
         for (int i = 0; i < recordsToReadInThisPass; i++){
+          try {
           valueVec.getMutator().setSafe(valuesReadInCurrentPass + i, pageReader.dictionaryValueReader.readInteger());
+          } catch (Throwable t) {
+            throw t;
+          }
         }
       } else {
         for (int i = 0; i < recordsToReadInThisPass; i++){
