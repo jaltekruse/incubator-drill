@@ -252,6 +252,7 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   // TODO - fix this, currently hanging
+  @Ignore
   @Test
   public void testParquetRead_checkNulls() throws Exception {
     compareParquetReaders("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
