@@ -87,8 +87,8 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           currentDefinitionLevel = pageReader.definitionLevels.readInteger();
           definitionLevelsRead++;
           if ( currentDefinitionLevel < columnDescriptor.getMaxDefinitionLevel()){
-            // a run of non-null values was found, break out of this loop to do a read in the outer loop
             nullsFound++;
+            // a run of non-null values was found, break out of this loop to do a read in the outer loop
             if ( ! lastValueWasNull ){
               currentValueIndexInVector++;
               break;
@@ -108,6 +108,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         }
         pageReader.readPosInBytes = runStart;
         recordsReadInThisIteration = runLength;
+        valuesReadInCurrentPass += nullsFound;
 
         readField( runLength);
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
@@ -118,7 +119,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           rightBitShift += dataTypeLengthInBits * nullsFound;
         }
         recordsReadInThisIteration += nullsFound;
-        valuesReadInCurrentPass += recordsReadInThisIteration;
+        valuesReadInCurrentPass += runLength;
         totalValuesRead += recordsReadInThisIteration;
         pageReader.valuesRead += recordsReadInThisIteration;
         if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0)

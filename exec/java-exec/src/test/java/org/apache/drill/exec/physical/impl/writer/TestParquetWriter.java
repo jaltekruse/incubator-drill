@@ -252,6 +252,21 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
+  @Test
+  public void testParquetRead_checkNulls() throws Exception {
+    test("alter system set `store.parquet.use_new_reader` = false");
+    List<QueryResultBatch> results = testSqlWithResults("select * from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
+    test("alter system set `store.parquet.use_new_reader` = true");
+    List<QueryResultBatch> expected = testSqlWithResults("select * from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
+    compareResults(expected, results);
+    for (QueryResultBatch result : results) {
+      result.release();
+    }
+    for (QueryResultBatch result : expected) {
+      result.release();
+    }
+  }
+
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
 
     Path path = new Path("/tmp/" + outputFile);
@@ -278,11 +293,14 @@ public class TestParquetWriter extends BaseTestQuery {
 
   public void addToMaterializedResults(List<Map> materializedRecords,  List<QueryResultBatch> records, RecordBatchLoader loader,
                                        BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+    long totalRecords = 0;
     for (QueryResultBatch batch : records) {
       loader.load(batch.getHeader().getDef(), batch.getData());
       if (schema == null) {
         schema = loader.getSchema();
       }
+      logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
+      totalRecords += loader.getRecordCount();
       for (int i = 0; i < loader.getRecordCount(); i++) {
         HashMap<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
@@ -324,6 +342,7 @@ public class TestParquetWriter extends BaseTestQuery {
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
       counter++;
+      if (i > 50000) {
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
           continue;
@@ -332,13 +351,16 @@ public class TestParquetWriter extends BaseTestQuery {
           continue;
         if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
           missmatch++;
+          System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + record.get(column) + " but received " + actualRecords.get(i).get(column));
         }
       }
       if ( ! actualRecords.remove(record)) {
         missing += missmatch + ",";
+        System.out.println("mismatch " + counter);
       }
       else {
         i--;
+      }
       }
       i++;
     }

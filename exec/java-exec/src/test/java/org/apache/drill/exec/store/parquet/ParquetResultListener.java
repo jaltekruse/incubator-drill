@@ -129,16 +129,18 @@ public class ParquetResultListener implements UserResultsListener {
       }
       printColumnMajor(vv);
 
-      for (int j = 0; j < vv.getAccessor().getValueCount(); j++) {
-        if (testValues){
+      if (testValues){
+        for (int j = 0; j < vv.getAccessor().getValueCount(); j++) {
           assertField(vv, j, currentField.type,
               currentField.values[columnValCounter % 3], currentField.name + "/");
+          columnValCounter++;
         }
+      } else {
+        columnValCounter += vv.getAccessor().getValueCount();
       }
-      columnValCounter += vv.getAccessor().getValueCount();
 
       valuesChecked.remove(vv.getField().getPath().getRootSegment().getPath());
-      assertEquals("Mismatched value count for vectors in the same batch.", valueCount, columnValCounter);
+      assertEquals("Mismatched value count for vectors in the same batch.", valueCount, vv.getAccessor().getValueCount());
       valuesChecked.put(vv.getField().getPath().getRootSegment().getPath(), columnValCounter);
     }
 
