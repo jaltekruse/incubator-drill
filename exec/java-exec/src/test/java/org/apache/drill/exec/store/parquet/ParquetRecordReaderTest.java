@@ -48,11 +48,17 @@ import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.proto.BitControl;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.record.RecordBatchLoader;
+import org.apache.drill.exec.record.VectorWrapper;
+import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserServer;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.CachedSingleFileSystem;
 import org.apache.drill.exec.store.TestOutputMutator;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetRecordReader;
+import org.apache.drill.exec.vector.BigIntVector;
+import org.apache.drill.exec.vector.NullableBigIntVector;
+import org.apache.drill.exec.vector.NullableIntVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -138,14 +144,41 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
 
   @Test
   public void testNullableAgg() throws Exception {
-    test("select sum(a) from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
+
+    List<QueryResultBatch> result = testSqlWithResults("select sum(a) as total_sum from dfs.`/tmp/parquet_with_nulls_should_sum_100000_nulls_first.parquet`");
+    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 2, result.size());
+    RecordBatchLoader loader = new RecordBatchLoader(bit.getContext()
+        .getAllocator());
+
+    QueryResultBatch b = result.get(0);
+    loader.load(b.getHeader().getDef(), b.getData());
+
+    VectorWrapper vw = loader.getValueAccessorById(
+        NullableBigIntVector.class, //
+        loader.getValueVectorId(SchemaPath.getCompoundPath("total_sum")).getFieldIds() //
+    );
+    assertEquals(100000l, vw.getValueVector().getAccessor().getObject(0));
+    b.release();
+    loader.clear();
   }
 
   @Test
   public void testNullableFilter() throws Exception {
-//    test("select wr_return_quantity from dfs.`/tmp/web_returns` where wr_return_quantity = 1");
-//    test("select wr_return_quantity from dfs.`/tmp/web_returns`");
-    test("select * from dfs.`/tmp/web_returns`");
+    List<QueryResultBatch> result = testSqlWithResults("select count(wr_return_quantity) as row_count from dfs.`/tmp/web_returns` where wr_return_quantity = 1");
+    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 2, result.size());
+    RecordBatchLoader loader = new RecordBatchLoader(bit.getContext()
+        .getAllocator());
+
+    QueryResultBatch b = result.get(0);
+    loader.load(b.getHeader().getDef(), b.getData());
+
+    VectorWrapper vw = loader.getValueAccessorById(
+        BigIntVector.class, //
+        loader.getValueVectorId(SchemaPath.getCompoundPath("row_count")).getFieldIds() //
+    );
+    assertEquals(3573l, vw.getValueVector().getAccessor().getObject(0));
+    b.release();
+    loader.clear();
   }
 
 
