@@ -141,6 +141,13 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     test("select sum(a) from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
   }
 
+  @Test
+  public void testNullableFilter() throws Exception {
+//    test("select wr_return_quantity from dfs.`/tmp/web_returns` where wr_return_quantity = 1");
+//    test("select wr_return_quantity from dfs.`/tmp/web_returns`");
+    test("select * from dfs.`/tmp/web_returns`");
+  }
+
 
   @Test
   public void testFixedBinary() throws Exception {

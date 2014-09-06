@@ -220,13 +220,11 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate(selection, validateSelection, inputTable, "foodmart_employee_parquet");
   }
 
-  @Test
-  @Ignore
-  public void testParquetRead() throws Exception {
+  public void compareParquetReaders(String selection, String table) throws Exception {
     test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select * from dfs.`/tmp/voter`");
+    List<QueryResultBatch> expected = testSqlWithResults("select " + selection + " from " + table);
     test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select * from dfs.`/tmp/voter`");
+    List<QueryResultBatch> results = testSqlWithResults("select " + selection + " from " + table);
     compareResults(expected, results);
     for (QueryResultBatch result : results) {
       result.release();
@@ -236,35 +234,24 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  @Ignore
   @Test
-  public void testParquetRead2() throws Exception {
-    test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select s_comment,s_suppkey from dfs.`/tmp/sf100_supplier.parquet`");
-    test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select s_comment,s_suppkey from dfs.`/tmp/sf100_supplier.parquet`");
-    compareResults(expected, results);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
+  public void testReadVoter() throws Exception {
+    compareParquetReaders("*", "dfs.`/tmp/voter`");
+  }
+
+  @Test
+  public void testReadSf_100_supplier() throws Exception {
+    compareParquetReaders("*", "dfs.`/tmp/sf100_supplier.parquet`");
   }
 
   @Test
   public void testParquetRead_checkNulls() throws Exception {
-    test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select * from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
-    test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select * from dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
-    compareResults(expected, results);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
+    compareParquetReaders("*", "dfs.`/tmp/parquet_with_nulls_should_sum_1000.parquet`");
+  }
+
+  @Test
+  public void testParquetReadWebReturns() throws Exception {
+    compareParquetReaders("wr_returning_customer_sk", "dfs.`/tmp/web_returns` limit 50000");
   }
 
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
@@ -341,8 +328,6 @@ public class TestParquetWriter extends BaseTestQuery {
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
-      counter++;
-      if (i > 50000) {
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
           continue;
@@ -356,12 +341,11 @@ public class TestParquetWriter extends BaseTestQuery {
       }
       if ( ! actualRecords.remove(record)) {
         missing += missmatch + ",";
-        System.out.println("mismatch " + counter);
       }
       else {
         i--;
       }
-      }
+      counter++;
       i++;
     }
     logger.debug(missing);

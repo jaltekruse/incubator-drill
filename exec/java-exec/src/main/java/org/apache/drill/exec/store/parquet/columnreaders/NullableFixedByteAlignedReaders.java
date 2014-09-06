@@ -63,7 +63,11 @@ public class NullableFixedByteAlignedReaders {
       this.bytebuf = pageReader.pageDataByteArray;
 
       // fill in data.
+      try {
       vectorData.writeBytes(bytebuf, (int) readStartInBytes, (int) readLength);
+      } catch (Throwable t) {
+        throw t;
+      }
     }
   }
 
