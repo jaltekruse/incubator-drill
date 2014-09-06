@@ -105,7 +105,6 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           }
           else{
             if (lastValueWasNull){
-              runStart = pageReader.readPosInBytes;
               runLength = 0;
               lastValueWasNull = false;
             }
@@ -114,7 +113,6 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           }
           currentValueIndexInVector++;
         }
-        pageReader.readPosInBytes = runStart;
         valuesReadInCurrentPass += nullsFound;
 
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();

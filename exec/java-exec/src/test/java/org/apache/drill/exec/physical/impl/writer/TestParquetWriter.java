@@ -366,7 +366,6 @@ public class TestParquetWriter extends BaseTestQuery {
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
-      /*
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && record.get(column) == null ) {
           if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
@@ -383,7 +382,6 @@ public class TestParquetWriter extends BaseTestQuery {
           if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
         }
       }
-      */
       if ( ! actualRecords.get(i).equals(record)) {
         System.out.println("mismatch at position " + counter );
         missing.append(missmatch);
