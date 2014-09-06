@@ -115,7 +115,6 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           currentValueIndexInVector++;
         }
         pageReader.readPosInBytes = runStart;
-        recordsReadInThisIteration = runLength;
         valuesReadInCurrentPass += nullsFound;
 
         int writerIndex = ((BaseValueVector) valueVec).getData().writerIndex();
@@ -125,13 +124,19 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         else if (dataTypeLengthInBits < 8){
           rightBitShift += dataTypeLengthInBits * nullsFound;
         }
+        this.recordsReadInThisIteration = runLength;
+
+        // set up metadata
+        this.readStartInBytes = pageReader.readPosInBytes;
+        this.readLengthInBits = recordsReadInThisIteration * dataTypeLengthInBits;
+        this.readLength = (int) Math.ceil(readLengthInBits / 8.0);
         readField( runLength);
         recordsReadInThisIteration += nullsFound;
         valuesReadInCurrentPass += runLength;
         totalValuesRead += recordsReadInThisIteration;
         pageReader.valuesRead += recordsReadInThisIteration;
-        if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0 &&
-            pageReader.valuesRead == pageReader.currentPage.getValueCount())) {
+        if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0) &&
+            pageReader.valuesRead == pageReader.currentPage.getValueCount()) {
           if (!pageReader.next()) {
             break;
           }

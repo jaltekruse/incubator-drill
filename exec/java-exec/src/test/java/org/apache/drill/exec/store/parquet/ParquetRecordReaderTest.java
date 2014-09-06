@@ -234,6 +234,7 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     testFull(QueryType.SQL, "select cust_key, address,  non_existent_column, non_existent_col_2 from dfs.`/tmp/customer.dict.parquet`", "", 1, 1, 150000, false);
   }
 
+  @Ignore // ignored for now for performance
   @Test
   public void testTPCHPerformace_SF1() throws Exception {
     testFull(QueryType.SQL, "select * from dfs.`/tmp/orders_part-m-00001.parquet`", "", 1, 1, 150000, false);
@@ -531,12 +532,13 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
   }
 
+  @Ignore
   @Test
   public void test958_sql() throws Exception {
     testFull(QueryType.SQL, "select ss_ext_sales_price from dfs.`/tmp/store_sales`", "", 1, 1, 30000000, false);
   }
 
-
+  @Ignore
   @Test
   public void drill_958bugTest() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();

@@ -221,7 +221,7 @@ public class DrillParquetReader extends AbstractRecordReader {
 //        filled = Math.max(filled, ((RepeatedFixedWidthVector) v).getAccessor().getGroupCount() * 100)
 //      }
     }
-    logger.debug("Percent filled: {}", filled);
+    //logger.debug("Percent filled: {}", filled);
     return filled;
   }
 

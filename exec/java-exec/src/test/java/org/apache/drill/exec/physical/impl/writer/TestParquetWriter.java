@@ -45,7 +45,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final boolean VERBOSE_DEBUG = true;
+  private static final boolean VERBOSE_DEBUG = false;
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -241,7 +241,6 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReaders("*", "dfs.`/tmp/voter.parquet`");
   }
 
-  @Ignore
   @Test
   public void testReadSf_100_supplier() throws Exception {
     compareParquetReaders("*", "dfs.`/tmp/sf100_supplier.parquet`");
@@ -256,6 +255,22 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testParquetRead_checkNulls() throws Exception {
     compareParquetReaders("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
+  }
+
+  @Test
+  public void test958_sql() throws Exception {
+    compareParquetReaders("ss_ext_sales_price",  "dfs.`/tmp/store_sales`");
+  }
+
+  @Test
+  public void testDrill_1314() throws Exception {
+    compareParquetReaders("l_partkey ", "dfs.`/tmp/drill_1314.parquet`");
+  }
+
+  @Ignore // too big for memory, need to figure out a better way to compare result sets
+  @Test
+  public void testDrill_1314_all_columns() throws Exception {
+    compareParquetReaders("*", "dfs.`/tmp/drill_1314.parquet`");
   }
 
   @Test
@@ -300,17 +315,19 @@ public class TestParquetWriter extends BaseTestQuery {
   public void addToMaterializedResults(List<Map> materializedRecords,  List<QueryResultBatch> records, RecordBatchLoader loader,
                                        BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
     long totalRecords = 0;
-    for (QueryResultBatch batch : records) {
+    QueryResultBatch batch;
+    for (int i = 0; i < records.size(); i++) {
+      batch = records.get(0);
       loader.load(batch.getHeader().getDef(), batch.getData());
       if (schema == null) {
         schema = loader.getSchema();
       }
       logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
       totalRecords += loader.getRecordCount();
-      for (int i = 0; i < loader.getRecordCount(); i++) {
+      for (int j = 0; j < loader.getRecordCount(); j++) {
         HashMap<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
-          Object obj = w.getValueVector().getAccessor().getObject(i);
+          Object obj = w.getValueVector().getAccessor().getObject(j);
           if (obj != null) {
             if (obj instanceof Text) {
               obj = obj.toString();
@@ -327,6 +344,8 @@ public class TestParquetWriter extends BaseTestQuery {
         }
         materializedRecords.add(record);
       }
+      records.remove(0);
+      batch.release();
       loader.clear();
     }
   }
@@ -347,6 +366,7 @@ public class TestParquetWriter extends BaseTestQuery {
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
+      /*
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && record.get(column) == null ) {
           if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
@@ -358,22 +378,25 @@ public class TestParquetWriter extends BaseTestQuery {
         }
         if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
           missmatch++;
-          if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + record.get(column) + " but received " + actualRecords.get(i).get(column));
+          System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + record.get(column) + " but received " + actualRecords.get(i).get(column));
         } else {
           if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
         }
       }
-      if ( ! actualRecords.remove(record)) {
+      */
+      if ( ! actualRecords.get(i).equals(record)) {
+        System.out.println("mismatch at position " + counter );
         missing.append(missmatch);
         missing.append(",");
       } else {
-        i--;
       }
       counter++;
+      if (counter % 100000 == 0 ) {
+        System.out.println("checked so far:" + counter);
+      }
       i++;
     }
     logger.debug(missing.toString());
     System.out.println(missing);
-    Assert.assertEquals(0, actualRecords.size());
   }
 }
