@@ -36,6 +36,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
   int bitsUsed;
   BaseValueVector castedBaseVector;
   NullableVectorDefinitionSetter castedVectorMutator;
+  int definitionLevelsRead;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
@@ -61,6 +62,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         if (!pageReader.next()) {
           break;
         }
+        definitionLevelsRead = 0;
       }
 
       // values need to be spaced out where nulls appear in the column
@@ -73,7 +75,6 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
       int currentDefinitionLevel;
       currentValueIndexInVector = (int) recordsReadInThisIteration;
       boolean lastValueWasNull;
-      int definitionLevelsRead = 0;
       boolean lastRunBrokenByNull = false;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){

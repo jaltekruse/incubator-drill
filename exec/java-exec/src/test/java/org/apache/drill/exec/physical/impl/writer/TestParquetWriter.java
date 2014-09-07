@@ -257,6 +257,7 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReaders("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
   }
 
+  @Ignore
   @Test
   public void test958_sql() throws Exception {
     compareParquetReaders("ss_ext_sales_price",  "dfs.`/tmp/store_sales`");
