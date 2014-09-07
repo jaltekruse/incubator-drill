@@ -36,29 +36,30 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
   int bitsUsed;
   BaseValueVector castedBaseVector;
   NullableVectorDefinitionSetter castedVectorMutator;
-  int definitionLevelsRead;
+  long definitionLevelsRead;
+  long totalDefinitionLevelsRead;
 
   NullableColumnReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
                boolean fixedLength, V v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
     castedBaseVector = (BaseValueVector) v;
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
+    totalDefinitionLevelsRead = 0;
   }
 
 
   public void processPages(long recordsToReadInThisPass) throws IOException {
-    int totalDefinitionLevelsRead = 0;
+    int indexInOutputVector = 0;
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
     recordsReadInThisIteration = 0;
     vectorData = castedBaseVector.getData();
-    int currentValueIndexInVector;
 
     do {
       // if no page has been read, or all of the records have been read out of a page, read the next one
       if (pageReader.currentPage == null
-          || pageReader.valuesRead == pageReader.currentPage.getValueCount()) {
+          || definitionLevelsRead == pageReader.currentPage.getValueCount()) {
         if (!pageReader.next()) {
           break;
         }
@@ -73,7 +74,6 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
       long runStart = pageReader.readPosInBytes;
       int runLength;
       int currentDefinitionLevel;
-      currentValueIndexInVector = (int) recordsReadInThisIteration;
       boolean lastValueWasNull;
       boolean lastRunBrokenByNull = false;
       // loop to find the longest run of defined values available, can be preceded by several nulls
@@ -85,27 +85,26 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
 //        if (lastRunBrokenByNull && pageReader.valuesRead > 0) {
         if (lastRunBrokenByNull ) {
           nullsFound = 1;
-          currentValueIndexInVector--;
           lastRunBrokenByNull = false;
         } else  {
           nullsFound = 0;
         }
         runLength = 0;
-        if (totalDefinitionLevelsRead == recordsToReadInThisPass
-            || totalDefinitionLevelsRead >= valueVec.getValueCapacity()) {
+        if (indexInOutputVector == recordsToReadInThisPass
+            || indexInOutputVector >= valueVec.getValueCapacity()) {
           Math.min(3,4);
           break;
         }
-        while(totalDefinitionLevelsRead < recordsToReadInThisPass
-            && totalDefinitionLevelsRead < valueVec.getValueCapacity()
+        while(indexInOutputVector < recordsToReadInThisPass
+            && indexInOutputVector < valueVec.getValueCapacity()
             && definitionLevelsRead < pageReader.currentPage.getValueCount()){
           currentDefinitionLevel = pageReader.definitionLevels.readInteger();
           definitionLevelsRead++;
+          indexInOutputVector++;
           totalDefinitionLevelsRead++;
           if ( currentDefinitionLevel < columnDescriptor.getMaxDefinitionLevel()){
             // a run of non-null values was found, break out of this loop to do a read in the outer loop
             if ( ! lastValueWasNull ){
-              currentValueIndexInVector++;
               lastRunBrokenByNull = true;
               break;
             }
@@ -118,9 +117,8 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
               lastValueWasNull = false;
             }
             runLength++;
-            castedVectorMutator.setIndexDefined(totalDefinitionLevelsRead - 1);
+            castedVectorMutator.setIndexDefined(indexInOutputVector - 1);
           }
-          currentValueIndexInVector++;
         }
         valuesReadInCurrentPass += nullsFound;
 
@@ -153,8 +151,8 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           pageReader.readPosInBytes = readStartInBytes + readLength;
         }
       }
-    } while (totalDefinitionLevelsRead < recordsToReadInThisPass && pageReader.currentPage != null);
-    valuesReadInCurrentPass = totalDefinitionLevelsRead;
+    } while (indexInOutputVector < recordsToReadInThisPass && pageReader.currentPage != null);
+    valuesReadInCurrentPass = indexInOutputVector;
     valueVec.getMutator().setValueCount(
         valuesReadInCurrentPass);
   }

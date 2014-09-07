@@ -211,7 +211,6 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
         "from dfs.`/tmp/drill_1314.parquet`", "", 1,1, 10000, false);
   }
 
-  @Ignore // mismatched value counts between vectors
   @Test
   public void testDrill_1314_all_columns() throws Exception {
     testFull(QueryType.SQL, "select * " +
