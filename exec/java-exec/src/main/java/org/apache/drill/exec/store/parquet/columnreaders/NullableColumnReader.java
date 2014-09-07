@@ -73,11 +73,10 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
       int currentDefinitionLevel;
       currentValueIndexInVector = (int) recordsReadInThisIteration;
       boolean lastValueWasNull;
-      int definitionLevelsRead;
+      int definitionLevelsRead = 0;
       boolean lastRunBrokenByNull = false;
       // loop to find the longest run of defined values available, can be preceded by several nulls
       while (true){
-        definitionLevelsRead = 0;
         lastValueWasNull = true;
         //  seemed to be getting the off by one error at page boundary
         // tried fixing it with this, seemed to have gotten rid of the shift, but
@@ -97,7 +96,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         }
         while(totalDefinitionLevelsRead < recordsToReadInThisPass
             && totalDefinitionLevelsRead < valueVec.getValueCapacity()
-            && pageReader.valuesRead + definitionLevelsRead < pageReader.currentPage.getValueCount()){
+            && definitionLevelsRead < pageReader.currentPage.getValueCount()){
           currentDefinitionLevel = pageReader.definitionLevels.readInteger();
           definitionLevelsRead++;
           totalDefinitionLevelsRead++;
@@ -146,6 +145,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           if (!pageReader.next()) {
             break;
           }
+          definitionLevelsRead = 0;
         } else {
           pageReader.readPosInBytes = readStartInBytes + readLength;
         }
