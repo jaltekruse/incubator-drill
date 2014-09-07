@@ -44,7 +44,9 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
     castedVectorMutator = (NullableVectorDefinitionSetter) v.getMutator();
   }
 
+
   public void processPages(long recordsToReadInThisPass) throws IOException {
+    int totalDefinitionLevelsRead = 0;
     readStartInBytes = 0;
     readLength = 0;
     readLengthInBits = 0;
@@ -77,22 +79,28 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
       while (true){
         definitionLevelsRead = 0;
         lastValueWasNull = true;
-        if (lastRunBrokenByNull) {
+        //  seemed to be getting the off by one error at page boundary
+        // tried fixing it with this, seemed to have gotten rid of the shift, but
+        // messed up the e
+        if (lastRunBrokenByNull && pageReader.valuesRead > 0) {
+//        if (lastRunBrokenByNull ) {
           nullsFound = 1;
+          currentValueIndexInVector--;
           lastRunBrokenByNull = false;
         } else  {
           nullsFound = 0;
         }
         runLength = 0;
-        if (currentValueIndexInVector == recordsToReadInThisPass
-            || currentValueIndexInVector >= valueVec.getValueCapacity()) {
+        if (totalDefinitionLevelsRead == recordsToReadInThisPass
+            || totalDefinitionLevelsRead >= valueVec.getValueCapacity()) {
           break;
         }
-        while(currentValueIndexInVector < recordsToReadInThisPass
-            && currentValueIndexInVector < valueVec.getValueCapacity()
+        while(totalDefinitionLevelsRead < recordsToReadInThisPass
+            && totalDefinitionLevelsRead < valueVec.getValueCapacity()
             && pageReader.valuesRead + definitionLevelsRead < pageReader.currentPage.getValueCount()){
           currentDefinitionLevel = pageReader.definitionLevels.readInteger();
           definitionLevelsRead++;
+          totalDefinitionLevelsRead++;
           if ( currentDefinitionLevel < columnDescriptor.getMaxDefinitionLevel()){
             // a run of non-null values was found, break out of this loop to do a read in the outer loop
             if ( ! lastValueWasNull ){
@@ -109,7 +117,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
               lastValueWasNull = false;
             }
             runLength++;
-            castedVectorMutator.setIndexDefined(currentValueIndexInVector);
+            castedVectorMutator.setIndexDefined(totalDefinitionLevelsRead - 1);
           }
           currentValueIndexInVector++;
         }
@@ -134,7 +142,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         totalValuesRead += recordsReadInThisIteration;
         pageReader.valuesRead += recordsReadInThisIteration;
         if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0) &&
-            pageReader.valuesRead == pageReader.currentPage.getValueCount()) {
+            pageReader.valuesRead >= pageReader.currentPage.getValueCount()) {
           if (!pageReader.next()) {
             break;
           }
@@ -142,7 +150,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
           pageReader.readPosInBytes = readStartInBytes + readLength;
         }
       }
-    } while (currentValueIndexInVector < recordsToReadInThisPass && pageReader.currentPage != null);
+    } while (totalDefinitionLevelsRead < recordsToReadInThisPass && pageReader.currentPage != null);
     valueVec.getMutator().setValueCount(
         valuesReadInCurrentPass);
   }

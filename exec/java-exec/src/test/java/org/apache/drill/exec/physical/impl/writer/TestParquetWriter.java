@@ -45,7 +45,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final boolean VERBOSE_DEBUG = false;
+  private static final boolean VERBOSE_DEBUG = true;
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -252,7 +252,6 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   // TODO - fix this, currently hanging
-  @Ignore
   @Test
   public void testParquetRead_checkNulls() throws Exception {
     compareParquetReaders("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
@@ -369,7 +368,7 @@ public class TestParquetWriter extends BaseTestQuery {
       missmatch = 0;
       for (String column : record.keySet()) {
         if (  actualRecords.get(i).get(column) == null && record.get(column) == null ) {
-          if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
+//          if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
           continue;
         }
         if (actualRecords.get(i).get(column) == null) {
@@ -380,7 +379,7 @@ public class TestParquetWriter extends BaseTestQuery {
           missmatch++;
           System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + record.get(column) + " but received " + actualRecords.get(i).get(column));
         } else {
-          if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
+//          if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
         }
       }
       if ( ! actualRecords.get(i).equals(record)) {
