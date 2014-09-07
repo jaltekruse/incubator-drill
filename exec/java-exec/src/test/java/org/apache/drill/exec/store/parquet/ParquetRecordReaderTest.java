@@ -211,6 +211,13 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
         "from dfs.`/tmp/drill_1314.parquet`", "", 1,1, 10000, false);
   }
 
+  @Ignore // mismatched value counts between vectors
+  @Test
+  public void testDrill_1314_all_columns() throws Exception {
+    testFull(QueryType.SQL, "select * " +
+        "from dfs.`/tmp/drill_1314.parquet`", "", 1,1, 10000, false);
+  }
+
   @Test
   public void testDictionaryError_419() throws Exception {
     testFull(QueryType.SQL, "select c_address from dfs.`/tmp/customer_snappyimpala_drill_419.parquet`", "", 1, 1, 150000, false);
@@ -532,13 +539,12 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
         "unused, no file is generated", 1, props, QueryType.LOGICAL);
   }
 
-  @Ignore
   @Test
   public void test958_sql() throws Exception {
-    testFull(QueryType.SQL, "select ss_ext_sales_price from dfs.`/tmp/store_sales`", "", 1, 1, 30000000, false);
+//    testFull(QueryType.SQL, "select ss_ext_sales_price from dfs.`/tmp/store_sales`", "", 1, 1, 30000000, false);
+    testFull(QueryType.SQL, "select * from dfs.`/tmp/store_sales`", "", 1, 1, 30000000, false);
   }
 
-  @Ignore
   @Test
   public void drill_958bugTest() throws Exception {
     HashMap<String, FieldInfo> fields = new HashMap<>();

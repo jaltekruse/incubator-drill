@@ -365,12 +365,22 @@ public class ParquetRecordReader extends AbstractRecordReader {
     }
   }
 
- public void readAllFixedFields(long recordsToRead) throws IOException {
-
-   for (ColumnReader crs : columnStatuses){
-     crs.processPages(recordsToRead);
-   }
- }
+  public void readAllFixedFields(long recordsToRead) throws IOException {
+    // the reader was designed originally with the assumption that all fixed length
+    // vectors would be allocated with the same number of values, this has changed
+    // to use the model where vectors track their own fill levels and allocate appropriately
+    // rounding issues on re-allocation requires we find the minimum capacity of the fixed vectors
+    // as the reading inside of each column reader is independent of the others
+    int minCapacity = (int) recordsToRead;
+    for (ColumnReader crs : columnStatuses){
+      if (crs.valueVec.getValueCapacity() < minCapacity) {
+        minCapacity = crs.valueVec.getValueCapacity();
+      }
+    }
+    for (ColumnReader crs : columnStatuses){
+      crs.processPages(recordsToRead);
+    }
+  }
 
   @Override
   public int next() {

@@ -82,8 +82,8 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         //  seemed to be getting the off by one error at page boundary
         // tried fixing it with this, seemed to have gotten rid of the shift, but
         // messed up the e
-        if (lastRunBrokenByNull && pageReader.valuesRead > 0) {
-//        if (lastRunBrokenByNull ) {
+//        if (lastRunBrokenByNull && pageReader.valuesRead > 0) {
+        if (lastRunBrokenByNull ) {
           nullsFound = 1;
           currentValueIndexInVector--;
           lastRunBrokenByNull = false;
@@ -93,6 +93,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         runLength = 0;
         if (totalDefinitionLevelsRead == recordsToReadInThisPass
             || totalDefinitionLevelsRead >= valueVec.getValueCapacity()) {
+          Math.min(3,4);
           break;
         }
         while(totalDefinitionLevelsRead < recordsToReadInThisPass
@@ -142,7 +143,8 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         totalValuesRead += recordsReadInThisIteration;
         pageReader.valuesRead += recordsReadInThisIteration;
         if ( (readStartInBytes + readLength >= pageReader.byteLength && bitsUsed == 0) &&
-            pageReader.valuesRead >= pageReader.currentPage.getValueCount()) {
+            definitionLevelsRead >= pageReader.currentPage.getValueCount()) {
+//            pageReader.valuesRead >= pageReader.currentPage.getValueCount()) {
           if (!pageReader.next()) {
             break;
           }
@@ -152,6 +154,7 @@ abstract class NullableColumnReader<V extends ValueVector> extends ColumnReader<
         }
       }
     } while (totalDefinitionLevelsRead < recordsToReadInThisPass && pageReader.currentPage != null);
+    valuesReadInCurrentPass = totalDefinitionLevelsRead;
     valueVec.getMutator().setValueCount(
         valuesReadInCurrentPass);
   }
