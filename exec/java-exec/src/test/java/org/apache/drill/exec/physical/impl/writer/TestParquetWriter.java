@@ -53,7 +53,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final boolean VERBOSE_DEBUG = true;
+  private static final boolean VERBOSE_DEBUG = false;
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -171,8 +171,6 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate("*", "*", inputTable, "basic_repeated");
   }
 
-  // TODO - this is failing due to the parquet behavior of allowing repeated values to reach across
-  // pages. This broke our reading model a bit, but it is possible to work around.
   @Test
   public void testRepeatedDouble() throws Exception {
     String inputTable = "cp.`parquet/repeated_double_data.json`";
@@ -284,12 +282,13 @@ public class TestParquetWriter extends BaseTestQuery {
     // I backed out the changes after the test passed.
 //    test("alter system set `planner.width.max_per_node` = 1");
     test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select " + selection + " from " + table);
+    String query = "select " + selection + " from " + table;
+    List<QueryResultBatch> results = testSqlWithResults(query);
 
     Map<String, HyperVectorValueIterator> actualSuperVectors = addToHyperVectorMap(results, loader, schema);
 
     test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select " + selection + " from " + table);
+    List<QueryResultBatch> expected = testSqlWithResults(query);
 
     Map<String, HyperVectorValueIterator> expectedSuperVectors = addToHyperVectorMap(expected, loader, schema);
 
@@ -302,27 +301,31 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
+  @Ignore
   @Test
   public void testReadVoter() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/voter.parquet`");
   }
 
+  @Ignore
   @Test
   public void testReadSf_100_supplier() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/sf100_supplier.parquet`");
   }
 
+  @Ignore
   @Test
   public void testParquetRead_checkNulls_NullsFirst() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000_nulls_first.parquet`");
   }
 
-  // TODO - fix this, currently hanging
+  @Ignore
   @Test
   public void testParquetRead_checkNulls() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
   }
 
+  @Ignore
   @Test
   public void test958_sql() throws Exception {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
@@ -331,7 +334,6 @@ public class TestParquetWriter extends BaseTestQuery {
   @Ignore
   @Test
   public void testReadSf_1_supplier() throws Exception {
-    // need a sort, as there are two row groups we cannot be sure which order they will arrive in for each reader
     compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
@@ -339,20 +341,14 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void test958_sql_all_columns() throws Exception {
     compareParquetReadersHyperVector("*",  "dfs.`/tmp/store_sales`");
-//    compareParquetReadersHyperVector("pig_schema,ss_sold_date_sk, ss_sold_time_sk, ss_item_sk, ss_customer_sk, ss_cdemo_sk, ss_hdemo_sk,ss_addr_sk,ss_store_sk,ss_promo_sk,ss_ticket_number,ss_quantity,ss_wholesale_cost,ss_list_price,ss_sales_price,ss_ext_discount_amt,ss_ext_sales_price",
-//        "dfs.`/tmp/store_sales`");
-
-    // passes
-//    compareParquetReadersHyperVector("pig_schema,ss_sold_date_sk,ss_item_sk,ss_cdemo_sk,ss_addr_sk",
-//        "dfs.`/tmp/store_sales`");
-    // fails
-    compareParquetReadersHyperVector("ss_addr_sk, ss_hdemo_sk",
-        "dfs.`/tmp/store_sales`");
+    compareParquetReadersHyperVector("ss_addr_sk, ss_hdemo_sk", "dfs.`/tmp/store_sales`");
+    // TODO - Drill 1388 - this currently fails, but it is an issue with project, not the reader, pulled out the physical plan
+    // removed the unneeded project in the plan and ran it against both readers, they outputs matched
 //    compareParquetReadersHyperVector("pig_schema,ss_sold_date_sk,ss_item_sk,ss_cdemo_sk,ss_addr_sk, ss_hdemo_sk",
 //        "dfs.`/tmp/store_sales`");
-//    compareParquetReadersColumnar("pig_schema,ss_sold_date_sk, ss_sold_time_sk, ss_item_sk, ss_customer_sk, ss_cdemo_sk, ss_hdemo_sk,ss_addr_sk,ss_store_sk,ss_promo_sk,ss_ticket_number,ss_quantity,ss_wholesale_cost,ss_list_price,ss_sales_price,ss_ext_discount_amt,ss_ext_sales_price,ss_ext_wholesale_cost,ss_ext_list_price,ss_ext_tax",
   }
 
+  @Ignore
   @Test
   public void testDrill_1314() throws Exception {
     compareParquetReadersColumnar("l_partkey ", "dfs.`/tmp/drill_1314.parquet`");
@@ -361,23 +357,24 @@ public class TestParquetWriter extends BaseTestQuery {
   @Ignore
   @Test
   public void testDrill_1314_all_columns() throws Exception {
-//    compareParquetReadersColumnar("l_orderkey,l_partkey,l_suppkey,l_linenumber, l_quantity, l_extendedprice,l_discount,l_tax",
-    compareParquetReadersHyperVector("*",
-        //TODO - review this, index out of bound exception while pulling out results?
-//    compareParquetReadersColumnar("l_orderkey,l_partkey,l_suppkey,l_linenumber, l_quantity, l_extendedprice,l_discount,l_tax",
+    compareParquetReadersHyperVector("*", "dfs.`/tmp/drill_1314.parquet`");
+    compareParquetReadersColumnar("l_orderkey,l_partkey,l_suppkey,l_linenumber, l_quantity, l_extendedprice,l_discount,l_tax",
         "dfs.`/tmp/drill_1314.parquet`");
   }
 
+  @Ignore
   @Test
   public void testParquetRead_checkShortNullLists() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/short_null_lists.parquet`");
   }
 
+  @Ignore
   @Test
   public void testParquetRead_checkStartWithNull() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/start_with_null.parquet`");
   }
 
+  @Ignore
   @Test
   public void testParquetReadWebReturns() throws Exception {
     compareParquetReadersColumnar("wr_returning_customer_sk", "dfs.`/tmp/web_returns`");
@@ -418,7 +415,7 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   public void compareHyperVectors(Map<String, HyperVectorValueIterator> expectedRecords,
-                                  Map<String, HyperVectorValueIterator> actualRecords) throws UnsupportedEncodingException {
+                                  Map<String, HyperVectorValueIterator> actualRecords) throws Exception {
     for (String s : expectedRecords.keySet()) {
       assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
       HyperVectorValueIterator expectedValues = expectedRecords.get(s);
@@ -441,7 +438,7 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  public void compareMergedVectors(Map<String, List> expectedRecords, Map<String, List> actualRecords) throws UnsupportedEncodingException {
+  public void compareMergedVectors(Map<String, List> expectedRecords, Map<String, List> actualRecords) throws Exception {
     for (String s : expectedRecords.keySet()) {
       assertEquals(expectedRecords.get(s).size(), actualRecords.get(s).size());
       List expectedValues = expectedRecords.get(s);
@@ -456,9 +453,6 @@ public class TestParquetWriter extends BaseTestQuery {
                                                       BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
     // TODO - this does not handle schema changes
     Map<String, HyperVectorValueIterator> combinedVectors = new HashMap();
-    // for comparing a subset of the records (was having failures at the end of the query, but wanted to look at
-    // the previous results, limit was also having problems with nulls)
-    long recordLimit = 9883000;
 
     long totalRecords = 0;
     QueryResultBatch batch;
@@ -485,7 +479,6 @@ public class TestParquetWriter extends BaseTestQuery {
     }
     for (HyperVectorValueIterator hvi : combinedVectors.values()) {
       hvi.determineTotalSize();
-//      hvi.setRecordLimit(recordLimit);
     }
     return combinedVectors;
   }
@@ -642,37 +635,37 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  public void compareValues(Object expected, Object actual, int counter, String column) throws UnsupportedEncodingException {
+  public void compareValues(Object expected, Object actual, int counter, String column) throws Exception {
 
-    // DONT LEAVE STUFF LIKE THIS AROUND
-//    if (counter < 1300000 || column.equals("`ss_addr_sk`")) return;
-    if (  expected == null && actual == null ) {
-//      if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + expected );
-      return;
+    if (  expected == null ) {
+      if (actual == null ) {
+      if (VERBOSE_DEBUG) logger.debug("(1) at position " + counter + " column '" + column + "' matched value:  " + expected );
+        return;
+      } else {
+        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: " + expected + " but received " + actual);
+      }
     }
     if ( actual == null) {
-      if (VERBOSE_DEBUG) System.out.println("unexpected null at position " + counter + " column '" + column + "' should have been:  " + expected);
-      return;
+      throw new Exception("unexpected null at position " + counter + " column '" + column + "' should have been:  " + expected);
     }
     if (actual instanceof byte[]) {
       if ( ! Arrays.equals((byte[]) expected, (byte[]) actual)) {
-        System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: "
-            + new String((byte[])expected, "UTF-8") + " but received " + new String((byte[])actual, "UTF-9"));
+        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
+            + new String((byte[])expected, "UTF-8") + " but received " + new String((byte[])actual, "UTF-8"));
       } else {
-//        System.out.println("at position " + counter + " column '" + column + "' matched value "
-//              + new String((byte[])expected, "UTF-8");
+        if (VERBOSE_DEBUG) logger.debug("at position " + counter + " column '" + column + "' matched value " + new String((byte[])expected, "UTF-8"));
         return;
       }
     }
     if (  ! expected.equals(actual)) {
-      System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + expected + " but received " + actual);
+      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: " + expected + " but received " + actual);
     } else {
-//      if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + expected );
+      if (VERBOSE_DEBUG) logger.debug("at position " + counter + " column '" + column + "' matched value:  " + expected );
     }
   }
 
   public void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
-//    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
+    Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
     StringBuilder missing = new StringBuilder();
     int i = 0;
@@ -681,27 +674,14 @@ public class TestParquetWriter extends BaseTestQuery {
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
       for (String column : record.keySet()) {
-        if (  actualRecords.get(i).get(column) == null && record.get(column) == null ) {
-//          if (VERBOSE_DEBUG) System.out.println("(1) at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
-          continue;
-        }
-        if (actualRecords.get(i).get(column) == null) {
-          if (VERBOSE_DEBUG) System.out.println("unexpected null at position " + counter + " column '" + column + "' should have been:  " + record.get(column)  );
-          continue;
-        }
-        if ( ! actualRecords.get(i).get(column).equals(record.get(column))) {
-          missmatch++;
-          System.out.println("at position " + counter + " column '" + column + "' mismatched values, expected: " + record.get(column) + " but received " + actualRecords.get(i).get(column));
-        } else {
-//          if (VERBOSE_DEBUG) System.out.println("at position " + counter + " column '" + column + "' matched value:  " + record.get(column)  );
-        }
+        compareValues(record.get(column), actualRecords.get(i).get(column), counter, column );
       }
       if ( ! actualRecords.get(i).equals(record)) {
         System.out.println("mismatch at position " + counter );
         missing.append(missmatch);
         missing.append(",");
-      } else {
       }
+
       counter++;
       if (counter % 100000 == 0 ) {
         System.out.println("checked so far:" + counter);
