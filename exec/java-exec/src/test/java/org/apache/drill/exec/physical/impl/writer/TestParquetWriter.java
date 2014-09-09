@@ -327,6 +327,15 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Ignore
   @Test
+  public void testParquetRead_tpcds_sf_1() throws Exception {
+    String[] tables = { "customer","customer_address","customer_demographics","date_dim","household_demographics","item","promotion","store","store_sales","time_dim"};
+    for (String s : tables ) {
+      compareParquetReadersHyperVector("*", "dfs.`/tmp/scale1/" + s + "`");
+    }
+  }
+
+  @Ignore
+  @Test
   public void test958_sql() throws Exception {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
   }
