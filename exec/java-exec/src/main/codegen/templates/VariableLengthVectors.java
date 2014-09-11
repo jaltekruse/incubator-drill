@@ -55,17 +55,24 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
   private final Mutator mutator;
   
   private final UInt${type.width}Vector.Accessor oAccessor;
+  private final int bufferBetweenValues;
   
 
   private int allocationTotalByteCount = 32768;
   private int allocationMonitor = 0;
 
+
   public ${minor.class}Vector(MaterializedField field, BufferAllocator allocator) {
+    this(field, allocator, 4);
+  }
+
+  public ${minor.class}Vector(MaterializedField field, BufferAllocator allocator, int bufferBetweenValues) {
     super(field, allocator);
     this.offsetVector = new UInt${type.width}Vector(null, allocator);
     this.oAccessor = offsetVector.getAccessor();
     this.accessor = new Accessor();
     this.mutator = new Mutator();
+    this.bufferBetweenValues = bufferBetweenValues;
   }
 
   public int getBufferSize(){
@@ -86,16 +93,24 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
   }
 
   public int getCurrentSizeInBytes() {
-    return offsetVector.getAccessor().get(currentValueCount);
+    return getValueStart(currentValueCount);
   }
-  
+
+  public int getValueStart(int index) {
+    return offsetVector.getAccessor().get(index);
+  }
+
+  public int getValueStartAdjusted(int index) {
+      return offsetVector.getAccessor().get(index) + index * bufferBetweenValues;
+  }
+
   /**
    * Return the number of bytes contained in the current var len byte vector.
    * @return
    */
   public int getVarByteLength(){
     if(valueCount == 0) return 0;
-    return offsetVector.getAccessor().get(valueCount); 
+    return getValueStartAdjusted(currentValueCount);
   }
   
   @Override
@@ -166,12 +181,12 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
   }
 
   public void splitAndTransferTo(int startIndex, int length, ${minor.class}Vector target) {
-    int startPoint = this.offsetVector.getAccessor().get(startIndex);
-    int sliceLength = this.offsetVector.getAccessor().get(startIndex + length) - startPoint;
+    int startPoint = getValueStartAdjusted(startIndex);
+    int sliceLength = getValueStartAdjusted(startIndex + length) - startPoint;
     target.offsetVector.clear();
     target.offsetVector.allocateNew(length + 1);
     for (int i = 0; i < length + 1; i++) {
-      target.offsetVector.getMutator().set(i, this.offsetVector.getAccessor().get(startIndex + i) - startPoint);
+      target.getMutator().setValueLengthSafe(i, getValueStartAdjusted(startIndex + i) - startPoint);
     }
     target.data = this.data.slice(startPoint, sliceLength);
     target.data.retain();
@@ -179,36 +194,34 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
 }
   
   protected void copyFrom(int fromIndex, int thisIndex, ${minor.class}Vector from){
-    int start = from.offsetVector.getAccessor().get(fromIndex);
-    int end =   from.offsetVector.getAccessor().get(fromIndex+1);
+    int start = from.getValueStartAdjusted(fromIndex);
+    int end =   from.getValueStartAdjusted(fromIndex+1);
     int len = end - start;
     
-    int outputStart = offsetVector.data.get${(minor.javaType!type.javaType)?cap_first}(thisIndex * ${type.width});
+    int outputStart = getValueStartAdjusted(thisIndex);
     from.data.getBytes(start, data, outputStart, len);
-    offsetVector.data.set${(minor.javaType!type.javaType)?cap_first}( (thisIndex+1) * ${type.width}, outputStart + len);
+    mutator.setValueLengthSafe( thisIndex, len - bufferBetweenValues);
   }
   
   public boolean copyFromSafe(int fromIndex, int thisIndex, ${minor.class}Vector from){
 
-    int start = from.offsetVector.getAccessor().get(fromIndex);
-    int end =   from.offsetVector.getAccessor().get(fromIndex+1);
+    int start = from.getValueStartAdjusted(fromIndex);
+    int end =   from.getValueStartAdjusted(fromIndex+1);
     int len = end - start;
     
-    int outputStart = offsetVector.data.get${(minor.javaType!type.javaType)?cap_first}(thisIndex * ${type.width});
+    int outputStart = getValueStartAdjusted(thisIndex);
     
     if(data.capacity() < outputStart + len) {
         decrementAllocationMonitor();
         return false;
     }
 
-    if (!offsetVector.getMutator().setSafe(thisIndex + 1, outputStart + len)) {
+    if (!mutator.setValueLengthSafe(thisIndex, len - bufferBetweenValues)) {
        decrementAllocationMonitor();
        return false;
     }
 
     from.data.getBytes(start, data, outputStart, len);
-    offsetVector.data.set${(minor.javaType!type.javaType)?cap_first}( (thisIndex+1) * ${type.width}, outputStart + len);
-
     return true;
   }
 
@@ -308,33 +321,36 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     }
     
     public long getStartEnd(int index){
-      return oAccessor.getTwoAsLong(index);
+      long val = getValueStartAdjusted(index) + bufferBetweenValues;
+      val |= ((long)getValueStartAdjusted(index + 1)) << 32;
+      return val;
+//      return oAccessor.getTwoAsLong(index);
     }
     
     public byte[] get(int index) {
       assert index >= 0;
-      int startIdx = oAccessor.get(index);
-      int length = oAccessor.get(index + 1) - startIdx;
+      int startIdx = getValueStartAdjusted(index);
+      int length = getValueStartAdjusted(index + 1) - startIdx - bufferBetweenValues;
       assert length >= 0;
       byte[] dst = new byte[length];
-      data.getBytes(startIdx, dst, 0, length);
+      data.getBytes(startIdx + bufferBetweenValues, dst, 0, length);
       return dst;
     }
 
     public int getValueLength(int index) {
-      return offsetVector.getAccessor().get(index + 1) - offsetVector.getAccessor().get(index);
+      return getValueStart(index + 1) - getValueStart(index);
     }
     
     public void get(int index, ${minor.class}Holder holder){
-      holder.start = oAccessor.get(index);
-      holder.end = oAccessor.get(index + 1);
+      holder.start = getValueStartAdjusted(index) + bufferBetweenValues;
+      holder.end = getValueStartAdjusted(index + 1);
       holder.buffer = data;
     }
     
     public void get(int index, Nullable${minor.class}Holder holder){
       holder.isSet = 1;
-      holder.start = oAccessor.get(index);
-      holder.end = oAccessor.get(index + 1);
+      holder.start = getValueStartAdjusted(index) + bufferBetweenValues;
+      holder.end = getValueStartAdjusted(index + 1);
       holder.buffer = data;
     }
     
@@ -394,24 +410,23 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
      */
     protected void set(int index, byte[] bytes) {
       assert index >= 0;
-      int currentOffset = offsetVector.getAccessor().get(index);
-      offsetVector.getMutator().set(index + 1, currentOffset + bytes.length);
-      data.setBytes(currentOffset, bytes, 0, bytes.length);
+      int currentOffset = getValueStartAdjusted(index);
+      setValueLengthSafe(index, bytes.length);
+      data.setBytes(currentOffset + bufferBetweenValues, bytes, 0, bytes.length);
     }
 
     public boolean setSafe(int index, byte[] bytes) {
       assert index >= 0;
 
-      int currentOffset = offsetVector.getAccessor().get(index);
-      if (data.capacity() < currentOffset + bytes.length) {
+      int currentOffset = getValueStartAdjusted(index);
+      if (data.capacity() < currentOffset + bytes.length + bufferBetweenValues) {
         decrementAllocationMonitor();
         return false;
       }
-      if (!offsetVector.getMutator().setSafe(index + 1, currentOffset + bytes.length)) {
+      if (!setValueLengthSafe(index, bytes.length)) {
         return false;
       }
-      offsetVector.getMutator().set(index + 1, currentOffset + bytes.length);
-      data.setBytes(currentOffset, bytes, 0, bytes.length);
+      data.setBytes(currentOffset + bufferBetweenValues, bytes, 0, bytes.length);
       return true;
     }
 
@@ -425,21 +440,21 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
      */
     protected void set(int index, byte[] bytes, int start, int length) {
       assert index >= 0;
-      int currentOffset = offsetVector.getAccessor().get(index);
-      offsetVector.getMutator().set(index + 1, currentOffset + length);
-      data.setBytes(currentOffset, bytes, start, length);
+      int currentOffset = getValueStartAdjusted(index);
+      setValueLengthSafe(index, bytes.length);
+      data.setBytes(currentOffset + bufferBetweenValues, bytes, start, length);
     }
 
     public boolean setSafe(int index, byte[] bytes, int start, int length) {
       assert index >= 0;
 
-      int currentOffset = offsetVector.getAccessor().get(index);
+      int currentOffset = getValueStartAdjusted(index);
 
-      if (data.capacity() < currentOffset + length) {
+      if (data.capacity() < currentOffset + length + bufferBetweenValues) {
         decrementAllocationMonitor();
         return false;
       }
-      if (!offsetVector.getMutator().setSafe(index + 1, currentOffset + length)) {
+      if (!setValueLengthSafe(index, bytes.length)) {
         return false;
       }
       data.setBytes(currentOffset, bytes, start, length);
@@ -447,24 +462,24 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     }
 
     public boolean setValueLengthSafe(int index, int length) {
-      return offsetVector.getMutator().setSafe(index + 1, offsetVector.getAccessor().get(index) + length);
+      return offsetVector.getMutator().setSafe(index + 1, getValueStart(index) + length);
     }
 
 
     public boolean setSafe(int index, int start, int end, DrillBuf buffer){
       int len = end - start;
       
-      int outputStart = offsetVector.data.get${(minor.javaType!type.javaType)?cap_first}(index * ${type.width});
+      int outputStart = getValueStartAdjusted(index);
       
-      if(data.capacity() < outputStart + len) {
+      if(data.capacity() < outputStart + len + bufferBetweenValues) {
         decrementAllocationMonitor();
         return false;
       }
-      
-      if (!offsetVector.getMutator().setSafe( index+1,  outputStart + len)) {
+
+      if (!setValueLengthSafe(index, len)) {
         return false;
       }
-      buffer.getBytes(start, data, outputStart, len);
+      buffer.getBytes(start, data, outputStart + bufferBetweenValues, len);
 
       return true;
     }
@@ -477,15 +492,15 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
       int end =   holder.end;
       int len = end - start;
       
-      int outputStart = offsetVector.data.get${(minor.javaType!type.javaType)?cap_first}(index * ${type.width});
+      int outputStart = getValueStartAdjusted(index);
       
-      if(data.capacity() < outputStart + len) {
+      if(data.capacity() < outputStart + len + bufferBetweenValues) {
         decrementAllocationMonitor();
         return false;
       }
       
-      holder.buffer.getBytes(start, data, outputStart, len);
-      if (!offsetVector.getMutator().setSafe( index+1,  outputStart + len)) {
+      holder.buffer.getBytes(start, data, outputStart + bufferBetweenValues, len);
+      if (!setValueLengthSafe(index, len)) {
         return false;
       }
 
@@ -499,16 +514,16 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
       int start = holder.start;
       int end =   holder.end;
       int len = end - start;
-      
-      int outputStart = offsetVector.data.get${(minor.javaType!type.javaType)?cap_first}(index * ${type.width});
-      
-      if(data.capacity() < outputStart + len) {
+
+      int outputStart = getValueStartAdjusted(index);
+
+      if(data.capacity() < outputStart + len + bufferBetweenValues) {
         decrementAllocationMonitor();
         return false;
       }
       
-      holder.buffer.getBytes(start, data, outputStart, len);
-      if (!offsetVector.getMutator().setSafe( index+1,  outputStart + len)) {
+      holder.buffer.getBytes(start, data, outputStart + bufferBetweenValues, len);
+      if (!setValueLengthSafe(index, len)) {
         return false;
       }
 
@@ -519,30 +534,29 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     
     protected void set(int index, int start, int length, DrillBuf buffer){
       assert index >= 0;
-      int currentOffset = offsetVector.getAccessor().get(index);
-      offsetVector.getMutator().set(index + 1, currentOffset + length);
-      DrillBuf bb = buffer.slice(start, length);
-      data.setBytes(currentOffset, bb);
+      int currentOffset = getValueStartAdjusted(index);
+      setValueLengthSafe(index, length);
+      data.setBytes(currentOffset + bufferBetweenValues, buffer, start, length);
     }
 
     protected void set(int index, Nullable${minor.class}Holder holder){
       int length = holder.end - holder.start;
-      int currentOffset = offsetVector.getAccessor().get(index);
-      offsetVector.getMutator().set(index + 1, currentOffset + length);
-      data.setBytes(currentOffset, holder.buffer, holder.start, length);
+      int currentOffset = getValueStartAdjusted(index);
+      setValueLengthSafe(index, length);
+      data.setBytes(currentOffset + bufferBetweenValues, holder.buffer, holder.start, length);
     }
     
     protected void set(int index, ${minor.class}Holder holder){
       int length = holder.end - holder.start;
-      int currentOffset = offsetVector.getAccessor().get(index);
-      offsetVector.getMutator().set(index + 1, currentOffset + length);
-      data.setBytes(currentOffset, holder.buffer, holder.start, length);
+      int currentOffset = getValueStartAdjusted(index);
+      setValueLengthSafe(index, length);
+      data.setBytes(currentOffset + bufferBetweenValues, holder.buffer, holder.start, length);
     }
     
     public void setValueCount(int valueCount) {
       int currentByteCapacity = getByteCapacity();
       ${minor.class}Vector.this.valueCount = valueCount;
-      int idx = offsetVector.getAccessor().get(valueCount);
+      int idx = getValueStartAdjusted(valueCount);
       data.writerIndex(idx);
       if (valueCount > 0 && currentByteCapacity > idx * 2) {
         incrementAllocationMonitor();
