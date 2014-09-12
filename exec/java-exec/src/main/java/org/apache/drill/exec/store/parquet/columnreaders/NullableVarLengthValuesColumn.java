@@ -21,8 +21,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DrillBuf;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.exec.vector.BaseDataValueVector;
+import org.apache.drill.exec.vector.NullableVarBinaryVector;
 import org.apache.drill.exec.vector.ValueVector;
 
+import org.apache.drill.exec.vector.VariableWidthVector;
 import parquet.bytes.BytesUtils;
 import parquet.column.ColumnDescriptor;
 import parquet.format.SchemaElement;
@@ -34,6 +37,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
 
   int nullsRead;
   boolean currentValNull = false;
+  int lengthToRead;
 
   NullableVarLengthValuesColumn(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor,
                                 ColumnChunkMetaData columnChunkMetaData, boolean fixedLength, V v,
@@ -50,11 +54,13 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     valuesReadInCurrentPass = 0;
     nullsRead = 0;
     pageReader.valuesReadyToRead = 0;
+    lengthToRead = 0;
   }
 
   protected void postPageRead() {
     currLengthDeterminingDictVal = null;
     pageReader.valuesReadyToRead = 0;
+    lengthToRead = 0;
   }
 
   protected boolean readAndStoreValueSizeInformation() throws IOException {
@@ -88,11 +94,40 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
       dataTypeLengthInBits = pageReader.pageDataByteArray.getInt((int) pageReader.readyToReadPosInBytes);
     }
     // I think this also needs to happen if it is null for the random access
+    // TODO - replace this with a call to just set the nullability
     boolean success = setSafe(valuesReadInCurrentPass + pageReader.valuesReadyToRead, pageReader.pageDataByteArray,
         (int) pageReader.readyToReadPosInBytes + 4, dataTypeLengthInBits);
+    lengthToRead += dataTypeLengthInBits + 4;
+    if (pageReader.readPosInBytes + lengthToRead > pageReader.pageDataByteArray.capacity()) {
+//      throw new RuntimeException("going to read out of the buffer");
+      Math.min(3,4);
+    }
     if ( ! success )
       return true;
     return false;
+  }
+
+  protected void readRecords(int recordsToRead) {
+    if (recordsToRead == 0)
+      return;
+//    if (usingDictionary) {
+//      for (int i = 0; i < recordsToRead; i++) {
+//        readField(i);
+//      }
+//    } else {
+    if (pageReader.readPosInBytes + lengthToRead > pageReader.pageDataByteArray.capacity()) {
+      throw new RuntimeException("going to read out of the buffer");
+    }
+    try {
+      ((NullableVarBinaryVector)valueVec).getData().writeBytes(pageReader.pageDataByteArray,
+          (int) pageReader.readPosInBytes, lengthToRead);
+    } catch (Exception ex) {
+      throw ex;
+    }
+      pageReader.readPosInBytes += lengthToRead;
+//    }
+    pageReader.valuesRead += recordsToRead;
+    valuesReadInCurrentPass += recordsToRead;
   }
 
   public void updateReadyToReadPosition() {
@@ -124,9 +159,9 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     currentValNull = variableWidthVector.getAccessor().getObject(valuesReadInCurrentPass) == null;
     // again, I am re-purposing the unused field here, it is a length n BYTES, not bits
     if (! currentValNull){
-      boolean success = setSafe(valuesReadInCurrentPass, pageReader.pageDataByteArray,
-          (int) pageReader.readPosInBytes + 4, dataTypeLengthInBits);
-      assert success;
+//      boolean success = setSafe(valuesReadInCurrentPass, pageReader.pageDataByteArray,
+//          (int) pageReader.readPosInBytes + 4, dataTypeLengthInBits);
+//      assert success;
     }
     updatePosition();
   }

@@ -53,7 +53,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final boolean VERBOSE_DEBUG = false;
+  private static final boolean VERBOSE_DEBUG = true;
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -301,10 +301,9 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  @Ignore
   @Test
   public void testReadVoter() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/tmp/voter.parquet`");
+    compareParquetReadersHyperVector("create_time", "dfs.`/tmp/voter.parquet`");
   }
 
   @Ignore
@@ -340,10 +339,10 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
   }
 
-  @Ignore
   @Test
   public void testReadSf_1_supplier() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+//    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    compareParquetReadersHyperVector("O_ORDERDATE", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
   @Ignore
@@ -425,7 +424,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   public void compareHyperVectors(Map<String, HyperVectorValueIterator> expectedRecords,
                                   Map<String, HyperVectorValueIterator> actualRecords) throws Exception {
-    for (String s : expectedRecords.keySet()) {
+    for (String s : actualRecords.keySet()) {
       assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
       HyperVectorValueIterator expectedValues = expectedRecords.get(s);
       HyperVectorValueIterator actualValues = actualRecords.get(s);

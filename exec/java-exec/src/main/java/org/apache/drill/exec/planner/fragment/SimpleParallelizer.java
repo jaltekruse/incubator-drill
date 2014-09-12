@@ -187,7 +187,9 @@ public class SimpleParallelizer {
 
       width = Math.min(width, maxWidthPerNode*allNodes.size());
 
-      if (width < 1) width = 1;
+      if (width< 1) width = 1;
+      // TODO - DELETE ME, FOR DEBUGGING
+      width = 1;
 //      logger.debug("Setting width {} on fragment {}", width, wrapper);
       wrapper.setWidth(width);
       // figure out endpoint assignments. also informs the exchanges about their respective endpoints.
