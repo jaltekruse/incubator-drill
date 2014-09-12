@@ -241,10 +241,9 @@ public class TestParquetWriter extends BaseTestQuery {
         .build().run();
   }
 
-  @Ignore
   @Test
   public void testReadVoter() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/tmp/voter.parquet`");
+    compareParquetReadersHyperVector("create_time", "dfs.`/tmp/voter.parquet`");
   }
 
   @Ignore
@@ -271,10 +270,10 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
   }
 
-  @Ignore
   @Test
   public void testReadSf_1_supplier() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+//    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    compareParquetReadersHyperVector("O_ORDERDATE", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
   @Ignore
