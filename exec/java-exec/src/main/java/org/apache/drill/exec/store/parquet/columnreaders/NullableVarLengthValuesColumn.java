@@ -126,6 +126,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     }
       pageReader.readPosInBytes += lengthToRead;
 //    }
+    lengthToRead = 0;
     pageReader.valuesRead += recordsToRead;
     valuesReadInCurrentPass += recordsToRead;
   }

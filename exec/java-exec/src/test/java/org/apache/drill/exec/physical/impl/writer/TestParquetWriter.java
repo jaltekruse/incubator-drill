@@ -53,7 +53,7 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
-  private static final boolean VERBOSE_DEBUG = true;
+  private static final boolean VERBOSE_DEBUG = false;
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -342,7 +342,19 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testReadSf_1_supplier() throws Exception {
 //    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
-    compareParquetReadersHyperVector("O_ORDERDATE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+//    compareParquetReadersHyperVector("O_ORDERDTE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // works
+//    compareParquetReadersHyperVector("O_CLERK, O_ORDERDATE, O_ORDERKEY", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // TODO - breaks
+//    compareParquetReadersHyperVector("O_CLERK, O_ORDERDATE, O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // this also breaks
+    compareParquetReadersHyperVector("O_CLERK, O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // works
+//    compareParquetReadersHyperVector("O_CLERK, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // works
+//    compareParquetReadersHyperVector("O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    // works
+//    compareParquetReadersHyperVector("O_ORDERDATE, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
   @Ignore
