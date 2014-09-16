@@ -182,7 +182,6 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
-  @Ignore
   public void testRepeatedBool() throws Exception {
     String inputTable = "cp.`parquet/repeated_bool_data.json`";
     runTestAndValidate("*", "*", inputTable, "repeated_bool_parquet");
