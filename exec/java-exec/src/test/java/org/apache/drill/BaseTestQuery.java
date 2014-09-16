@@ -18,8 +18,15 @@
 package org.apache.drill;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -37,7 +44,11 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
+import org.apache.drill.exec.record.BatchSchema;
+import org.apache.drill.exec.record.HyperVectorWrapper;
+import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
+import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
@@ -45,7 +56,10 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.util.VectorUtil;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.hadoop.io.Text;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
@@ -54,10 +68,13 @@ import org.junit.runner.Description;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
+import static org.junit.Assert.assertEquals;
+
 public class BaseTestQuery extends ExecTest{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
   private int[] columnWidths = new int[] { 8 };
+  private static final boolean VERBOSE_DEBUG = false;
 
   private static final String ENABLE_FULL_CACHE = "drill.exec.test.use-full-cache";
 
@@ -308,6 +325,309 @@ public class BaseTestQuery extends ExecTest{
     }
 
     return formattedResults.toString();
+  }
+
+  public void compareHyperVectors(Map<String, HyperVectorValueIterator> expectedRecords,
+                                  Map<String, HyperVectorValueIterator> actualRecords) throws Exception {
+    for (String s : expectedRecords.keySet()) {
+      assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
+      HyperVectorValueIterator expectedValues = expectedRecords.get(s);
+      HyperVectorValueIterator actualValues = actualRecords.get(s);
+      int i = 0;
+      while (expectedValues.hasNext()) {
+        compareValues(expectedValues.next(), actualValues.next(), i, s);
+        i++;
+      }
+    }
+    for (HyperVectorValueIterator hvi : expectedRecords.values()) {
+      for (ValueVector vv : hvi.hyperVector.getValueVectors()) {
+        vv.clear();
+      }
+    }
+    for (HyperVectorValueIterator hvi : actualRecords.values()) {
+      for (ValueVector vv : hvi.hyperVector.getValueVectors()) {
+        vv.clear();
+      }
+    }
+  }
+
+  public void compareMergedVectors(Map<String, List> expectedRecords, Map<String, List> actualRecords) throws Exception {
+    for (String s : expectedRecords.keySet()) {
+      assertEquals(expectedRecords.get(s).size(), actualRecords.get(s).size());
+      List expectedValues = expectedRecords.get(s);
+      List actualValues = actualRecords.get(s);
+      for (int i = 0; i < expectedValues.size(); i++) {
+        compareValues(expectedValues.get(i), actualValues.get(i), i, s);
+      }
+    }
+  }
+
+  public Map<String, HyperVectorValueIterator> addToHyperVectorMap(List<QueryResultBatch> records, RecordBatchLoader loader,
+                                                                   BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+    // TODO - this does not handle schema changes
+    Map<String, HyperVectorValueIterator> combinedVectors = new HashMap();
+
+    long totalRecords = 0;
+    QueryResultBatch batch;
+    int size = records.size();
+    for (int i = 0; i < size; i++) {
+      batch = records.get(i);
+      loader = new RecordBatchLoader(getAllocator());
+      loader.load(batch.getHeader().getDef(), batch.getData());
+      logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
+      totalRecords += loader.getRecordCount();
+      for (VectorWrapper w : loader) {
+        String field = w.getField().toExpr();
+        if ( ! combinedVectors.containsKey(field)) {
+          MaterializedField mf = w.getField();
+          ValueVector[] vvList = (ValueVector[]) Array.newInstance(mf.getValueClass(), 1);
+          vvList[0] = w.getValueVector();
+          combinedVectors.put(mf.getPath().toExpr(), new HyperVectorValueIterator(mf, new HyperVectorWrapper(mf,
+              vvList)));
+        } else {
+          combinedVectors.get(field).hyperVector.addVector(w.getValueVector());
+        }
+
+      }
+    }
+    for (HyperVectorValueIterator hvi : combinedVectors.values()) {
+      hvi.determineTotalSize();
+    }
+    return combinedVectors;
+  }
+
+  public Map<String, List> addToCombinedVectorResults(List<QueryResultBatch> records, RecordBatchLoader loader,
+                                                      BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+    // TODO - this does not handle schema changes
+    Map<String, List> combinedVectors = new HashMap();
+
+    long totalRecords = 0;
+    QueryResultBatch batch;
+    int size = records.size();
+    for (int i = 0; i < size; i++) {
+      batch = records.get(0);
+      loader.load(batch.getHeader().getDef(), batch.getData());
+      if (schema == null) {
+        schema = loader.getSchema();
+        for (MaterializedField mf : schema) {
+          combinedVectors.put(mf.getPath().toExpr(), new ArrayList());
+        }
+      }
+      logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
+      totalRecords += loader.getRecordCount();
+      for (VectorWrapper w : loader) {
+        String field = w.getField().toExpr();
+        for (int j = 0; j < loader.getRecordCount(); j++) {
+          if (totalRecords - loader.getRecordCount() + j > 5000000) {
+            continue;
+          }
+          Object obj = w.getValueVector().getAccessor().getObject(j);
+          if (obj != null) {
+            if (obj instanceof Text) {
+              obj = obj.toString();
+              if (obj.equals("")) {
+                System.out.println(w.getField());
+              }
+            }
+            else if (obj instanceof byte[]) {
+              obj = new String((byte[]) obj, "UTF-8");
+            }
+          }
+          combinedVectors.get(field).add(obj);
+        }
+      }
+      records.remove(0);
+      batch.release();
+      loader.clear();
+    }
+    return combinedVectors;
+  }
+
+  public static class HyperVectorValueIterator implements Iterator<Object> {
+    private MaterializedField mf;
+    HyperVectorWrapper hyperVector;
+    private int indexInVectorList;
+    private int indexInCurrentVector;
+    private ValueVector currVec;
+    private long totalValues;
+    private long totalValuesRead;
+    // limit how many values will be read out of this iterator
+    private long recordLimit;
+
+    public HyperVectorValueIterator(MaterializedField mf, HyperVectorWrapper hyperVector) {
+      this.mf = mf;
+      this.hyperVector = hyperVector;
+      this.totalValues = 0;
+      this.indexInCurrentVector = 0;
+      this.indexInVectorList = 0;
+      this.recordLimit = -1;
+    }
+
+    public void setRecordLimit(long limit) {
+      this.recordLimit = limit;
+    }
+
+    public long getTotalRecords() {
+      if (recordLimit > 0) {
+        return recordLimit;
+      } else {
+        return totalValues;
+      }
+    }
+
+    public void determineTotalSize() {
+      for (ValueVector vv : hyperVector.getValueVectors()) {
+        this.totalValues += vv.getAccessor().getValueCount();
+      }
+    }
+
+    @Override
+    public boolean hasNext() {
+      if (totalValuesRead == recordLimit) {
+        return false;
+      }
+      if (indexInVectorList < hyperVector.getValueVectors().length) {
+        return true;
+      } else if ( indexInCurrentVector < currVec.getAccessor().getValueCount()) {
+        return true;
+      }
+      return false;
+    }
+
+    @Override
+    public Object next() {
+      if (currVec == null || indexInCurrentVector == currVec.getValueCapacity()) {
+        currVec = hyperVector.getValueVectors()[indexInVectorList];
+        indexInVectorList++;
+        indexInCurrentVector = 0;
+      }
+      Object obj = currVec.getAccessor().getObject(indexInCurrentVector);
+      indexInCurrentVector++;
+      totalValuesRead++;
+      return obj;
+    }
+
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException();
+    }
+  }
+
+  public void addToMaterializedResults(List<Map> materializedRecords,  List<QueryResultBatch> records, RecordBatchLoader loader,
+                                       BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+    long totalRecords = 0;
+    QueryResultBatch batch;
+    int size = records.size();
+    for (int i = 0; i < size; i++) {
+      batch = records.get(0);
+      loader.load(batch.getHeader().getDef(), batch.getData());
+      if (schema == null) {
+        schema = loader.getSchema();
+      }
+      logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
+      totalRecords += loader.getRecordCount();
+      for (int j = 0; j < loader.getRecordCount(); j++) {
+        HashMap<String, Object> record = new HashMap<>();
+        for (VectorWrapper w : loader) {
+          Object obj = w.getValueVector().getAccessor().getObject(j);
+          if (obj != null) {
+            if (obj instanceof Text) {
+              obj = obj.toString();
+              if (obj.equals("")) {
+                System.out.println(w.getField());
+              }
+            }
+            else if (obj instanceof byte[]) {
+              obj = new String((byte[]) obj, "UTF-8");
+            }
+            record.put(w.getField().toExpr(), obj);
+          }
+          record.put(w.getField().toExpr(), obj);
+        }
+        materializedRecords.add(record);
+      }
+      records.remove(0);
+      batch.release();
+      loader.clear();
+    }
+  }
+
+  public void compareValues(Object expected, Object actual, int counter, String column) throws Exception {
+
+    if (expected == null) {
+      if (actual == null) {
+        if (VERBOSE_DEBUG) {
+          logger.debug("(1) at position " + counter + " column '" + column + "' matched value:  " + expected );
+        }
+        return;
+      } else {
+        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: " + expected + " but received " + actual);
+      }
+    }
+    if (actual == null) {
+      throw new Exception("unexpected null at position " + counter + " column '" + column + "' should have been:  " + expected);
+    }
+    if (actual instanceof byte[]) {
+      if ( ! Arrays.equals((byte[]) expected, (byte[]) actual)) {
+        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
+            + new String((byte[])expected, "UTF-8") + " but received " + new String((byte[])actual, "UTF-8"));
+      } else {
+        if (VERBOSE_DEBUG) {
+          logger.debug("at position " + counter + " column '" + column + "' matched value " + new String((byte[])expected, "UTF-8"));
+        }
+        return;
+      }
+    }
+    if (!expected.equals(actual)) {
+      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: " + expected + " but received " + actual);
+    } else {
+      if (VERBOSE_DEBUG) {
+        logger.debug("at position " + counter + " column '" + column + "' matched value:  " + expected );
+      }
+    }
+  }
+
+  /**
+   * Compare two result sets, ignoring ordering.
+   *
+   * @param expectedRecords
+   * @param actualRecords
+   * @throws Exception
+   */
+  public void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
+
+    BatchSchema schema = null;
+    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
+    assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
+
+    String missing = "";
+    int i = 0;
+    int counter = 0;
+    int missmatch;
+    for (Map<String, Object> record : expectedRecords) {
+      missmatch = 0;
+      counter++;
+      for (String column : record.keySet()) {
+        if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
+          continue;
+        }
+        if (actualRecords.get(i).get(column) == null)
+          continue;
+        if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
+          missmatch++;
+        }
+      }
+      if ( ! actualRecords.remove(record)) {
+        missing += missmatch + ",";
+      }
+      else {
+        i--;
+      }
+      i++;
+    }
+    logger.debug(missing);
+    System.out.println(missing);
+    assertEquals(0, actualRecords.size());
   }
 
 }
