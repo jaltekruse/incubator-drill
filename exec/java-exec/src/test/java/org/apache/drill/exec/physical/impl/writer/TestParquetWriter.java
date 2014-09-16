@@ -674,32 +674,46 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
+  /**
+   * Compare two result sets, ignoring ordering.
+   *
+   * @param expectedRecords
+   * @param actualRecords
+   * @throws Exception
+   */
   public void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
+
+    BatchSchema schema = null;
+    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     Assert.assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
-    StringBuilder missing = new StringBuilder();
+    String missing = "";
     int i = 0;
     int counter = 0;
     int missmatch;
     for (Map<String, Object> record : expectedRecords) {
       missmatch = 0;
-      for (String column : record.keySet()) {
-        compareValues(record.get(column), actualRecords.get(i).get(column), counter, column );
-      }
-      if ( !actualRecords.get(i).equals(record)) {
-        System.out.println("mismatch at position " + counter );
-        missing.append(missmatch);
-        missing.append(",");
-      }
-
       counter++;
-      if (counter % 100000 == 0 ) {
-        System.out.println("checked so far:" + counter);
+      for (String column : record.keySet()) {
+        if (  actualRecords.get(i).get(column) == null && expectedRecords.get(i).get(column) == null ) {
+          continue;
+        }
+        if (actualRecords.get(i).get(column) == null)
+          continue;
+        if ( (actualRecords.get(i).get(column) == null && record.get(column) == null) || ! actualRecords.get(i).get(column).equals(record.get(column))) {
+          missmatch++;
+        }
+      }
+      if ( ! actualRecords.remove(record)) {
+        missing += missmatch + ",";
+      }
+      else {
+        i--;
       }
       i++;
     }
-    logger.debug(missing.toString());
+    logger.debug(missing);
     System.out.println(missing);
+    Assert.assertEquals(0, actualRecords.size());
   }
-
 }
