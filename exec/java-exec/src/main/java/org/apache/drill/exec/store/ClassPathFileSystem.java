@@ -63,6 +63,9 @@ public class ClassPathFileSystem extends FileSystem{
 
   private String getFileName(Path path){
     String file = path.toString();
+    if (file.startsWith("classpath:")) {
+      file = file.substring("classpath:".length());
+    }
     if(file.charAt(0) == '/'){
       file = file.substring(1);
     }
