@@ -18,13 +18,24 @@
 package org.apache.drill;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Array;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Strings;
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ExecTest;
@@ -37,7 +48,11 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
+import org.apache.drill.exec.record.BatchSchema;
+import org.apache.drill.exec.record.HyperVectorWrapper;
+import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatchLoader;
+import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.RpcException;
 import org.apache.drill.exec.rpc.user.ConnectionThrottle;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
@@ -45,7 +60,10 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.util.VectorUtil;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.hadoop.io.Text;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
@@ -54,10 +72,14 @@ import org.junit.runner.Description;
 import com.google.common.base.Charsets;
 import com.google.common.io.Resources;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 public class BaseTestQuery extends ExecTest{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
   private int[] columnWidths = new int[] { 8 };
+  private static final boolean VERBOSE_DEBUG = false;
 
   private static final String ENABLE_FULL_CACHE = "drill.exec.test.use-full-cache";
 
@@ -110,10 +132,12 @@ public class BaseTestQuery extends ExecTest{
     }
   }
 
-
-
   protected BufferAllocator getAllocator() {
     return allocator;
+  }
+
+  public TestBuilder testBuilder() {
+    return new TestBuilder(allocator);
   }
 
   @AfterClass
@@ -150,12 +174,12 @@ public class BaseTestQuery extends ExecTest{
     return testRunAndReturn(QueryType.PHYSICAL, physical);
   }
 
-  protected List<QueryResultBatch>  testRunAndReturn(QueryType type, String query) throws Exception{
+  public static List<QueryResultBatch>  testRunAndReturn(QueryType type, String query) throws Exception{
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
     return client.runQuery(type, query);
   }
 
-  protected int testRunAndPrint(QueryType type, String query) throws Exception{
+  public static int testRunAndPrint(QueryType type, String query) throws Exception{
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
     PrintingResultsListener resultListener = new PrintingResultsListener(client.getConfig(), Format.TSV, VectorUtil.DEFAULT_COLUMN_WIDTH);
     client.runQuery(type, query, resultListener);
@@ -182,7 +206,7 @@ public class BaseTestQuery extends ExecTest{
     }
   }
 
-  protected void test(String query) throws Exception{
+  public static void test(String query) throws Exception{
     String[] queries = query.split(";");
     for (String q : queries) {
       if (q.trim().isEmpty()) {
@@ -220,7 +244,7 @@ public class BaseTestQuery extends ExecTest{
     test(getFile(file));
   }
 
-  protected String getFile(String resource) throws IOException{
+  public static String getFile(String resource) throws IOException{
     URL url = Resources.getResource(resource);
     if (url == null) {
       throw new IOException(String.format("Unable to find path %s.", resource));
@@ -309,5 +333,4 @@ public class BaseTestQuery extends ExecTest{
 
     return formattedResults.toString();
   }
-
 }
