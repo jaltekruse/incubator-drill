@@ -30,6 +30,7 @@ import java.util.Map;
 
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.HyperVectorValueIterator;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.record.BatchSchema;
@@ -88,17 +89,9 @@ public class TestParquetWriter extends BaseTestQuery {
         "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, cast(L_COMMITDATE as DATE) as COMMITDATE, cast(L_RECEIPTDATE as DATE) AS RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
     String validationSelection = "L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, " +
         "L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,COMMITDATE ,RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT";
+
     String inputTable = "cp.`tpch/lineitem.parquet`";
-    String query = String.format("SELECT %s FROM %s", selection, inputTable);
-    List<QueryResultBatch> expected = testSqlWithResults(query);
-    BatchSchema schema = null;
-    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
-    List<Map> expectedRecords = new ArrayList<>();
-    // read the data out of the results, the error manifested itself upon call of getObject on the vectors as they had contained deadbufs
-    addToMaterializedResults(expectedRecords, expected, loader, schema);
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
+    runTestAndValidate(selection, validationSelection, inputTable, "drill_929");
 }
 
   @Test
@@ -205,11 +198,9 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testMulipleRowGroups() throws Exception {
     try {
-      //test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
+      test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
       String selection = "mi";
       String inputTable = "cp.`customer.json`";
-      int count = testRunAndPrint(UserBitShared.QueryType.SQL, "select mi from cp.`customer.json`");
-      System.out.println(count);
       runTestAndValidate(selection, selection, inputTable, "foodmart_customer_parquet");
     } finally {
       test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 512*1024*1024));
@@ -225,77 +216,29 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate(selection, validateSelection, inputTable, "foodmart_employee_parquet");
   }
 
-  public void compareParquetReaders(String selection, String table) throws Exception {
-    test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select " + selection + " from " + table);
-
-    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
-    BatchSchema schema = null;
-
-    List<Map> expectedRecords = new ArrayList<>();
-    addToMaterializedResults(expectedRecords, expected, loader, schema);
-
-    test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select " + selection + " from " + table);
-
-    List<Map> actualRecords = new ArrayList<>();
-    addToMaterializedResults(actualRecords, results, loader, schema);
-    compareResults(expectedRecords, actualRecords);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
-  }
-
   public void compareParquetReadersColumnar(String selection, String table) throws Exception {
-    test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults("select " + selection + " from " + table);
+    String query = "select " + selection + " from " + table;
+    testBuilder()
+        .ordered()
+        .sqlQuery(query)
+        .optionSettingQueriesForTestQuery("alter system set `store.parquet.use_new_reader` = false")
+        .sqlBaselineQuery(query)
+        .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
+        .build().run();
 
-    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
-    BatchSchema schema = null;
-
-    Map<String, List> expectedSuperVectors = addToCombinedVectorResults(expected, loader, schema);
-
-    test("alter system set `store.parquet.use_new_reader` = false");
-    List<QueryResultBatch> results = testSqlWithResults("select " + selection + " from " + table);
-
-    Map<String, List> actualSuperVectors = addToCombinedVectorResults(results, loader, schema);
-    compareMergedVectors(expectedSuperVectors, actualSuperVectors);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
   }
 
   public void compareParquetReadersHyperVector(String selection, String table) throws Exception {
-    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
-    BatchSchema schema = null;
 
-    // TODO - It didn't seem to respect the max width per node setting, so I went in and modified the SimpleParalellizer directly.
-    // I backed out the changes after the test passed.
-//    test("alter system set `planner.width.max_per_node` = 1");
-    test("alter system set `store.parquet.use_new_reader` = false");
     String query = "select " + selection + " from " + table;
-    List<QueryResultBatch> results = testSqlWithResults(query);
-
-    Map<String, HyperVectorValueIterator> actualSuperVectors = addToHyperVectorMap(results, loader, schema);
-
-    test("alter system set `store.parquet.use_new_reader` = true");
-    List<QueryResultBatch> expected = testSqlWithResults(query);
-
-    Map<String, HyperVectorValueIterator> expectedSuperVectors = addToHyperVectorMap(expected, loader, schema);
-
-    compareHyperVectors(expectedSuperVectors, actualSuperVectors);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
+    testBuilder()
+        .ordered()
+        .highPerformanceComparison()
+        .sqlQuery(query)
+        .optionSettingQueriesForTestQuery("alter system set `store.parquet.use_new_reader` = false")
+        .sqlBaselineQuery(query)
+        .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
+        .build().run();
   }
 
   @Ignore
@@ -334,7 +277,6 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
-  @Ignore
   @Test
   public void test958_sql_all_columns() throws Exception {
     compareParquetReadersHyperVector("*",  "dfs.`/tmp/store_sales`");
@@ -391,24 +333,10 @@ public class TestParquetWriter extends BaseTestQuery {
     String validateQuery = String.format("SELECT %s FROM " + outputFile, validationSelection);
     test(create);
 
-    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
-    BatchSchema schema = null;
-
-    List<QueryResultBatch> expected = testSqlWithResults(query);
-    List<Map> expectedRecords = new ArrayList<>();
-    addToMaterializedResults(expectedRecords, expected, loader, schema);
-
-    List<QueryResultBatch> results = testSqlWithResults(validateQuery);
-    List<Map> actualRecords = new ArrayList<>();
-    addToMaterializedResults(actualRecords, results, loader, schema);
-
-    compareResults(expectedRecords, actualRecords);
-    for (QueryResultBatch result : results) {
-      result.release();
-    }
-    for (QueryResultBatch result : expected) {
-      result.release();
-    }
+    testBuilder()
+        .unOrdered()
+        .sqlQuery(query)
+        .sqlBaselineQuery(validateQuery);
   }
 
 }
