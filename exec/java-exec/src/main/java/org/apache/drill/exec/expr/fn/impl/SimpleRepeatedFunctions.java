@@ -25,7 +25,11 @@ import org.apache.drill.exec.expr.holders.BigIntHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.IntHolder;
 import org.apache.drill.exec.expr.holders.RepeatedBigIntHolder;
+import org.apache.drill.exec.expr.holders.RepeatedFloat4Holder;
+import org.apache.drill.exec.expr.holders.RepeatedFloat8Holder;
 import org.apache.drill.exec.expr.holders.RepeatedIntHolder;
+import org.apache.drill.exec.expr.holders.RepeatedTinyIntHolder;
+import org.apache.drill.exec.expr.holders.RepeatedVarCharHolder;
 import org.apache.drill.exec.record.RecordBatch;
 
 public class SimpleRepeatedFunctions {
@@ -50,9 +54,71 @@ public class SimpleRepeatedFunctions {
   }
 
   @FunctionTemplate(name = "repeated_count", scope = FunctionTemplate.FunctionScope.SIMPLE)
+  public static class RepeatedLengthTinyInt implements DrillSimpleFunc {
+
+    @Param
+    RepeatedTinyIntHolder input;
+    @Output
+    IntHolder out;
+
+    public void setup(RecordBatch b) {
+    }
+
+    public void eval() {
+      out.value = input.end - input.start;
+    }
+  }
+
+  @FunctionTemplate(name = "repeated_count", scope = FunctionTemplate.FunctionScope.SIMPLE)
+  public static class RepeatedLengthFloat4 implements DrillSimpleFunc {
+
+    @Param
+    RepeatedFloat4Holder input;
+    @Output
+    IntHolder out;
+
+    public void setup(RecordBatch b) {
+    }
+
+    public void eval() {
+      out.value = input.end - input.start;
+    }
+  }
+
+  @FunctionTemplate(name = "repeated_count", scope = FunctionTemplate.FunctionScope.SIMPLE)
+  public static class RepeatedLengthFloat8 implements DrillSimpleFunc {
+
+    @Param
+    RepeatedFloat8Holder input;
+    @Output
+    IntHolder out;
+
+    public void setup(RecordBatch b) {
+    }
+
+    public void eval() {
+      out.value = input.end - input.start;
+    }
+  }
+
+  @FunctionTemplate(name = "repeated_count", scope = FunctionTemplate.FunctionScope.SIMPLE)
   public static class RepeatedLengthInt implements DrillSimpleFunc {
 
     @Param RepeatedIntHolder input;
+    @Output IntHolder out;
+
+    public void setup(RecordBatch b) {
+    }
+
+    public void eval() {
+      out.value = input.end - input.start;
+    }
+  }
+
+  @FunctionTemplate(name = "repeated_count", scope = FunctionTemplate.FunctionScope.SIMPLE)
+  public static class RepeatedLengthVarChar implements DrillSimpleFunc {
+
+    @Param RepeatedVarCharHolder input;
     @Output IntHolder out;
 
     public void setup(RecordBatch b) {

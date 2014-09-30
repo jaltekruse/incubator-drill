@@ -98,6 +98,12 @@ public class TestJsonReader extends BaseTestQuery {
   }
 
   @Test
+  public void testRepeatedVarcharCount() throws Exception {
+//    test("select repeated_count(str_list) from cp.`/store/json/json_basic_repeated_varchar.json`");
+    test("select * from cp.`/parquet/alltypes_repeated.json`");
+  }
+
+  @Test
   public void testSingleColumnRead_vector_fill_bug() throws Exception {
     String[] queries = {"select * from cp.`/store/json/single_column_long_file.json`"};
     long[] rowCounts = {13512};
@@ -113,6 +119,7 @@ public class TestJsonReader extends BaseTestQuery {
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
   }
 
+  @Test
   public void testAllTextMode() throws Exception {
     test("alter system set `store.json.all_text_mode` = true");
     String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
