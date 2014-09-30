@@ -112,6 +112,12 @@ public class TestJsonReader extends BaseTestQuery {
     test("select repeated_count(FLOAT4_col) from cp.`/parquet/alltypes_repeated.json`");
     test("select repeated_count(VARCHAR_col) from cp.`/parquet/alltypes_repeated.json`");
     test("select repeated_count(BIT_col) from cp.`/parquet/alltypes_repeated.json`");
+    // TODO - fix this
+//    test("select repeated_count(rl) from cp.`/store/json/input2.json`");
+    // TODO - fix this
+//    test("alter system set `store.json.all_text_mode` = true");
+//    test("select repeated_count(field_5) from cp.`/store/json/schema_change_int_to_string.json`");
+//    test("alter system set `store.json.all_text_mode` = false");
   }
 
   @Test
