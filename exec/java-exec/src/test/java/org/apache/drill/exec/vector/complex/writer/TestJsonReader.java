@@ -100,7 +100,7 @@ public class TestJsonReader extends BaseTestQuery {
   @Test
   public void testRepeatedVarcharCount() throws Exception {
 //    test("select repeated_count(str_list) from cp.`/store/json/json_basic_repeated_varchar.json`");
-    test("select * from cp.`/parquet/alltypes_repeated.json`");
+    test("select repeated_count(FLOAT4_col) from cp.`/parquet/alltypes_repeated.json`");
   }
 
   @Test
