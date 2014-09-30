@@ -29,10 +29,12 @@ import static org.junit.Assert.assertEquals;
 
 public class TestTestFramework extends BaseTestQuery{
 
+  private static String CSV_COLS = " cast(columns[0] as bigint) employee_id, columns[1] as first_name, columns[2] as last_name ";
+
   @Test
   public void testCSVVerification() throws Exception {
     testBuilder()
-        .sqlQuery("select employee_id, first_name, last_name from cp.`employee.json` order by employee_id limit 5 offset 10 ")
+        .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json`")
         .ordered()
         .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
@@ -41,10 +43,82 @@ public class TestTestFramework extends BaseTestQuery{
   }
 
   @Test
+  public void testCSVVerification_missing_records_fails() throws Exception {
+    try {
+    testBuilder()
+        .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json`")
+        .ordered()
+        .csvBaselineFile("testframework/small_test_data_extra.tsv")
+        .baselineColumnNames("employee_id", "first_name", "last_name")
+        .baselineTypes(TypeProtos.MinorType.BIGINT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
+        .build().run();
+    } catch (AssertionError ex) {
+      assertEquals("Incorrect number of rows returned by query. expected:<7> but was:<5>", ex.getMessage());
+      // this indicates successful completion of the test
+      return;
+    }
+    throw new Exception("Test framework verification failed, expected failure on type check.");
+  }
+
+  @Test
+  public void testCSVVerification_extra_records_fails() throws Exception {
+    try {
+      testBuilder()
+          .sqlQuery("select " + CSV_COLS + " from cp.`testframework/small_test_data_extra.tsv`")
+          .ordered()
+          .csvBaselineFile("testframework/small_test_data.tsv")
+          .baselineColumnNames("employee_id", "first_name", "last_name")
+          .baselineTypes(TypeProtos.MinorType.BIGINT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
+          .build().run();
+    } catch (AssertionError ex) {
+      assertEquals("Incorrect number of rows returned by query. expected:<5> but was:<7>", ex.getMessage());
+      // this indicates successful completion of the test
+      return;
+    }
+    throw new Exception("Test framework verification failed, expected failure on type check.");
+  }
+
+  @Test
+  public void testCSVVerification_extra_column_fails() throws Exception {
+    try {
+      testBuilder()
+          .sqlQuery("select " + CSV_COLS + ", columns[3] as address from cp.`testframework/small_test_data_extra_col.tsv`")
+          .ordered()
+          .csvBaselineFile("testframework/small_test_data.tsv")
+          .baselineColumnNames("employee_id", "first_name", "last_name")
+          .baselineTypes(TypeProtos.MinorType.BIGINT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
+          .build().run();
+    } catch (AssertionError ex) {
+      assertEquals("Incorrect number of rows returned by query. expected:<7> but was:<5>", ex.getMessage());
+      // this indicates successful completion of the test
+      return;
+    }
+    throw new Exception("Test framework verification failed, expected failure on type check.");
+  }
+
+  @Test
+  public void testCSVVerification_missing_column_fails() throws Exception {
+    try {
+      testBuilder()
+          .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data_extra.json`")
+          .ordered()
+          .csvBaselineFile("testframework/small_test_data.tsv")
+          .baselineColumnNames("employee_id", "first_name", "last_name")
+          .baselineTypes(TypeProtos.MinorType.BIGINT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
+          .build().run();
+    } catch (AssertionError ex) {
+      assertEquals("Incorrect number of rows returned by query. expected:<7> but was:<5>", ex.getMessage());
+      // this indicates successful completion of the test
+      return;
+    }
+    throw new Exception("Test framework verification failed, expected failure on type check.");
+  }
+
+  @Test
   public void testCSVVerificationOfTypes() throws Throwable {
     try {
     testBuilder()
-        .sqlQuery("select employee_id, first_name, last_name from cp.`employee.json` order by employee_id limit 5 offset 10 ")
+        .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json`")
         .ordered()
         .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
@@ -127,7 +201,7 @@ public class TestTestFramework extends BaseTestQuery{
         .baselineColumnNames("employee_id", "first_name", "last_name")
         .baselineTypes(typeMap)
         .build().run();
-    } catch (AssertionError ex) {
+    } catch (Exception ex) {
       // this indicates successful completion of the test
       return;
     }
