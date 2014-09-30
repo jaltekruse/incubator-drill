@@ -46,14 +46,21 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 /**
- * An object to encapsulate the options for a Drill unit test.
+ * An object to encapsulate the options for a Drill unit test, as well as the execution methods to perform the tests and
+ * validation of results.
  *
- * To construct an instance easily, look at the TestBuilder class.
+ * To construct an instance easily, look at the TestBuilder class. From an implementation of
+ * the BaseTestQuery class, and instance of the builder is accessible through the testBuilder() method.
  */
 public class DrillTestWrapper {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
   // TODO - when in JSON, read baseline in all text mode to avoid precision loss for decimal values
+
+  // This flag will enable all of the values that are validated to be logged. For large validations this is time consuming
+  // so this is not exposed in a way that it can be enabled for an individual test. It can be changed here while debugging
+  // a test to see all of the output, but as this framework is doing full validation, there is no reason to keep it on as
+  // it will only make the test slower.
   private static boolean VERBOSE_DEBUG = false;
 
   private TestBuilder testBuilder;
@@ -63,7 +70,7 @@ public class DrillTestWrapper {
   private UserBitShared.QueryType queryType;
   // The type of query provided for the baseline
   private UserBitShared.QueryType baselineQueryType;
-  // should ordering be enforced in the baseline chectbuilder
+  // should ordering be enforced in the baseline check
   private boolean ordered;
   // TODO - implement this
   private boolean approximateEquality;
@@ -80,7 +87,7 @@ public class DrillTestWrapper {
 
   public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
-                          String baselineQuery, QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
+                          QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
                           boolean highPerformanceComparison) {
     this.testBuilder = testBuilder;
     this.allocator = allocator;
@@ -109,6 +116,7 @@ public class DrillTestWrapper {
   private void compareHyperVectors(Map<String, HyperVectorValueIterator> expectedRecords,
                                          Map<String, HyperVectorValueIterator> actualRecords) throws Exception {
     for (String s : expectedRecords.keySet()) {
+      assertNotNull("Expected column '" + s + "' not found.", actualRecords.get(s));
       assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
       HyperVectorValueIterator expectedValues = expectedRecords.get(s);
       HyperVectorValueIterator actualValues = actualRecords.get(s);
@@ -158,7 +166,7 @@ public class DrillTestWrapper {
       totalRecords += loader.getRecordCount();
       for (VectorWrapper w : loader) {
         String field = w.getField().toExpr();
-        if ( ! combinedVectors.containsKey(field)) {
+        if (!combinedVectors.containsKey(field)) {
           MaterializedField mf = w.getField();
           ValueVector[] vvList = (ValueVector[]) Array.newInstance(mf.getValueClass(), 1);
           vvList[0] = w.getValueVector();
@@ -280,6 +288,7 @@ public class DrillTestWrapper {
 
     BaseTestQuery.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
+    // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 
     Map<String, List> actualSuperVectors = addToCombinedVectorResults(results, loader, schema);
@@ -299,6 +308,7 @@ public class DrillTestWrapper {
 
     BaseTestQuery.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
+    // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 
     Map<String, HyperVectorValueIterator> actualSuperVectors = addToHyperVectorMap(results, loader, schema);
@@ -376,14 +386,14 @@ public class DrillTestWrapper {
     }
   }
 
-  public static void compareValues(Object expected, Object actual, int counter, String column) throws Exception {
+  public boolean compareValues(Object expected, Object actual, int counter, String column) throws Exception {
 
     if (expected == null) {
       if (actual == null) {
         if (VERBOSE_DEBUG) {
           logger.debug("(1) at position " + counter + " column '" + column + "' matched value:  " + expected );
         }
-        return;
+        return true;
       } else {
         throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
             + expected + "(" + expected.getClass().getSimpleName() + ") but received " + actual + "(" + actual.getClass().getSimpleName() + ")");
@@ -400,7 +410,7 @@ public class DrillTestWrapper {
         if (VERBOSE_DEBUG) {
           logger.debug("at position " + counter + " column '" + column + "' matched value " + new String((byte[])expected, "UTF-8"));
         }
-        return;
+        return true;
       }
     }
     if (!expected.equals(actual)) {
@@ -411,13 +421,14 @@ public class DrillTestWrapper {
         logger.debug("at position " + counter + " column '" + column + "' matched value:  " + expected );
       }
     }
+    return true;
   }
 
   /**
    * Compare two result sets, ignoring ordering.
    *
-   * @param expectedRecords
-   * @param actualRecords
+   * @param expectedRecords - list of records from baseline
+   * @param actualRecords - list of records from test query, WARNING - this list is destroyed in this method
    * @throws Exception
    */
   private void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
@@ -425,14 +436,33 @@ public class DrillTestWrapper {
     assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 
     String missing = "";
+    int i = 0;
     for (Map<String, Object> record : expectedRecords) {
-      if ( ! actualRecords.remove(record)) {
-        // TODO - add some kind of row major record serialization, append to the 'missing' string
+      i = 0;
+      findMatch:
+      for (Map<String, Object> actualRecord : actualRecords) {
+        for (String s : actualRecord.keySet()) {
+          if ( ! record.get(s).equals(actualRecord.get(s))) {
+            continue findMatch;
+          }
+          i++;
+        }
+      }
+      if ( actualRecords.remove(i)) {
+        throw new Exception("Did not find expected record in remaining results: " + printRecord(record));
       }
     }
     logger.debug(missing);
     System.out.println(missing);
     assertEquals(0, actualRecords.size());
+  }
+
+  private String printRecord(Map<String, Object> record) {
+    String ret = "";
+    for (String s : record.keySet()) {
+      ret += s + " : "  + record.get(s) + ", ";
+    }
+    return ret + "\n";
   }
 
 }

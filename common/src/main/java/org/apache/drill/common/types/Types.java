@@ -409,7 +409,7 @@ public class Types {
       case VARBINARY:
         return "binary";
       case LATE:
-        return "json";
+        throw new DrillRuntimeException("The late type should never appear in execution or an SQL query, so it does not have a name to refer to it.");
       default:
         throw new DrillRuntimeException("Unrecognized type " + type);
     }

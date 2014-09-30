@@ -34,7 +34,7 @@ public class TestTestFramework extends BaseTestQuery{
     testBuilder()
         .sqlQuery("select employee_id, first_name, last_name from cp.`employee.json` order by employee_id limit 5 offset 10 ")
         .ordered()
-        .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+        .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
         .baselineTypes(TypeProtos.MinorType.BIGINT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
         .build().run();
@@ -46,7 +46,7 @@ public class TestTestFramework extends BaseTestQuery{
     testBuilder()
         .sqlQuery("select employee_id, first_name, last_name from cp.`employee.json` order by employee_id limit 5 offset 10 ")
         .ordered()
-        .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+        .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
         .baselineTypes(TypeProtos.MinorType.INT, TypeProtos.MinorType.VARCHAR, TypeProtos.MinorType.VARCHAR)
         .build().run();
@@ -62,9 +62,9 @@ public class TestTestFramework extends BaseTestQuery{
   public void testCSVVerificationOfOrder_checkFailure() throws Throwable {
     try {
       testBuilder()
-          .sqlQuery("select columns[0] as employee_id, columns[1] as first_name, columns[2] as last_name from cp.`sort/testSelectWithLimitOffset_reordered.tsv`")
+          .sqlQuery("select columns[0] as employee_id, columns[1] as first_name, columns[2] as last_name from cp.`testframework/small_test_data_reordered.tsv`")
           .ordered()
-          .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+          .csvBaselineFile("testframework/small_test_data.tsv")
           .baselineColumnNames("employee_id", "first_name", "last_name")
           .build().run();
     } catch (Exception ex) {
@@ -78,9 +78,9 @@ public class TestTestFramework extends BaseTestQuery{
   @Test
   public void testCSVVerificationOfUnorderedComparison() throws Throwable {
     testBuilder()
-        .sqlQuery("select columns[0] as employee_id, columns[1] as first_name, columns[2] as last_name from cp.`sort/testSelectWithLimitOffset_reordered.tsv`")
+        .sqlQuery("select columns[0] as employee_id, columns[1] as first_name, columns[2] as last_name from cp.`testframework/small_test_data_reordered.tsv`")
         .unOrdered()
-        .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+        .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
         .build().run();
   }
@@ -103,9 +103,9 @@ public class TestTestFramework extends BaseTestQuery{
     typeMap.put(TestBuilder.parsePath("employee_id"), TypeProtos.MinorType.INT);
     typeMap.put(TestBuilder.parsePath("last_name"), TypeProtos.MinorType.VARCHAR);
     testBuilder()
-        .sqlQuery("select cast(columns[0] as int) employee_id, columns[1] as first_name, columns[2] as last_name from cp.`sort/testSelectWithLimitOffset_reordered.tsv`")
+        .sqlQuery("select cast(columns[0] as int) employee_id, columns[1] as first_name, columns[2] as last_name from cp.`testframework/small_test_data_reordered.tsv`")
         .unOrdered()
-        .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+        .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
         // This should work without this line because of the default type casts added based on the types that come out of the test query.
         // To write a test that enforces strict typing you must pass type information using a CSV with a list of types,
@@ -121,9 +121,9 @@ public class TestTestFramework extends BaseTestQuery{
 
     try {
     testBuilder()
-        .sqlQuery("select cast(columns[0] as int) employee_id, columns[1] as first_name, columns[2] as last_name from cp.`sort/testSelectWithLimitOffset_reordered.tsv`")
+        .sqlQuery("select cast(columns[0] as int) employee_id, columns[1] as first_name, columns[2] as last_name from cp.`testframework/small_test_data_reordered.tsv`")
         .unOrdered()
-        .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
+        .csvBaselineFile("testframework/small_test_data.tsv")
         .baselineColumnNames("employee_id", "first_name", "last_name")
         .baselineTypes(typeMap)
         .build().run();
