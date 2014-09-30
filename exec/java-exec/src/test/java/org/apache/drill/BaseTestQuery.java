@@ -79,7 +79,6 @@ public class BaseTestQuery extends ExecTest{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
   private int[] columnWidths = new int[] { 8 };
-  private static final boolean VERBOSE_DEBUG = false;
 
   private static final String ENABLE_FULL_CACHE = "drill.exec.test.use-full-cache";
 

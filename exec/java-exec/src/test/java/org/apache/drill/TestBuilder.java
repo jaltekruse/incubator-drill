@@ -34,6 +34,8 @@ import org.apache.drill.exec.proto.UserBitShared;
 import java.io.IOException;
 import java.util.Map;
 
+import static org.junit.Assert.assertEquals;
+
 public class TestBuilder {
 
   // test query to run
@@ -95,12 +97,8 @@ public class TestBuilder {
     if ( ! ordered && highPerformanceComparison ) {
       throw new Exception("High performance comparison only available for ordered checks, to enforce this restriction, ordered() must be called first.");
     }
-    String validationQuery = null;
-    if (typeInfoSet()) {
-      validationQuery = getValidationQuery();
-    }
     return new DrillTestWrapper(this, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
-        validationQuery, getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison);
+        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison);
   }
 
   public TestBuilder sqlQuery(String query) {
@@ -109,7 +107,21 @@ public class TestBuilder {
     return this;
   }
 
+  public TestBuilder sqlQueryFromFile(String queryFile) throws IOException {
+    String query = BaseTestQuery.getFile(queryFile);
+    this.query = query;
+    this.queryType = UserBitShared.QueryType.SQL;
+    return this;
+  }
+
   public TestBuilder physicalPlan(String query) {
+    this.query = query;
+    this.queryType = UserBitShared.QueryType.PHYSICAL;
+    return this;
+  }
+
+  public TestBuilder physicalPlanFromFile(String queryFile) throws IOException {
+    String query = BaseTestQuery.getFile(queryFile);
     this.query = query;
     this.queryType = UserBitShared.QueryType.PHYSICAL;
     return this;
@@ -280,6 +292,10 @@ public class TestBuilder {
     String getValidationQuery() throws Exception {
       if (baselineColumnNames.length == 0) {
         throw new Exception("Baseline CSV files require passing column names, please call the baselineColumnNames() method on the test builder.");
+      }
+
+      if (baselineTypes != null) {
+        assertEquals("Must pass the same number of types as column names if types are provided.", baselineTypes.length, baselineColumnNames.length);
       }
 
       String[] aliasedExpectedColumns = new String[baselineColumnNames.length];
