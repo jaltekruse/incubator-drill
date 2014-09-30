@@ -41,6 +41,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -141,7 +142,7 @@ public class DrillTestWrapper {
   private void compareMergedVectors(Map<String, List> expectedRecords, Map<String, List> actualRecords) throws Exception {
     for (String s : expectedRecords.keySet()) {
       assertNotNull("Expected column '" + s + "' not found.", actualRecords.get(s));
-      assertEquals(expectedRecords.get(s).size(), actualRecords.get(s).size());
+      assertEquals("Incorrect number of rows returned by query.", expectedRecords.get(s).size(), actualRecords.get(s).size());
       List expectedValues = expectedRecords.get(s);
       List actualValues = actualRecords.get(s);
       for (int i = 0; i < expectedValues.size(); i++) {
@@ -437,19 +438,39 @@ public class DrillTestWrapper {
 
     String missing = "";
     int i = 0;
-    for (Map<String, Object> record : expectedRecords) {
+    boolean found;
+    for (Map<String, Object> expectedRecord : expectedRecords) {
       i = 0;
+      found = false;
       findMatch:
       for (Map<String, Object> actualRecord : actualRecords) {
         for (String s : actualRecord.keySet()) {
-          if ( ! record.get(s).equals(actualRecord.get(s))) {
+          if ( expectedRecord.get(s) == null) {
+            // TODO - fill this in here with function to find the columns missing/ in excess and include in error message
+            this is a syntax error to make me find this later
+            throw new Exception("Unexpected column '" + s + "' returned by query.");
+          }
+          if ( ! expectedRecord.get(s).equals(actualRecord.get(s))) {
+            i++;
             continue findMatch;
           }
-          i++;
         }
+        if (actualRecord.size() < expectedRecord.size()) {
+          Set<String> expectedCols = actualRecord.keySet();
+          for (String colName : actualCols) {
+            // TODO - fill this in here with function to find the columns missing/ in excess and include in error message
+            this is a syntax error to make me find this later
+
+          }
+          assertEquals("Expected columns", expectedRecord.size(), actualRecord.size());
+        }
+        found = true;
+        break;
       }
-      if ( actualRecords.remove(i)) {
-        throw new Exception("Did not find expected record in remaining results: " + printRecord(record));
+      if (!found) {
+        throw new Exception("Did not find expected record in remaining results: " + printRecord(expectedRecord));
+      } else {
+        actualRecords.remove(i);
       }
     }
     logger.debug(missing);
