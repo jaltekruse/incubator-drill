@@ -134,6 +134,22 @@ public class SortRecordBatchBuilder {
     }
   }
 
+  public boolean canonicalizeRequired() {
+    BatchSchema schema = null;
+
+    for (RecordBatchData batch : batches.values()) {
+      if (schema == null) {
+        schema = batch.getContainer().getSchema();
+      } else {
+        if (!schema.equals(batch.getContainer().getSchema())) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   public boolean isEmpty() {
     return batches.isEmpty();
   }

@@ -238,16 +238,17 @@ public class MergingRecordBatch extends AbstractRecordBatch<MergingReceiverPOP> 
         ++i;
       }
 
-      // Canonicalize each incoming batch, so that vectors are alphabetically sorted based on SchemaPath.
-      for (RecordBatchLoader loader : batchLoaders) {
-        loader.canonicalize();
-      }
+      // If incoming batches do not have identical schemas : 1) first canonicalize the schemas, 2) stop
+      // if still not identical schemas after canonicalization.
+      if (!isSameSchemaAmongBatches()) {
+        logger.debug("Incoming schemas for MergingRecordBatch are different. Require schema canolicalization.");
+        canonicalize();
 
-      // Ensure all the incoming batches have the identical schema.
-      if (!isSameSchemaAmongBatches(batchLoaders)) {
-        logger.error("Incoming batches for merging receiver have diffferent schemas!");
-        context.fail(new SchemaChangeException("Incoming batches for merging receiver have diffferent schemas!"));
-        return IterOutcome.STOP;
+        if (!isSameSchemaAmongBatches()) {
+          logger.error("Incoming batches for merging receiver have diffferent schemas!");
+          context.fail(new SchemaChangeException("Incoming batches for merging receiver have diffferent schemas!"));
+          return IterOutcome.STOP;
+        }
       }
 
       // create the outgoing schema and vector container, and allocate the initial batch
@@ -529,18 +530,28 @@ public class MergingRecordBatch extends AbstractRecordBatch<MergingReceiverPOP> 
     return WritableBatch.get(this);
   }
 
-  private boolean isSameSchemaAmongBatches(RecordBatchLoader[] batchLoaders) {
-    Preconditions.checkArgument(batchLoaders.length > 0, "0 batch is not allowed!");
+  private boolean isSameSchemaAmongBatches() {
+//    Preconditions.checkArgument(batchLoaders.length > 0, "0 batch is not allowed!");
 
-    BatchSchema schema = batchLoaders[0].getSchema();
+    BatchSchema schema = null;
 
-    for (int i = 1; i < batchLoaders.length; i++) {
-      if (!schema.equals(batchLoaders[i].getSchema())) {
-        logger.error("Schemas are different. Schema 1 : " + schema + ", Schema 2: " + batchLoaders[i].getSchema() );
-        return false;
+    for (int i = 0; i < batchLoaders.length; i++) {
+      if (schema == null) {
+        schema = batchLoaders[i].getSchema();
+      } else {
+        if (!schema.equals(batchLoaders[i].getSchema())) {
+          return false;
+        }
       }
     }
     return true;
+  }
+
+  private void canonicalize() {
+    // Canonicalize each incoming batch, so that vectors are alphabetically sorted based on SchemaPath.
+    for (RecordBatchLoader loader : batchLoaders) {
+      loader.canonicalize();
+    }
   }
 
   private void allocateOutgoing() {

@@ -188,7 +188,9 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
           countSincePurge += incoming.getRecordCount();
           batchCount++;
           RecordBatchData batch = new RecordBatchData(incoming);
-          batch.canonicalize();
+          if (!this.schema.equals(incoming.getSchema())) {
+            batch.canonicalize();
+          }
           if (priorityQueue == null) {
             priorityQueue = createNewPriorityQueue(context, config.getOrderings(), new ExpandableHyperContainer(batch.getContainer()), MAIN_MAPPING, LEFT_MAPPING, RIGHT_MAPPING);
           }
@@ -262,7 +264,9 @@ public class TopNBatch extends AbstractRecordBatch<TopN> {
     selectionVector4.clear();
     c.clear();
     VectorContainer newQueue = new VectorContainer();
-    builder.canonicalize();
+    if (builder.canonicalizeRequired()) {
+      builder.canonicalize();
+    }
     builder.build(context, newQueue);
     priorityQueue.resetQueue(newQueue, builder.getSv4().createNewWrapperCurrent());
     builder.getSv4().clear();
