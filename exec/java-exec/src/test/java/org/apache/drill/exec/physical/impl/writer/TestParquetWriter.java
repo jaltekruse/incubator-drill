@@ -277,6 +277,7 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
+  @Ignore
   @Test
   public void test958_sql_all_columns() throws Exception {
     compareParquetReadersHyperVector("*",  "dfs.`/tmp/store_sales`");

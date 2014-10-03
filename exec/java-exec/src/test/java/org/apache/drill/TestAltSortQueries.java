@@ -17,7 +17,6 @@
  */
 package org.apache.drill;
 
-import org.apache.drill.common.types.TypeProtos;
 import org.junit.Test;
 
 public class TestAltSortQueries extends BaseTestQuery{
@@ -51,7 +50,7 @@ public class TestAltSortQueries extends BaseTestQuery{
         .sqlQuery("select employee_id,  first_name, last_name from cp.`employee.json` order by employee_id limit 5 offset 10 ")
         .ordered()
         .csvBaselineFile("sort/testSelectWithLimitOffset.tsv")
-        .baselineColumnNames("employee_id", "first_name", "last_name")
+        .baselineColumns("employee_id", "first_name", "last_name")
         .build().run();
   }
 

@@ -32,6 +32,8 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.UserBitShared;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -60,6 +62,19 @@ public class TestBuilder {
   // while this does work faster and use less memory, it can be harder to debug as all of the elements are not in a
   // single list
   private boolean highPerformanceComparison;
+  // for cases where the result set is just a single record, test writers can avoid creating a lot of small baseline
+  // files by providing a list of baseline values
+  private Object[] baselineValues;
+  // column names for use with the baseline values
+  protected String[] baselineColumns;
+  // In cases where we need to verify larger datasets without the risk of running the baseline data through
+  // the drill engine, results can be provided in a list of maps. While this model does make a lot of sense, there is a
+  // lot of work to make the type handling/casting work correctly, and making robust complex type handling work completely outside
+  // of the drill engine for generating baselines would likely be more work than it would be worth. For now we will be
+  // going with an approach of using this facility to validate the parts of the drill engine that could break in ways
+  // that would affect the reading of baseline files (i.e. we need robust test for storage engines, project and casting that
+  // use this interface) and then rely on the engine for the rest of the tests that will use the baseline queries.
+  private List<Map> baselineRecords;
 
   public TestBuilder(BufferAllocator allocator) {
     this.allocator = allocator;
@@ -71,7 +86,7 @@ public class TestBuilder {
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
     this(allocator);
     if (ordered == null) {
-      throw new RuntimeException("Ordering not set, you must explicitly call the ordered() or unOrdered() method on the " + this.getClass().getSimpleName());
+      throw new RuntimeException("Ordering not set, when using a baseline file or query you must explicitly call the ordered() or unOrdered() method on the " + this.getClass().getSimpleName());
     }
     this.query = query;
     this.queryType = queryType;
@@ -98,7 +113,7 @@ public class TestBuilder {
       throw new Exception("High performance comparison only available for ordered checks, to enforce this restriction, ordered() must be called first.");
     }
     return new DrillTestWrapper(this, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
-        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison);
+        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineSingleRecordMaterializedRowForm());
   }
 
   public TestBuilder sqlQuery(String query) {
@@ -111,12 +126,6 @@ public class TestBuilder {
     String query = BaseTestQuery.getFile(queryFile);
     this.query = query;
     this.queryType = UserBitShared.QueryType.SQL;
-    return this;
-  }
-
-  public TestBuilder physicalPlan(String query) {
-    this.query = query;
-    this.queryType = UserBitShared.QueryType.PHYSICAL;
     return this;
   }
 
@@ -163,6 +172,7 @@ public class TestBuilder {
     return this;
   }
 
+  // modified code from SchemaPath.De class. This should be used sparingly and only in tests if absolutely needed.
   public static SchemaPath parsePath(String path) {
     try {
       // logger.debug("Parsing expression string '{}'", expr);
@@ -190,6 +200,9 @@ public class TestBuilder {
   }
 
   protected UserBitShared.QueryType getValidationQueryType() throws Exception {
+    if (singleExplicitBaselineRecord()) {
+      return null;
+    }
     throw new RuntimeException("Must provide some kind of baseline, either a baseline file or another query");
   }
 
@@ -214,6 +227,78 @@ public class TestBuilder {
     } else {
       return false;
     }
+  }
+
+  /**
+   * This method is used to pass in a simple list of values for a single record verification without
+   * the need to create a CSV or JSON file to store the baseline.
+   *
+   * @param baselineValues - the baseline values to validate
+   * @return
+   */
+  public TestBuilder baselineValues(Object ... baselineValues) {
+    this.baselineValues = baselineValues;
+    this.unOrdered();
+    return this;
+  }
+
+  /**
+   * This can be used in cases where we want to avoid issues with the assumptions made by the test framework.
+   * Most of the methods for verification in the framework run drill queries to generate the read baseline files or
+   * execute alternative baseline queries. This model relies on basic functionality of reading files with storage
+   * plugins and applying casts/projects to be stable.
+   *
+   * This method can be used to verify the engine for these cases and any other future execution paths that would
+   * be used by both the test query and baseline. Without tests like this it is possible that some tests
+   * could falsely report as passing, as both the test query and baseline query could run into the same problem
+   * with an assumed stable code path and produce the same erroneous result.
+   *
+   * @param materializedRecords - a list of maps representing materialized results
+   * @return
+   */
+  public TestBuilder baselineRecords(List<Map> materializedRecords) {
+    this.baselineRecords = materializedRecords;
+    return this;
+  }
+
+  /**
+   * This setting has a slightly different impact on the test depending on some of the other
+   * configuration options are set.
+   *
+   * If a JSON baseline file is given, this list will act as a project list to verify the
+   * test query against a subset of the columns in the file.
+   *
+   * For a CSV baseline file, these will act as aliases for columns [0 .. n] in the repeated
+   * varchar column that is read out of CSV.
+   *
+   * For a baseline sql query, this currently has no effect.
+   *
+   * For explicit baseline values given in java code with the baselineValues() method, these will
+   * be used to create a map for the one record verification.
+   */
+  public TestBuilder baselineColumns(String... columns) {
+    for (int i = 0; i < columns.length; i++) {
+      columns[i] = parsePath(columns[i]).toExpr();
+    }
+    this.baselineColumns = columns;
+    return this;
+  }
+
+  private  Map<String, Object> baselineSingleRecordMaterializedRowForm() {
+    Map<String, Object> ret = new HashMap();
+    if ( baselineValues == null || baselineValues.length == 0)
+      return null;
+    assertEquals("Must supply the same number of baseline values as columns.", baselineValues.length, baselineColumns.length);
+    int i = 0;
+    for (String s : baselineColumns) {
+      ret.put(s, baselineValues[i]);
+      i++;
+    }
+    return ret;
+  }
+
+  private boolean singleExplicitBaselineRecord() {
+    return baselineSingleRecordMaterializedRowForm() != null;
   }
 
   // provide a SQL query to validate against
@@ -241,8 +326,6 @@ public class TestBuilder {
 
     // path to the baseline file that will be inserted into the validation query
     private String baselineFilePath;
-    // aliases for the baseline columns, only used in CSV where column names are not known
-    private String[] baselineColumnNames;
     // use to cast the baseline file columns, if not set the types
     // that come out of the test query drive interpretation of baseline
     private TypeProtos.MinorType[] baselineTypes;
@@ -253,11 +336,6 @@ public class TestBuilder {
       super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
       this.baselineFilePath = baselineFile;
-    }
-
-    public CSVTestBuilder baselineColumnNames(String... baselineColumnNames) {
-      this.baselineColumnNames = baselineColumnNames;
-      return this;
     }
 
     public CSVTestBuilder baselineTypes(TypeProtos.MinorType... baselineTypes) {
@@ -274,7 +352,6 @@ public class TestBuilder {
 
     protected TestBuilder reset() {
       super.reset();
-      baselineColumnNames = null;
       baselineTypeMap = null;
       baselineTypes = null;
       baselineFilePath = null;
@@ -290,23 +367,23 @@ public class TestBuilder {
     }
 
     String getValidationQuery() throws Exception {
-      if (baselineColumnNames.length == 0) {
-        throw new Exception("Baseline CSV files require passing column names, please call the baselineColumnNames() method on the test builder.");
+      if (baselineColumns.length == 0) {
+        throw new Exception("Baseline CSV files require passing column names, please call the baselineColumns() method on the test builder.");
       }
 
       if (baselineTypes != null) {
-        assertEquals("Must pass the same number of types as column names if types are provided.", baselineTypes.length, baselineColumnNames.length);
+        assertEquals("Must pass the same number of types as column names if types are provided.", baselineTypes.length, baselineColumns.length);
       }
 
-      String[] aliasedExpectedColumns = new String[baselineColumnNames.length];
-      for (int i = 0; i < baselineColumnNames.length; i++) {
+      String[] aliasedExpectedColumns = new String[baselineColumns.length];
+      for (int i = 0; i < baselineColumns.length; i++) {
         aliasedExpectedColumns[i] = "columns[" + i + "] ";
         if (baselineTypes != null) {
           aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMajorType(baselineTypes[i]) + " ) ";
         } else if (baselineTypeMap != null) {
-          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMajorType(baselineTypeMap.get(parsePath(baselineColumnNames[i]))) + " ) ";
+          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMajorType(baselineTypeMap.get(parsePath(baselineColumns[i]))) + " ) ";
         }
-        aliasedExpectedColumns[i] += baselineColumnNames[i];
+        aliasedExpectedColumns[i] += baselineColumns[i];
       }
       String query = "select " + Joiner.on(", ").join(aliasedExpectedColumns) + " from cp.`" + baselineFilePath + "`";
 //    System.out.println(query);
@@ -330,10 +407,11 @@ public class TestBuilder {
       super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
       this.baselineFilePath = baselineFile;
+      this.baselineColumns = new String[] {"*"};
     }
 
     String getValidationQuery() {
-      return "select * from cp.`" + baselineFilePath + "`";
+      return "select " + Joiner.on(", ").join(baselineColumns) + " from cp.`" + baselineFilePath + "`";
     }
 
     protected UserBitShared.QueryType getValidationQueryType() throws Exception {

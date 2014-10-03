@@ -38,7 +38,6 @@ import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -64,6 +63,11 @@ public class DrillTestWrapper {
   // it will only make the test slower.
   private static boolean VERBOSE_DEBUG = false;
 
+  // The motivation behind the TestBuilder was to provide a clean API for test writers. The model is mostly designed to
+  // prepare all of the components necessary for running the tests, before the TestWrapper is initialized. There is however
+  // one case where the setup for the baseline is driven by the test query results, and this is implicit type enforcement
+  // for the baseline data. In this case there needs to be a call back into the TestBuilder once we know the type information
+  // from the test query.
   private TestBuilder testBuilder;
   // test query to run
   private String query;
@@ -85,11 +89,15 @@ public class DrillTestWrapper {
   // while this does work faster and use less memory, it can be harder to debug as all of the elements are not in a
   // single list
   private boolean highPerformanceComparison;
+  // if the baseline is a single option test writers can provide the baseline values and columns
+  // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
+  // and translated into a map in the builder
+  private Map<String, Object> singleRecordBaseline;
 
   public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
-                          boolean highPerformanceComparison) {
+                          boolean highPerformanceComparison, Map<String, Object> baselineRecord) {
     this.testBuilder = testBuilder;
     this.allocator = allocator;
     this.query = query;
@@ -100,6 +108,7 @@ public class DrillTestWrapper {
     this.baselineOptionSettingQueries = baselineOptionSettingQueries;
     this.testOptionSettingQueries = testOptionSettingQueries;
     this.highPerformanceComparison = highPerformanceComparison;
+    this.singleRecordBaseline = baselineRecord;
   }
 
   public void run() throws Exception {
@@ -123,7 +132,7 @@ public class DrillTestWrapper {
       HyperVectorValueIterator actualValues = actualRecords.get(s);
       int i = 0;
       while (expectedValues.hasNext()) {
-        compareValues(expectedValues.next(), actualValues.next(), i, s);
+        compareValuesErrorOnMismatch(expectedValues.next(), actualValues.next(), i, s);
         i++;
       }
     }
@@ -140,14 +149,20 @@ public class DrillTestWrapper {
   }
 
   private void compareMergedVectors(Map<String, List> expectedRecords, Map<String, List> actualRecords) throws Exception {
-    for (String s : expectedRecords.keySet()) {
-      assertNotNull("Expected column '" + s + "' not found.", actualRecords.get(s));
+
+    for (String s : actualRecords.keySet()) {
+      assertNotNull("Unexpected extra column " + s + " returned by query.", expectedRecords.get(s));
       assertEquals("Incorrect number of rows returned by query.", expectedRecords.get(s).size(), actualRecords.get(s).size());
       List expectedValues = expectedRecords.get(s);
       List actualValues = actualRecords.get(s);
+      assertEquals("Different number of records returned", expectedValues.size(), actualValues.size());
+
       for (int i = 0; i < expectedValues.size(); i++) {
-        compareValues(expectedValues.get(i), actualValues.get(i), i, s);
+        compareValuesErrorOnMismatch(expectedValues.get(i), actualValues.get(i), i, s);
       }
+    }
+    if (actualRecords.size() < expectedRecords.size()) {
+      throw new Exception(findMissingColumns(expectedRecords.keySet(), actualRecords.keySet()));
     }
   }
 
@@ -260,10 +275,17 @@ public class DrillTestWrapper {
     List<Map> expectedRecords = new ArrayList<>();
     addToMaterializedResults(expectedRecords, expected, loader, schema);
 
-    BaseTestQuery.test(baselineOptionSettingQueries);
-    List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
+    List<QueryResultBatch> results = new ArrayList();
     List<Map> actualRecords = new ArrayList<>();
-    addToMaterializedResults(actualRecords, results, loader, schema);
+    // If a single baseline record was not provided to the test builder, we must run a query for the baseline, this includes
+    // the cases where the baseline is stored in a file.
+    if (singleRecordBaseline == null) {
+      BaseTestQuery.test(baselineOptionSettingQueries);
+      results = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
+      addToMaterializedResults(actualRecords, results, loader, schema);
+    } else {
+      actualRecords.add(singleRecordBaseline);
+    }
 
     compareResults(expectedRecords, actualRecords);
     cleanupBatches(expected, results);
@@ -387,8 +409,30 @@ public class DrillTestWrapper {
     }
   }
 
-  public boolean compareValues(Object expected, Object actual, int counter, String column) throws Exception {
+  public boolean compareValuesErrorOnMismatch(Object expected, Object actual, int counter, String column) throws Exception {
 
+    if (compareValues(expected, actual, counter, column)) {
+      return true;
+    }
+    if (expected == null) {
+      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: null " +
+          "but received " + actual + "(" + actual.getClass().getSimpleName() + ")");
+    }
+    if (actual == null) {
+      throw new Exception("unexpected null at position " + counter + " column '" + column + "' should have been:  " + expected);
+    }
+    if (actual instanceof byte[]) {
+      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
+          + new String((byte[])expected, "UTF-8") + " but received " + new String((byte[])actual, "UTF-8"));
+    }
+    if (!expected.equals(actual)) {
+      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
+          + expected + "(" + expected.getClass().getSimpleName() + ") but received " + actual + "(" + actual.getClass().getSimpleName() + ")");
+    }
+    return true;
+  }
+
+  public boolean compareValues(Object expected, Object actual, int counter, String column) throws Exception {
     if (expected == null) {
       if (actual == null) {
         if (VERBOSE_DEBUG) {
@@ -396,17 +440,15 @@ public class DrillTestWrapper {
         }
         return true;
       } else {
-        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
-            + expected + "(" + expected.getClass().getSimpleName() + ") but received " + actual + "(" + actual.getClass().getSimpleName() + ")");
+        return false;
       }
     }
     if (actual == null) {
-      throw new Exception("unexpected null at position " + counter + " column '" + column + "' should have been:  " + expected);
+      return false;
     }
     if (actual instanceof byte[]) {
       if ( ! Arrays.equals((byte[]) expected, (byte[]) actual)) {
-        throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
-            + new String((byte[])expected, "UTF-8") + " but received " + new String((byte[])actual, "UTF-8"));
+        return false;
       } else {
         if (VERBOSE_DEBUG) {
           logger.debug("at position " + counter + " column '" + column + "' matched value " + new String((byte[])expected, "UTF-8"));
@@ -415,8 +457,7 @@ public class DrillTestWrapper {
       }
     }
     if (!expected.equals(actual)) {
-      throw new Exception("at position " + counter + " column '" + column + "' mismatched values, expected: "
-          + expected + "(" + expected.getClass().getSimpleName() + ") but received " + actual + "(" + actual.getClass().getSimpleName() + ")");
+      return false;
     } else {
       if (VERBOSE_DEBUG) {
         logger.debug("at position " + counter + " column '" + column + "' matched value:  " + expected );
@@ -438,6 +479,7 @@ public class DrillTestWrapper {
 
     String missing = "";
     int i = 0;
+    int counter = 0;
     boolean found;
     for (Map<String, Object> expectedRecord : expectedRecords) {
       i = 0;
@@ -445,37 +487,40 @@ public class DrillTestWrapper {
       findMatch:
       for (Map<String, Object> actualRecord : actualRecords) {
         for (String s : actualRecord.keySet()) {
-          if ( expectedRecord.get(s) == null) {
-            // TODO - fill this in here with function to find the columns missing/ in excess and include in error message
-            this is a syntax error to make me find this later
+          if (!expectedRecord.containsKey(s)) {
             throw new Exception("Unexpected column '" + s + "' returned by query.");
           }
-          if ( ! expectedRecord.get(s).equals(actualRecord.get(s))) {
+          if ( ! compareValues(expectedRecord.get(s), actualRecord.get(s), counter, s)) {
             i++;
             continue findMatch;
           }
         }
         if (actualRecord.size() < expectedRecord.size()) {
-          Set<String> expectedCols = actualRecord.keySet();
-          for (String colName : actualCols) {
-            // TODO - fill this in here with function to find the columns missing/ in excess and include in error message
-            this is a syntax error to make me find this later
-
-          }
-          assertEquals("Expected columns", expectedRecord.size(), actualRecord.size());
+          throw new Exception(findMissingColumns(expectedRecord.keySet(), actualRecord.keySet()));
         }
         found = true;
         break;
       }
       if (!found) {
-        throw new Exception("Did not find expected record in remaining results: " + printRecord(expectedRecord));
+        throw new Exception("Did not find expected record in result set: " + printRecord(expectedRecord));
       } else {
         actualRecords.remove(i);
+        counter++;
       }
     }
     logger.debug(missing);
     System.out.println(missing);
     assertEquals(0, actualRecords.size());
+  }
+
+  private String findMissingColumns(Set<String> expected, Set<String> actual) {
+    String missingCols = "";
+    for (String colName : expected) {
+      if (!actual.contains(colName)) {
+        missingCols += colName + ", ";
+      }
+    }
+    return "Expected column(s) " + missingCols + " not found in result set.";
   }
 
   private String printRecord(Map<String, Object> record) {
