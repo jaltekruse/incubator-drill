@@ -136,7 +136,7 @@ public class BaseTestQuery extends ExecTest{
   }
 
   public TestBuilder testBuilder() {
-    return new TestBuilder(allocator);
+    return new TestBuilder(allocator, this);
   }
 
   @AfterClass
@@ -205,7 +205,7 @@ public class BaseTestQuery extends ExecTest{
     }
   }
 
-  public static void test(String query) throws Exception{
+  protected void test(String query) throws Exception{
     String[] queries = query.split(";");
     for (String q : queries) {
       if (q.trim().isEmpty()) {

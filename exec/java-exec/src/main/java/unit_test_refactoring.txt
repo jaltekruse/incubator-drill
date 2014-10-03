@@ -1,0 +1,371 @@
+org.apache.drill  (139 usages found)
+    TestAltSortQueries  (4 usages found)
+        testJoinWithLimit()  (1 usage found)
+            (60: 5) test("SELECT\n" +
+        testOrderBy()  (1 usage found)
+            (28: 5) test("select R_REGIONKEY " +
+        testOrderBySingleFile()  (1 usage found)
+            (35: 5) test("select R_REGIONKEY " +
+        testSelectWithLimit()  (1 usage found)
+            (42: 5) test("select employee_id,  first_name, last_name from cp.`employee.json` order by employee_id limit 5 ");
+    TestBugFixes  (7 usages found)
+        DRILL1061()  (1 usage found)
+            (56: 5) test(query);
+        DRILL1126()  (1 usage found)
+            (62: 5) test(query);
+        DRILL883()  (1 usage found)
+            (50: 5) test("select n1.n_regionkey from cp.`tpch/nation.parquet` n1, (select n_nationkey from cp.`tpch/nation.parquet`) as n2 where n1.n_nationkey = n2.n_nationkey");
+        failingSmoke()  (1 usage found)
+            (44: 5) test(select);
+        leak1()  (1 usage found)
+            (32: 5) test(select);
+        testDRILL1337_LocalLeftFilterLeftOutJoin()  (1 usage found)
+            (70: 5) test("select count(*) from cp.`tpch/nation.parquet` n left outer join cp.`tpch/region.parquet` r on n.n_regionkey = r.r_regionkey and n.n_nationkey > 10;");
+        testDRILL1337_LocalRightFilterLeftOutJoin()  (1 usage found)
+            (75: 5) test("select * from cp.`tpch/nation.parquet` n left outer join cp.`tpch/region.parquet` r on n.n_regionkey = r.r_regionkey and r.r_name not like '%ASIA' order by r.r_name;");
+    TestExampleQueries  (109 usages found)
+        testCase()  (1 usage found)
+            (475: 5) test(
+        testCaseReturnValueBigInt()  (1 usage found)
+            (173: 5) test("select case when employee_id < 1000 then 1000 else 2000 end from cp.`employee.json` limit 5" );
+        testCaseReturnValueVarChar()  (1 usage found)
+            (168: 5) test("select case when employee_id < 1000 then 'ABC' else 'DEF' end from cp.`employee.json` limit 5");
+        testColunValueCnt()  (1 usage found)
+            (280: 5) test("select count( 1 + 2) from cp.`tpch/nation.parquet` ");
+        testDrill428()  (1 usage found)
+            (296: 5) test("select cast(NON_EXIST_COL as varchar(10)) from cp.`employee.json` limit 2; ");
+        testDRILL_595WithClause()  (3 usages found)
+            (388: 5) test(" with x as (select * from cp.`region.json`) \n" +
+            (392: 5) test(" with x as (select * from cp.`region.json`) \n" +
+            (396: 5) test(" with x as (select * from cp.`tpch/nation.parquet`) \n" +
+        testDRILL_595WithClauseJoin()  (2 usages found)
+            (407: 5) test("with n as (select * from cp.`tpch/nation.parquet`), \n " +
+            (413: 5) test("with n as (select * from cp.`tpch/nation.parquet`), \n " +
+        testDRILL_811Json()  (4 usages found)
+            (452: 5) test("use dfs.tmp");
+            (453: 5) test("create view region_view as select * from cp.`region.json`;");
+            (454: 5) test("select sales_city, sales_region from region_view where region_id > 50 order by sales_country; ");
+            (455: 5) test("drop view region_view ");
+        testDRILL_811View()  (5 usages found)
+            (424: 5) test("use dfs.tmp");
+            (425: 5) test("create view nation_view as select * from cp.`tpch/nation.parquet`;");
+            (427: 5) test("select n.n_nationkey, n.n_name, n.n_regionkey from nation_view n where n.n_nationkey > 8 order by n.n_regionkey");
+            (429: 5) test("select n.n_regionkey, count(*) as cnt from nation_view n where n.n_nationkey > 8 group by n.n_regionkey order by n.n_regionkey");
+            (431: 5) test("drop view nation_view ");
+        testDRILL_811ViewJoin()  (8 usages found)
+            (436: 5) test("use dfs.tmp");
+            (437: 5) test("create view nation_view as select * from cp.`tpch/nation.parquet`;");
+            (438: 5) test("create view region_view as select * from cp.`tpch/region.parquet`;");
+            (440: 5) test("select n.n_nationkey, n.n_regionkey, r.r_name from region_view r , nation_view n where r.r_regionkey = n.n_regionkey ");
+            (442: 5) test("select n.n_regionkey, count(*) as cnt from region_view r , nation_view n where r.r_regionkey = n.n_regionkey and n.n_nationkey > 8 group by n.n_regionkey order by n.n_regionkey");
+            (444: 5) test("select n.n_regionkey, count(*) as cnt from region_view r join nation_view n on r.r_regionkey = n.n_regionkey and n.n_nationkey > 8 group by n.n_regionkey order by n.n_regionkey");
+            (446: 5) test("drop view region_view ");
+            (447: 5) test("drop view nation_view ");
+        testExplainLogical()  (1 usage found)
+            (265: 5) test("explain plan without implementation for select marital_status, COUNT(1) as cnt from cp.`employee.json` group by marital_status");
+        testExplainPhysical()  (1 usage found)
+            (260: 5) test("explain plan for select marital_status, COUNT(1) as cnt from cp.`employee.json` group by marital_status");
+        testFilterOnArrayTypes()  (1 usage found)
+            (224: 5) test(query);
+        testGroupBy()  (1 usage found)
+            (255: 5) test("select marital_status, COUNT(1) as cnt from cp.`employee.json` group by marital_status");
+        testGroupScanRowCount1()  (1 usage found)
+            (275: 5) test("select count(n_nationkey) as mycnt, count(*) + 2 * count(*) as mycnt2 from cp.`tpch/nation.parquet` ");
+        testGroupScanRowCount2()  (1 usage found)
+            (290: 5) test("select count(*) as mycnt, count(*) + 2 * count(*) as mycnt2 from cp.`tpch/nation.parquet` where 1 < 2");
+        testGroupScanRowCountExp1()  (1 usage found)
+            (270: 5) test("EXPLAIN plan for select count(n_nationkey) as mycnt, count(*) + 2 * count(*) as mycnt2 from cp.`tpch/nation.parquet` ");
+        testGroupScanRowCountExp2()  (1 usage found)
+            (285: 5) test("EXPLAIN plan for select count(*) as mycnt, count(*) + 2 * count(*) as mycnt2 from cp.`tpch/nation.parquet` ");
+        testHashPartitionSV2()  (1 usage found)
+            (178: 5) test("select count(n_nationkey) from cp.`tpch/nation.parquet` where n_nationkey > 8 group by n_regionkey");
+        testHashPartitionSV4()  (1 usage found)
+            (183: 5) test("select count(n_nationkey) as cnt from cp.`tpch/nation.parquet` group by n_regionkey order by cnt");
+        testJoin()  (2 usages found)
+            (236: 5) test("alter session set `planner.enable_hashjoin` = false");
+            (237: 5) test("SELECT\n" +
+        testJoinExpOn()  (1 usage found)
+            (122: 5) test("select a.n_nationkey from cp.`tpch/nation.parquet` a join cp.`tpch/region.parquet` b on a.n_regionkey + 1 = b.r_regionkey and a.n_regionkey + 1 = b.r_regionkey;");
+        testJoinExpWhere()  (1 usage found)
+            (127: 5) test("select a.n_nationkey from cp.`tpch/nation.parquet` a , cp.`tpch/region.parquet` b where a.n_regionkey + 1 = b.r_regionkey and a.n_regionkey + 1 = b.r_regionkey;");
+        testJoinMerge()  (3 usages found)
+            (51: 5) test("alter session set `planner.enable_hashjoin` = false");
+            (52: 5) test("select count(*) \n" +
+            (59: 5) test("alter session set `planner.enable_hashjoin` = true");
+        testLimit0_1()  (6 usages found)
+            (308: 5) test("select n_nationkey, n_name from cp.`tpch/nation.parquet` limit 0");
+            (309: 5) test("select n_nationkey, n_name from cp.`tpch/nation.parquet` limit 0 offset 5");
+            (310: 5) test("select n_nationkey, n_name from cp.`tpch/nation.parquet` order by n_nationkey limit 0");
+            (311: 5) test("select * from cp.`tpch/nation.parquet` limit 0");
+            (312: 5) test("select n.n_nationkey from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey limit 0");
+            (313: 5) test("select n_regionkey, count(*) from cp.`tpch/nation.parquet` group by n_regionkey limit 0");
+        testOrderByDiffColumn()  (3 usages found)
+            (301: 5) test("select r_name from cp.`tpch/region.parquet` order by r_regionkey");
+            (302: 5) test("select r_name from cp.`tpch/region.parquet` order by r_name, r_regionkey");
+            (303: 5) test("select cast(r_name as varchar(20)) from cp.`tpch/region.parquet` order by r_name");
+        testParquetComplex()  (3 usages found)
+            (29: 5) test("select recipe from cp.`parquet/complex.parquet`");
+            (30: 5) test("select * from cp.`parquet/complex.parquet`");
+            (31: 5) test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
+        testPushExpInJoinConditionInnerJoin()  (1 usage found)
+            (132: 5) test("select a.n_nationkey from cp.`tpch/nation.parquet` a join cp.`tpch/region.parquet` b " + "" +
+        testPushExpInJoinConditionLeftJoin()  (1 usage found)
+            (150: 5) test("select a.n_nationkey, b.r_regionkey from cp.`tpch/nation.parquet` a left join cp.`tpch/region.parquet` b " + "" +
+        testPushExpInJoinConditionRightJoin()  (1 usage found)
+            (159: 5) test("select a.n_nationkey, b.r_regionkey from cp.`tpch/nation.parquet` a right join cp.`tpch/region.parquet` b " + "" +
+        testPushExpInJoinConditionWhere()  (1 usage found)
+            (141: 5) test("select a.n_nationkey from cp.`tpch/nation.parquet` a , cp.`tpch/region.parquet` b " + "" +
+        testQueryWithNullValues()  (11 usages found)
+            (36: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (37: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (38: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (39: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (40: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (41: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (42: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (43: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (44: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (45: 5) test("select count(*) from cp.`customer.json` limit 1");
+            (46: 5) test("select count(*) from cp.`customer.json` limit 1");
+        testSelectWithLimit()  (1 usage found)
+            (188: 5) test("select employee_id,  first_name, last_name from cp.`employee.json` limit 5 ");
+        testSelectWithLimit2()  (1 usage found)
+            (193: 5) test("select l_comment, l_orderkey from cp.`tpch/lineitem.parquet` limit 10000 ");
+        testSelLeftStarJoin()  (1 usage found)
+            (89: 5) test("select n.* from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey order by n.n_name;");
+        testSelRightStarJoin()  (1 usage found)
+            (94: 5) test("select r.* from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey order by n.n_name;");
+        testSelStarAmbiguousJoin()  (1 usage found)
+            (460: 5) test("select x.n_nationkey, x.n_name, x.n_regionkey, x.r_name from (select * from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey) x " ) ;
+        testSelStarBothSideJoin()  (1 usage found)
+            (104: 5) test("select n.*, r.* from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey;");
+        testSelStarJoin()  (1 usage found)
+            (84: 5) test("select * from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey order by n.n_name;");
+        testSelStarJoinSameColName()  (1 usage found)
+            (109: 5) test("select * from cp.`tpch/nation.parquet` n1, cp.`tpch/nation.parquet` n2 where n1.n_nationkey = n2.n_nationkey;");
+        testSelStarJoinSchemaWithSchemaLess()  (1 usage found)
+            (470: 5) test("select t1.name, t1.kind, t2.n_nationkey from (select * from sys.options) t1 join (select * from cp.`tpch/nation.parquet`) t2 on t1.name = t2.n_name;");
+        testSelStarOrderBy()  (1 usage found)
+            (64: 5) test("select * from cp.`employee.json` order by last_name");
+        testSelStarOrderByLimit()  (1 usage found)
+            (69: 5) test("select * from cp.`employee.json` order by employee_id limit 2;");
+        testSelStarPlusRegCol()  (1 usage found)
+            (74: 5) test("select *, n_nationkey from cp.`tpch/nation.parquet` limit 2;");
+        testSelStarRegColConstJoin()  (1 usage found)
+            (99: 5) test("select *, n.n_nationkey, 1 + 2 as constant from cp.`tpch/nation.parquet` n, cp.`tpch/region.parquet` r where n.n_regionkey = r.r_regionkey order by n.n_name;");
+        testSelStarSubQJoin()  (5 usages found)
+            (351: 5) test(" select n.n_nationkey, n.n_name, n.n_regionkey, r.r_name \n" +
+            (357: 5) test(" select n.n_regionkey, count(*) as cnt \n" +
+            (365: 5) test(" select n.n_regionkey, count(*) as cnt \n" +
+            (374: 5) test(" select *  \n" +
+            (380: 5) test(" select *  \n" +
+        testSelStarSubQJson2()  (1 usage found)
+            (326: 5) test("select v.first_name from (select * from cp.`employee.json`) v limit 2" );
+        testSelStarSubQNoPrefix()  (3 usages found)
+            (341: 5) test("select n_nationkey, n_name, n_regionkey from (select * from cp.`tpch/nation.parquet`)  where n_regionkey > 1 order by n_name" );
+            (343: 5) test(
+            (345: 5) test("select n_regionkey, count(*) as cnt from (select * from cp.`tpch/nation.parquet`) t where n_nationkey > 1 group by n_regionkey order by n_regionkey;" );
+        testSelStarSubQPrefix()  (3 usages found)
+            (332: 5) test("select t.n_nationkey, t.n_name, t.n_regionkey from (select * from cp.`tpch/nation.parquet`) t where t.n_regionkey > 1 order by t.n_name" );
+            (334: 5) test(
+            (336: 5) test("select t.n_regionkey, count(*) as cnt from (select * from cp.`tpch/nation.parquet`) t where t.n_nationkey > 1 group by t.n_regionkey order by t.n_regionkey;" );
+        testSelStarSubQSchemaTable()  (1 usage found)
+            (465: 5) test("select name, kind, type from (select * from sys.options);");
+        testSelStarWhereOrderBy()  (1 usage found)
+            (79: 5) test("select * from cp.`employee.json` where first_name = 'James' order by employee_id");
+        testStarView1()  (4 usages found)
+            (114: 5) test("use dfs.tmp");
+            (115: 5) test("create view vt1 as select * from cp.`tpch/region.parquet` r, cp.`tpch/nation.parquet` n where r.r_regionkey = n.n_regionkey");
+            (116: 5) test("select * from vt1");
+            (117: 5) test("drop view vt1");
+        testSVRV4()  (1 usage found)
+            (198: 5) test("select employee_id,  first_name from cp.`employee.json` order by employee_id ");
+        testSVRV4Join()  (1 usage found)
+            (208: 5) test("select count(*) from cp.`tpch/lineitem.parquet` l, cp.`tpch/partsupp.parquet` ps \n" +
+        testSVRV4MultBatch()  (1 usage found)
+            (203: 5) test("select l_orderkey from cp.`tpch/lineitem.parquet` order by l_orderkey limit 10000 ");
+        testText()  (1 usage found)
+            (216: 5) test(query);
+        testTextJoin()  (1 usage found)
+            (321: 5) test(query);
+        testTextPartitions()  (1 usage found)
+            (231: 5) test(query);
+        testWhere()  (1 usage found)
+            (250: 5) test("select * from cp.`employee.json` ");
+    TestTpchDistributed  (1 usage found)
+        testDistributed(String)  (1 usage found)
+            (28: 5) test("alter session set `planner.slice_target` = 10; " + query);
+    TestTpchExplain  (1 usage found)
+        doExplain(String)  (1 usage found)
+            (32: 5) test(query);
+    TestTpchSingleMode  (1 usage found)
+        testSingleMode(String)  (1 usage found)
+            (32: 5) test(query);
+    TestUnionAll  (9 usages found)
+        testUnionAll1()  (1 usage found)
+            (27: 5) test("select n_regionkey from cp.`tpch/nation.parquet` union all select r_regionkey from cp.`tpch/region.parquet`");
+        testUnionAll2()  (1 usage found)
+            (32: 5) test(
+        testUnionAll3()  (1 usage found)
+            (37: 5) test(
+        testUnionAll4()  (1 usage found)
+            (42: 5) test(
+        testUnionAll5()  (1 usage found)
+            (47: 5) test("select * from cp.`tpch/region.parquet` r1 union all select * from cp.`tpch/region.parquet` r2");
+        testUnionAll6()  (1 usage found)
+            (52: 5) test("select n_nationkey, n_regionkey from cp.`tpch/nation.parquet` where n_regionkey = 1 union all select r_regionkey, r_regionkey from cp.`tpch/region.parquet` where r_regionkey = 2");
+        testUnionAll6_1()  (1 usage found)
+            (57: 5) test("select n_nationkey, n_nationkey from cp.`tpch/nation.parquet` union all select r_regionkey, r_regionkey from cp.`tpch/region.parquet`");
+        testUnionAll7()  (1 usage found)
+            (62: 5) test("select 'abc' from cp.`tpch/region.parquet` union all select 'abcdefgh' from cp.`tpch/region.parquet`");
+        testUnionAll8()  (1 usage found)
+            (67: 5) test("select n_name from cp.`tpch/nation.parquet` union all select r_comment from cp.`tpch/region.parquet`");
+org.apache.drill.exec.nested  (3 usages found)
+    TestNestedComplexSchema  (3 usages found)
+        testNested1()  (1 usage found)
+            (27: 5) test("select tbl.arrayval[0] from cp.`nested/nested_1.json` tbl");
+        testNested2()  (1 usage found)
+            (32: 5) test("select tbl.a.arrayval[0] from cp.`nested/nested_2.json` tbl");
+        testNested3()  (1 usage found)
+            (37: 5) test("select tbl.a.arrayval[0].val1[0] from cp.`nested/nested_3.json` tbl");
+org.apache.drill.exec.physical.impl.writer  (4 usages found)
+    TestParquetWriter  (4 usages found)
+        runTestAndValidate(String, String, String, String)  (2 usages found)
+            (329: 5) test("use dfs.tmp");
+            (334: 5) test(create);
+        testMulipleRowGroups()  (2 usages found)
+            (201: 7) test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1*1024*1024));
+            (206: 7) test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 512*1024*1024));
+org.apache.drill.exec.server  (2 usages found)
+    TestOptions  (2 usages found)
+        testDrillbits()  (1 usage found)
+            (28: 5) test("select * from sys.drillbits;");
+        testOptions()  (1 usage found)
+            (33: 5) test(
+org.apache.drill.exec.sql  (11 usages found)
+    TestSimpleCastFunctions  (2 usages found)
+        castFromBoolean()  (1 usage found)
+            (28: 5) test("select cast(false as varchar(5)), cast(true as varchar(4)), cast((1 < 5) as varchar(4)) from sys.options limit 1;");
+        castToBoolean()  (1 usage found)
+            (33: 5) test("select cast('false' as boolean), cast('true' as boolean) from sys.options limit 1;");
+    TestViewSupport  (6 usages found)
+        referToSchemaInsideAndOutsideView()  (6 usages found)
+            (35: 5) test(use);
+            (36: 5) test(selectInto);
+            (37: 5) test(createView);
+            (38: 5) test(selectInside);
+            (39: 5) test(use2);
+            (40: 5) test(selectOutside);
+    TestWindowFunctions  (1 usage found)
+        testWindowSum()  (1 usage found)
+            (27: 5) test("select sum(position_id) over w from cp.`employee.json` window w as ( partition by position_id order by position_id)");
+    TestWithClause  (2 usages found)
+        withClause()  (1 usage found)
+            (29: 5) test("with alpha as (select * from sys.options where type = 'SYSTEM') \n" +
+        withClauseWithAliases()  (1 usage found)
+            (37: 5) test("with alpha (x,y) as (select name, kind from sys.options where type = 'SYSTEM') \n" +
+org.apache.drill.exec.store.json  (3 usages found)
+    JsonRecordReader2Test  (3 usages found)
+        testComplexJsonInput()  (1 usage found)
+            (30: 5) test("select `integer`, x['y'] as x1, x['y'] as x2, z[0], z[0]['orange'], z[1]['pink']  from cp.`jsoninput/input2.json` limit 10 ");
+        testComplexMultipleTimes()  (1 usage found)
+            (39: 5) test("select * from cp.`join/merge_join.json`");
+        trySimpleQueryWithLimit()  (1 usage found)
+            (45: 5) test("select * from cp.`limit/test1.json` limit 10");
+org.apache.drill.exec.store.text  (1 usage found)
+    TestTextColumn  (1 usage found)
+        testCsvColumnSelection()  (1 usage found)
+            (39: 5) test("select columns[0] as region_id, columns[1] as country from dfs_test.`[WORKING_PATH]/src/test/resources/store/text/data/regions.csv`");
+org.apache.drill.exec.vector.complex.writer  (44 usages found)
+    TestComplexTypeReader  (27 usages found)
+        test_repeatedList()  (1 usage found)
+            (183: 5) test("select l, l from cp.`jsoninput/input2.json`;");
+        testA0()  (1 usage found)
+            (134: 5) test("  select convert_to(types, 'JSON') from cp.`jsoninput/vvtypes.json`;");
+        testA1()  (1 usage found)
+            (140: 5) test("  select convert_to(types[1], 'JSON') from cp.`jsoninput/vvtypes.json`;");
+        testA2()  (1 usage found)
+            (146: 5) test("  select convert_to(types[1].minor, 'JSON') from cp.`jsoninput/vvtypes.json`;");
+        testA3()  (1 usage found)
+            (152: 5) test("  select convert_to(types[1].minor[0].valueHolder, 'JSON') from cp.`jsoninput/vvtypes.json`;");
+        testA4()  (1 usage found)
+            (159: 5) test("  select convert_to(types[1], 'JSON'), convert_to(modes[2], 'JSON') from cp.`jsoninput/vvtypes.json`;");
+        testB1()  (1 usage found)
+            (165: 5) test("  select types[1] from cp.`jsoninput/vvtypes.json`;");
+        testB2()  (1 usage found)
+            (171: 5) test("  select types[1].minor from cp.`jsoninput/vvtypes.json`;");
+        testB3()  (1 usage found)
+            (177: 5) test("  select types[1].minor[0].valueholder from cp.`jsoninput/vvtypes.json`;");
+        testX()  (1 usage found)
+            (30: 5) test("select convert_to(z[0], 'JSON') from cp.`jsoninput/input2.json`;");
+        testX2()  (1 usage found)
+            (36: 5) test("select convert_to(x, 'JSON') from cp.`jsoninput/input2.json`;");
+        testX3()  (1 usage found)
+            (42: 5) test("select convert_to(tbl.x.y, 'JSON') from cp.`jsoninput/input2.json` tbl;");
+        testX4()  (1 usage found)
+            (48: 5) test("select convert_to(`float`, 'JSON') from cp.`jsoninput/input2.json`;");
+        testX5()  (1 usage found)
+            (54: 5) test("select convert_to(`integer`, 'JSON') from cp.`jsoninput/input2.json`;");
+        testX6()  (1 usage found)
+            (60: 5) test("select convert_to(z, 'JSON')  from cp.`jsoninput/input2.json`;");
+        testX7()  (1 usage found)
+            (66: 5) test("select convert_to(rl[1], 'JSON') from cp.`jsoninput/input2.json`;");
+        testX8()  (1 usage found)
+            (72: 5) test("select convert_to(rl[0][1], 'JSON') from cp.`jsoninput/input2.json`;");
+        testX9()  (1 usage found)
+            (78: 5) test("select convert_to(rl, 'JSON') from cp.`jsoninput/input2.json`;");
+        testY()  (1 usage found)
+            (83: 5) test("select z[0] from cp.`jsoninput/input2.json`;");
+        testY2()  (1 usage found)
+            (88: 5) test("select x from cp.`jsoninput/input2.json`;");
+        testY3()  (1 usage found)
+            (93: 5) test("select tbl.x.y from cp.`jsoninput/input2.json` tbl;");
+        testY6()  (1 usage found)
+            (98: 5) test("select z  from cp.`jsoninput/input2.json`;");
+        testZ()  (1 usage found)
+            (104: 5) test("select rl[1] from cp.`jsoninput/input2.json`;");
+        testZ1()  (1 usage found)
+            (110: 5) test("select rl[0][1] from cp.`jsoninput/input2.json`;");
+        testZ2()  (1 usage found)
+            (116: 5) test("select rl[1000][1] from cp.`jsoninput/input2.json`;");
+        testZ3()  (1 usage found)
+            (122: 5) test("select rl[0][1000] from cp.`jsoninput/input2.json`;");
+        testZ4()  (1 usage found)
+            (128: 5) test("select rl, rl from cp.`jsoninput/input2.json`;");
+    TestComplexTypeWriter  (13 usages found)
+        testA0()  (1 usage found)
+            (30: 5) test(" select convert_from('{x:100, y:215.6}' ,'JSON') as mycol from cp.`tpch/nation.parquet`;");
+        testA1()  (1 usage found)
+            (36: 5) test(" select convert_from('{x:100, y:215.6, z: [1, 2, 3], s : [[5, 6, 7], [8, 9]], " +
+        testA10()  (1 usage found)
+            (93: 5) test(" select convert_from('{x:100, y:215.6}' ,'JSON') as mycol1, " +
+        testA100()  (1 usage found)
+            (109: 5) test(" select convert_from(concat(concat('{ Price : ', L_EXTENDEDPRICE) , '}') , 'JSON') " +
+        testA11()  (1 usage found)
+            (102: 5) test(" select convert_from(concat(concat('{ NationName: \"', N_NAME) , '\"}'), 'JSON')" +
+        testA2()  (1 usage found)
+            (45: 5) test(" select convert_from('{x:100, y:215.6}' ,'JSON') as mycol1, convert_from('{x:100, y:215.6}' ,'JSON') as mycol2 from cp.`tpch/nation.parquet`;");
+        testA3()  (1 usage found)
+            (51: 5) test(" select convert_from(concat('{x:100,',  'y:215.6}') ,'JSON') as mycol1, convert_from('{x:100, y:215.6}' ,'JSON') as mycol2 from cp.`tpch/nation.parquet`;");
+        testA4()  (1 usage found)
+            (57: 5) test(" select convert_from('{}' ,'JSON') as mycol1, convert_from('{x:100, y:215.6}' ,'JSON') as mycol2 from cp.`tpch/nation.parquet`;");
+        testA5()  (1 usage found)
+            (63: 5) test(" select convert_from('[]' ,'JSON') as mycol1, convert_from('{x:100, y:215.6}' ,'JSON') as mycol2 from cp.`tpch/nation.parquet`;");
+        testA6()  (1 usage found)
+            (69: 5) test(" select convert_from('[1, 2, 3]' ,'JSON') as mycol1  from cp.`tpch/nation.parquet`;");
+        testA7()  (1 usage found)
+            (75: 5) test(" select convert_from('[1.2, 2.3, 3.5]' ,'JSON') as mycol1  from cp.`tpch/nation.parquet`;");
+        testA8()  (1 usage found)
+            (81: 5) test(" select convert_from('[ [1, 2], [3, 4], [5]]' ,'JSON') as mycol1  from cp.`tpch/nation.parquet`;");
+        testA9()  (1 usage found)
+            (87: 5) test(" select convert_from('[{a : 100, b: 200}, {a:300, b: 400}]' ,'JSON') as mycol1  from cp.`tpch/nation.parquet`;");
+    TestJsonReader  (4 usages found)
+        testAllTextMode()  (1 usage found)
+            (117: 5) test("alter system set `store.json.all_text_mode` = true");
+        testNullWhereListExpected()  (1 usage found)
+            (142: 5) test("alter system set `store.json.all_text_mode` = true");
+        testNullWhereMapExpected()  (1 usage found)
+            (151: 5) test("alter system set `store.json.all_text_mode` = true");
+        testProjectPushdown()  (1 usage found)
+            (166: 5) test("alter system set `store.json.all_text_mode` = false");
+

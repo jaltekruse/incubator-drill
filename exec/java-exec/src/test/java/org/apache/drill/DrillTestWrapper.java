@@ -52,7 +52,7 @@ import static org.junit.Assert.assertNotNull;
  * To construct an instance easily, look at the TestBuilder class. From an implementation of
  * the BaseTestQuery class, and instance of the builder is accessible through the testBuilder() method.
  */
-public class DrillTestWrapper {
+public class DrillTestWrapper extends BaseTestQuery {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
   // TODO - when in JSON, read baseline in all text mode to avoid precision loss for decimal values
@@ -93,8 +93,12 @@ public class DrillTestWrapper {
   // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
   // and translated into a map in the builder
   private Map<String, Object> singleRecordBaseline;
+  // this is a temporary fix, eventually the functionality of BaseTestQuery will be moved into this class, but for now
+  // it will be used with a reference to the class to keep the current tests cleaner while we are transitioning to the
+  // new framework
+  private BaseTestQuery baseTestQuery;
 
-  public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
+  public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, BaseTestQuery baseTestQuery, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
                           boolean highPerformanceComparison, Map<String, Object> baselineRecord) {
@@ -119,7 +123,7 @@ public class DrillTestWrapper {
     }
   }
 
-  private BufferAllocator getAllocator() {
+  public BufferAllocator getAllocator() {
     return allocator;
   }
 
@@ -267,7 +271,7 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQuery.test(testOptionSettingQueries);
     List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(queryType, query);
 
     addTypeInfoIfMissing(expected.get(0), testBuilder);
@@ -280,7 +284,7 @@ public class DrillTestWrapper {
     // If a single baseline record was not provided to the test builder, we must run a query for the baseline, this includes
     // the cases where the baseline is stored in a file.
     if (singleRecordBaseline == null) {
-      BaseTestQuery.test(baselineOptionSettingQueries);
+      baseTestQuery.test(baselineOptionSettingQueries);
       results = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
       addToMaterializedResults(actualRecords, results, loader, schema);
     } else {
@@ -309,14 +313,14 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQuery.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
     // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 
     Map<String, List> actualSuperVectors = addToCombinedVectorResults(results, loader, schema);
 
-    BaseTestQuery.test(baselineOptionSettingQueries);
+    baseTestQuery.test(baselineOptionSettingQueries);
     List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
     Map<String, List> expectedSuperVectors = addToCombinedVectorResults(expected, loader, schema);
 
@@ -329,14 +333,14 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQuery.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
     // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 
     Map<String, HyperVectorValueIterator> actualSuperVectors = addToHyperVectorMap(results, loader, schema);
 
-    BaseTestQuery.test(baselineOptionSettingQueries);
+    baseTestQuery.test(baselineOptionSettingQueries);
     List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
 
     Map<String, HyperVectorValueIterator> expectedSuperVectors = addToHyperVectorMap(expected, loader, schema);
