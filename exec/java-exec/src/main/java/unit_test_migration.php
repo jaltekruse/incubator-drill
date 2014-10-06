@@ -22,17 +22,32 @@ foreach ($unit_test_lines as $line) {
         echo "TEST_METHOD:" . $curr_test . "\n";
     } else if ( strpos( $line_parts[1], " test(") !== FALSE) {
         $test_query = explode(" test(", $line_parts[1]);
-        if ( strpos( $test_query[1], "\");") === FALSE) {
-            echo "FIX MANUALLY:" . $test_method . "." . $test_query[1] . "\n";
-            $manual_fix_count++;
+        if ( strpos( $test_query[1], "\");") === FALSE && strpos( $test_query[1], "\" );") === FALSE) {
+            echo "FIX MANUALLY:" . $curr_test. "." . $test_query[1] . "\n";
+            echo "last char:" . $test_query[ 1][strlen($test_query[1]) - 1]. "\n";
+            if ($test_query[ 1][strlen($test_query[1]) - 1] != '+'
+                && $test_query[ 1][strlen($test_query[1]) - 2] != '+') {
+                $manual_fix_count++;
+            }
 
-            // too many tests to deal with manually, it just doen't make sense, 
-            // and there is too great a chance for errors to be introduced
             $file_path = "../../test/java/" . str_replace(".", "/", $curr_package);
             $file_path .= "/" . $curr_class . ".java";
             $file = fopen($file_path, "rw");
             if ( ! isset( $file_map[ $file_path ] )) {
                 $file_map[ $file_path ] = fread($file, filesize($file_path)); 
+            }
+
+            // too many tests to deal with manually, it just doesn't make sense to fix them by hand,
+            // and there is too great a chance for errors to be introduced
+            // find all occurances of `test(` and "); in the file, these will allow for finding and stitching the
+            // queries together easily
+            // nevermind this seems like too much effort, this actually only fixes 25 cases, will just do them manually
+            $file = $file_map[ $file_path ];
+
+            if (preg_match( "/" . preg_quote("test(" . $test_query[1]) . "/", $file) ) {
+            }
+            if (preg_match( "/" . preg_quote("\");") . "/",  $file_map[$file_path], $file)) {
+                echo "@@@@@@@########@@@@@@@^^^^^^^^^\n";
             }
             continue;
         }
@@ -51,7 +66,6 @@ foreach ($unit_test_lines as $line) {
 }
 echo "MANUAL FIX COUNT:" . $manual_fix_count . "\n";
 echo "AUTO FIX COUNT:" . $auto_fix_count . "\n";
-print_r($file_map);
 fclose($myfile);
 
 ?>
