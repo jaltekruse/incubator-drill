@@ -26,9 +26,11 @@ import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestTestFramework extends BaseTestQuery{
+public class TestTestFramework extends BaseTestQuery {
 
   private static String CSV_COLS = " cast(columns[0] as bigint) employee_id, columns[1] as first_name, columns[2] as last_name ";
+
+  // TODO - add enforcement of column ordering
 
   @Test
   public void testCSVVerification() throws Exception {
@@ -46,6 +48,7 @@ public class TestTestFramework extends BaseTestQuery{
     testBuilder()
         .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json` limit 1")
         .baselineColumns("employee_id", "first_name", "last_name")
+        // TODO - make sure this have more than one row allowed
         .baselineValues(12l, "Jewel", "Creek")
         .build().run();
   }
@@ -224,6 +227,11 @@ public class TestTestFramework extends BaseTestQuery{
     throw new Exception("Test framework verification failed, expected failure on order check.");
   }
 
+  // TODO - write a comment to discourage use of this
+  // TODO - verifying errors
+  // optiq has fusion model for plan and result check
+  // text comparison for plan regression check
+  // for ordered(), check the query for an order by
   @Test
   public void testCSVVerificationTypeMap() throws Throwable {
     Map<SchemaPath, TypeProtos.MinorType> typeMap = new HashMap<>();
