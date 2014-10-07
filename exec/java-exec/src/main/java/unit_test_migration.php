@@ -8,6 +8,8 @@ $file_map = array();
 $curr_package = "";
 $manual_fix_count = 0;
 $auto_fix_count = 0;
+$tests = array();
+$query_within_single_test_count = 0;
 foreach ($unit_test_lines as $line) {
     //echo $line . "\n";
     $line_parts = preg_split( "/\([0-9]/", $line);
@@ -18,39 +20,40 @@ foreach ($unit_test_lines as $line) {
         echo "PACKAGE:" . $curr_package . "\n";
     } else if ( strpos( $line_parts[0], "()") !== FALSE) {
         // found a test
-        $curr_test = trim($line_parts[0]);
+        $curr_test = str_replace("()", "", trim($line_parts[0]));
+        $query_within_single_test_count = 0;
         echo "TEST_METHOD:" . $curr_test . "\n";
     } else if ( strpos( $line_parts[1], " test(") !== FALSE) {
-        $test_query = explode(" test(", $line_parts[1]);
-        if ( strpos( $test_query[1], "\");") === FALSE && strpos( $test_query[1], "\" );") === FALSE) {
+        $test_query = explode(" test(\"", $line_parts[1]);
+
+        $file_path = "../../test/java/" . str_replace(".", "/", $curr_package);
+        $file_path .= "/" . $curr_class . ".java";
+        $file = fopen($file_path, "rw");
+        if ( ! isset( $file_map[ $file_path ] )) {
+            $file_map[ $file_path ] = fread($file, filesize($file_path)); 
+        }
+
+        // if the 
+        if ( (strpos( $test_query[1], "\");") === FALSE && strpos( $test_query[1], "\" );") === FALSE ) || 
+            strpos( $test_query[1], "alter session") !== FALSE || strpos( $test_query[1], "alter system") !== FALSE ||
+            strpos( $test_query[1], "create view") !== FALSE || strpos( $test_query[1], "drop view") !== FALSE 
+            || strpos( $test_query[1], "drop view") !== FALSE ) {
             echo "FIX MANUALLY:" . $curr_test. "." . $test_query[1] . "\n";
             echo "last char:" . $test_query[ 1][strlen($test_query[1]) - 1]. "\n";
             if ($test_query[ 1][strlen($test_query[1]) - 1] != '+'
                 && $test_query[ 1][strlen($test_query[1]) - 2] != '+') {
                 $manual_fix_count++;
-            }
-
-            $file_path = "../../test/java/" . str_replace(".", "/", $curr_package);
-            $file_path .= "/" . $curr_class . ".java";
-            $file = fopen($file_path, "rw");
-            if ( ! isset( $file_map[ $file_path ] )) {
-                $file_map[ $file_path ] = fread($file, filesize($file_path)); 
-            }
-
-            // too many tests to deal with manually, it just doesn't make sense to fix them by hand,
-            // and there is too great a chance for errors to be introduced
-            // find all occurances of `test(` and "); in the file, these will allow for finding and stitching the
-            // queries together easily
-            // nevermind this seems like too much effort, this actually only fixes 25 cases, will just do them manually
-            $file = $file_map[ $file_path ];
-
-            if (preg_match( "/" . preg_quote("test(" . $test_query[1]) . "/", $file) ) {
-            }
-            if (preg_match( "/" . preg_quote("\");") . "/",  $file_map[$file_path], $file)) {
-                echo "@@@@@@@########@@@@@@@^^^^^^^^^\n";
+                continue;
             }
             continue;
         }
+
+        $test_info = array();
+        $test_info['file path'] = $file_path;
+        $test_info['query'] = str_replace("\" );", "", str_replace("\");", "", $test_query[1]));
+        $test_info['test method'] = $curr_test;
+        $test_inf0['query count in test'] = $query_within_single_test_count;
+        $tests[] = $test_info;
         $test_query = explode("\");", $test_query[1]);
         //echo "TEST QUERY:" . $test_query[0] . "\n";
         $auto_fix_count++;
@@ -66,6 +69,28 @@ foreach ($unit_test_lines as $line) {
 }
 echo "MANUAL FIX COUNT:" . $manual_fix_count . "\n";
 echo "AUTO FIX COUNT:" . $auto_fix_count . "\n";
+
+$test_queries_to_run = array();
+$test_match_count = 0;
+foreach ($tests as $test) {
+    $file_path = $test['file path'];
+    print_r($test['query']);
+    echo "\n";
+    if ( preg_match( "@" . preg_quote("test(\"" . $test['query']) . "@", $file_map[$file_path])) {
+        $test_match_count++;
+    }
+    $test_queries_to_run[] = "$$$$$" . str_replace("java/org/apache/drill/exec", "resources", str_replace(".java", "", $test["file path"])) . '.' .  $test['test method'] . $test['query count in test'] . ".tsv" . "$$$$$;";
+    // small check to make sure I wasn't messing up any tests that we wubmitting two queries in a single line
+    if (substr_count($test['query'], ";") > 1) {
+       throw new Exception("THIS IS BAD");
+    }
+    $test_queries_to_run[] = str_replace(";", "", $test['query']) . ";";
+}
+//print_r($test_queries_to_run);
+foreach ($test_queries_to_run as $query) {
+echo $query . "\n";
+}
+echo "matched test queries: " . $test_match_count . "\n";
 fclose($myfile);
 
 ?>
