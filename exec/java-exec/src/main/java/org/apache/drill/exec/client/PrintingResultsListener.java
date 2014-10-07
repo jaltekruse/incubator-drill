@@ -17,6 +17,10 @@
  */
 package org.apache.drill.exec.client;
 
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,12 +46,39 @@ public class PrintingResultsListener implements UserResultsListener {
   BufferAllocator allocator;
   volatile Exception exception;
   QueryId queryId;
+  PrintWriter pw;
+  String outFile;
 
   public PrintingResultsListener(DrillConfig config, Format format, int columnWidth) {
+    this(config, format, new PrintWriter(System.out), columnWidth);
+  }
+
+  public PrintingResultsListener(DrillConfig config, Format format, int columnWidth, String outFile) {
+
+    ByteArrayOutputStream os = new ByteArrayOutputStream();
+    PrintWriter writer;
+    try {
+      writer = new PrintWriter(outFile, "UTF-8");
+    } catch (FileNotFoundException e) {
+      throw new RuntimeException(e);
+    } catch (UnsupportedEncodingException e) {
+      throw new RuntimeException(e);
+    }
+
     this.allocator = new TopLevelAllocator(config);
     loader = new RecordBatchLoader(allocator);
     this.format = format;
     this.columnWidth = columnWidth;
+    this.pw = writer;
+    this.outFile = outFile;
+  }
+
+  private PrintingResultsListener(DrillConfig config, Format format, PrintWriter pw, int columnWidth) {
+    this.allocator = new TopLevelAllocator(config);
+    loader = new RecordBatchLoader(allocator);
+    this.format = format;
+    this.columnWidth = columnWidth;
+    this.pw = pw;
   }
 
   @Override
@@ -72,10 +103,10 @@ public class PrintingResultsListener implements UserResultsListener {
           VectorUtil.showVectorAccessibleContent(loader, columnWidth);
           break;
         case TSV:
-          VectorUtil.showVectorAccessibleContent(loader, "\t");
+          VectorUtil.storeVectorAccessibleContent(loader, "\t", pw);
           break;
         case CSV:
-          VectorUtil.showVectorAccessibleContent(loader, ",");
+          VectorUtil.storeVectorAccessibleContent(loader, ",", pw);
           break;
       }
       loader.clear();
@@ -85,6 +116,10 @@ public class PrintingResultsListener implements UserResultsListener {
     result.release();
 
     if (isLastChunk) {
+      // outfile is not null, write out data
+      if (outFile != null) {
+        pw.close();
+      }
       allocator.close();
       latch.countDown();
       System.out.println("Total rows returned : " + count.get());

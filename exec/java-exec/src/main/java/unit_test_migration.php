@@ -52,7 +52,8 @@ foreach ($unit_test_lines as $line) {
         $test_info['file path'] = $file_path;
         $test_info['query'] = str_replace("\" );", "", str_replace("\");", "", $test_query[1]));
         $test_info['test method'] = $curr_test;
-        $test_inf0['query count in test'] = $query_within_single_test_count;
+        $test_info['query count in test'] = $query_within_single_test_count;
+        $query_within_single_test_count++;
         $tests[] = $test_info;
         $test_query = explode("\");", $test_query[1]);
         //echo "TEST QUERY:" . $test_query[0] . "\n";
@@ -79,12 +80,14 @@ foreach ($tests as $test) {
     if ( preg_match( "@" . preg_quote("test(\"" . $test['query']) . "@", $file_map[$file_path])) {
         $test_match_count++;
     }
-    $test_queries_to_run[] = "$$$$$" . str_replace("java/org/apache/drill/exec", "resources", str_replace(".java", "", $test["file path"])) . '.' .  $test['test method'] . $test['query count in test'] . ".tsv" . "$$$$$;";
-    // small check to make sure I wasn't messing up any tests that we wubmitting two queries in a single line
+    $test_queries_to_run[] =
+        "testRunAndWriteToFile(UserBitShared.QueryType.SQL,\"" . str_replace(";", "", $test['query']) . "\",\"" . 
+            str_replace("../../test/java/org/apache/drill/exec", "exec/java-exec/src/test/resources", str_replace(".java", "", $test["file path"])) . '.' .  $test['test method'] . 
+            ($test['query count in test'] != 0 ? '_' . $test['query count in test'] : "") . ".tsv\");";
+    // small check to make sure I wasn't messing up any tests that were submitting two queries in a single line
     if (substr_count($test['query'], ";") > 1) {
        throw new Exception("THIS IS BAD");
     }
-    $test_queries_to_run[] = str_replace(";", "", $test['query']) . ";";
 }
 //print_r($test_queries_to_run);
 foreach ($test_queries_to_run as $query) {

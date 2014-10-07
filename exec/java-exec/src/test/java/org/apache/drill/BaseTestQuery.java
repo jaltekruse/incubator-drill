@@ -185,6 +185,13 @@ public class BaseTestQuery extends ExecTest{
     return resultListener.await();
   }
 
+  public static int testRunAndWriteToFile(QueryType type, String query, String outfilePath) throws Exception {
+    query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
+    PrintingResultsListener resultListener = new PrintingResultsListener(client.getConfig(), Format.TSV, VectorUtil.DEFAULT_COLUMN_WIDTH, outfilePath);
+    client.runQuery(type, query, resultListener);
+    return resultListener.await();
+  }
+
   protected void testWithListener(QueryType type, String query, UserResultsListener resultListener) {
     query = query.replace("[WORKING_PATH]", TestTools.getWorkingPath());
     client.runQuery(type, query, resultListener);

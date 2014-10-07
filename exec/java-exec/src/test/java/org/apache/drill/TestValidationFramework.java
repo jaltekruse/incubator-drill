@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill;
 
+import org.apache.drill.exec.proto.UserBitShared;
 import org.junit.Test;
 
 /**
@@ -27,9 +28,8 @@ import org.junit.Test;
 public class TestValidationFramework extends BaseTestQuery {
 
   @Test
-  public void testOrderedVerification() throws Exception {
-    String[] expectedCols = { "columns"};
-//    testSQLVerifyingOrderedResultsCSV("select * from cp.`store/text/data/nations.csv`", "store/text/data/nations.csv", expectedCols);
+  public void generateNewBaselines() throws Exception {
+    testRunAndWriteToFile(UserBitShared.QueryType.SQL, "select * from cp.`customer.json` limit 50", "outfile.tsv");
   }
 
 }
