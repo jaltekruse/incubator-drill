@@ -18,6 +18,7 @@
 package org.apache.drill.exec.client;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
@@ -57,6 +58,8 @@ public class PrintingResultsListener implements UserResultsListener {
 
     ByteArrayOutputStream os = new ByteArrayOutputStream();
     PrintWriter writer;
+    File file = new File(outFile);
+    file.getParentFile().mkdirs();
     try {
       writer = new PrintWriter(outFile, "UTF-8");
     } catch (FileNotFoundException e) {
