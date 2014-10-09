@@ -1,0 +1,55 @@
+text	json
+00-00    Screen
+00-01      Project(mycnt=[$0], mycnt2=[+($0, *(2, $0))])
+00-02        Project(mycnt=[$0])
+00-03          Scan(groupscan=[org.apache.drill.exec.store.pojo.PojoRecordReader@126ecd00])
+	{
+  "head" : {
+    "version" : 1,
+    "generator" : {
+      "type" : "ExplainHandler",
+      "info" : ""
+    },
+    "type" : "APACHE_DRILL_PHYSICAL",
+    "options" : [ ],
+    "queue" : 0,
+    "resultMode" : "EXEC"
+  },
+  "graph" : [ {
+    "pop" : "DirectGroupScan",
+    "@id" : 3,
+    "cost" : 20.0
+  }, {
+    "pop" : "project",
+    "@id" : 2,
+    "exprs" : [ {
+      "ref" : "`mycnt`",
+      "expr" : "`count`"
+    } ],
+    "child" : 3,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 20.0
+  }, {
+    "pop" : "project",
+    "@id" : 1,
+    "exprs" : [ {
+      "ref" : "`mycnt`",
+      "expr" : "`mycnt`"
+    }, {
+      "ref" : "`mycnt2`",
+      "expr" : "add(`mycnt`, multiply(2, `mycnt`) ) "
+    } ],
+    "child" : 2,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 20.0
+  }, {
+    "pop" : "screen",
+    "@id" : 0,
+    "child" : 1,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 20.0
+  } ]
+}

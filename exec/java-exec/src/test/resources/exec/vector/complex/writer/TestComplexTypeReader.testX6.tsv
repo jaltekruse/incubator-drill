@@ -1,0 +1,14 @@
+EXPR$0
+[ {
+  "orange" : "yellow",
+  "pink" : "red"
+}, {
+  "pink" : "purple"
+} ]
+[ ]
+[ {
+  "pink" : "lilac"
+} ]
+[ {
+  "orange" : "stucco"
+} ]

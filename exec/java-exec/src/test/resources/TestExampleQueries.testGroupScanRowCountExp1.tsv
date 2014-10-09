@@ -1,0 +1,91 @@
+text	json
+00-00    Screen
+00-01      Project(mycnt=[$0], mycnt2=[+($1, *(2, $1))])
+00-02        StreamAgg(group=[{}], mycnt=[COUNT($0)], agg#1=[COUNT()])
+00-03          Scan(groupscan=[ParquetGroupScan [entries=[ReadEntryWithPath [path=/tpch/nation.parquet]], selectionRoot=/tpch/nation.parquet, numFiles=1, columns=[SchemaPath [`n_nationkey`]]]])
+	{
+  "head" : {
+    "version" : 1,
+    "generator" : {
+      "type" : "ExplainHandler",
+      "info" : ""
+    },
+    "type" : "APACHE_DRILL_PHYSICAL",
+    "options" : [ ],
+    "queue" : 0,
+    "resultMode" : "EXEC"
+  },
+  "graph" : [ {
+    "pop" : "parquet-scan",
+    "@id" : 3,
+    "entries" : [ {
+      "path" : "/tpch/nation.parquet"
+    } ],
+    "storage" : {
+      "type" : "file",
+      "enabled" : true,
+      "connection" : "classpath:///",
+      "workspaces" : null,
+      "formats" : {
+        "csv" : {
+          "type" : "text",
+          "extensions" : [ "csv" ],
+          "delimiter" : ","
+        },
+        "tsv" : {
+          "type" : "text",
+          "extensions" : [ "tsv" ],
+          "delimiter" : "\t"
+        },
+        "json" : {
+          "type" : "json"
+        },
+        "parquet" : {
+          "type" : "parquet"
+        }
+      }
+    },
+    "format" : {
+      "type" : "parquet"
+    },
+    "columns" : [ "`n_nationkey`" ],
+    "selectionRoot" : "/tpch/nation.parquet",
+    "cost" : 25.0
+  }, {
+    "pop" : "streaming-aggregate",
+    "@id" : 2,
+    "child" : 3,
+    "keys" : [ ],
+    "exprs" : [ {
+      "ref" : "`mycnt`",
+      "expr" : "count(`n_nationkey`) "
+    }, {
+      "ref" : "`$f1`",
+      "expr" : "count(1) "
+    } ],
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 1.0
+  }, {
+    "pop" : "project",
+    "@id" : 1,
+    "exprs" : [ {
+      "ref" : "`mycnt`",
+      "expr" : "`mycnt`"
+    }, {
+      "ref" : "`mycnt2`",
+      "expr" : "add(`$f1`, multiply(2, `$f1`) ) "
+    } ],
+    "child" : 2,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 2.5
+  }, {
+    "pop" : "screen",
+    "@id" : 0,
+    "child" : 1,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 2.5
+  } ]
+}

@@ -1,0 +1,2 @@
+host	user_port	control_port	data_port
+10.250.0.86	31010	31011	31012

@@ -1,0 +1,5 @@
+integer	x1	x2	EXPR$3	EXPR$4	EXPR$5
+2010	kevin	kevin	{"orange":"yellow","pink":"red"}	yellow	purple
+-2002	null	null	{}	null	null
+2001	bill	bill	{"pink":"lilac"}	null	null
+6005	mike	mike	{"orange":"stucco"}	stucco	null

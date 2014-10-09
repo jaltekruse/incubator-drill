@@ -1,0 +1,20 @@
+employee_id	full_name	first_name	last_name	position_id	position_title	store_id	department_id	birth_date	hire_date	salary	supervisor_id	education_level	marital_status	gender	management_role	employee_id0
+151	James Sparacino	James	Sparacino	18	Store Temporary Stocker	7	18	1914-02-02	1996-01-01 00:00:00.0	20.0	102	High School Degree	S	M	Store Temp Staff	151
+174	James Bayol	James	Bayol	15	Store Permanent Checker	24	15	1914-02-02	1996-01-01 00:00:00.0	6700.0	163	High School Degree	S	F	Store Full Time Staf	174
+214	James Frank	James	Frank	18	Store Temporary Stocker	24	18	1914-02-02	1996-01-01 00:00:00.0	20.0	163	Bachelors Degree	S	M	Store Temp Staff	214
+284	James Story	James	Story	18	Store Temporary Stocker	11	18	1914-02-02	1996-01-01 00:00:00.0	20.0	228	Bachelors Degree	S	F	Store Temp Staff	284
+341	James Haugh	James	Haugh	18	Store Temporary Stocker	13	18	1914-02-02	1996-01-01 00:00:00.0	20.0	287	High School Degree	M	M	Store Temp Staff	341
+353	James Bailey	James	Bailey	18	Store Temporary Stocker	13	18	1914-02-02	1996-01-01 00:00:00.0	20.0	289	Partial College	S	F	Store Temp Staff	353
+385	James McCoy	James	McCoy	16	Store Temporary Checker	3	16	1914-02-02	1996-01-01 00:00:00.0	20.0	363	Partial College	M	F	Store Full Time Staf	385
+429	James Clark	James	Clark	14	Store Information Systems	15	14	1942-06-01	1997-01-01 00:00:00.0	9000.0	423	High School Degree	S	M	Store Full Time Staf	429
+649	James Thomas	James	Thomas	15	Store Permanent Checker	19	15	1914-02-02	1998-01-01 00:00:00.0	8200.0	640	High School Degree	S	F	Store Full Time Staf	649
+651	James Tran	James	Tran	15	Store Permanent Checker	19	15	1914-02-02	1998-01-01 00:00:00.0	7000.0	641	Partial College	M	M	Store Full Time Staf	651
+790	James Aguilar	James	Aguilar	17	Store Permanent Stocker	21	17	1914-02-02	1998-01-01 00:00:00.0	3700.0	749	Bachelors Degree	S	M	Store Full Time Staf	790
+819	James Brew	James	Brew	18	Store Temporary Stocker	21	18	1914-02-02	1998-01-01 00:00:00.0	20.0	751	Graduate Degree	S	M	Store Temp Staff	819
+821	James Thompson	James	Thompson	12	Store Assistant Manager	1	11	1932-12-24	1998-01-01 00:00:00.0	13000.0	11	Partial College	M	F	Store Management	821
+918	James Barnurn	James	Barnurn	16	Store Temporary Checker	10	16	1914-02-02	1998-01-01 00:00:00.0	20.0	888	Bachelors Degree	M	M	Store Full Time Staf	918
+1010	James Trujillo	James	Trujillo	18	Store Temporary Stocker	8	18	1914-02-02	1998-01-01 00:00:00.0	20.0	948	High School Degree	S	M	Store Temp Staff	1010
+1092	James Delhay	James	Delhay	16	Store Temporary Checker	12	16	1914-02-02	1998-01-01 00:00:00.0	20.0	1067	Partial High School	S	M	Store Full Time Staf	1092
+1119	James Hays	James	Hays	17	Store Permanent Stocker	12	17	1914-02-02	1998-01-01 00:00:00.0	4600.0	1069	High School Degree	M	F	Store Full Time Staf	1119
+1138	James Eichorn	James	Eichorn	18	Store Temporary Stocker	12	18	1914-02-02	1998-01-01 00:00:00.0	20.0	1069	Partial College	S	M	Store Temp Staff	1138
+1141	James Compagno	James	Compagno	15	Store Permanent Checker	18	15	1914-02-02	1998-01-01 00:00:00.0	6400.0	1139	Graduate Degree	S	M	Store Full Time Staf	1141

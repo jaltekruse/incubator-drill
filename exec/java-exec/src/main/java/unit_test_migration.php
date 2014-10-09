@@ -37,7 +37,8 @@ foreach ($unit_test_lines as $line) {
         if ( (strpos( $test_query[1], "\");") === FALSE && strpos( $test_query[1], "\" );") === FALSE ) || 
             strpos( $test_query[1], "alter session") !== FALSE || strpos( $test_query[1], "alter system") !== FALSE ||
             strpos( $test_query[1], "create view") !== FALSE || strpos( $test_query[1], "drop view") !== FALSE 
-            || strpos( $test_query[1], "drop view") !== FALSE ) {
+            || strpos( $test_query[1], "drop view") !== FALSE || strpos( $test_query[1], "view") !== FALSE
+            || strpos( $test_query[1], "use ") !== FALSE) {
             echo "FIX MANUALLY:" . $curr_test. "." . $test_query[1] . "\n";
             echo "last char:" . $test_query[ 1][strlen($test_query[1]) - 1]. "\n";
             if ($test_query[ 1][strlen($test_query[1]) - 1] != '+'
@@ -82,7 +83,7 @@ foreach ($tests as $test) {
     }
     $test_queries_to_run[] =
         "testRunAndWriteToFile(UserBitShared.QueryType.SQL,\"" . str_replace(";", "", $test['query']) . "\",\"" . 
-            str_replace("../../test/java/org/apache/drill/exec", "exec/java-exec/src/test/resources", str_replace(".java", "", $test["file path"])) . '.' .  $test['test method'] . 
+            str_replace("../../test/java/org/apache/drill", "exec/java-exec/src/test/resources", str_replace(".java", "", $test["file path"])) . '.' .  $test['test method'] . 
             ($test['query count in test'] != 0 ? '_' . $test['query count in test'] : "") . ".tsv\");";
     // small check to make sure I wasn't messing up any tests that were submitting two queries in a single line
     if (substr_count($test['query'], ";") > 1) {
