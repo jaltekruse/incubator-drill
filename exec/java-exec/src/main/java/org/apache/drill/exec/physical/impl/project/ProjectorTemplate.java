@@ -60,21 +60,27 @@ public abstract class ProjectorTemplate implements Projector {
     case NONE:
       final int countN = recordCount;
       int i;
-      for (i = startIndex; i < startIndex + countN; i++, firstOutputIndex++) {
-        if (!doEval(i, firstOutputIndex)) {
-          break;
+      outer:
+      for (i = startIndex; i < startIndex + countN; i++) {
+//        System.out.println(i);
+        for (int j = 0; j < 1000; j++) {
+          if (!doEval(i, firstOutputIndex)) {
+            System.out.println("BREAK");
+            break outer;
+          }
+          firstOutputIndex++;
         }
       }
-      if (i < startIndex + recordCount || startIndex > 0) {
-        for (TransferPair t : transfers) {
-          t.splitAndTransfer(startIndex, i - startIndex);
-        }
-        return i - startIndex;
-      }
-      for (TransferPair t : transfers) {
-          t.transfer();
-      }
-      return recordCount;
+//      if (i < startIndex + recordCount || startIndex > 0) {
+//        for (TransferPair t : transfers) {
+//          t.splitAndTransfer(startIndex, i - startIndex);
+//        }
+//        return i - startIndex;
+//      }
+//      for (TransferPair t : transfers) {
+//          t.transfer();
+//      }
+      return (i - startIndex) * 1000;
 
     default:
       throw new UnsupportedOperationException();

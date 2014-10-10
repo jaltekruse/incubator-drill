@@ -140,7 +140,8 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     }
 
     int outputRecords = projector.projectRecords(0, incomingRecordCount, 0);
-    if (outputRecords < incomingRecordCount) {
+    // TODO - change this to be based on the repeated vector length
+    if (outputRecords < incomingRecordCount * 1000) {
       setValueCount(outputRecords);
       hasRemainder = true;
       remainderIndex = outputRecords;
@@ -162,12 +163,12 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   }
 
   private void handleRemainder() {
-    int remainingRecordCount = incoming.getRecordCount() - remainderIndex;
+    int remainingRecordCount = incoming.getRecordCount() * 1000 - remainderIndex;
     if (!doAlloc()) {
       outOfMemory = true;
       return;
     }
-    int projRecords = projector.projectRecords(remainderIndex, remainingRecordCount, 0);
+    int projRecords = projector.projectRecords(remainderIndex / 1000, remainingRecordCount / 1000, 0);
     if (projRecords < remainingRecordCount) {
       setValueCount(projRecords);
       this.recordCount = projRecords;
