@@ -31,6 +31,17 @@ public class TestExampleQueries extends BaseTestQuery{
     test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
   }
 
+  @Test
+  public void testFlatten() throws Exception {
+    // old tests, from when flatten early work was just modifying project to produce more
+    // records than it took in
+    // currently 'works'
+//    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
+    test("select `integer`, `float`, x, flatten(z), rl from cp.`/jsoninput/input2_modified.json`");
+//    test("select * from cp.`/jsoninput/input2_modified.json`");
+//    testPhysicalFromFile("flatten/test_flatten_physical.json");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");

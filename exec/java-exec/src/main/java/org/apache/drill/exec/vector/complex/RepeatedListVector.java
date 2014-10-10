@@ -202,9 +202,18 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
       return l;
     }
 
+    public int getGroupSizeAtIndex(int index) {
+      return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
+    }
+
+    @Override
+    public ValueVector getAllChildValues() {
+      return vector;
+    }
+
     @Override
     public int getValueCount() {
-      return offsets.getAccessor().getValueCount() - 1;
+      return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
     }
 
     public void get(int index, RepeatedListHolder holder) {
@@ -249,7 +258,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
 
     @Override
     public int getGroupCount() {
-      return size();
+      return offsets.getAccessor().getValueCount() - 1;
     }
   }
 
@@ -402,7 +411,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     return getField() //
         .getAsBuilder() //
         .setBufferLength(getBufferSize()) //
-        .setValueCount(accessor.getValueCount()) //
+        .setValueCount(accessor.getGroupCount()) //
         .addChild(vector.getMetadata()) //
         .build();
   }

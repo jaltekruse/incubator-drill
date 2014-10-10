@@ -121,7 +121,7 @@ public class PlanningBase extends ExecTest{
         context.getActiveEndpoints();
         result = ImmutableList.of(DrillbitEndpoint.getDefaultInstance());
         context.getPlannerSettings();
-        result = new PlannerSettings(queryOptions);
+        result = new PlannerSettings(queryOptions, functionRegistry);
         context.getOptions();
         result = queryOptions;
         context.getConfig();
