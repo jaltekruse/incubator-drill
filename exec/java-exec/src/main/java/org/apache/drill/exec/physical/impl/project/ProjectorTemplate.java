@@ -63,7 +63,7 @@ public abstract class ProjectorTemplate implements Projector {
       outer:
       for (i = startIndex; i < startIndex + countN; i++) {
 //        System.out.println(i);
-        for (int j = 0; j < 1000; j++) {
+        for (int j = 0; j < 10; j++) {
           if (!doEval(i, firstOutputIndex)) {
             System.out.println("BREAK");
             break outer;
@@ -80,7 +80,7 @@ public abstract class ProjectorTemplate implements Projector {
 //      for (TransferPair t : transfers) {
 //          t.transfer();
 //      }
-      return (i - startIndex) * 1000;
+      return (i - startIndex) * 10;
 
     default:
       throw new UnsupportedOperationException();

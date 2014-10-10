@@ -141,7 +141,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
     int outputRecords = projector.projectRecords(0, incomingRecordCount, 0);
     // TODO - change this to be based on the repeated vector length
-    if (outputRecords < incomingRecordCount * 1000) {
+    if (outputRecords < incomingRecordCount * 10) {
       setValueCount(outputRecords);
       hasRemainder = true;
       remainderIndex = outputRecords;
@@ -163,12 +163,12 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   }
 
   private void handleRemainder() {
-    int remainingRecordCount = incoming.getRecordCount() * 1000 - remainderIndex;
+    int remainingRecordCount = incoming.getRecordCount() * 10 - remainderIndex;
     if (!doAlloc()) {
       outOfMemory = true;
       return;
     }
-    int projRecords = projector.projectRecords(remainderIndex / 1000, remainingRecordCount / 1000, 0);
+    int projRecords = projector.projectRecords(remainderIndex / 10, remainingRecordCount / 10, 0);
     if (projRecords < remainingRecordCount) {
       setValueCount(projRecords);
       this.recordCount = projRecords;
@@ -272,8 +272,18 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       if (collector.hasErrors()) {
         throw new SchemaChangeException(String.format("Failure while trying to materialize incoming schema.  Errors:\n %s.", collector.toErrorString()));
       }
+      if (expr instanceof DrillFuncHolderExpr &&
+          ((DrillFuncHolderExpr) expr).isComplexWriterFuncHolder())  {
+        // Need to process ComplexWriter function evaluation.
+        // Lazy initialization of the list of complex writers, if not done yet.
+        if (complexWriters == null) {
+          complexWriters = Lists.newArrayList();
+        }
 
-      // add value vector to transfer if direct reference and this is allowed, otherwise, add to evaluation stack.
+        // The reference name will be passed to ComplexWriter, used as the name of the output vector from the writer.
+        ((DrillComplexWriterFuncHolder) ((DrillFuncHolderExpr) expr).getHolder()).setReference(namedExpression.getRef());
+        cg.addExpr(expr);
+      } else{
         // need to do evaluation.
         ValueVector vector = TypeHelper.getNewVector(outputField, oContext.getAllocator());
         allocationVectors.add(vector);
@@ -283,6 +293,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
         cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
         logger.debug("Added eval for project expression.");
+      }
     }
 
     cg.rotateBlock();
