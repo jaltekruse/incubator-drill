@@ -39,6 +39,7 @@ import org.apache.drill.exec.planner.logical.DrillRel;
 import org.apache.drill.exec.planner.logical.DrillScreenRel;
 import org.apache.drill.exec.planner.logical.DrillStoreRel;
 import org.apache.drill.exec.planner.logical.RewriteProjectRel;
+import org.apache.drill.exec.planner.physical.visitor.RewriteProjectToFlatten;
 import org.apache.drill.exec.planner.physical.DrillDistributionTrait;
 import org.apache.drill.exec.planner.physical.PhysicalPlanCreator;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
@@ -52,6 +53,7 @@ import org.apache.drill.exec.planner.physical.visitor.MemoryEstimationVisitor;
 import org.apache.drill.exec.planner.physical.visitor.ProducerConsumerPrelVisitor;
 import org.apache.drill.exec.planner.physical.visitor.RelUniqifier;
 import org.apache.drill.exec.planner.physical.visitor.SelectionVectorPrelVisitor;
+import org.apache.drill.exec.planner.physical.visitor.SplitUpComplexExpressions;
 import org.apache.drill.exec.planner.physical.visitor.StarColumnConverter;
 import org.apache.drill.exec.planner.sql.DrillSqlWorker;
 import org.apache.drill.exec.server.options.OptionManager;
@@ -194,6 +196,13 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      */
     phyRelNode = JoinPrelRenameVisitor.insertRenameProject(phyRelNode);
 
+    System.out.println(context.getPlannerSettings().functionImplementationRegistry.isFunctionComplexOutput(""));
+
+    // TODO - create a rewrite rule for dividing a project that has multiple complex writer outputs
+    // pass in the planner settings referenced above
+//    phyRelNode = ((Prel) phyRelNode).accept(new SplitUpComplexExpressions(planner.getTypeFactory(), context.getDrillOperatorTable(), context.getPlannerSettings().functionImplementationRegistry), null);
+    phyRelNode = ((Prel) phyRelNode).accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()), null);
+    // Definitely before this one
     /*
      * 2.)
      * Since our operators work via names rather than indices, we have to make to reorder any

@@ -32,6 +32,32 @@ public class TestExampleQueries extends BaseTestQuery{
     test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
   }
 
+  @Test
+  public void testFlatten() throws Exception {
+    // old tests, from when flatten early work was just modifying project to produce more
+    // records than it took in
+    // currently 'works'
+//    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
+//    test("select x, flatten(z) from cp.`/jsoninput/input2_modified.json`");
+
+    test("select t2.key from (select t.monkey.`value` as val, t.monkey.key as key from (select flatten(kvgen(f1)) as monkey, x " +
+        "from cp.`/store/json/test_flatten_mapify.json`) as t) as t2 where t2.val > 1");
+
+//    test("select t.monkey.`value` as val, t.monkey as key from (select flatten(kvgen(f1)) as monkey, x " +
+//        "from cp.`/store/json/test_flatten_mapify.json`) as t");
+
+//    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2_modified.json`");
+//  this.testPhysicalFromFile("flatten/corrected_physical.json");
+//    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+//    test("select `integer`, `integer` from cp.`/jsoninput/input2_modified.json`");
+
+//    test("select flatten(rl) from cp.`/jsoninput/input2_modified.json`");
+//    test("select rl from cp.`/jsoninput/repeated_list_bug.json`");
+//    test("select f_1, convert_fromJSON(nested_json) from cp.`/store/json/nested_json.json`");
+//    test("select * from cp.`/jsoninput/input2_modified.json`");
+//    testPhysicalFromFile("flatten/test_flatten_physical.json");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");
