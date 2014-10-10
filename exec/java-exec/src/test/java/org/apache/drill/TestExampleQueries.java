@@ -32,6 +32,21 @@ public class TestExampleQueries extends BaseTestQuery{
     test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
   }
 
+  @Test
+  public void testProjectComplexBug() throws Exception {
+    test("select z,z from cp.`/jsoninput/input2_modified.json`");
+  }
+
+  @Test
+  public void testFlatten() throws Exception {
+//    test("select flatten(kvgen(f1)) as monkey, x " +
+//        "from cp.`/store/json/test_flatten_mapify.json`");
+
+//    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+//    test("select z from cp.`/jsoninput/input2_modified.json`");
+    test("select flatten(a) from cp.`/jsoninput/simple_json_test.json`");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");
