@@ -141,13 +141,13 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
     int outputRecords = projector.projectRecords(0, incomingRecordCount, 0);
     // TODO - change this to be based on the repeated vector length
-    if (outputRecords < incomingRecordCount * 10) {
+    if (outputRecords < incomingRecordCount * 1000) {
       setValueCount(outputRecords);
       hasRemainder = true;
       remainderIndex = outputRecords;
       this.recordCount = remainderIndex;
     } else {
-      setValueCount(incomingRecordCount);
+      setValueCount(outputRecords);
       for(VectorWrapper<?> v: incoming) {
         v.clear();
       }
@@ -163,12 +163,12 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   }
 
   private void handleRemainder() {
-    int remainingRecordCount = incoming.getRecordCount() * 10 - remainderIndex;
+    int remainingRecordCount = incoming.getRecordCount() * 1000 - remainderIndex;
     if (!doAlloc()) {
       outOfMemory = true;
       return;
     }
-    int projRecords = projector.projectRecords(remainderIndex / 10, remainingRecordCount / 10, 0);
+    int projRecords = projector.projectRecords(remainderIndex / 1000, remainingRecordCount / 1000, 0);
     if (projRecords < remainingRecordCount) {
       setValueCount(projRecords);
       this.recordCount = projRecords;
