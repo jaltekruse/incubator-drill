@@ -25,6 +25,12 @@ public class TestExampleQueries extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
   @Test
+  public void testProjectComplex() throws Exception {
+//    test("select convert_toJSON(x), l, rl from cp.`/store/json/lots_of_complex_records.json`");
+    test("select convert_fromJSON(convert_toJSON(x)) from cp.`/store/json/lots_of_complex_records.json`");
+  }
+
+  @Test
   public void testParquetComplex() throws Exception {
     test("select recipe from cp.`parquet/complex.parquet`");
     test("select * from cp.`parquet/complex.parquet`");
