@@ -26,8 +26,11 @@ public class TestExampleQueries extends BaseTestQuery{
 
   @Test
   public void testProjectComplex() throws Exception {
-//    test("select convert_toJSON(x), l, rl from cp.`/store/json/lots_of_complex_records.json`");
-    test("select convert_fromJSON(convert_toJSON(x)) from cp.`/store/json/lots_of_complex_records.json`");
+    // TODO - JIRA - index out of bound exception
+    test("select convert_fromJSON(convert_toJSON(x)), l, rl from cp.`/store/json/lots_of_complex_records.json`");
+    // TODO - file a JIRA - unsupported operation exception transferTo on reapeated list
+    test("select convert_fromJSON(convert_toJSON(x)), l, rl from cp.`/store/json/lots_of_complex_records.json`");
+//    test("select b.join_key, a.x, a.l, a.rl from cp.`/store/json/lots_of_complex_records.json` as a join cp.`/store/json/single_scalar_column.json` as b on a.join_key = b.join_key");
   }
 
   @Test
