@@ -202,6 +202,10 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
       return l;
     }
 
+    public int getGroupSizeAtIndex(int index) {
+      return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
+    }
+
     @Override
     public int getValueCount() {
       return offsets.getAccessor().getValueCount() - 1;

@@ -45,7 +45,7 @@ package org.apache.drill.exec.vector;
  * NB: this class is automatically generated from ValueVectorTypes.tdd using FreeMarker.
  */
 
- public final class Repeated${minor.class}Vector extends BaseValueVector implements Repeated<#if type.major == "VarLen">VariableWidth<#else>FixedWidth</#if>Vector {
+public final class Repeated${minor.class}Vector extends BaseValueVector implements Repeated<#if type.major == "VarLen">VariableWidth<#else>FixedWidth</#if>Vector {
 
   private int parentValueCount;
   private int childValueCount;
@@ -309,6 +309,10 @@ package org.apache.drill.exec.vector;
         vals.add(values.getAccessor().getObject(i));
       }
       return vals;
+    }
+
+    public int getGroupSizeAtIndex(int index){
+      return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
     }
     
     public ${friendlyType} getSingleObject(int index, int arrayIndex){

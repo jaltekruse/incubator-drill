@@ -32,10 +32,13 @@ public class TestExampleQueries extends BaseTestQuery{
   }
 
   @Test
-  public void testProjectComplex() throws Exception {
+  public void testFlatten() throws Exception {
+    // old tests, from when flatten early work was just modifying project to produce more
+    // records than it took in
     // currently 'works'
-    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
+//    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
 //    test("select `integer`, `float`, x, z, l, rl from cp.`/jsoninput/input2.json`");
+    testPhysicalFromFile("flatten/test_flatten_physical.json");
   }
 
   @Test // see DRILL-553

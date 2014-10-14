@@ -1,0 +1,58 @@
+{
+  "head" : {
+    "version" : 1,
+    "generator" : {
+      "type" : "DefaultSqlHandler",
+      "info" : ""
+    },
+    "type" : "APACHE_DRILL_PHYSICAL",
+    "options" : [ ],
+    "queue" : 0,
+    "resultMode" : "EXEC"
+  },
+  "graph" : [ {
+    "pop" : "fs-scan",
+    "@id" : 2,
+    "files" : [ "/jsoninput/input2.json" ],
+    "storage" : {
+      "type" : "file",
+      "enabled" : true,
+      "connection" : "classpath:///",
+      "workspaces" : null,
+      "formats" : {
+        "csv" : {
+          "type" : "text",
+          "extensions" : [ "csv" ],
+          "delimiter" : ","
+        },
+        "json" : {
+          "type" : "json"
+        },
+        "parquet" : {
+          "type" : "parquet"
+        }
+      }
+    },
+    "format" : {
+      "type" : "json"
+    },
+    "columns" : [ "`integer`", "`float`", "`x`", "`l`", "`rl`" ],
+    "selectionRoot" : "/jsoninput/input2.json",
+    "cost" : 0.0
+  }, {
+    "pop" : "flatten",
+    "@id" : 1,
+    "child" : 2,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "column" : "l",
+    "cost" : 1.0
+  }, {
+    "pop" : "screen",
+    "@id" : 0,
+    "child" : 1,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 1.0
+  } ]
+}

@@ -51,6 +51,10 @@ public class FlattenPOP extends AbstractSingle {
     return Iterators.singletonIterator(child);
   }
 
+  public SchemaPath getFlattenCol() {
+    return column;
+  }
+
   @Override
   public <T, X, E extends Throwable> T accept(PhysicalVisitor<T, X, E> physicalVisitor, X value) throws E {
     return physicalVisitor.visitFlatten(this, value);
