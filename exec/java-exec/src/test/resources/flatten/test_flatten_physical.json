@@ -13,7 +13,7 @@
   "graph" : [ {
     "pop" : "fs-scan",
     "@id" : 2,
-    "files" : [ "/jsoninput/input2.json" ],
+    "files" : [ "/jsoninput/input2_modified.json" ],
     "storage" : {
       "type" : "file",
       "enabled" : true,
@@ -36,7 +36,7 @@
     "format" : {
       "type" : "json"
     },
-    "columns" : [ "`integer`", "`float`", "`x`", "`l`", "`rl`" ],
+    "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`", "`rl`" ],
     "selectionRoot" : "/jsoninput/input2.json",
     "cost" : 0.0
   }, {
@@ -45,7 +45,7 @@
     "child" : 2,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "l",
+    "column" : "rl",
     "cost" : 1.0
   }, {
     "pop" : "screen",

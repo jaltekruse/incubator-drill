@@ -156,7 +156,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     }
     int outputRecords = projector.projectRecords(0, incomingRecordCount, 0);
     // TODO - change this to be based on the repeated vector length
-    if (outputRecords < incomingRecordCount) {
+    if (outputRecords < projector.getFlattenField().getAccessor().getValueCount()) {
       setValueCount(outputRecords);
       hasRemainder = true;
       remainderIndex = outputRecords;
@@ -178,7 +178,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
   }
 
   private void handleRemainder() {
-    int remainingRecordCount = incoming.getRecordCount() - remainderIndex;
+    int remainingRecordCount = projector.getFlattenField().getAccessor().getValueCount() - remainderIndex;
     if (!doAlloc()) {
       outOfMemory = true;
       return;

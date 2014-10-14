@@ -31,6 +31,7 @@ public interface Flattener {
   public abstract void setup(FragmentContext context, RecordBatch incoming,  RecordBatch outgoing, List<TransferPair> transfers)  throws SchemaChangeException;
   public abstract int projectRecords(int startIndex, int recordCount, int firstOutputIndex);
   public void setFlattenField(RepeatedVector repeatedColumn);
+  public RepeatedVector getFlattenField();
 
   public static TemplateClassDefinition<Flattener> TEMPLATE_DEFINITION = new TemplateClassDefinition<Flattener>(Flattener.class, FlattenTemplate.class);
 

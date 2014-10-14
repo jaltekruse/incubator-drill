@@ -39,7 +39,7 @@ public abstract class FlattenTemplate implements Flattener {
   private SelectionVector2 vector2;
   private SelectionVector4 vector4;
   private SelectionVectorMode svMode;
-  private RepeatedVector fieldToFlatten;
+  RepeatedVector fieldToFlatten;
   private int groupIndex;
   // this allows for groups to be written between batches if we run out of space, for cases where we have finished
   // a batch on the boundary it will be set to 0
@@ -58,8 +58,13 @@ public abstract class FlattenTemplate implements Flattener {
     this.fieldToFlatten = flattenField;
   }
 
+  public RepeatedVector getFlattenField() {
+    return fieldToFlatten;
+  }
+
   @Override
   public final int projectRecords(int startIndex, final int recordCount, int firstOutputIndex) {
+    startIndex = childIndex;
     switch (svMode) {
       case FOUR_BYTE:
         throw new UnsupportedOperationException();
@@ -75,12 +80,11 @@ public abstract class FlattenTemplate implements Flattener {
 //        return recordCount;
 
       case NONE:
-        final int countN = recordCount;
         if (childIndexWithinCurrGroup == -1) {
           childIndexWithinCurrGroup = 0;
         }
         outer:
-        for (groupIndex = startIndex; groupIndex < startIndex + countN; groupIndex++) {
+        for ( ; groupIndex < fieldToFlatten.getAccessor().getGroupCount(); groupIndex++) {
 //        System.out.println(groupIndex);
           currGroupSize = fieldToFlatten.getAccessor().getGroupSizeAtIndex(groupIndex);
           for ( ; childIndexWithinCurrGroup < currGroupSize; childIndexWithinCurrGroup++) {
@@ -104,7 +108,7 @@ public abstract class FlattenTemplate implements Flattener {
 //      for (TransferPair t : transfers) {
 //          t.transfer();
 //      }
-        return childIndex;
+        return childIndex - startIndex;
 
       default:
         throw new UnsupportedOperationException();
