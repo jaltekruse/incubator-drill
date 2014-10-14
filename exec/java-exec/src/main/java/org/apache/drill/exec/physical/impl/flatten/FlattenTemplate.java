@@ -63,7 +63,7 @@ public abstract class FlattenTemplate implements Flattener {
   }
 
   @Override
-  public final int projectRecords(int startIndex, final int recordCount, int firstOutputIndex) {
+  public final int flattenRecords(int startIndex, final int recordCount, int firstOutputIndex) {
     startIndex = childIndex;
     switch (svMode) {
       case FOUR_BYTE:

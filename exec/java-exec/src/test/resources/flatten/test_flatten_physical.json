@@ -37,7 +37,6 @@
       "type" : "json"
     },
     "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`", "`rl`" ],
-    "selectionRoot" : "/jsoninput/input2.json",
     "cost" : 0.0
   }, {
     "pop" : "flatten",
@@ -45,7 +44,7 @@
     "child" : 2,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "rl",
+    "column" : "z",
     "cost" : 1.0
   }, {
     "pop" : "screen",
