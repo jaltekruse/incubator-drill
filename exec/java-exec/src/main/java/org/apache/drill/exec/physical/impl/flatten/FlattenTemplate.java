@@ -99,15 +99,10 @@ public abstract class FlattenTemplate implements Flattener {
           childIndexWithinCurrGroup = 0;
         }
         // TODO - re-enable for the column to flatten
-//      if (i < startIndex + recordCount || startIndex > 0) {
-//        for (TransferPair t : transfers) {
-//          t.splitAndTransfer(startIndex, i - startIndex);
-//        }
-//        return i - startIndex;
-//      }
-//      for (TransferPair t : transfers) {
-//          t.transfer();
-//      }
+
+        for (TransferPair t : transfers) {
+          t.splitAndTransfer(startIndex, childIndex - startIndex);
+        }
         return childIndex - startIndex;
 
       default:

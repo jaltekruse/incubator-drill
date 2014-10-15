@@ -43,6 +43,7 @@ public interface RepeatedFixedWidthVector extends ValueVector, RepeatedVector {
     public int getGroupCount();
     public int getValueCount();
     public int getGroupSizeAtIndex(int index);
+    public ValueVector getAllChildValues();
   }
   public interface RepeatedMutator extends Mutator {
     public void setValueCounts(int parentValueCount, int childValueCount);

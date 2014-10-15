@@ -59,7 +59,8 @@ public final class Repeated${minor.class}Vector extends BaseValueVector implemen
   public Repeated${minor.class}Vector(MaterializedField field, BufferAllocator allocator) {
     super(field, allocator);
     this.offsets = new UInt4Vector(null, allocator);
-    this.values = new ${minor.class}Vector(null, allocator);
+    MaterializedField mf = MaterializedField.create(field.getPath(), Types.required(field.getType().getMinorType()));
+    this.values = new ${minor.class}Vector(mf, allocator);
   }
 
   public int getValueCapacity(){
@@ -300,7 +301,11 @@ public final class Repeated${minor.class}Vector extends BaseValueVector implemen
     public int getCount(int index) {
       return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
     }
-    
+
+    public ValueVector getAllChildValues() {
+      return values;
+    }
+
     public List<${friendlyType}> getObject(int index) {
       List<${friendlyType}> vals = new JsonStringArrayList();
       int start = offsets.getAccessor().get(index);

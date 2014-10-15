@@ -20,6 +20,8 @@ package org.apache.drill.exec.physical.impl.flatten;
 import java.io.IOException;
 import java.util.List;
 
+import com.carrotsearch.hppc.IntOpenHashSet;
+import com.google.common.base.Preconditions;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.ErrorCollector;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
@@ -35,6 +37,7 @@ import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.DrillFuncHolderExpr;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
+import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.ValueVectorWriteExpression;
 import org.apache.drill.exec.expr.fn.DrillComplexWriterFuncHolder;
 import org.apache.drill.exec.memory.OutOfMemoryException;
@@ -114,16 +117,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     return this.container;
   }
 
-  @Override
-  protected IterOutcome doWork() {
-//    VectorUtil.showVectorAccessibleContent(incoming, ",");
-    int incomingRecordCount = incoming.getRecordCount();
-
-    if (!doAlloc()) {
-      outOfMemory = true;
-      return IterOutcome.OUT_OF_MEMORY;
-    }
-
+  private void setFlattenVector() {
     try {
       flattener.setFlattenField((RepeatedVector) incoming.getValueAccessorById(
           incoming.getSchema().getColumn(
@@ -134,8 +128,25 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       // TODO - discuss the relationship between scalars and lists, should we just do a project in the case where
       // a scalar is called to be flattened, will some users have schemas in JSON where a scalar can be in the same
       // position as a list in other records? Will they expect us to handle this gracefully?
+      ex.printStackTrace();
       throw new DrillRuntimeException("Trying to flatten a non repeated filed.");
     }
+  }
+
+  @Override
+  protected IterOutcome doWork() {
+//    VectorUtil.showVectorAccessibleContent(incoming, ",");
+    int incomingRecordCount = incoming.getRecordCount();
+
+    if (!doAlloc()) {
+      outOfMemory = true;
+      return IterOutcome.OUT_OF_MEMORY;
+    }
+
+    // we call this in setupSchema, but we also need to call it here so we have a reference to the appropriate vector
+    // inside of the the flattener for the current batch
+    setFlattenVector();
+
     int outputRecords = flattener.flattenRecords(0, incomingRecordCount, 0);
     // TODO - change this to be based on the repeated vector length
     if (outputRecords < flattener.getFlattenField().getAccessor().getValueCount()) {
@@ -247,12 +258,32 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     final List<TransferPair> transfers = Lists.newArrayList();
 
     final ClassGenerator<Flattener> cg = CodeGenerator.getRoot(Flattener.TEMPLATE_DEFINITION, context.getFunctionRegistry());
+    IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
+    RepeatedVector flattenField = ((RepeatedVector) incoming.getValueAccessorById(
+          incoming.getSchema().getColumn(
+              incoming.getValueVectorId(
+                  popConfig.getFlattenCol()).getFieldIds()[0]).getValueClass(),
+          incoming.getValueVectorId(popConfig.getFlattenCol()).getFieldIds()).getValueVector());
+
+    NamedExpression namedExpression = new NamedExpression(popConfig.getFlattenCol(), new FieldReference(popConfig.getFlattenCol()));
+    LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
+    ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
+    TypedFieldId id = vectorRead.getFieldId();
+    ValueVector vvIn = flattenField.getAccessor().getAllChildValues();
+    Preconditions.checkNotNull(incoming);
+
+    TransferPair tp = vvIn.getTransferPair();
+    transfers.add(tp);
+    container.add(tp.getTo());
+    transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);
+
+    logger.debug("Added transfer for project expression.");
 
     ClassifierResult result = new ClassifierResult();
 
     for (int i = 0; i < exprs.size(); i++) {
-      final NamedExpression namedExpression = exprs.get(i);
+      namedExpression = exprs.get(i);
       result.clear();
 
       String outputName = getRef(namedExpression).getRootSegment().getPath();
@@ -265,7 +296,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
         }
       }
 
-      final LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
+      expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
       final MaterializedField outputField = MaterializedField.create(outputName, expr.getMajorType());
       if (collector.hasErrors()) {
         throw new SchemaChangeException(String.format("Failure while trying to materialize incoming schema.  Errors:\n %s.", collector.toErrorString()));

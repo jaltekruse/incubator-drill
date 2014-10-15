@@ -413,6 +413,11 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     }
 
     @Override
+    public ValueVector getAllChildValues() {
+      throw new UnsupportedOperationException("Cannot retrieve inner vector from repeated map.");
+    }
+
+    @Override
     public int getValueCount() {
       return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
     }
