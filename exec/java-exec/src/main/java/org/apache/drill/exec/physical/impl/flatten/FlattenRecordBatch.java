@@ -53,6 +53,7 @@ import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.vector.RepeatedVector;
 import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.complex.RepeatedMapVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 
 import com.google.common.collect.Lists;
@@ -270,10 +271,15 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
     ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
     TypedFieldId id = vectorRead.getFieldId();
-    ValueVector vvIn = flattenField.getAccessor().getAllChildValues();
     Preconditions.checkNotNull(incoming);
 
-    TransferPair tp = vvIn.getTransferPair();
+    TransferPair tp = null;
+    if (flattenField instanceof RepeatedMapVector) {
+      tp = ((RepeatedMapVector)flattenField).getTransferPairToSingleMap();
+    } else {
+      ValueVector vvIn = flattenField.getAccessor().getAllChildValues();
+      tp = vvIn.getTransferPair();
+    }
     transfers.add(tp);
     container.add(tp.getTo());
     transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);

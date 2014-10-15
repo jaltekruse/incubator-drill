@@ -209,6 +209,10 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     return new MapTransferPair(ref);
   }
 
+  public TransferPair getTransferPairToSingleMap() {
+    return new SingleMapTransferPair(field.getPath());
+  }
+
   @Override
   public void allocateNew() throws OutOfMemoryRuntimeException {
     if (!allocateNewSafe()) {
@@ -228,6 +232,73 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
       }
     }
     return true;
+  }
+
+  private class SingleMapTransferPair implements TransferPair{
+    private RepeatedMapVector from = RepeatedMapVector.this;
+    private TransferPair[] pairs;
+    private MapVector to;
+
+    public SingleMapTransferPair(SchemaPath path) {
+      MapVector v = new MapVector(MaterializedField.create(path, TYPE), allocator);
+      pairs = new TransferPair[vectors.size()];
+      int i =0;
+      for (Map.Entry<String, ValueVector> e : vectors.entrySet()) {
+        TransferPair otherSide = e.getValue().getTransferPair();
+        v.put(e.getKey(), otherSide.getTo());
+        pairs[i++] = otherSide;
+      }
+      this.to = v;
+    }
+
+    public SingleMapTransferPair(MapVector to) {
+      this.to = to;
+      pairs = new TransferPair[vectors.size()];
+      int i =0;
+      for (Map.Entry<String, ValueVector> e : vectors.entrySet()) {
+        int preSize = to.vectors.size();
+        ValueVector v = to.addOrGet(e.getKey(), e.getValue().getField().getType(), e.getValue().getClass());
+        if (to.vectors.size() != preSize) {
+          v.allocateNew();
+        }
+        pairs[i++] = e.getValue().makeTransferPair(v);
+      }
+    }
+
+
+    @Override
+    public void transfer() {
+      for (TransferPair p : pairs) {
+        p.transfer();
+      }
+      to.getMutator().setValueCount(from.getAccessor().getValueCount());
+      clear();
+    }
+
+    @Override
+    public ValueVector getTo() {
+      return to;
+    }
+
+    @Override
+    public boolean copyValueSafe(int from, int to) {
+      for (TransferPair p : pairs) {
+        if (!p.copyValueSafe(from, to)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public void splitAndTransfer(int startIndex, int length) {
+      for (TransferPair p : pairs) {
+        p.splitAndTransfer(startIndex, length);
+      }
+      to.getMutator().setValueCount(length);
+      clear();
+    }
+
   }
 
   private class MapTransferPair implements TransferPair{
@@ -303,7 +374,6 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     }
 
   }
-
 
   transient private MapTransferPair ephPair;
 
