@@ -12,7 +12,7 @@
   },
   "graph" : [ {
     "pop" : "fs-scan",
-    "@id" : 2,
+    "@id" : 3,
     "files" : [ "/jsoninput/input2_modified.json" ],
     "storage" : {
       "type" : "file",
@@ -36,17 +36,25 @@
     "format" : {
       "type" : "json"
     },
-    "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`", "`rl`" ],
+    "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`", "`l2`", "`rl`" ],
     "cost" : 0.0
+  }, {
+    "pop" : "flatten",
+    "@id" : 2,
+    "child" : 3,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "column" : "l",
+    "cost" : 1.0
   }, {
     "pop" : "flatten",
     "@id" : 1,
     "child" : 2,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "z",
+    "column" : "l2",
     "cost" : 1.0
-  }, {
+  },{
     "pop" : "screen",
     "@id" : 0,
     "child" : 1,
