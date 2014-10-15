@@ -406,7 +406,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     return getField() //
         .getAsBuilder() //
         .setBufferLength(getBufferSize()) //
-        .setValueCount(accessor.getValueCount()) //
+        .setValueCount(accessor.getGroupCount()) //
         .addChild(vector.getMetadata()) //
         .build();
   }

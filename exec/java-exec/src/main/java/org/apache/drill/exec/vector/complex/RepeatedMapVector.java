@@ -365,7 +365,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     SerializedField.Builder b = getField() //
         .getAsBuilder() //
         .setBufferLength(getBufferSize()) //
-        .setValueCount(accessor.getValueCount());
+        .setValueCount(accessor.getGroupCount());
     for (ValueVector v : vectors.values()) {
       b.addChild(v.getMetadata());
     }
@@ -414,7 +414,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
 
     @Override
     public int getValueCount() {
-      return offsets.getAccessor().getValueCount() - 1;
+      return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
     }
 
     public void get(int index, RepeatedMapHolder holder) {
@@ -458,7 +458,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
 
     @Override
     public int getGroupCount() {
-      return size();
+      return offsets.getAccessor().getValueCount() - 1;
     }
   }
 

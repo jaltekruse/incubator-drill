@@ -44,7 +44,7 @@
     "child" : 2,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "z",
+    "column" : "rl",
     "cost" : 1.0
   }, {
     "pop" : "screen",
