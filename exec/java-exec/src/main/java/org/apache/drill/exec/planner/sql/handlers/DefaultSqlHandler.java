@@ -39,6 +39,7 @@ import org.apache.drill.exec.planner.logical.DrillRel;
 import org.apache.drill.exec.planner.logical.DrillScreenRel;
 import org.apache.drill.exec.planner.logical.DrillStoreRel;
 import org.apache.drill.exec.planner.logical.RewriteProjectRel;
+import org.apache.drill.exec.planner.logical.RewriteProjectToFlatten;
 import org.apache.drill.exec.planner.physical.DrillDistributionTrait;
 import org.apache.drill.exec.planner.physical.PhysicalPlanCreator;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
@@ -128,6 +129,7 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      * TODO: Ideally all function rewrites would move here instead of DrillOptiq
      */
     rel = rel.accept(new RewriteProjectRel(planner.getTypeFactory(), context.getDrillOperatorTable()));
+    rel = rel.accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()));
     log("Optiq Logical", rel);
     DrillRel drel = convertToDrel(rel);
     log("Drill Logical", drel);
