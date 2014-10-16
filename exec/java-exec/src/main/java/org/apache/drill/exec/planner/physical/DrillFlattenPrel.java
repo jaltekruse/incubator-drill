@@ -17,16 +17,26 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.physical;
 
+import org.apache.drill.common.expression.PathSegment;
+import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.FlattenPOP;
 import org.apache.drill.exec.planner.common.DrillFilterRelBase;
 import org.apache.drill.exec.planner.physical.visitor.PrelVisitor;
 import org.apache.drill.exec.record.BatchSchema;
+import org.eigenbase.rel.RelNode;
+import org.eigenbase.relopt.RelOptCluster;
+import org.eigenbase.relopt.RelTraitSet;
+import org.eigenbase.rex.RexNode;
 
 import java.io.IOException;
 import java.util.Iterator;
 
-public class DrillFlattenPrel extends DrillFilterRelBase implements Prel {
+public class DrillFlattenPrel extends SinglePrel implements Prel {
+
+  protected DrillFlattenPrel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode toFlatten) {
+    super(cluster, traits, child);
+  }
 
   @Override
   public Iterator<Prel> iterator() {
@@ -38,26 +48,12 @@ public class DrillFlattenPrel extends DrillFilterRelBase implements Prel {
     Prel child = (Prel) this.getChild();
 
     PhysicalOperator childPOP = child.getPhysicalOperator(creator);
-    FlattenPop f = new FlattenPOP();
-  }
-
-  @Override
-  public <T, X, E extends Throwable> T accept(PrelVisitor<T, X, E> logicalVisitor, X value) throws E {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public BatchSchema.SelectionVectorMode[] getSupportedEncodings() {
-    return new BatchSchema.SelectionVectorMode[0];  //To change body of implemented methods use File | Settings | File Templates.
+    FlattenPOP f = new FlattenPOP(childPOP, new SchemaPath(new PathSegment.NameSegment("")));
+    return creator.addMetadata(this, f);
   }
 
   @Override
   public BatchSchema.SelectionVectorMode getEncoding() {
-    return null;  //To change body of implemented methods use File | Settings | File Templates.
-  }
-
-  @Override
-  public boolean needsFinalColumnReordering() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    return BatchSchema.SelectionVectorMode.NONE;
   }
 }
