@@ -123,8 +123,8 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       flattener.setFlattenField((RepeatedVector) incoming.getValueAccessorById(
           incoming.getSchema().getColumn(
               incoming.getValueVectorId(
-                  popConfig.getFlattenCol()).getFieldIds()[0]).getValueClass(),
-          incoming.getValueVectorId(popConfig.getFlattenCol()).getFieldIds()).getValueVector());
+                  popConfig.getColumn()).getFieldIds()[0]).getValueClass(),
+          incoming.getValueVectorId(popConfig.getColumn()).getFieldIds()).getValueVector());
     } catch (Exception ex) {
       // TODO - discuss the relationship between scalars and lists, should we just do a project in the case where
       // a scalar is called to be flattened, will some users have schemas in JSON where a scalar can be in the same
@@ -264,10 +264,10 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     RepeatedVector flattenField = ((RepeatedVector) incoming.getValueAccessorById(
           incoming.getSchema().getColumn(
               incoming.getValueVectorId(
-                  popConfig.getFlattenCol()).getFieldIds()[0]).getValueClass(),
-          incoming.getValueVectorId(popConfig.getFlattenCol()).getFieldIds()).getValueVector());
+                  popConfig.getColumn()).getFieldIds()[0]).getValueClass(),
+          incoming.getValueVectorId(popConfig.getColumn()).getFieldIds()).getValueVector());
 
-    NamedExpression namedExpression = new NamedExpression(popConfig.getFlattenCol(), new FieldReference(popConfig.getFlattenCol()));
+    NamedExpression namedExpression = new NamedExpression(popConfig.getColumn(), new FieldReference(popConfig.getColumn()));
     LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
     ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
     TypedFieldId id = vectorRead.getFieldId();
@@ -351,7 +351,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
 
     List<NamedExpression> exprs = Lists.newArrayList();
     for (MaterializedField field : incoming.getSchema()) {
-      if (field.getPath().equals(popConfig.getFlattenCol())) {
+      if (field.getPath().equals(popConfig.getColumn())) {
         continue;
       }
 //      if (Types.isComplex(field.getType()) || Types.isRepeated(field.getType())) {

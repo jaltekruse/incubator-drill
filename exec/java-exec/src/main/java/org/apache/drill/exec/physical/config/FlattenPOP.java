@@ -51,7 +51,7 @@ public class FlattenPOP extends AbstractSingle {
     return Iterators.singletonIterator(child);
   }
 
-  public SchemaPath getFlattenCol() {
+  public SchemaPath getColumn() {
     return column;
   }
 

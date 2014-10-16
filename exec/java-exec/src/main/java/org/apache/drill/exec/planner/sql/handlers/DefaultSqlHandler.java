@@ -129,12 +129,12 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      * TODO: Ideally all function rewrites would move here instead of DrillOptiq
      */
     rel = rel.accept(new RewriteProjectRel(planner.getTypeFactory(), context.getDrillOperatorTable()));
-    rel = rel.accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()));
     log("Optiq Logical", rel);
     DrillRel drel = convertToDrel(rel);
     log("Drill Logical", drel);
     Prel prel = convertToPrel(drel);
     log("Drill Physical", prel);
+    prel = (Prel) prel.accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()));
     PhysicalOperator pop = convertToPop(prel);
     PhysicalPlan plan = convertToPlan(pop);
     log("Drill Plan", plan);

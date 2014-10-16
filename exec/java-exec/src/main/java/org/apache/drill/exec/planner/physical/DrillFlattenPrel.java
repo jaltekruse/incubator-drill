@@ -17,11 +17,14 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.physical;
 
+import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.config.FlattenPOP;
 import org.apache.drill.exec.planner.common.DrillFilterRelBase;
+import org.apache.drill.exec.planner.logical.DrillOptiq;
+import org.apache.drill.exec.planner.logical.DrillParseContext;
 import org.apache.drill.exec.planner.physical.visitor.PrelVisitor;
 import org.apache.drill.exec.record.BatchSchema;
 import org.eigenbase.rel.RelNode;
@@ -31,11 +34,20 @@ import org.eigenbase.rex.RexNode;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 
 public class DrillFlattenPrel extends SinglePrel implements Prel {
 
-  protected DrillFlattenPrel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode toFlatten) {
+  RexNode toFlatten;
+
+  public DrillFlattenPrel(RelOptCluster cluster, RelTraitSet traits, RelNode child, RexNode toFlatten) {
     super(cluster, traits, child);
+    this.toFlatten = toFlatten;
+  }
+
+  @Override
+  public RelNode copy(RelTraitSet traitSet, List<RelNode> inputs) {
+    return new DrillFlattenPrel(getCluster(), traitSet, sole(inputs), toFlatten);
   }
 
   @Override
@@ -48,12 +60,16 @@ public class DrillFlattenPrel extends SinglePrel implements Prel {
     Prel child = (Prel) this.getChild();
 
     PhysicalOperator childPOP = child.getPhysicalOperator(creator);
-    FlattenPOP f = new FlattenPOP(childPOP, new SchemaPath(new PathSegment.NameSegment("")));
+    FlattenPOP f = new FlattenPOP(childPOP, (SchemaPath) getFlattenExpression(new DrillParseContext()));
     return creator.addMetadata(this, f);
   }
 
   @Override
   public BatchSchema.SelectionVectorMode getEncoding() {
     return BatchSchema.SelectionVectorMode.NONE;
+  }
+
+  protected LogicalExpression getFlattenExpression(DrillParseContext context){
+    return DrillOptiq.toDrill(context, getChild(), toFlatten);
   }
 }

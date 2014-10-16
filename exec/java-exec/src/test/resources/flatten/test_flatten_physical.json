@@ -36,15 +36,28 @@
     "format" : {
       "type" : "json"
     },
-    "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`", "`l2`", "`rl`" ],
+    "columns" : [ "`integer`", "`float`", "`x`", "`l`" ],
+    "selectionRoot" : "/jsoninput/input2_modified.json",
     "cost" : 0.0
   }, {
-    "pop" : "flatten",
+    "pop" : "project",
     "@id" : 2,
+    "exprs" : [ {
+      "ref" : "`integer`",
+      "expr" : "`integer`"
+    }, {
+      "ref" : "`float`",
+      "expr" : "`float`"
+    }, {
+      "ref" : "`x`",
+      "expr" : "`x`"
+    }, {
+      "ref" : "`EXPR$3`",
+      "expr" : "`l`"
+    } ],
     "child" : 3,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "l",
     "cost" : 1.0
   }, {
     "pop" : "flatten",
@@ -52,9 +65,9 @@
     "child" : 2,
     "initialAllocation" : 1000000,
     "maxAllocation" : 10000000000,
-    "column" : "l2",
-    "cost" : 1.0
-  },{
+    "cost" : 1.0,
+    "column" : "`EXPR$3`"
+  }, {
     "pop" : "screen",
     "@id" : 0,
     "child" : 1,

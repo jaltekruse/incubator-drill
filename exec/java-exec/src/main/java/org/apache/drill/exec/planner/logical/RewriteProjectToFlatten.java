@@ -17,6 +17,8 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import org.apache.drill.exec.planner.physical.DrillFlattenPrel;
+import org.eigenbase.rel.ProjectRelBase;
 import org.eigenbase.rel.RelShuttleImpl;
 import org.apache.drill.exec.planner.sql.DrillOperatorTable;
 import org.eigenbase.rel.ProjectRel;
@@ -48,28 +50,35 @@ public class RewriteProjectToFlatten extends RelShuttleImpl {
   }
 
   @Override
-  public RelNode visit(ProjectRel project) {
+  public RelNode visit(RelNode node) {
 
-    List<RexNode> exprList = new ArrayList<>();
-    boolean rewrite = false;
+    // The ProjectRel referenced by the RelShuttle is a final class in calcite
+    // we are extending from its parent to allow custom Drill functionality
+    // but this disables the ability to use the RelShuttle properly
+    if (node instanceof ProjectRelBase) {
+      ProjectRelBase project = (ProjectRelBase) node;
+      List<RexNode> exprList = new ArrayList<>();
+      boolean rewrite = false;
 
-    List<RelDataTypeField> relDataTypes = new ArrayList();
-    int i = 0;
-    for (RexNode rex : project.getChildExps()) {
-      RexNode newExpr = rex;
-      if (rex instanceof RexCall) {
-        RexCall function = (RexCall) rex;
-        String functionName = function.getOperator().getName();
-        int nArgs = function.getOperands().size();
-        // TODO - determine if I need to care about case sensitivity here
+      List<RelDataTypeField> relDataTypes = new ArrayList();
+      int i = 0;
+      RexNode flatttenExpr = null;
+      for (RexNode rex : project.getChildExps()) {
+        RexNode newExpr = rex;
+        if (rex instanceof RexCall) {
+          RexCall function = (RexCall) rex;
+          String functionName = function.getOperator().getName();
+          int nArgs = function.getOperands().size();
+          // TODO - determine if I need to care about case sensitivity here
 
-        if (functionName.equalsIgnoreCase("flatten") ) {
-          System.out.println("expression contains flatten");
-          rewrite = true;
-          i++;
-          continue;
+          if (functionName.equalsIgnoreCase("flatten") ) {
+            System.out.println("expression contains flatten");
+            rewrite = true;
+//            i++;
 //          assert nArgs == 2 && function.getOperands().get(1) instanceof RexLiteral;
-//          String literal = ((NlsString) (((RexLiteral) function.getOperands().get(1)).getValue())).getValue();
+            flatttenExpr = function.getOperands().get(0);
+            newExpr = flatttenExpr;
+//            continue;
 //          RexBuilder builder = new RexBuilder(factory);
 //
 //          // construct the new function name based on the input argument
@@ -92,17 +101,22 @@ public class RewriteProjectToFlatten extends RelShuttleImpl {
 //          // create the new expression to be used in the rewritten project
 //          newExpr = builder.makeCall(newFunction, function.getOperands().subList(0, 1));
 //          rewrite = true;
+          }
         }
+        relDataTypes.add(project.getRowType().getFieldList().get(i));
+        i++;
+        exprList.add(newExpr);
       }
-      relDataTypes.add(project.getRowType().getFieldList().get(i));
-      i++;
-      exprList.add(newExpr);
-    }
-    if (rewrite == true) {
-      ProjectRel newProject = project.copy(project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
-      return visitChild(newProject, 0, project.getChild());
-    }
+      if (rewrite == true) {
+        // TODO - figure out what is the right setting for the traits
+        ProjectRelBase newProject = project.copy(project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
+        DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
+        return visitChild(flatten, 0, newProject);
+      }
 
-    return visitChild(project, 0, project.getChild());
+      return visitChild(project, 0, project.getChild());
+    } else {
+      return super.visit(node);
+    }
   }
 }
