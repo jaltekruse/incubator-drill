@@ -18,6 +18,8 @@
 package org.apache.drill.exec.planner.logical;
 
 import org.apache.drill.exec.planner.physical.DrillFlattenPrel;
+import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
+import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.eigenbase.rel.ProjectRelBase;
 import org.eigenbase.rel.RelShuttleImpl;
 import org.apache.drill.exec.planner.sql.DrillOperatorTable;
@@ -72,35 +74,10 @@ public class RewriteProjectToFlatten extends RelShuttleImpl {
           // TODO - determine if I need to care about case sensitivity here
 
           if (functionName.equalsIgnoreCase("flatten") ) {
-            System.out.println("expression contains flatten");
             rewrite = true;
-//            i++;
-//          assert nArgs == 2 && function.getOperands().get(1) instanceof RexLiteral;
-            flatttenExpr = function.getOperands().get(0);
             newExpr = flatttenExpr;
-//            continue;
-//          RexBuilder builder = new RexBuilder(factory);
-//
-//          // construct the new function name based on the input argument
-//          String newFunctionName = functionName + literal;
-//
-//          // Look up the new function name in the drill operator table
-//          List<SqlOperator> operatorList = table.getSqlOperator(newFunctionName);
-//          assert operatorList.size() > 0;
-//          SqlFunction newFunction = null;
-//
-//          // Find the SqlFunction with the correct args
-//          for (SqlOperator op : operatorList) {
-//            if (op.getOperandTypeChecker().getOperandCountRange().isValidCount(nArgs - 1)) {
-//              newFunction = (SqlFunction) op;
-//              break;
-//            }
-//          }
-//          assert newFunction != null;
-//
-//          // create the new expression to be used in the rewritten project
-//          newExpr = builder.makeCall(newFunction, function.getOperands().subList(0, 1));
-//          rewrite = true;
+            RexBuilder builder = new RexBuilder(factory);
+            flatttenExpr = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), i);
           }
         }
         relDataTypes.add(project.getRowType().getFieldList().get(i));
