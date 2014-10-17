@@ -141,6 +141,14 @@ public class TestJsonReader extends BaseTestQuery {
   }
 
   @Test
+  public void test_md5() throws Exception {
+    String[] queries = {"select * from dfs.`/tmp/lil4000.json`"};
+    long[] rowCounts = {4000};
+    String filename = "/store/json/single_column_long_file.json";
+    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+  }
+
+  @Test
   public void testAllTextMode() throws Exception {
     test("alter system set `store.json.all_text_mode` = true");
     String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
