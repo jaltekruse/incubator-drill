@@ -92,12 +92,12 @@ public class DrillTestWrapper {
   // if the baseline is a single option test writers can provide the baseline values and columns
   // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
   // and translated into a map in the builder
-  private Map<String, Object> singleRecordBaseline;
+  private List<Map> baselineRecords;
 
   public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
-                          boolean highPerformanceComparison, Map<String, Object> baselineRecord) {
+                          boolean highPerformanceComparison, List<Map> baselineRecords) {
     this.testBuilder = testBuilder;
     this.allocator = allocator;
     this.query = query;
@@ -108,7 +108,7 @@ public class DrillTestWrapper {
     this.baselineOptionSettingQueries = baselineOptionSettingQueries;
     this.testOptionSettingQueries = testOptionSettingQueries;
     this.highPerformanceComparison = highPerformanceComparison;
-    this.singleRecordBaseline = baselineRecord;
+    this.baselineRecords = baselineRecords;
   }
 
   public void run() throws Exception {
@@ -277,14 +277,14 @@ public class DrillTestWrapper {
 
     List<QueryResultBatch> results = new ArrayList();
     List<Map> actualRecords = new ArrayList<>();
-    // If a single baseline record was not provided to the test builder, we must run a query for the baseline, this includes
+    // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
     // the cases where the baseline is stored in a file.
-    if (singleRecordBaseline == null) {
+    if (baselineRecords == null) {
       BaseTestQuery.test(baselineOptionSettingQueries);
       results = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
       addToMaterializedResults(actualRecords, results, loader, schema);
     } else {
-      actualRecords.add(singleRecordBaseline);
+      actualRecords = baselineRecords;
     }
 
     compareResults(expectedRecords, actualRecords);
@@ -299,6 +299,9 @@ public class DrillTestWrapper {
    */
   protected void compareOrderedResults() throws Exception {
     if (highPerformanceComparison) {
+      if (baselineQueryType != null) {
+        throw new Exception("Cannot do a high performance comparison without using a baseline file");
+      }
       compareResultsHyperVector();
     } else {
       compareMergedOnHeapVectors();
@@ -316,9 +319,29 @@ public class DrillTestWrapper {
 
     Map<String, List> actualSuperVectors = addToCombinedVectorResults(results, loader, schema);
 
-    BaseTestQuery.test(baselineOptionSettingQueries);
-    List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
-    Map<String, List> expectedSuperVectors = addToCombinedVectorResults(expected, loader, schema);
+    List<QueryResultBatch> expected = null;
+    Map<String, List> expectedSuperVectors = null;
+
+    // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
+    // the cases where the baseline is stored in a file.
+    if (baselineRecords == null) {
+      BaseTestQuery.test(baselineOptionSettingQueries);
+      expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
+      expectedSuperVectors = addToCombinedVectorResults(expected, loader, schema);
+    } else {
+      // data is built in the TestBuilder in a row major format as it is provided by the user
+      // translate it here to vectorized, the representation expected by the ordered comparison
+      expectedSuperVectors = new HashMap();
+      expected = new ArrayList();
+      for (String s : ((Map<String, Object>)baselineRecords.get(0)).keySet()) {
+        expectedSuperVectors.put(s, new ArrayList());
+      }
+      for (Map<String, Object> m : baselineRecords) {
+        for (String s : m.keySet()) {
+          expectedSuperVectors.get(s).add(m.get(s));
+        }
+      }
+    }
 
     compareMergedVectors(expectedSuperVectors, actualSuperVectors);
 

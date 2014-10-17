@@ -19,6 +19,8 @@ package org.apache.drill;
 
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.util.JsonStringArrayList;
+import org.apache.drill.exec.util.JsonStringHashMap;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -45,8 +47,68 @@ public class TestTestFramework extends BaseTestQuery{
   public void testBaselineValsVerification() throws Exception {
     testBuilder()
         .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json` limit 1")
+        .ordered()
         .baselineColumns("employee_id", "first_name", "last_name")
         .baselineValues(12l, "Jewel", "Creek")
+        .build().run();
+
+    testBuilder()
+        .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json` limit 1")
+        .unOrdered()
+        .baselineColumns("employee_id", "first_name", "last_name")
+        .baselineValues(12l, "Jewel", "Creek")
+        .build().run();
+  }
+
+  @Test
+  public void testBaselineValsVerificationWithNulls() throws Exception {
+    testBuilder()
+        .sqlQuery("select * from cp.`store/json/json_simple_with_null.json`")
+        .ordered()
+        .baselineColumns("a", "b")
+        .baselineValues(5l, 10l)
+        .baselineValues(7l, null)
+        .baselineValues(null, null)
+        .baselineValues(9l, 11l)
+        .build().run();
+
+    testBuilder()
+        .sqlQuery("select * from cp.`store/json/json_simple_with_null.json`")
+        .unOrdered()
+        .baselineColumns("a", "b")
+        .baselineValues(5l, 10l)
+        .baselineValues(9l, 11l)
+        .baselineValues(7l, null)
+        .baselineValues(null, null)
+        .build().run();
+  }
+
+  // TODO - add tests that verified nested and repeated fields without a baseline file
+  @Test
+  public void testBaselineValsVerificationWithComplexAndNulls() throws Exception {
+    JsonStringArrayList list = new JsonStringArrayList();
+    JsonStringArrayList innerList1 = new JsonStringArrayList();
+    innerList1.add(2l);
+    innerList1.add(1l);
+    JsonStringArrayList innerList2 = new JsonStringArrayList();
+    innerList2.add(4l);
+    innerList2.add(6l);
+    list.add(innerList1);
+    list.add(innerList2);
+
+    JsonStringArrayList l_list = new JsonStringArrayList();
+    l_list.add(4l);
+    l_list.add(2l);
+
+    JsonStringHashMap x = new JsonStringHashMap();
+    x.put("y", "kevin");
+    x.put("z", "kevin");
+
+    testBuilder()
+        .sqlQuery("select * from cp.`/jsoninput/input2.json` limit 1")
+        .ordered()
+        .baselineColumns("integer", "float", "x", "z", "l", "rl")
+        .baselineValues(2010l, 17.4, x, null, l_list, list)
         .build().run();
   }
 
@@ -224,6 +286,31 @@ public class TestTestFramework extends BaseTestQuery{
     throw new Exception("Test framework verification failed, expected failure on order check.");
   }
 
+  @Test
+  public void testEmptyResultSet() throws Exception {
+    testBuilder()
+        .sqlQuery("select * from cp.`store/json/json_simple_with_null.json` where 1=0")
+        .expectsEmptyResultSet()
+        .build().run();
+    try {
+      testBuilder()
+          .sqlQuery("select * from cp.`store/json/json_simple_with_null.json`")
+          .expectsEmptyResultSet()
+          .build().run();
+    } catch (AssertionError ex) {
+      assertEquals("Different number of records returned expected:<4> but was:<0>", ex.getMessage());
+      // this indicates successful completion of the test
+      return;
+    }
+    throw new Exception("Test framework verification failed, expected failure on unexpected records.");
+  }
+
+  // TODO - write a comment to discourage use of this
+  // TODO - verifying queries expected to produce an error
+  // TODO - verify queries expecting a empty result set
+  // optiq has fusion model for plan and result check
+  // text comparison for plan regression check
+  // for ordered(), check the query for an order by
   @Test
   public void testCSVVerificationTypeMap() throws Throwable {
     Map<SchemaPath, TypeProtos.MinorType> typeMap = new HashMap<>();

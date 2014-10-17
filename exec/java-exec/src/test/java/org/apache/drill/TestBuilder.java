@@ -32,6 +32,7 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.UserBitShared;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -105,6 +106,7 @@ public class TestBuilder {
     highPerformanceComparison = false;
     testOptionSettingQueries = "";
     baselineOptionSettingQueries = "";
+    baselineRecords = null;
     return this;
   }
 
@@ -113,7 +115,7 @@ public class TestBuilder {
       throw new Exception("High performance comparison only available for ordered checks, to enforce this restriction, ordered() must be called first.");
     }
     return new DrillTestWrapper(this, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
-        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineSingleRecordMaterializedRowForm());
+        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineRecords);
   }
 
   public TestBuilder sqlQuery(String query) {
@@ -229,16 +231,38 @@ public class TestBuilder {
     }
   }
 
+  // indicate that the tests query should be checked for an empty result set
+  public TestBuilder expectsEmptyResultSet() {
+    unOrdered();
+    baselineRecords = new ArrayList();
+    return this;
+  }
+
   /**
    * This method is used to pass in a simple list of values for a single record verification without
    * the need to create a CSV or JSON file to store the baseline.
+   *
+   * This can be called repeatedly to pass a list of records to verify. It works for both ordered and unordered
+   * checks.
    *
    * @param baselineValues - the baseline values to validate
    * @return
    */
   public TestBuilder baselineValues(Object ... baselineValues) {
-    this.baselineValues = baselineValues;
-    this.unOrdered();
+    if (ordered == null) {
+      throw new RuntimeException("Ordering not set, before specifying baseline data you must explicitly call the ordered() or unOrdered() method on the " + this.getClass().getSimpleName());
+    }
+    if (baselineRecords == null) {
+      baselineRecords = new ArrayList();
+    }
+    Map<String, Object> ret = new HashMap();
+    int i = 0;
+    assertEquals("Must supply the same number of baseline values as columns.", baselineValues.length, baselineColumns.length);
+    for (String s : baselineColumns) {
+      ret.put(s, baselineValues[i]);
+      i++;
+    }
+    this.baselineRecords.add(ret);
     return this;
   }
 
@@ -284,21 +308,8 @@ public class TestBuilder {
     return this;
   }
 
-  private  Map<String, Object> baselineSingleRecordMaterializedRowForm() {
-    Map<String, Object> ret = new HashMap();
-    if ( baselineValues == null || baselineValues.length == 0)
-      return null;
-    assertEquals("Must supply the same number of baseline values as columns.", baselineValues.length, baselineColumns.length);
-    int i = 0;
-    for (String s : baselineColumns) {
-      ret.put(s, baselineValues[i]);
-      i++;
-    }
-    return ret;
-  }
-
   private boolean singleExplicitBaselineRecord() {
-    return baselineSingleRecordMaterializedRowForm() != null;
+    return baselineRecords != null;
   }
 
   // provide a SQL query to validate against
