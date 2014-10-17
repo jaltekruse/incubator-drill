@@ -196,6 +196,7 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      */
     phyRelNode = JoinPrelRenameVisitor.insertRenameProject(phyRelNode);
 
+    // Definitely before this one
     /*
      * 2.)
      * Since our operators work via names rather than indices, we have to make to reorder any

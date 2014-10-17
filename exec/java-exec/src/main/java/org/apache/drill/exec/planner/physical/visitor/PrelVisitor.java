@@ -35,5 +35,6 @@ public interface PrelVisitor<RETURN, EXTRA, EXCEP extends Throwable> {
   public RETURN visitJoin(JoinPrel prel, EXTRA value) throws EXCEP;
 
   public RETURN visitPrel(Prel prel, EXTRA value) throws EXCEP;
+  // add method here for project and modify base implimentation
 
 }
