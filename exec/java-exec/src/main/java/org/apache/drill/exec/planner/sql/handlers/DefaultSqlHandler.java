@@ -134,7 +134,6 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
     log("Drill Logical", drel);
     Prel prel = convertToPrel(drel);
     log("Drill Physical", prel);
-    prel = (Prel) prel.accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()));
     PhysicalOperator pop = convertToPop(prel);
     PhysicalPlan plan = convertToPlan(pop);
     log("Drill Plan", plan);
@@ -196,6 +195,8 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      */
     phyRelNode = JoinPrelRenameVisitor.insertRenameProject(phyRelNode);
 
+
+    phyRelNode = ((Prel) phyRelNode).accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()), null);
     // Definitely before this one
     /*
      * 2.)

@@ -17,7 +17,13 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import com.google.common.collect.Lists;
+import net.hydromatic.optiq.tools.RelConversionException;
+import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.planner.physical.DrillFlattenPrel;
+import org.apache.drill.exec.planner.physical.Prel;
+import org.apache.drill.exec.planner.physical.ProjectPrel;
+import org.apache.drill.exec.planner.physical.visitor.BasePrelVisitor;
 import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.eigenbase.rel.ProjectRelBase;
@@ -40,7 +46,7 @@ import org.eigenbase.util.NlsString;
 import java.util.ArrayList;
 import java.util.List;
 
-public class RewriteProjectToFlatten extends RelShuttleImpl {
+public class RewriteProjectToFlatten extends BasePrelVisitor<Prel, Object, RelConversionException> {
 
   RelDataTypeFactory factory;
   DrillOperatorTable table;
@@ -52,48 +58,52 @@ public class RewriteProjectToFlatten extends RelShuttleImpl {
   }
 
   @Override
-  public RelNode visit(RelNode node) {
-
-    // The ProjectRel referenced by the RelShuttle is a final class in calcite
-    // we are extending from its parent to allow custom Drill functionality
-    // but this disables the ability to use the RelShuttle properly
-    if (node instanceof ProjectRelBase) {
-      ProjectRelBase project = (ProjectRelBase) node;
-      List<RexNode> exprList = new ArrayList<>();
-      boolean rewrite = false;
-
-      List<RelDataTypeField> relDataTypes = new ArrayList();
-      int i = 0;
-      RexNode flatttenExpr = null;
-      for (RexNode rex : project.getChildExps()) {
-        RexNode newExpr = rex;
-        if (rex instanceof RexCall) {
-          RexCall function = (RexCall) rex;
-          String functionName = function.getOperator().getName();
-          int nArgs = function.getOperands().size();
-          // TODO - determine if I need to care about case sensitivity here
-
-          if (functionName.equalsIgnoreCase("flatten") ) {
-            rewrite = true;
-            newExpr = flatttenExpr;
-            RexBuilder builder = new RexBuilder(factory);
-            flatttenExpr = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), i);
-          }
-        }
-        relDataTypes.add(project.getRowType().getFieldList().get(i));
-        i++;
-        exprList.add(newExpr);
-      }
-      if (rewrite == true) {
-        // TODO - figure out what is the right setting for the traits
-        ProjectRelBase newProject = project.copy(project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
-        DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
-        return visitChild(flatten, 0, newProject);
-      }
-
-      return visitChild(project, 0, project.getChild());
-    } else {
-      return super.visit(node);
+  public Prel visitPrel(Prel prel, Object value) throws RelConversionException {
+    List<RelNode> children = Lists.newArrayList();
+    for(Prel child : prel){
+      child = child.accept(this, null);
+      children.add(child);
     }
+    return (Prel) prel.copy(prel.getTraitSet(), children);
   }
+
+
+  @Override
+  public Prel visitProject(ProjectPrel node, Object unused) throws RelConversionException {
+    ProjectPrel project = node;
+    List<RexNode> exprList = new ArrayList<>();
+    boolean rewrite = false;
+
+    List<RelDataTypeField> relDataTypes = new ArrayList();
+    int i = 0;
+    RexNode flatttenExpr = null;
+    for (RexNode rex : project.getChildExps()) {
+      RexNode newExpr = rex;
+      if (rex instanceof RexCall) {
+        RexCall function = (RexCall) rex;
+        String functionName = function.getOperator().getName();
+        int nArgs = function.getOperands().size();
+        // TODO - determine if I need to care about case sensitivity here
+
+        if (functionName.equalsIgnoreCase("flatten") ) {
+          rewrite = true;
+          newExpr = function.getOperands().get(0);
+          RexBuilder builder = new RexBuilder(factory);
+          flatttenExpr = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), i);
+        }
+      }
+      relDataTypes.add(project.getRowType().getFieldList().get(i));
+      i++;
+      exprList.add(newExpr);
+    }
+    if (rewrite == true) {
+      // TODO - figure out what is the right setting for the traits
+      ProjectPrel newProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
+      DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
+      return flatten;
+    }
+
+    return visitProject(project, null);
+  }
+
 }

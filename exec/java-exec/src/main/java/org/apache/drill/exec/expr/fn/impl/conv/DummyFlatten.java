@@ -25,6 +25,7 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
 import org.apache.drill.exec.expr.annotations.Output;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.record.RecordBatch;
+import org.apache.drill.exec.vector.complex.writer.BaseWriter;
 
 /**
  * This and {@link DummyConvertTo} class merely act as a placeholder so that Optiq
@@ -33,7 +34,7 @@ import org.apache.drill.exec.record.RecordBatch;
 @FunctionTemplate(name = "flatten", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
 public class DummyFlatten implements DrillSimpleFunc {
 
-  @Output VarBinaryHolder out;
+  @Output BaseWriter.ComplexWriter out;
 
   @Override
   public void setup(RecordBatch incoming) { }
