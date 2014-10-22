@@ -39,8 +39,18 @@ public class TestExampleQueries extends BaseTestQuery{
     // currently 'works'
 //    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
     test("select `integer`, `float`, x, flatten(z), rl from cp.`/jsoninput/input2_modified.json`");
+//    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2_modified.json`");
+//    test("select `integer`, `float`, x, flatten(rl) from cp.`/jsoninput/input2_modified.json`");
+    test("select flatten(rl) from cp.`/jsoninput/input2_modified.json`");
+//    test("select rl from cp.`/jsoninput/repeated_list_bug.json`");
+//    test("select f_1, convert_fromJSON(nested_json) from cp.`/store/json/nested_json.json`");
 //    test("select * from cp.`/jsoninput/input2_modified.json`");
 //    testPhysicalFromFile("flatten/test_flatten_physical.json");
+  }
+
+  @Test
+  public void testNestedComplex() throws Exception {
+
   }
 
   @Test // see DRILL-553

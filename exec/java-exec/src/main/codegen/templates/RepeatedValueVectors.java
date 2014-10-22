@@ -107,7 +107,7 @@ public final class Repeated${minor.class}Vector extends BaseValueVector implemen
     int endPos = offsets.getAccessor().get(startIndex+length);
     values.splitAndTransferTo(startIndex, endPos-startPos, target.values);
     target.offsets.clear();
-    target.offsets.allocateNew(length+1);
+    target.offsets.allocateNew(endPos - startPos + 1);
     int normalizedPos = 0;
     for (int i=0; i<length+1;i++) {
       normalizedPos = offsets.getAccessor().get(startIndex+i) - startPos;

@@ -213,7 +213,11 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
 
     @Override
     public int getValueCount() {
-      return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
+//      if (offsets.getAccessor().getValueCount() == 0 ) {
+//        return 0;
+//      } else {
+        return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
+//      }
     }
 
     public void get(int index, RepeatedListHolder holder) {
