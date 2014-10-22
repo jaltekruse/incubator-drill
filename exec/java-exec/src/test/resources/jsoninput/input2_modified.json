@@ -6,7 +6,7 @@
   },
   "z": [
     {"orange" : "yellow" , "pink": "red"},
-    {"pink" : "purple" },
+    {"pink" : "purple" , "map_field" : "asdf"},
     {"red" : "dog" },
     {"asdfj" : "bunny" },
     {"qwerty" : "monkey" }
@@ -15,7 +15,8 @@
   "rl": [ [2,1], [4,6] ]
 }
 { "integer" : -2002,
-  "float"   : -1.2
+  "float"   : -1.2,
+  "rl": [[5,7]]
 }
 { "integer" : 2001,
   "float"   : 1.2,
@@ -27,7 +28,7 @@
     {"pink" : "lilac" }
   ],
   "l": [4,2],
-  "rl": [ [2,1], [4,6] ],
+  "rl": [ [3,1], [9,7] ],
   "l2" : [ "456", "qwerty", "meh", "trogdor" ]
 }
 { "integer" : 6005,

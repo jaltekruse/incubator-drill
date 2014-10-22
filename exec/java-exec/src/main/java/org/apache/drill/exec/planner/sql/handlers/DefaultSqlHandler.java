@@ -39,7 +39,7 @@ import org.apache.drill.exec.planner.logical.DrillRel;
 import org.apache.drill.exec.planner.logical.DrillScreenRel;
 import org.apache.drill.exec.planner.logical.DrillStoreRel;
 import org.apache.drill.exec.planner.logical.RewriteProjectRel;
-import org.apache.drill.exec.planner.logical.RewriteProjectToFlatten;
+import org.apache.drill.exec.planner.physical.visitor.RewriteProjectToFlatten;
 import org.apache.drill.exec.planner.physical.DrillDistributionTrait;
 import org.apache.drill.exec.planner.physical.PhysicalPlanCreator;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
@@ -195,7 +195,7 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
      */
     phyRelNode = JoinPrelRenameVisitor.insertRenameProject(phyRelNode);
 
-    context.getPlannerSettings().functionImplementationRegistry.isFunctionComplexOutput("");
+    System.out.println(context.getPlannerSettings().functionImplementationRegistry.isFunctionComplexOutput(""));
 
     // TODO - create a rewrite rule for dividing a project that has multiple complex writer outputs
     // pass in the planner settings referenced above

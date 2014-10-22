@@ -28,6 +28,7 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.holders.ComplexHolder;
 import org.apache.drill.exec.expr.holders.RepeatedMapHolder;
@@ -240,7 +241,9 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     private MapVector to;
 
     public SingleMapTransferPair(SchemaPath path) {
-      MapVector v = new MapVector(MaterializedField.create(path, TYPE), allocator);
+
+      MaterializedField mf = MaterializedField.create(field.getPath(), Types.required(field.getType().getMinorType()));
+      MapVector v = new MapVector(mf, allocator);
       pairs = new TransferPair[vectors.size()];
       int i =0;
       for (Map.Entry<String, ValueVector> e : vectors.entrySet()) {
@@ -489,7 +492,11 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
 
     @Override
     public int getValueCount() {
-      return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
+      if (offsets.getAccessor().getValueCount() == 0 ) {
+        return 0;
+      } else {
+        return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
+      }
     }
 
     public void get(int index, RepeatedMapHolder holder) {

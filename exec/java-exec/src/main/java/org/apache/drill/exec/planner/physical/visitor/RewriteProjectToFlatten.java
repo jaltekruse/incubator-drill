@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.planner.logical;
+package org.apache.drill.exec.planner.physical.visitor;
 
 import com.google.common.collect.Lists;
 import net.hydromatic.optiq.tools.RelConversionException;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.planner.physical.DrillFlattenPrel;
 import org.apache.drill.exec.planner.physical.Prel;
@@ -83,10 +84,12 @@ public class RewriteProjectToFlatten extends BasePrelVisitor<Prel, Object, RelCo
         RexCall function = (RexCall) rex;
         String functionName = function.getOperator().getName();
         int nArgs = function.getOperands().size();
-        // TODO - determine if I need to care about case sensitivity here
 
         if (functionName.equalsIgnoreCase("flatten") ) {
           rewrite = true;
+          if (function.getOperands().size() != 1) {
+            throw new RelConversionException("Flatten expression expects a single input.");
+          }
           newExpr = function.getOperands().get(0);
           RexBuilder builder = new RexBuilder(factory);
           flatttenExpr = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), i);
