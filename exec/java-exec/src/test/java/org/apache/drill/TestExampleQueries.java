@@ -37,7 +37,7 @@ public class TestExampleQueries extends BaseTestQuery{
     // records than it took in
     // currently 'works'
 //    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
-    test("select `integer`, `float`, x, flatten(l) from cp.`/jsoninput/input2_modified.json`");
+    test("select `integer`, `float`, x, flatten(z), rl from cp.`/jsoninput/input2_modified.json`");
 //    test("select * from cp.`/jsoninput/input2_modified.json`");
 //    testPhysicalFromFile("flatten/test_flatten_physical.json");
   }
