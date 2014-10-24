@@ -200,7 +200,7 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
 
     // TODO - create a rewrite rule for dividing a project that has multiple complex writer outputs
     // pass in the planner settings referenced above
-//    phyRelNode = ((Prel) phyRelNode).accept(new SplitUpComplexExpressions(planner.getTypeFactory(), context.getDrillOperatorTable(), context.getPlannerSettings().functionImplementationRegistry), null);
+    phyRelNode = ((Prel) phyRelNode).accept(new SplitUpComplexExpressions(planner.getTypeFactory(), context.getDrillOperatorTable(), context.getPlannerSettings().functionImplementationRegistry), null);
     phyRelNode = ((Prel) phyRelNode).accept(new RewriteProjectToFlatten(planner.getTypeFactory(), context.getDrillOperatorTable()), null);
     // Definitely before this one
     /*

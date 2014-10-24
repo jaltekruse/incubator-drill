@@ -46,12 +46,12 @@ public class RexVisitorComplexExprSplitter extends RexVisitorImpl<RexNode> {
   List<ProjectPrel> projects;
   int lastUsedIndex;
 
-  public RexVisitorComplexExprSplitter(RelDataTypeFactory factory, FunctionImplementationRegistry funcReg) {
+  public RexVisitorComplexExprSplitter(RelDataTypeFactory factory, FunctionImplementationRegistry funcReg, int firstUnused) {
     super(true);
     this.factory = factory;
     this.funcReg = funcReg;
     this.complexExprs = new ArrayList();
-    this.lastUsedIndex = 0;
+    this.lastUsedIndex = firstUnused;
   }
   
   public  List<RexNode> getComplexExprs() {
@@ -97,7 +97,7 @@ public class RexVisitorComplexExprSplitter extends RexVisitorImpl<RexNode> {
     if (funcReg.isFunctionComplexOutput(functionName) ) {
       RexBuilder builder = new RexBuilder(factory);
       RexNode ret = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), lastUsedIndex);
-//      lastUsedIndex++;
+      lastUsedIndex++;
       complexExprs.add(call.clone(new RelDataTypeDrillImpl(new RelDataTypeHolder(),factory), newOps));
       return ret;
     }
