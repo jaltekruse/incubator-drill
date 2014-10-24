@@ -1,0 +1,146 @@
+{
+  "head" : {
+    "version" : 1,
+    "generator" : {
+      "type" : "DefaultSqlHandler",
+      "info" : ""
+    },
+    "type" : "APACHE_DRILL_PHYSICAL",
+    "options" : [ {
+      "name" : "planner.width.max_per_node",
+      "kind" : "LONG",
+      "type" : "SESSION",
+      "num_val" : 2
+    } ],
+    "queue" : 0,
+    "resultMode" : "EXEC"
+  },
+  "graph" : [ {
+    "pop" : "fs-scan",
+    "@id" : 6,
+    "files" : [ "/jsoninput/input2_modified.json" ],
+    "storage" : {
+      "type" : "file",
+      "enabled" : true,
+      "connection" : "classpath:///",
+      "workspaces" : null,
+      "formats" : {
+        "csv" : {
+          "type" : "text",
+          "extensions" : [ "csv" ],
+          "delimiter" : ","
+        },
+        "json" : {
+          "type" : "json"
+        },
+        "parquet" : {
+          "type" : "parquet"
+        }
+      }
+    },
+    "format" : {
+      "type" : "json"
+    },
+    "columns" : [ "`integer`", "`float`", "`x`", "`z`", "`l`" ],
+    "selectionRoot" : "/jsoninput/input2_modified.json",
+    "cost" : 36.0
+  }, {
+    "pop" : "project",
+    "@id" : 5,
+    "exprs" : [ {
+      "ref" : "`EXPR$0`",
+      "expr" : "`integer`"
+    }, {
+      "ref" : "`EXPR$1`",
+      "expr" : "`x`"
+    }, {
+      "ref" : "`EXPR$2`",
+      "expr" : "2"
+    }, {
+      "ref" : "`EXPR$3`",
+      "expr" : "`l`"
+    }, {
+      "ref" : "`EXPR$4`",
+      "expr" : "`float`"
+    }, {
+      "ref" : "`EXPR$5`",
+      "expr" : "`z`"
+    } ],
+    "child" : 6,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  }, {
+    "pop" : "flatten",
+    "@id" : 4,
+    "child" : 5,
+    "column" : "`EXPR$5`",
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  }, {
+    "pop" : "project",
+    "@id" : 3,
+    "exprs" : [ {
+      "ref" : "`EXPR$0`",
+      "expr" : "`EXPR$0`"
+    }, {
+      "ref" : "`EXPR$1`",
+      "expr" : "`EXPR$1`"
+    }, {
+      "ref" : "`EXPR$2`",
+      "expr" : "`EXPR$2`"
+    }, {
+      "ref" : "`EXPR$4`",
+      "expr" : "`EXPR$4`"
+    }, {
+      "ref" : "`EXPR$5`",
+      "expr" : "`EXPR$5`"
+    }, {
+      "ref" : "`EXPR$6`",
+      "expr" : "`EXPR$3`"
+    } ],
+    "child" : 4,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  }, {
+    "pop" : "flatten",
+    "@id" : 2,
+    "child" : 3,
+    "column" : "`EXPR$6`",
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  }, {
+    "pop" : "project",
+    "@id" : 1,
+    "exprs" : [ {
+      "ref" : "`integer`",
+      "expr" : "`EXPR$0`"
+    }, {
+      "ref" : "`float`",
+      "expr" : "`EXPR$4`"
+    }, {
+      "ref" : "`x`",
+      "expr" : "`EXPR$1`"
+    }, {
+      "ref" : "`EXPR$3`",
+      "expr" : "`EXPR$5`"
+    }, {
+      "ref" : "`EXPR$4`",
+      "expr" : "`EXPR$6`"
+    } ],
+    "child" : 2,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  }, {
+    "pop" : "screen",
+    "@id" : 0,
+    "child" : 1,
+    "initialAllocation" : 1000000,
+    "maxAllocation" : 10000000000,
+    "cost" : 36.0
+  } ]
+}

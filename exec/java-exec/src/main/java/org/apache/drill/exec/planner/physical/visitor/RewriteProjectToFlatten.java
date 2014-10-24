@@ -101,7 +101,8 @@ public class RewriteProjectToFlatten extends BasePrelVisitor<Prel, Object, RelCo
     }
     if (rewrite == true) {
       // TODO - figure out what is the right setting for the traits
-      ProjectPrel newProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
+      Prel newChild = ((Prel)project.getInput(0)).accept(this, null);
+      ProjectPrel newProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), newChild, exprList, new RelRecordType(relDataTypes));
       DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
       return flatten;
     }

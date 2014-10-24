@@ -39,9 +39,12 @@ public class TestExampleQueries extends BaseTestQuery{
     // currently 'works'
 //    test("select `integer`, `float`, x, l, rl from cp.`/jsoninput/input2.json`");
 //    test("select x, flatten(z) from cp.`/jsoninput/input2_modified.json`");
-    test("select flatten(kvgen(f1)) as monkey, x from cp.`/store/json/test_flatten_mapify.json`");
+//    test("select flatten(kvgen(f1)) as monkey, x from cp.`/store/json/test_flatten_mapify.json`");
 //    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2_modified.json`");
-//    test("select `integer`, `float`, x, flatten(l) from cp.`/jsoninput/input2_modified.json`");
+//  this.testPhysicalFromFile("flatten/corrected_physical.json");
+//    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+    test("select `integer`, `integer` from cp.`/jsoninput/input2_modified.json`");
+
 //    test("select flatten(rl) from cp.`/jsoninput/input2_modified.json`");
 //    test("select rl from cp.`/jsoninput/repeated_list_bug.json`");
 //    test("select f_1, convert_fromJSON(nested_json) from cp.`/store/json/nested_json.json`");
