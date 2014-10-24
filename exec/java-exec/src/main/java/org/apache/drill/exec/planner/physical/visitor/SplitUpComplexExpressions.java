@@ -17,8 +17,11 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.physical.visitor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+
 import net.hydromatic.optiq.tools.RelConversionException;
+
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.planner.physical.DrillFlattenPrel;
 import org.apache.drill.exec.planner.physical.Prel;
@@ -52,7 +55,7 @@ public class SplitUpComplexExpressions extends BasePrelVisitor<Prel, Object, Rel
   DrillOperatorTable table;
   FunctionImplementationRegistry funcReg;
 
-  public SplitUpComplexExpressions(RelDataTypeFactory factory, DrillOperatorTable table) {
+  public SplitUpComplexExpressions(RelDataTypeFactory factory, DrillOperatorTable table, FunctionImplementationRegistry funcReg) {
     super();
     this.factory = factory;
     this.table = table;
@@ -80,33 +83,29 @@ public class SplitUpComplexExpressions extends BasePrelVisitor<Prel, Object, Rel
     List<RelDataTypeField> relDataTypes = new ArrayList();
     int i = 0;
     RexNode flatttenExpr = null;
+    RexVisitorComplexExprSplitter exprSplitter = new RexVisitorComplexExprSplitter(factory, funcReg);
     for (RexNode rex : project.getChildExps()) {
-      RexNode newExpr = rex;
-      if (rex instanceof RexCall) {
-        RexCall function = (RexCall) rex;
-        String functionName = function.getOperator().getName();
-        int nArgs = function.getOperands().size();
-        // TODO - determine if I need to care about case sensitivity here
-
-        if (funcReg.isFunctionComplexOutput(functionName) ) {
-          rewrite = true;
-          newExpr = function.getOperands().get(0);
-          RexBuilder builder = new RexBuilder(factory);
-          flatttenExpr = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), i);
-        }
-      }
       relDataTypes.add(project.getRowType().getFieldList().get(i));
       i++;
-      exprList.add(newExpr);
+      exprList.add(rex.accept(exprSplitter));
     }
-    if (rewrite == true) {
-      // TODO - figure out what is the right setting for the traits
-      ProjectPrel newProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), project.getInput(0), exprList, new RelRecordType(relDataTypes));
-      DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
-      return flatten;
-    }
+    List<RexNode> complexExprs = exprSplitter.getComplexExprs();
 
-    return visitProject(project, null);
+    RelNode originalInput = project.getInput(0);
+    ProjectPrel childProject;
+    
+    List<RexNode> allExprs = new ArrayList();
+    RexNode currRexNode;
+    while (complexExprs.size() > 0) {
+      currRexNode = complexExprs.remove(0);
+      allExprs.add(currRexNode);
+      childProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), originalInput, Lists.newArrayList(currRexNode), new RelRecordType(relDataTypes));
+      originalInput = childProject;
+    }
+//      DrillFlattenPrel flatten = new DrillFlattenPrel(project.getCluster(), project.getTraitSet(), newProject, flatttenExpr);
+    return new ProjectPrel(node.getCluster(), project.getTraitSet(), originalInput, exprList, new RelRecordType(relDataTypes));
   }
+  
+//  ProjectPrel newProject = new ProjectPrel(node.getCluster(), project.getTraitSet(), , exprList, new RelRecordType(relDataTypes));
 
 }

@@ -18,6 +18,7 @@
 package org.apache.drill.exec.planner.physical.visitor;
 
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.planner.physical.ProjectPrel;
 import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.eigenbase.reltype.RelDataTypeFactory;
@@ -42,6 +43,7 @@ public class RexVisitorComplexExprSplitter extends RexVisitorImpl<RexNode> {
   RelDataTypeFactory factory;
   FunctionImplementationRegistry funcReg;
   List<RexNode> complexExprs;
+  List<ProjectPrel> projects;
   int lastUsedIndex;
 
   public RexVisitorComplexExprSplitter(RelDataTypeFactory factory, FunctionImplementationRegistry funcReg) {
@@ -51,69 +53,70 @@ public class RexVisitorComplexExprSplitter extends RexVisitorImpl<RexNode> {
     this.complexExprs = new ArrayList();
     this.lastUsedIndex = 0;
   }
+  
+  public  List<RexNode> getComplexExprs() {
+    return complexExprs;
+  }
 
   @Override
   public RexNode visitInputRef(RexInputRef inputRef) {
-    return null;
+    return inputRef;
   }
 
   @Override
   public RexNode visitLocalRef(RexLocalRef localRef) {
-    return null;
+    return localRef;
   }
 
   @Override
   public RexNode visitLiteral(RexLiteral literal) {
-    return null;
+    return literal;
   }
 
   @Override
   public RexNode visitOver(RexOver over) {
-    return null;
+    return over;
   }
 
   @Override
   public RexNode visitCorrelVariable(RexCorrelVariable correlVariable) {
-    return null;
+    return correlVariable;
   }
 
   public RexNode visitCall(RexCall call) {
 
     String functionName = call.getOperator().getName();
     int nArgs = call.getOperands().size();
-
+    
+    List<RexNode> newOps = new ArrayList();
+    RexNode r;
+    for (RexNode operand : call.operands) {
+      newOps.add(operand.accept(this));
+    }
+    
     if (funcReg.isFunctionComplexOutput(functionName) ) {
       RexBuilder builder = new RexBuilder(factory);
       RexNode ret = builder.makeInputRef( new RelDataTypeDrillImpl(new RelDataTypeHolder(), factory), lastUsedIndex);
-      lastUsedIndex++;
-      List<RexNode> newOps = new ArrayList();
-      RexNode r;
-      for (RexNode operand : call.operands) {
-        r = operand.accept(this);
-        if (r != null ) {
-          newOps.add(r);
-        } else {
-          newOps.add(operand);
-        }
-      }
-      return call.clone(new RelDataTypeDrillImpl(new RelDataTypeHolder(),factory), newOps);
+//      lastUsedIndex++;
+      complexExprs.add(call.clone(new RelDataTypeDrillImpl(new RelDataTypeHolder(),factory), newOps));
+      return ret;
     }
-    return null;
+    return call.clone(new RelDataTypeDrillImpl(new RelDataTypeHolder(),factory), newOps);
   }
 
   @Override
   public RexNode visitDynamicParam(RexDynamicParam dynamicParam) {
-    return null;
+    return dynamicParam;
   }
 
   @Override
   public RexNode visitRangeRef(RexRangeRef rangeRef) {
-    return null;
+    return rangeRef;
   }
 
   @Override
   public RexNode visitFieldAccess(RexFieldAccess fieldAccess) {
-    return null;
+    return fieldAccess;
   }
 
 }

@@ -106,7 +106,8 @@ public class RewriteProjectToFlatten extends BasePrelVisitor<Prel, Object, RelCo
       return flatten;
     }
 
-    return visitProject(project, null);
+    Prel child = ((Prel)project.getChild()).accept(this, null);
+    return new ProjectPrel(node.getCluster(), project.getTraitSet(), child, exprList, new RelRecordType(relDataTypes));
   }
 
 }
