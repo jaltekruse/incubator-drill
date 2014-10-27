@@ -205,6 +205,10 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     }
   }
 
+  public TransferPair getTransferPairToSingleMap() {
+    return new SingleMapTransferPair(field.getPath());
+  }
+
   @Override
   public TransferPair getTransferPair(FieldReference ref) {
     return new MapTransferPair(ref);
@@ -229,6 +233,74 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
       }
     }
     return true;
+  }
+
+  private class SingleMapTransferPair implements TransferPair{
+    private RepeatedMapVector from = RepeatedMapVector.this;
+    private TransferPair[] pairs;
+    private MapVector to;
+
+    public SingleMapTransferPair(SchemaPath path) {
+
+      MaterializedField mf = MaterializedField.create(field.getPath(), Types.required(field.getType().getMinorType()));
+      MapVector v = new MapVector(mf, allocator);
+      pairs = new TransferPair[vectors.size()];
+      int i =0;
+      for (Map.Entry<String, ValueVector> e : vectors.entrySet()) {
+        TransferPair otherSide = e.getValue().getTransferPair();
+        v.put(e.getKey(), otherSide.getTo());
+        pairs[i++] = otherSide;
+      }
+      this.to = v;
+    }
+
+    public SingleMapTransferPair(MapVector to) {
+      this.to = to;
+      pairs = new TransferPair[vectors.size()];
+      int i =0;
+      for (Map.Entry<String, ValueVector> e : vectors.entrySet()) {
+        int preSize = to.vectors.size();
+        ValueVector v = to.addOrGet(e.getKey(), e.getValue().getField().getType(), e.getValue().getClass());
+        if (to.vectors.size() != preSize) {
+          v.allocateNew();
+        }
+        pairs[i++] = e.getValue().makeTransferPair(v);
+      }
+    }
+
+
+    @Override
+    public void transfer() {
+      for (TransferPair p : pairs) {
+        p.transfer();
+      }
+      to.getMutator().setValueCount(from.getAccessor().getValueCount());
+      clear();
+    }
+
+    @Override
+    public ValueVector getTo() {
+      return to;
+    }
+
+    @Override
+    public boolean copyValueSafe(int from, int to) {
+      for (TransferPair p : pairs) {
+        if (!p.copyValueSafe(from, to)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public void splitAndTransfer(int startIndex, int length) {
+      for (TransferPair p : pairs) {
+        p.splitAndTransfer(startIndex, length);
+      }
+      to.getMutator().setValueCount(length);
+    }
+
   }
 
   private class MapTransferPair implements TransferPair{
@@ -412,6 +484,15 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
     @Override
     public int getValueCount() {
       return offsets.getAccessor().getValueCount() - 1;
+    }
+
+    public int getGroupSizeAtIndex(int index) {
+      return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
+    }
+
+    @Override
+    public ValueVector getAllChildValues() {
+      throw new UnsupportedOperationException("Cannot retrieve inner vector from repeated map.");
     }
 
     public void get(int index, RepeatedMapHolder holder) {
