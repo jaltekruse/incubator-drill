@@ -32,6 +32,11 @@ public class TestExampleQueries extends BaseTestQuery{
     test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
   }
 
+  @Test
+  public void testProjectComplexBug() throws Exception {
+    test("select z,z from cp.`/jsoninput/input2.json`");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");
