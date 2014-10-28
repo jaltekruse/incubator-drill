@@ -44,7 +44,7 @@ public class TestExampleQueries extends BaseTestQuery{
 
 //    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
 //    test("select z from cp.`/jsoninput/input2_modified.json`");
-    test("select flatten(a) from cp.`/jsoninput/simple_json_test.json`");
+    test("select a,a from cp.`/jsoninput/simple_json_test.json`");
   }
 
   @Test // see DRILL-553
