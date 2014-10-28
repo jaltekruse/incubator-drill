@@ -34,7 +34,7 @@ public class TestExampleQueries extends BaseTestQuery{
 
   @Test
   public void testProjectComplexBug() throws Exception {
-    test("select z,z from cp.`/jsoninput/input2.json`");
+    test("select z,z from cp.`/jsoninput/input2_modified.json`");
   }
 
   @Test // see DRILL-553
