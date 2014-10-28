@@ -38,6 +38,31 @@ public class TestExampleQueries extends BaseTestQuery{
         "from cp.`/store/json/test_flatten_mapify.json`");
   }
 
+  @Test
+  public void testFlatten_kvGen() throws Exception {
+    // tests from Zhiyong
+    test("select kvgen(varcharcol) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+    test("select kvgen(bigintegercol), kvgen(float8col) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select kvgen(boolcol) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select kvgen(bigintegercol), rownum from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select boolcol, kvgen(bigintegercol) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+
+    test("select flatten(kvgen(varcharcol)) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+    test("select flatten(kvgen(bigintegercol)), kvgen(float8col) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select flatten(kvgen(boolcol)) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select flatten(kvgen(bigintegercol)), rownum from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+    test("select boolcol, flatten(kvgen(bigintegercol)) from cp.`jsoninput/flatten_kvgen_test_data.json`;");
+
+    test("select flatten(complex) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+    test("select flatten(complex), rownum from cp.`jsoninput/flatten_kvgen_test_data.json`");
+    test("select varcharcol, flatten(complex) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+    test("select complex, flatten(complex) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+
+    // new stuff
+    // this doesn't work without the second re-write rule which has been disabled
+//    test("select kvgen(flatten(complex)) from cp.`jsoninput/flatten_kvgen_test_data.json`");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");
