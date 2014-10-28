@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.work.foreman;
 
+import com.google.common.base.Stopwatch;
 import io.netty.buffer.ByteBuf;
 
 import java.util.Collection;
@@ -25,6 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -145,6 +147,8 @@ public class QueryManager implements FragmentStatusListener, DrillbitStatusListe
 
     CountDownLatch latch = new CountDownLatch(intFragmentMap.keySet().size());
 
+    Stopwatch watch = new Stopwatch();
+    watch.start();
     // send remote intermediate fragments
     for (DrillbitEndpoint ep : intFragmentMap.keySet()) {
       sendRemoteFragments(ep, intFragmentMap.get(ep), latch);
@@ -156,6 +160,8 @@ public class QueryManager implements FragmentStatusListener, DrillbitStatusListe
     } catch (InterruptedException e) {
       throw new ExecutionSetupException(e);
     }
+
+    logger.debug("Took {} ms to send intermediate fragments", watch.elapsed(TimeUnit.MILLISECONDS));
 
     // send remote (leaf) fragments.
     for (DrillbitEndpoint ep : leafFragmentMap.keySet()) {
