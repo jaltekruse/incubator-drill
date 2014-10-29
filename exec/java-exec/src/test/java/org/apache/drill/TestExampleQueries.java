@@ -36,6 +36,12 @@ public class TestExampleQueries extends BaseTestQuery{
   public void testFlatten() throws Exception {
     test("select flatten(kvgen(f1)) as monkey, x " +
         "from cp.`/store/json/test_flatten_mapify.json`");
+
+    test("select t2.key from (select t.monkey.`value` as val, t.monkey.key as key from (select flatten(kvgen(f1)) as monkey, x " +
+        "from cp.`/store/json/test_flatten_mapify.json`) as t) as t2 where t2.val > 1");
+
+    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+
   }
 
   @Test // see DRILL-553
