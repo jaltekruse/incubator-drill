@@ -58,6 +58,11 @@ public class TestExampleQueries extends BaseTestQuery{
 //        " where mytbouter.mytb.`value` >1)");
   }
 
+  @Test
+  public void test_FuncFailure() throws Exception {
+    test("select sum(cast(c_decimal18 as decimal(18,4))) from dfs.`/Users/jaltekruse/src/drill-test/incubator-drill/testing/framework/resources/Datasources/implicit_cast/data` where c_row > 15");
+  }
+
   @Test // see DRILL-553
   public void testQueryWithNullValues() throws Exception {
     test("select count(*) from cp.`customer.json` limit 1");
