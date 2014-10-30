@@ -141,7 +141,7 @@ public class TestJsonReader extends BaseTestQuery {
   @Test
   public void testAllTextMode() throws Exception {
     test("alter system set `store.json.all_text_mode` = true");
-    String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
+    String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json` limit 1"};
     long[] rowCounts = {3};
     String filename = "/store/json/schema_change_int_to_string.json";
     runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
