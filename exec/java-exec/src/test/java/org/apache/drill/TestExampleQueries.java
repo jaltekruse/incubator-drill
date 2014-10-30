@@ -34,14 +34,28 @@ public class TestExampleQueries extends BaseTestQuery{
 
   @Test
   public void testFlatten() throws Exception {
-    test("select flatten(kvgen(f1)) as monkey, x " +
-        "from cp.`/store/json/test_flatten_mapify.json`");
+//    test("select flatten(kvgen(f1)) as monkey, x " +
+//        "from cp.`/store/json/test_flatten_mapify.json`");
+//
+//    test("select t2.key from (select t.monkey.`value` as val, t.monkey.key as key from (select flatten(kvgen(f1)) as monkey, x " +
+//        "from cp.`/store/json/test_flatten_mapify.json`) as t) as t2 where t2.val > 1");
+//
+//    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
 
-    test("select t2.key from (select t.monkey.`value` as val, t.monkey.key as key from (select flatten(kvgen(f1)) as monkey, x " +
-        "from cp.`/store/json/test_flatten_mapify.json`) as t) as t2 where t2.val > 1");
+//    test("select flatten(kvgen(visited_cellid_counts)) from dfs.`/tmp/ericsson.json`");
 
-    test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+//    test("select sum(filtered_mybouter.mytb.`value`)\n" +
+//        " from \n" +
+//        " ( select * from (\n" +
+//        "select flatten(kvgen(visited_cellid_counts)) as mytb from dfs.`/tmp/ericsson.json` )  mytbouter\n" +
+//        " where mytbouter.mytb.`value` > 1 ) filtered_mybouter ");
 
+//    test("select sum(casted_count)\n" +
+//        " from \n" +
+//        " ( select cast(mytbouter.mytb.`value` as int) as casted_count from " +
+//        " (\n" +
+//        "select flatten(kvgen(visited_cellid_counts)) as mytb from dfs.`/tmp/ericsson.json` )  mytbouter\n" +
+//        " where mytbouter.mytb.`value` >1)");
   }
 
   @Test // see DRILL-553
