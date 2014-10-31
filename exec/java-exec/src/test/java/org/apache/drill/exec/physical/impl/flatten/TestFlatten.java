@@ -28,4 +28,9 @@ public class TestFlatten extends BaseTestQuery {
 //    test("select `integer`, `float`, x, flatten(rl) from cp.`/jsoninput/input2_modified.json`");
   }
 
+  @Test
+  public void test_complexExprSplitter() throws Exception {
+    test("select kvgen(convert_from(map_field, 'json')) from cp.`jsoninput/complex_expr_split_data.json`");
+  }
+
 }
