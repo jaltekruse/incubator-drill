@@ -30,7 +30,9 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void test_complexExprSplitter() throws Exception {
-    test("select kvgen(convert_from(map_field, 'json')) from cp.`jsoninput/complex_expr_split_data.json`");
+    test("select sum(t.field_1.`value`) from (select flatten(kvgen(convert_fromJSON(map_field))) as field_1 from " +
+        "cp.`jsoninput/complex_expr_split_data.json`) as t where t.field_1.key = 'field_2'");
+//    test("select flatten(kvgen(convert_fromJSON(map_field))) as field_1 from cp.`jsoninput/complex_expr_split_data.json`");
   }
 
 }
