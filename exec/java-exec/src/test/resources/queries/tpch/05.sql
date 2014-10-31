@@ -4,12 +4,12 @@ select
   sum(l.l_extendedprice * (1 - l.l_discount)) as revenue
 
 from
-  cp.`tpch/customer.parquet` c,
-  cp.`tpch/orders.parquet` o,
-  cp.`tpch/lineitem.parquet` l,
-  cp.`tpch/supplier.parquet` s,
-  cp.`tpch/nation.parquet` n,
-  cp.`tpch/region.parquet` r
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/customer` c,
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/orders` o,
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/lineitem` l,
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/supplier` s,
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/nation` n,
+  dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/region` r
 
 where
   c.c_custkey = o.o_custkey
