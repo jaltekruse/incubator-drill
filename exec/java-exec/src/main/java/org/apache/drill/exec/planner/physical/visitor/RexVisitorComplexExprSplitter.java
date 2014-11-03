@@ -99,7 +99,6 @@ public class RexVisitorComplexExprSplitter extends RexVisitorImpl<RexNode> {
       return ret;
     }
     return call.clone(call.getType(), newOps);
-//    return call;
   }
 
   @Override
