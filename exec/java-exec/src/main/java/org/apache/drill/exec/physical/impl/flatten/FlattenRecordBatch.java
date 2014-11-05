@@ -246,26 +246,26 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     return ref;
   }
 
-  @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    incoming.buildSchema();
-    if ( ! fastSchemaCalled ) {
-      for (VectorWrapper vw : incoming) {
-        ValueVector vector = container.addOrGet(vw.getField());
-        container.add(vector);
-      }
-      fastSchemaCalled = true;
-      container.buildSchema(SelectionVectorMode.NONE);
-      return IterOutcome.OK_NEW_SCHEMA;
-    }
-    else {
-      setupNewSchema();
-      return IterOutcome.OK_NEW_SCHEMA;
-    }
-  }
+//  @Override
+//  public IterOutcome buildSchema() throws SchemaChangeException {
+//    incoming.buildSchema();
+//    if ( ! fastSchemaCalled ) {
+//      for (VectorWrapper vw : incoming) {
+//        ValueVector vector = container.addOrGet(vw.getField());
+//        container.add(vector);
+//      }
+//      fastSchemaCalled = true;
+//      container.buildSchema(SelectionVectorMode.NONE);
+//      return IterOutcome.OK_NEW_SCHEMA;
+//    }
+//    else {
+//      setupNewSchema();
+//      return IterOutcome.OK_NEW_SCHEMA;
+//    }
+//  }
 
   @Override
-  protected boolean setupNewSchema() throws SchemaChangeException {
+  protected void setupNewSchema() throws SchemaChangeException {
     this.allocationVectors = Lists.newArrayList();
     container.clear();
     final List<NamedExpression> exprs = getExpressionList();
@@ -356,7 +356,6 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
-    return true;
   }
 
   private List<NamedExpression> getExpressionList() {
