@@ -52,6 +52,28 @@ public class TestFlatten extends BaseTestQuery {
   }
 
   @Test
+  public void testFilterFlattenedRecords2() throws Exception {
+    // previously failed in generated code
+    //  "value" is neither a method, a field, nor a member class of "org.apache.drill.exec.expr.holders.RepeatedVarCharHolder" [ 42eb1fa1-0742-4e4f-8723-609215c18900 on 10.250.0.86:31010 ]
+    // appears to be resolving the data coming out of flatten as repeated, check fast schema stuff
+
+    // FIXED BY RETURNING PROPER SCHEMA DURING FAST SCHEMA STEP
+    // these types of problems are being solved more generally as we develp better support for chaning schema
+    test("select celltbl.catl from (\n" +
+        "        select flatten(categories) catl from dfs.`/tmp/yelp_academic_dataset_business.json` b limit 100\n" +
+        "    )  celltbl where celltbl.catl = 'Doctors'");
+  }
+
+  @Test
+  public void testCountAggFlattened() throws Exception {
+    // WORKS!! - requires new fix for fast schema
+    test("select celltbl.catl, count(celltbl.catl) from ( " +
+        "select business_id, flatten(categories) catl from dfs.`/tmp/yelp_academic_dataset_business.json` b limit 100 " +
+        ")  celltbl group by celltbl.catl limit 10 ");
+  }
+
+
+  @Test
   public void tstFlattenAndAdditionalColumn() throws Exception {
     // currently hangs, allocating indefinitely
     test("select business_id, flatten(categories) from dfs.`/tmp/yelp_academic_dataset_business.json` b");
@@ -64,32 +86,11 @@ public class TestFlatten extends BaseTestQuery {
   }
 
   @Test
-  public void testCountAggFlattened() throws Exception {
-    // WORKS!! - requires new fix for fast schema
-    test("select celltbl.catl, count(celltbl.catl) from ( " +
-        "select business_id, flatten(categories) catl from dfs.`/tmp/yelp_academic_dataset_business.json` b limit 100 " +
-        ")  celltbl group by celltbl.catl limit 10 ");
-  }
-
-  @Test
   public void testDistinctAggrFlattened() throws Exception {
     // weird tiny memory allocation until timeout
     test(" select distinct(celltbl.catl) from (\n" +
         "        select flatten(categories) catl from dfs.`/tmp/yelp_academic_dataset_business.json` b\n" +
         "    )  celltbl");
-  }
-
-  @Test
-  public void testFilterFlattenedRecords2() throws Exception {
-    // currently fails in generated code
-    //  "value" is neither a method, a field, nor a member class of "org.apache.drill.exec.expr.holders.RepeatedVarCharHolder" [ 42eb1fa1-0742-4e4f-8723-609215c18900 on 10.250.0.86:31010 ]
-    // appears to be resolving the data coming out of flatten as repeated, check fast schema stuff
-
-    // FIXED BY RETURNING PROPER SCHEMA DURING FAST SCHEMA STEP
-    // these types of problems are being solved more generally as we develp better support for chaning schema
-    test("select celltbl.catl from (\n" +
-        "        select flatten(categories) catl from dfs.`/tmp/yelp_academic_dataset_business.json` b limit 100\n" +
-        "    )  celltbl where celltbl.catl = 'Doctors'");
   }
 
 }
