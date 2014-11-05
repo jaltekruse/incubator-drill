@@ -24,6 +24,7 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void testKVGenFlatten1() throws Exception {
+    // works - TODO and verify results
     test("select flatten(kvgen(f1)) as monkey, x " +
         "from cp.`/store/json/test_flatten_mapify.json`");
   }
