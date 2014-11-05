@@ -20,7 +20,6 @@ package org.apache.drill.exec.physical.impl.producer;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -155,35 +154,33 @@ public class ProducerConsumerBatch extends AbstractRecordBatch {
           IterOutcome upstream = incoming.next();
           switch (upstream) {
             case NONE:
-              stop = true;
               break outer;
             case STOP:
               queue.putFirst(new RecordBatchDataWrapper(null, false, true));
               return;
             case OK_NEW_SCHEMA:
             case OK:
-              wrapper = new RecordBatchDataWrapper(new RecordBatchData(incoming), false, false);
-              queue.put(wrapper);
-              wrapper = null;
+              try {
+                if (!stop) {
+                  wrapper = new RecordBatchDataWrapper(new RecordBatchData(incoming), false, false);
+                  queue.put(wrapper);
+                }
+              } catch (InterruptedException e) {
+                wrapper.batch.getContainer().zeroVectors();
+                throw e;
+              }
               break;
             default:
               throw new UnsupportedOperationException();
           }
         }
+
+        queue.put(new RecordBatchDataWrapper(null, true, false));
       } catch (InterruptedException e) {
-        logger.warn("Producer thread is interrupted.", e);
+        if (!(context.isCancelled() || context.isFailed())) {
+          context.fail(e);
+        }
       } finally {
-        if (stop) {
-          try {
-            clearQueue();
-            queue.put(new RecordBatchDataWrapper(null, true, false));
-          } catch (InterruptedException e) {
-            logger.error("Unable to enqueue the last batch indicator. Something is broken.", e);
-          }
-        }
-        if (wrapper!=null) {
-          wrapper.batch.getContainer().zeroVectors();
-        }
         cleanUpLatch.countDown();
       }
     }
