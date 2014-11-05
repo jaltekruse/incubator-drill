@@ -102,13 +102,33 @@ public class TestTestFramework extends BaseTestQuery{
 
     JsonStringHashMap x = new JsonStringHashMap();
     x.put("y", "kevin");
-    x.put("z", "kevin");
+    x.put("z", "paul");
+
+
+    JsonStringArrayList z = new JsonStringArrayList();
+    JsonStringHashMap zChild1 = new JsonStringHashMap();
+    zChild1.put("orange", "yellow");
+    zChild1.put("pink", "red");
+
+    JsonStringHashMap zChild2 = new JsonStringHashMap();
+    zChild2.put("pink", "purple");
+
+    z.add(zChild1);
+    z.add(zChild2);
 
     testBuilder()
         .sqlQuery("select * from cp.`/jsoninput/input2.json` limit 1")
         .ordered()
         .baselineColumns("integer", "float", "x", "z", "l", "rl")
-        .baselineValues(2010l, 17.4, x, null, l_list, list)
+        .baselineValues(2010l, 17.4, x, z, l_list, list)
+        .build().run();
+
+    testBuilder()
+        .sqlQuery("select * from cp.`/jsoninput/input2.json` limit 1")
+        .ordered()
+        .baselineColumns("integer", "float", "x", "z", "l", "rl")
+        .baselineValues(2010l, 17.4,
+            new MapBuilder().key("y").val("kevin").key("z").val("paul").build(), z, l_list, list)
         .build().run();
   }
 

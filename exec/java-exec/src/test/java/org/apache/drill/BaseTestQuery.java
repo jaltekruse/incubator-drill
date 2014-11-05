@@ -59,6 +59,7 @@ import org.apache.drill.exec.rpc.user.QueryResultBatch;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.util.VectorUtil;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.io.Text;
@@ -110,6 +111,42 @@ public class BaseTestQuery extends ExecTest{
   static void resetClientAndBit() throws Exception{
     closeClient();
     openClient();
+  }
+
+  protected static class MapBuilder {
+
+    private String key;
+    private JsonStringHashMap map;
+
+    public MapBuilder() {
+      reset();
+    }
+
+    private void reset() {
+      key = null;
+      map = new JsonStringHashMap();
+    }
+
+    public MapBuilder key(String key) {
+      if (key == null) {
+        this.key = key;
+      } else {
+        throw new RuntimeException("Must call val() after each call to key().");
+      }
+      return this;
+    }
+
+    public MapBuilder val(Object val) {
+      if (key == null) {
+        throw new RuntimeException("Must call key() before each call to val().");
+      }
+      map.put(key, val);
+      return this;
+    }
+
+    public JsonStringHashMap build() {
+      return map;
+    }
   }
 
   @BeforeClass
