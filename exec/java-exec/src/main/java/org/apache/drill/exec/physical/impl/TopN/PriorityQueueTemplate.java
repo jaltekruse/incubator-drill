@@ -77,7 +77,6 @@ public abstract class PriorityQueueTemplate implements PriorityQueue {
       heapSv4.set(i, v4.get(i));
     }
     v4.clear();
-    doSetup(context, hyperBatch, null);
   }
 
   @Override

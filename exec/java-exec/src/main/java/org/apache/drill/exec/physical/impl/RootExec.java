@@ -18,7 +18,6 @@
 package org.apache.drill.exec.physical.impl;
 
 
-import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 
 /**
@@ -27,11 +26,6 @@ import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
  */
 public interface RootExec {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RootExec.class);
-
-  /**
-   * Generate and send emtpy schema batch
-   */
-  public void buildSchema() throws SchemaChangeException;
 
   /**
    * Do the next batch of work.

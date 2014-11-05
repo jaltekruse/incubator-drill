@@ -28,7 +28,7 @@
         {
             @id:3,
             child: 2,
-            pop:"external-sort",
+            pop:"sort",
             orderings: [
               {expr: "Datecast"}
             ]

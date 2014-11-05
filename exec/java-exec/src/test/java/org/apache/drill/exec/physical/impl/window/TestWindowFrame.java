@@ -64,9 +64,9 @@ public class TestWindowFrame extends PopUnitTestBase {
       RecordBatchLoader batchLoader = new RecordBatchLoader(bit.getContext().getAllocator());
       int recordCount = 0;
 
-      assertEquals(3, results.size());
+      assertEquals(2, results.size());
 
-      QueryResultBatch batch = results.get(1);
+      QueryResultBatch batch = results.get(0);
       assertTrue(batchLoader.load(batch.getHeader().getDef(), batch.getData()));
       batchLoader.load(batch.getHeader().getDef(), batch.getData());
 
@@ -107,9 +107,9 @@ public class TestWindowFrame extends PopUnitTestBase {
       RecordBatchLoader batchLoader = new RecordBatchLoader(bit.getContext().getAllocator());
       int recordCount = 0;
 
-      assertEquals(3, results.size());
+      assertEquals(2, results.size());
 
-      QueryResultBatch batch = results.get(1);
+      QueryResultBatch batch = results.get(0);
       assertTrue(batchLoader.load(batch.getHeader().getDef(), batch.getData()));
       batchLoader.load(batch.getHeader().getDef(), batch.getData());
       ValueVector.Accessor output = batchLoader.getValueAccessorById(NullableBigIntVector.class,
@@ -174,9 +174,9 @@ public class TestWindowFrame extends PopUnitTestBase {
       RecordBatchLoader batchLoader = new RecordBatchLoader(bit.getContext().getAllocator());
       int recordCount = 0;
 
-      assertEquals(3, results.size());
+      assertEquals(2, results.size());
 
-      QueryResultBatch batch = results.get(1);
+      QueryResultBatch batch = results.get(0);
       assertTrue(batchLoader.load(batch.getHeader().getDef(), batch.getData()));
       batchLoader.load(batch.getHeader().getDef(), batch.getData());
 

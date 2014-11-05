@@ -42,6 +42,7 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
   private int recordsLeft;
   private boolean noEndLimit;
   private boolean skipBatch;
+  private boolean first = true;
   private boolean done = false;
   List<TransferPair> transfers = Lists.newArrayList();
 
@@ -57,13 +58,14 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
   }
 
   @Override
-  protected boolean setupNewSchema() throws SchemaChangeException {
-    container.zeroVectors();
+  protected void setupNewSchema() throws SchemaChangeException {
+    container.clear();
     transfers.clear();
 
 
     for(VectorWrapper<?> v : incoming){
-      TransferPair pair = v.getValueVector().makeTransferPair(container.addOrGet(v.getField()));
+      TransferPair pair = v.getValueVector().getTransferPair();
+      container.add(pair.getTo());
       transfers.add(pair);
     }
 
@@ -79,12 +81,8 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
         throw new UnsupportedOperationException();
     }
 
-    if (container.isSchemaChanged()) {
-      container.buildSchema(BatchSchema.SelectionVectorMode.TWO_BYTE);
-      return true;
-    }
+    container.buildSchema(BatchSchema.SelectionVectorMode.TWO_BYTE);
 
-    return false;
   }
 
   @Override
@@ -94,6 +92,10 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
     }
 
     if(!noEndLimit && recordsLeft <= 0) {
+      if (first) {
+        return produceEmptyFirstBatch();
+      }
+
       incoming.kill(true);
 
       IterOutcome upStream = incoming.next();
@@ -107,8 +109,11 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
         upStream = incoming.next();
       }
 
+      first = false;
       return IterOutcome.NONE;
     }
+
+    first = false;
     return super.innerNext();
   }
 
@@ -137,6 +142,23 @@ public class LimitRecordBatch extends AbstractSingleRecordBatch<Limit> {
     }
 
     return IterOutcome.OK;
+  }
+
+  private IterOutcome produceEmptyFirstBatch() {
+    incoming.next();
+    first = false;
+    done = true;
+    // Build the container schema and set the count
+    for (VectorWrapper<?> v : incoming) {
+      TransferPair pair = v.getValueVector().getTransferPair();
+      container.add(pair.getTo());
+      transfers.add(pair);
+    }
+    container.buildSchema(BatchSchema.SelectionVectorMode.TWO_BYTE);
+    container.setRecordCount(0);
+
+    incoming.kill(true);
+    return IterOutcome.OK_NEW_SCHEMA;
   }
 
   private void limitWithNoSV(int recordCount) {

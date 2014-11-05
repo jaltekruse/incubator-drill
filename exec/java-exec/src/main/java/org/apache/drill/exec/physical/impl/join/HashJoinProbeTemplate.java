@@ -26,7 +26,6 @@ import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.impl.common.HashTable;
-import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.RecordBatch.IterOutcome;
 import org.apache.drill.exec.record.VectorContainer;
@@ -37,10 +36,6 @@ public abstract class HashJoinProbeTemplate implements HashJoinProbe {
 
   // Probe side record batch
   private RecordBatch probeBatch;
-
-  private BatchSchema probeSchema;
-
-  private VectorContainer buildBatch;
 
   // Join type, INNER, LEFT, RIGHT or OUTER
   private JoinRelType joinType;
@@ -86,8 +81,6 @@ public abstract class HashJoinProbeTemplate implements HashJoinProbe {
                                  HashJoinHelper hjHelper, JoinRelType joinRelType) {
 
     this.probeBatch = probeBatch;
-    this.probeSchema = probeBatch.getSchema();
-    this.buildBatch = buildBatch;
     this.joinType = joinRelType;
     this.recordsToProcess = probeRecordCount;
     this.hashTable = hashTable;
@@ -142,12 +135,7 @@ public abstract class HashJoinProbeTemplate implements HashJoinProbe {
             continue;
 
           case OK_NEW_SCHEMA:
-            if (probeBatch.getSchema().equals(probeSchema)) {
-              doSetup(outgoingJoinBatch.getContext(), buildBatch, probeBatch, outgoingJoinBatch);
-              hashTable.updateBatches();
-            } else {
-              throw new SchemaChangeException("Hash join does not support schema changes");
-            }
+            throw new SchemaChangeException("Hash join does not support schema changes");
           case OK:
             recordsToProcess = probeBatch.getRecordCount();
             recordsProcessed = 0;

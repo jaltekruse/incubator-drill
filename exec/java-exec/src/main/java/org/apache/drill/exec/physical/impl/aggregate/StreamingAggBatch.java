@@ -77,33 +77,13 @@ public class StreamingAggBatch extends AbstractRecordBatch<StreamingAggregate> {
   }
 
   @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    stats.startProcessing();
-    try {
-      stats.stopProcessing();
-      try {
-        incoming.buildSchema();
-      } finally {
-        stats.startProcessing();
-      }
-      if (!createAggregator()) {
-        done = true;
-        return IterOutcome.STOP;
-      }
-      return IterOutcome.OK_NEW_SCHEMA;
-    } finally {
-      stats.stopProcessing();
-    }
-  }
-  @Override
   public IterOutcome innerNext() {
     if (done) {
       container.zeroVectors();
       return IterOutcome.NONE;
     }
       // this is only called on the first batch. Beyond this, the aggregator manages batches.
-    if (aggregator == null || first) {
-      first = false;
+    if (aggregator == null) {
       IterOutcome outcome = next(incoming);
       logger.debug("Next outcome of {}", outcome);
       switch (outcome) {
@@ -118,7 +98,7 @@ public class StreamingAggBatch extends AbstractRecordBatch<StreamingAggregate> {
         }
         break;
       case OK:
-        break;
+        throw new IllegalStateException("You should never get a first batch without a new schema");
       default:
         throw new IllegalStateException(String.format("unknown outcome %s", outcome));
       }

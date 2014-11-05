@@ -125,7 +125,7 @@ public class TraceRecordBatch extends AbstractSingleRecordBatch<Trace> {
   }
 
   @Override
-  protected boolean setupNewSchema() throws SchemaChangeException {
+  protected void setupNewSchema() throws SchemaChangeException {
     /* Trace operator does not deal with hyper vectors yet */
     if (incoming.getSchema().getSelectionVectorMode() == SelectionVectorMode.FOUR_BYTE) {
       throw new SchemaChangeException("Trace operator does not work with hyper vectors");
@@ -141,8 +141,6 @@ public class TraceRecordBatch extends AbstractSingleRecordBatch<Trace> {
       TransferPair tp = vv.getValueVector().getTransferPair();
       container.add(tp.getTo());
     }
-    container.buildSchema(incoming.getSchema().getSelectionVectorMode());
-    return true;
   }
 
   @Override

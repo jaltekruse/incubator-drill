@@ -27,7 +27,7 @@
     {
       @id: 2,
       child: 1,
-      pop: "external-sort",
+      pop: "sort",
       orderings: [ {expr: "blue", order:"DESC"},  {expr: "red", order:"DESC"} ]
     },
     {

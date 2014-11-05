@@ -280,7 +280,7 @@ public class BaseTestQuery extends ExecTest{
       rowCount += result.getHeader().getRowCount();
       loader.load(result.getHeader().getDef(), result.getData());
       if (loader.getRecordCount() <= 0) {
-        continue;
+        break;
       }
       VectorUtil.showVectorAccessibleContent(loader, columnWidths);
       loader.clear();
@@ -297,7 +297,7 @@ public class BaseTestQuery extends ExecTest{
     for(QueryResultBatch result : results) {
       loader.load(result.getHeader().getDef(), result.getData());
       if (loader.getRecordCount() <= 0) {
-        continue;
+        break;
       }
       VectorUtil.appendVectorAccessibleContent(loader, formattedResults, delimiter, includeHeader);
       if (!includeHeader) {

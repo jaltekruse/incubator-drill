@@ -55,6 +55,7 @@ public abstract class StreamingAggTemplate implements StreamingAggregator {
     this.schema = incoming.getSchema();
     this.outgoing = outgoing;
     setupInterior(incoming, outgoing);
+    this.currentIndex = incoming.getRecordCount() == 0 ? 0 : this.getVectorIndex(underlyingIndex);
   }
 
 
@@ -91,7 +92,6 @@ public abstract class StreamingAggTemplate implements StreamingAggregator {
 
       // if we're in the first state, allocate outgoing.
       if (first) {
-        this.currentIndex = incoming.getRecordCount() == 0 ? 0 : this.getVectorIndex(underlyingIndex);
         allocateOutgoing();
       }
 

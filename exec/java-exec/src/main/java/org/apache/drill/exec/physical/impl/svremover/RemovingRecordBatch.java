@@ -60,15 +60,9 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
   }
 
   @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    incoming.buildSchema();
-    setupNewSchema();
-    return IterOutcome.OK_NEW_SCHEMA;
-  }
+  protected void setupNewSchema() throws SchemaChangeException {
+    container.clear();
 
-  @Override
-  protected boolean setupNewSchema() throws SchemaChangeException {
-    container.zeroVectors();
     switch(incoming.getSchema().getSelectionVectorMode()){
     case NONE:
       this.copier = getStraightCopier();
@@ -83,12 +77,8 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
       throw new UnsupportedOperationException();
     }
 
-    if (container.isSchemaChanged()) {
-      container.buildSchema(SelectionVectorMode.NONE);
-      return true;
-    }
+    container.buildSchema(SelectionVectorMode.NONE);
 
-    return false;
   }
 
   @Override
@@ -198,12 +188,14 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
   private class StraightCopier implements Copier{
 
     private List<TransferPair> pairs = Lists.newArrayList();
+    private List<ValueVector> out = Lists.newArrayList();
 
     @Override
     public void setupRemover(FragmentContext context, RecordBatch incoming, RecordBatch outgoing){
       for(VectorWrapper<?> vv : incoming){
-        TransferPair tp = vv.getValueVector().makeTransferPair(container.addOrGet(vv.getField()));
+        TransferPair tp = vv.getValueVector().getTransferPair();
         pairs.add(tp);
+        out.add(tp.getTo());
       }
     }
 
@@ -216,20 +208,28 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
       return recordCount;
     }
 
+    public List<ValueVector> getOut() {
+      return out;
+    }
+
   }
 
   private Copier getStraightCopier(){
     StraightCopier copier = new StraightCopier();
     copier.setupRemover(context, incoming, this);
+    container.addCollection(copier.getOut());
     return copier;
   }
 
   private Copier getGenerated2Copier() throws SchemaChangeException{
     Preconditions.checkArgument(incoming.getSchema().getSelectionVectorMode() == SelectionVectorMode.TWO_BYTE);
 
+    List<ValueVector> out = Lists.newArrayList();
     for(VectorWrapper<?> vv : incoming){
-      TransferPair tp = vv.getValueVector().makeTransferPair(container.addOrGet(vv.getField()));
+      TransferPair tp = vv.getValueVector().getTransferPair();
+      out.add(tp.getTo());
     }
+    container.addCollection(out);
 
     try {
       final CodeGenerator<Copier> cg = CodeGenerator.get(Copier.TEMPLATE_DEFINITION2, context.getFunctionRegistry());
@@ -250,10 +250,14 @@ public class RemovingRecordBatch extends AbstractSingleRecordBatch<SelectionVect
 
   public static Copier getGenerated4Copier(RecordBatch batch, FragmentContext context, BufferAllocator allocator, VectorContainer container, RecordBatch outgoing) throws SchemaChangeException{
 
+    List<ValueVector> out = Lists.newArrayList();
+
     for(VectorWrapper<?> vv : batch){
       ValueVector v = vv.getValueVectors()[0];
-      TransferPair tp = v.makeTransferPair(container.addOrGet(v.getField()));
+      TransferPair tp = v.getTransferPair();
+      out.add(tp.getTo());
     }
+    container.addCollection(out);
 
     try {
       final CodeGenerator<Copier> cg = CodeGenerator.get(Copier.TEMPLATE_DEFINITION4, context.getFunctionRegistry());

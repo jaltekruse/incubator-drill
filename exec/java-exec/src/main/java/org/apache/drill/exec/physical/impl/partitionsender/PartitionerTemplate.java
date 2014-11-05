@@ -228,7 +228,6 @@ public abstract class PartitionerTemplate implements Partitioner {
     private final int oppositeMinorFragmentId;
 
     private boolean isLast = false;
-    private boolean isFirst = true;
     private volatile boolean terminated = false;
     private boolean dropAll = false;
     private BatchSchema outSchema;
@@ -306,9 +305,9 @@ public abstract class PartitionerTemplate implements Partitioner {
         this.sendCount.increment();
       } else {
         logger.debug("Flush requested on an empty outgoing record batch" + (isLast ? " (last batch)" : ""));
-        if (isFirst || isLast || terminated) {
+        if (isLast || terminated) {
           // send final (empty) batch
-          FragmentWritableBatch writableBatch = new FragmentWritableBatch(isLast || terminated,
+          FragmentWritableBatch writableBatch = new FragmentWritableBatch(true,
                   handle.getQueryId(),
                   handle.getMajorFragmentId(),
                   handle.getMinorFragmentId(),
@@ -323,12 +322,7 @@ public abstract class PartitionerTemplate implements Partitioner {
           }
           this.sendCount.increment();
           vectorContainer.zeroVectors();
-          if (!isFirst) {
-            dropAll = true;
-          }
-          if (isFirst) {
-            isFirst = !isFirst;
-          }
+          dropAll = true;
           return;
         }
       }

@@ -144,7 +144,7 @@ public abstract class HashTableTemplate implements HashTable {
       hashValues.getMutator().setValueCount(size);
     }
 
-    protected void setup() {
+    private void setup() {
       setupInterior(incomingBuild, incomingProbe, outgoing, htContainer);
     }
 
@@ -431,13 +431,6 @@ public abstract class HashTableTemplate implements HashTable {
     doSetup(incomingBuild, incomingProbe);
 
     currentIdxHolder = new IndexPointer();
-  }
-
-  public void updateBatches() {
-    doSetup(incomingBuild, incomingProbe);
-    for (BatchHolder batchHolder : batchHolders) {
-      batchHolder.setup();
-    }
   }
 
   public int numBuckets() {

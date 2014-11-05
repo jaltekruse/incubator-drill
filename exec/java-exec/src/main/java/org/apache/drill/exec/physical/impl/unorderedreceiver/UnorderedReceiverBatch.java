@@ -95,11 +95,6 @@ public class UnorderedReceiverBatch implements RecordBatch {
   }
 
   @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    return next();
-  }
-
-  @Override
   public int getRecordCount() {
     return batchLoader.getRecordCount();
   }

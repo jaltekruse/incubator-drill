@@ -185,33 +185,9 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
     if (sv4 != null) {
       sv4.clear();
     }
-    if (copier != null) {
-      copier.cleanup();
-    }
     copierAllocator.close();
     super.cleanup();
     incoming.cleanup();
-  }
-
-  @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    stats.startProcessing();
-    try {
-      stats.stopProcessing();
-      try {
-        incoming.buildSchema();
-      } finally {
-        stats.startProcessing();
-      }
-      for (VectorWrapper w : incoming) {
-        container.addOrGet(w.getField());
-      }
-      container.buildSchema(SelectionVectorMode.NONE);
-      container.setRecordCount(0);
-      return IterOutcome.OK_NEW_SCHEMA;
-    } finally {
-      stats.stopProcessing();
-    }
   }
 
   @Override
@@ -245,20 +221,14 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
     long totalcount = 0;
 
     try{
-      container.clear();
       outer: while (true) {
         Stopwatch watch = new Stopwatch();
         watch.start();
         IterOutcome upstream = incoming.next();
-        if (upstream == IterOutcome.OK && sorter == null) {
-          upstream = IterOutcome.OK_NEW_SCHEMA;
-        }
 //        logger.debug("Took {} us to get next", watch.elapsed(TimeUnit.MICROSECONDS));
         switch (upstream) {
         case NONE:
-          if (first) {
-            return upstream;
-          }
+          assert !first;
           break outer;
         case NOT_YET:
           throw new UnsupportedOperationException();
@@ -628,8 +598,6 @@ public class ExternalSortBatch extends AbstractRecordBatch<ExternalSort> {
         CopyUtil.generateCopies(g, batch, true);
         g.setMappingSet(MAIN_MAPPING);
         copier = context.getImplementationClass(cg);
-      } else {
-        copier.cleanup();
       }
 
       List<VectorAllocator> allocators = Lists.newArrayList();

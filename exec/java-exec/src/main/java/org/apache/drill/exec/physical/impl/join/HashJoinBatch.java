@@ -33,6 +33,7 @@ import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
+import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.MetricDef;
@@ -45,13 +46,12 @@ import org.apache.drill.exec.physical.impl.common.IndexPointer;
 import org.apache.drill.exec.physical.impl.sort.RecordBatchData;
 import org.apache.drill.exec.record.AbstractRecordBatch;
 import org.apache.drill.exec.record.BatchSchema;
-import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
 import org.apache.drill.exec.record.ExpandableHyperContainer;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.TypedFieldId;
-import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
+import org.apache.drill.exec.vector.ValueVector;
 import org.eigenbase.rel.JoinRelType;
 
 import com.sun.codemodel.JExpr;
@@ -167,35 +167,6 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     }
 
 
-
-  @Override
-  public IterOutcome buildSchema() throws SchemaChangeException {
-    leftUpstream = left.buildSchema();
-    right.buildSchema();
-    // Initialize the hash join helper context
-    hjHelper = new HashJoinHelper(context, oContext.getAllocator());
-    try {
-      rightSchema = right.getSchema();
-      VectorContainer c = new VectorContainer(oContext);
-      for (MaterializedField field : rightSchema) {
-        c.addOrGet(field);
-      }
-      c.buildSchema(SelectionVectorMode.NONE);
-      c.setRecordCount(0);
-      hyperContainer = new ExpandableHyperContainer(c);
-      hjHelper.addNewBatch(0);
-      buildBatchIndex++;
-      setupHashTable();
-      hashJoinProbe = setupHashJoinProbe();
-      // Build the container schema and set the counts
-      container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
-      container.setRecordCount(outputRecords);
-    } catch (IOException | ClassTransformationException e) {
-      throw new SchemaChangeException(e);
-    }
-    return IterOutcome.OK_NEW_SCHEMA;
-  }
-
     @Override
     public IterOutcome innerNext() {
         if (done) {
@@ -205,15 +176,27 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
             /* If we are here for the first time, execute the build phase of the
              * hash join and setup the run time generated class for the probe side
              */
-            if (first) {
-                first = false;
+            if (hashJoinProbe == null) {
+
+                // Initialize the hash join helper context
+                hjHelper = new HashJoinHelper(context, oContext.getAllocator());
+
+                /* Build phase requires setting up the hash table. Hash table will
+                 * materialize both the build and probe side expressions while
+                 * creating the hash table. So we need to invoke next() on our probe batch
+                 * as well, for the materialization to be successful. This batch will not be used
+                 * till we complete the build phase.
+                 */
+                leftUpstream = next(HashJoinHelper.LEFT_INPUT, left);
+
                 // Build the hash table, using the build side record batches.
                 executeBuildPhase();
-//                IterOutcome next = next(HashJoinHelper.LEFT_INPUT, left);
-                hashJoinProbe.setupHashJoinProbe(context, hyperContainer, left, 0, this, hashTable, hjHelper, joinType);
 
                 // Update the hash table related stats for the operator
                 updateStats(this.hashTable);
+
+                // Create the run time generated code needed to probe and project
+                hashJoinProbe = setupHashJoinProbe();
             }
 
             // Store the number of records projected
@@ -233,11 +216,21 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                 if (outputRecords > 0 || first) {
                   first = false;
 
+                  // Build the container schema and set the counts
+                  container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
+                  container.setRecordCount(outputRecords);
 
                   for (VectorWrapper<?> v : container) {
                     v.getValueVector().getMutator().setValueCount(outputRecords);
                   }
 
+                  // First output batch, return OK_NEW_SCHEMA
+                  if (firstOutputBatch == true) {
+                    firstOutputBatch = false;
+                    return IterOutcome.OK_NEW_SCHEMA;
+                  }
+
+                  // Not the first output batch
                   return IterOutcome.OK;
                 }
             } else {
@@ -309,9 +302,6 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
 
         //Setup the underlying hash table
         IterOutcome rightUpstream = next(HashJoinHelper.RIGHT_INPUT, right);
-      if (hashTable == null) {
-        rightUpstream = IterOutcome.OK_NEW_SCHEMA;
-      }
 
         boolean moreData = true;
 
@@ -334,10 +324,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                         }
                         setupHashTable();
                     } else {
-                      if (!rightSchema.equals(right.getSchema())) {
                         throw new SchemaChangeException("Hash join does not support schema changes");
-                      }
-                      hashTable.updateBatches();
                     }
                 // Fall through
                 case OK:
@@ -401,10 +388,10 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
         JExpression outIndex = JExpr.direct("outIndex");
         g.rotateBlock();
 
-        if (rightSchema != null) {
-            for(MaterializedField field : rightSchema) {
+        if (hyperContainer != null) {
+            for(VectorWrapper<?> vv : hyperContainer) {
 
-                MajorType inputType = field.getType();
+                MajorType inputType = vv.getField().getType();
                 MajorType outputType;
                 if (joinType == JoinRelType.LEFT && inputType.getMode() == DataMode.REQUIRED) {
                   outputType = Types.overrideMode(inputType, DataMode.OPTIONAL);
@@ -413,10 +400,10 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                 }
 
                 // Add the vector to our output container
-//                ValueVector v = TypeHelper.getNewVector(MaterializedField.create(vv.getField().getPath(), outputType), context.getAllocator());
-                container.addOrGet(MaterializedField.create(field.getPath(), outputType));
+                ValueVector v = TypeHelper.getNewVector(MaterializedField.create(vv.getField().getPath(), outputType), context.getAllocator());
+                container.add(v);
 
-                JVar inVV = g.declareVectorValueSetupAndMember("buildBatch", new TypedFieldId(field.getType(), true, fieldId));
+                JVar inVV = g.declareVectorValueSetupAndMember("buildBatch", new TypedFieldId(vv.getField().getType(), true, fieldId));
                 JVar outVV = g.declareVectorValueSetupAndMember("outgoing", new TypedFieldId(outputType, false, fieldId));
                 g.getEvalBlock()._if(outVV.invoke("copyFromSafe")
                   .arg(buildIndex.band(JExpr.lit((int) Character.MAX_VALUE)))
@@ -448,7 +435,8 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                   outputType = inputType;
                 }
 
-                container.addOrGet(MaterializedField.create(vv.getField().getPath(), outputType));
+                ValueVector v = TypeHelper.getNewVector(MaterializedField.create(vv.getField().getPath(), outputType), oContext.getAllocator());
+                container.add(v);
 
                 JVar inVV = g.declareVectorValueSetupAndMember("probeBatch", new TypedFieldId(inputType, false, fieldId));
                 JVar outVV = g.declareVectorValueSetupAndMember("outgoing", new TypedFieldId(outputType, false, outputFieldId));
@@ -465,6 +453,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
 
         HashJoinProbe hj = context.getImplementationClass(cg);
 
+        hj.setupHashJoinProbe(context, hyperContainer, left, recordCount, this, hashTable, hjHelper, joinType);
         return hj;
     }
 

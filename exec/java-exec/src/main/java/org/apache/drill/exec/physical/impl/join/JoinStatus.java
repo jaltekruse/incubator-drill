@@ -219,14 +219,6 @@ public final class JoinStatus {
     return leftPosition + 1 < left.getRecordCount();
   }
 
-  public IterOutcome getLastRight() {
-    return lastRight;
-  }
-
-  public IterOutcome getLastLeft() {
-    return lastLeft;
-  }
-
   /**
    * Check if the next left record position can advance by one in the current batch.
    */
