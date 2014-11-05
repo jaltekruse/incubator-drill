@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -124,37 +123,20 @@ public class QueryManager implements FragmentStatusListener{
       }
     }
 
-    Multimap<DrillbitEndpoint, PlanFragment> leafFragmentMap = ArrayListMultimap.create();
-    Multimap<DrillbitEndpoint, PlanFragment> intFragmentMap = ArrayListMultimap.create();
+    Multimap<DrillbitEndpoint, PlanFragment> fragmentMap = ArrayListMultimap.create();
 
     // record all fragments for status purposes.
     for (PlanFragment f : nonRootFragments) {
       logger.debug("Tracking intermediate remote node {} with data {}", f.getAssignment(), f.getFragmentJson());
       status.add(new FragmentData(f.getHandle(), f.getAssignment(), false));
-      if (f.getLeafFragment()) {
-        leafFragmentMap.put(f.getAssignment(), f);
-      } else {
-        intFragmentMap.put(f.getAssignment(), f);
-      }
+      fragmentMap.put(f.getAssignment(), f);
     }
 
-    CountDownLatch latch = new CountDownLatch(intFragmentMap.keySet().size());
 
-    // send remote intermediate fragments
-    for (DrillbitEndpoint ep : intFragmentMap.keySet()) {
-      sendRemoteFragments(ep, intFragmentMap.get(ep), latch);
-    }
-
-    // wait for send complete
-    try {
-      latch.await();
-    } catch (InterruptedException e) {
-      throw new ExecutionSetupException(e);
-    }
 
     // send remote (leaf) fragments.
-    for (DrillbitEndpoint ep : leafFragmentMap.keySet()) {
-      sendRemoteFragments(ep, leafFragmentMap.get(ep), null);
+    for (DrillbitEndpoint ep : fragmentMap.keySet()) {
+      sendRemoteFragments(ep, fragmentMap.get(ep));
     }
 
     bee.getContext().getAllocator().resetFragmentLimits();
@@ -166,7 +148,7 @@ public class QueryManager implements FragmentStatusListener{
     }
   }
 
-  private void sendRemoteFragments(DrillbitEndpoint assignment, Collection<PlanFragment> fragments, CountDownLatch latch){
+  private void sendRemoteFragments(DrillbitEndpoint assignment, Collection<PlanFragment> fragments){
     InitializeFragments.Builder fb = InitializeFragments.newBuilder();
     for(PlanFragment f : fragments){
       fb.addFragment(f);
@@ -174,7 +156,7 @@ public class QueryManager implements FragmentStatusListener{
     InitializeFragments initFrags = fb.build();
 
     logger.debug("Sending remote fragments to node {} with data {}", assignment, initFrags);
-    FragmentSubmitListener listener = new FragmentSubmitListener(assignment, initFrags, latch);
+    FragmentSubmitListener listener = new FragmentSubmitListener(assignment, initFrags);
     controller.getTunnel(assignment).sendFragments(listener, initFrags);
   }
 
@@ -293,25 +275,16 @@ public class QueryManager implements FragmentStatusListener{
 
   }
 
-  public RpcOutcomeListener<Ack> getSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value, CountDownLatch latch){
-    return new FragmentSubmitListener(endpoint, value, latch);
+  public RpcOutcomeListener<Ack> getSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value){
+    return new FragmentSubmitListener(endpoint, value);
   }
 
   private class FragmentSubmitListener extends EndpointListener<Ack, InitializeFragments>{
 
-    private CountDownLatch latch;
-
-    public FragmentSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value, CountDownLatch latch) {
+    public FragmentSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value) {
       super(endpoint, value);
-      this.latch = latch;
     }
 
-    @Override
-    public void success(Ack ack, ByteBuf byteBuf) {
-      if (latch != null) {
-        latch.countDown();
-      }
-    }
 
     @Override
     public void failed(RpcException ex) {
