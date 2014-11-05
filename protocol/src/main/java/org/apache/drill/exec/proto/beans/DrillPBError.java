@@ -53,7 +53,6 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
     private DrillbitEndpoint endpoint;
     private int errorType;
     private String message;
-    private ExceptionWrapper exception;
     private List<ParsingError> parsingError;
 
     public DrillPBError()
@@ -112,19 +111,6 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
     public DrillPBError setMessage(String message)
     {
         this.message = message;
-        return this;
-    }
-
-    // exception
-
-    public ExceptionWrapper getException()
-    {
-        return exception;
-    }
-
-    public DrillPBError setException(ExceptionWrapper exception)
-    {
-        this.exception = exception;
         return this;
     }
 
@@ -209,10 +195,6 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
                     message.message = input.readString();
                     break;
                 case 5:
-                    message.exception = input.mergeObject(message.exception, ExceptionWrapper.getSchema());
-                    break;
-
-                case 6:
                     if(message.parsingError == null)
                         message.parsingError = new ArrayList<ParsingError>();
                     message.parsingError.add(input.mergeObject(null, ParsingError.getSchema()));
@@ -240,16 +222,12 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
         if(message.message != null)
             output.writeString(4, message.message, false);
 
-        if(message.exception != null)
-             output.writeObject(5, message.exception, ExceptionWrapper.getSchema(), false);
-
-
         if(message.parsingError != null)
         {
             for(ParsingError parsingError : message.parsingError)
             {
                 if(parsingError != null)
-                    output.writeObject(6, parsingError, ParsingError.getSchema(), true);
+                    output.writeObject(5, parsingError, ParsingError.getSchema(), true);
             }
         }
 
@@ -263,8 +241,7 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
             case 2: return "endpoint";
             case 3: return "errorType";
             case 4: return "message";
-            case 5: return "exception";
-            case 6: return "parsingError";
+            case 5: return "parsingError";
             default: return null;
         }
     }
@@ -282,8 +259,7 @@ public final class DrillPBError implements Externalizable, Message<DrillPBError>
         __fieldMap.put("endpoint", 2);
         __fieldMap.put("errorType", 3);
         __fieldMap.put("message", 4);
-        __fieldMap.put("exception", 5);
-        __fieldMap.put("parsingError", 6);
+        __fieldMap.put("parsingError", 5);
     }
     
 }

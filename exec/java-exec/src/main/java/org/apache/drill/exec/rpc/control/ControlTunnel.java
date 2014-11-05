@@ -17,11 +17,8 @@
  */
 package org.apache.drill.exec.rpc.control;
 
-import java.util.Collection;
-
 import org.apache.drill.exec.proto.BitControl.FinishedReceiver;
 import org.apache.drill.exec.proto.BitControl.FragmentStatus;
-import org.apache.drill.exec.proto.BitControl.InitializeFragments;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.BitControl.RpcType;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
@@ -50,8 +47,8 @@ public class ControlTunnel {
     return manager.getEndpoint();
   }
 
-  public void sendFragments(RpcOutcomeListener<Ack> outcomeListener, InitializeFragments fragments){
-    SendFragment b = new SendFragment(outcomeListener, fragments);
+  public void sendFragment(RpcOutcomeListener<Ack> outcomeListener, PlanFragment fragment){
+    SendFragment b = new SendFragment(outcomeListener, fragment);
     manager.runCommand(b);
   }
 
@@ -124,16 +121,16 @@ public class ControlTunnel {
   }
 
   public static class SendFragment extends ListeningCommand<Ack, ControlConnection> {
-    final InitializeFragments fragments;
+    final PlanFragment fragment;
 
-    public SendFragment(RpcOutcomeListener<Ack> listener, InitializeFragments fragments) {
+    public SendFragment(RpcOutcomeListener<Ack> listener, PlanFragment fragment) {
       super(listener);
-      this.fragments = fragments;
+      this.fragment = fragment;
     }
 
     @Override
     public void doRpcCall(RpcOutcomeListener<Ack> outcomeListener, ControlConnection connection) {
-      connection.send(outcomeListener, RpcType.REQ_INIATILIZE_FRAGMENTS, fragments, Ack.class);
+      connection.send(outcomeListener, RpcType.REQ_INIATILIZE_FRAGMENT, fragment, Ack.class);
     }
 
   }

@@ -68,6 +68,7 @@ public class FragmentContext implements Closeable {
   private final FragmentStats stats;
   private final FunctionImplementationRegistry funcRegistry;
   private final QueryClassLoader loader;
+  private final ClassTransformer transformer;
   private final BufferAllocator allocator;
   private final PlanFragment fragment;
   private List<Thread> daemonThreads = Lists.newLinkedList();
@@ -84,7 +85,8 @@ public class FragmentContext implements Closeable {
 
   public FragmentContext(DrillbitContext dbContext, PlanFragment fragment, UserClientConnection connection,
       FunctionImplementationRegistry funcRegistry) throws OutOfMemoryException, ExecutionSetupException {
-    this.stats = new FragmentStats(dbContext.getMetrics(), fragment.getAssignment());
+    this.transformer = new ClassTransformer(dbContext.getCache());
+    this.stats = new FragmentStats(dbContext.getMetrics());
     this.context = dbContext;
     this.connection = connection;
     this.fragment = fragment;

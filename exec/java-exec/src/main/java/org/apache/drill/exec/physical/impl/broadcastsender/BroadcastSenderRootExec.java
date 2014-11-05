@@ -214,7 +214,9 @@ public class BroadcastSenderRootExec extends BaseRootExec {
     public void failed(RpcException ex) {
       sendCount.decrement();
       logger.error("Failure while sending data to user.", ex);
-      ErrorHelper.logAndConvertError(context.getIdentity(), "Failure while sending fragment to client.", ex, logger);
+      boolean verbose = context.getOptions().getOption(ExecConstants.ENABLE_VERBOSE_ERRORS_KEY).bool_val;
+      ErrorHelper.logAndConvertError(context.getIdentity(), "Failure while sending fragment to client.", ex, logger,
+        verbose);
       ok = false;
       this.ex = ex;
     }

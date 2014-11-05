@@ -24,8 +24,7 @@ import org.eigenbase.reltype.RelDataTypeFactory;
 
 public enum SystemTable {
   OPTION("options", OptionValue.class),
-  DRILLBITS("drillbits", DrillbitIterator.DrillbitInstance.class),
-  VERSION("version", VersionIterator.VersionInfo.class)
+  DRILLBITS("drillbits", DrillbitIterator.DrillbitInstance.class)
   ;
 
   private final PojoDataType type;

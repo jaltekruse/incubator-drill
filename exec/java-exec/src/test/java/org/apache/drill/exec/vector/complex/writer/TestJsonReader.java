@@ -17,7 +17,9 @@
  */
 package org.apache.drill.exec.vector.complex.writer;
 
-import static org.junit.Assert.*;
+import static org.jgroups.util.Util.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import io.netty.buffer.DrillBuf;
 
 import java.io.ByteArrayOutputStream;

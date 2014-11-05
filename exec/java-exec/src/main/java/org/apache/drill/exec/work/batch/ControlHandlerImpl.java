@@ -22,11 +22,11 @@ import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.proto.BitControl.FinishedReceiver;
 import org.apache.drill.exec.proto.BitControl.FragmentStatus;
-import org.apache.drill.exec.proto.BitControl.InitializeFragments;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.BitControl.RpcType;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
@@ -38,7 +38,6 @@ import org.apache.drill.exec.rpc.Acks;
 import org.apache.drill.exec.rpc.Response;
 import org.apache.drill.exec.rpc.RpcConstants;
 import org.apache.drill.exec.rpc.RpcException;
-import org.apache.drill.exec.rpc.UserRpcException;
 import org.apache.drill.exec.rpc.control.ControlConnection;
 import org.apache.drill.exec.rpc.control.ControlTunnel;
 import org.apache.drill.exec.rpc.data.DataRpcConfig;
@@ -47,7 +46,6 @@ import org.apache.drill.exec.work.foreman.Foreman;
 import org.apache.drill.exec.work.foreman.QueryStatus;
 import org.apache.drill.exec.work.fragment.FragmentExecutor;
 import org.apache.drill.exec.work.fragment.FragmentManager;
-import org.apache.drill.exec.work.fragment.NonRootFragmentManager;
 import org.apache.drill.exec.work.fragment.NonRootStatusReporter;
 
 public class ControlHandlerImpl implements ControlMessageHandler {
@@ -83,12 +81,16 @@ public class ControlHandlerImpl implements ControlMessageHandler {
       // TODO: Support a type of message that has no response.
       return DataRpcConfig.OK;
 
-    case RpcType.REQ_INIATILIZE_FRAGMENTS_VALUE:
-      InitializeFragments fragments = get(pBody, InitializeFragments.PARSER);
-      for(int i =0; i < fragments.getFragmentCount(); i++){
-        startNewRemoteFragment(fragments.getFragment(i));
+    case RpcType.REQ_INIATILIZE_FRAGMENT_VALUE:
+      PlanFragment fragment = get(pBody, PlanFragment.PARSER);
+      try {
+        startNewRemoteFragment(fragment);
+        return DataRpcConfig.OK;
+
+      } catch (ExecutionSetupException e) {
+        logger.error("Failure while attempting to start remote fragment.", fragment);
+        return new Response(RpcType.ACK, Acks.FAIL);
       }
-      return DataRpcConfig.OK;
 
     case RpcType.REQ_QUERY_STATUS_VALUE:
       QueryId queryId = get(pBody, QueryId.PARSER);
@@ -111,29 +113,25 @@ public class ControlHandlerImpl implements ControlMessageHandler {
 
   }
 
+  /* (non-Javadoc)
+   * @see org.apache.drill.exec.work.batch.BitComHandler#startNewRemoteFragment(org.apache.drill.exec.proto.ExecProtos.PlanFragment)
+   */
   @Override
-  public void startNewRemoteFragment(PlanFragment fragment) throws UserRpcException {
+  public void startNewRemoteFragment(PlanFragment fragment) throws ExecutionSetupException{
     logger.debug("Received remote fragment start instruction", fragment);
+    FragmentContext context = new FragmentContext(bee.getContext(), fragment, null, bee.getContext().getFunctionImplementationRegistry());
+    ControlTunnel tunnel = bee.getContext().getController().getTunnel(fragment.getForeman());
 
+    NonRootStatusReporter listener = new NonRootStatusReporter(context, tunnel);
     try {
-      // we either need to start the fragment if it is a leaf fragment, or set up a fragment manager if it is non leaf.
-      if(fragment.getLeafFragment()){
-        FragmentContext context = new FragmentContext(bee.getContext(), fragment, null, bee.getContext().getFunctionImplementationRegistry());
-        ControlTunnel tunnel = bee.getContext().getController().getTunnel(fragment.getForeman());
-        NonRootStatusReporter listener = new NonRootStatusReporter(context, tunnel);
-        FragmentRoot rootOperator = bee.getContext().getPlanReader().readFragmentOperator(fragment.getFragmentJson());
-        FragmentExecutor fr = new FragmentExecutor(context, bee, rootOperator, listener);
-        bee.addFragmentRunner(fr);
-      }else{ // isIntermediate, store for incoming data.
-        NonRootFragmentManager manager = new NonRootFragmentManager(fragment, bee);
-        bee.getContext().getWorkBus().setFragmentManager(manager);
-      }
-
+      FragmentRoot rootOperator = bee.getContext().getPlanReader().readFragmentOperator(fragment.getFragmentJson());
+      FragmentExecutor fr = new FragmentExecutor(context, bee, rootOperator, listener);
+      bee.addFragmentRunner(fr);
     } catch (Exception e) {
-        throw new UserRpcException(bee.getContext().getEndpoint(), "Failure while trying to start remote fragment", e);
+      listener.fail(fragment.getHandle(), "Failure due to uncaught exception", e);
     } catch (OutOfMemoryError t) {
       if (t.getMessage().startsWith("Direct buffer")) {
-        throw new UserRpcException(bee.getContext().getEndpoint(), "Out of direct memory while trying to start remote fragment", t);
+        listener.fail(fragment.getHandle(), "Failure due to error", t);
       } else {
         throw t;
       }
@@ -146,7 +144,7 @@ public class ControlHandlerImpl implements ControlMessageHandler {
    */
   @Override
   public Ack cancelFragment(FragmentHandle handle) {
-    FragmentManager manager = bee.getContext().getWorkBus().getFragmentManagerIfExists(handle);
+    FragmentManager manager = bee.getContext().getWorkBus().getFragmentManager(handle);
     if (manager != null) {
       // try remote fragment cancel.
       manager.cancel();
@@ -162,7 +160,7 @@ public class ControlHandlerImpl implements ControlMessageHandler {
   }
 
   public Ack receivingFragmentFinished(FinishedReceiver finishedReceiver) {
-    FragmentManager manager = bee.getContext().getWorkBus().getFragmentManagerIfExists(finishedReceiver.getSender());
+    FragmentManager manager = bee.getContext().getWorkBus().getFragmentManager(finishedReceiver.getSender());
 
     FragmentExecutor executor;
     if (manager != null) {

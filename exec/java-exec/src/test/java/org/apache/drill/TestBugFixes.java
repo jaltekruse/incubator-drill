@@ -44,15 +44,6 @@ public class TestBugFixes extends BaseTestQuery {
     test(select);
   }
 
-  @Test
-  public void testSysDrillbits() throws Exception {
-    test("select * from sys.drillbits");
-  }
-
-  @Test
-  public void testVersionTable() throws Exception {
-    test("select * from sys.version");
-  }
 
   @Test
   public void DRILL883() throws Exception {

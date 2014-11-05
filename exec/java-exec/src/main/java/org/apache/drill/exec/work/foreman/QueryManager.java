@@ -19,7 +19,6 @@ package org.apache.drill.exec.work.foreman;
 
 import io.netty.buffer.ByteBuf;
 
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -29,7 +28,6 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.base.FragmentRoot;
 import org.apache.drill.exec.proto.BitControl.FragmentStatus;
-import org.apache.drill.exec.proto.BitControl.InitializeFragments;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
@@ -51,9 +49,6 @@ import org.apache.drill.exec.work.foreman.Foreman.ForemanManagerListener;
 import org.apache.drill.exec.work.fragment.AbstractStatusReporter;
 import org.apache.drill.exec.work.fragment.FragmentExecutor;
 import org.apache.drill.exec.work.fragment.RootFragmentManager;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 
 /**
  * Each Foreman holds its own fragment manager.  This manages the events associated with execution of a particular query across all fragments.
@@ -94,9 +89,10 @@ public class QueryManager implements FragmentStatusListener{
   }
 
   public void runFragments(WorkerBee bee, PlanFragment rootFragment, FragmentRoot rootOperator,
-                           UserClientConnection rootClient, List<PlanFragment> nonRootFragments) throws ExecutionSetupException{
+                           UserClientConnection rootClient, List<PlanFragment> leafFragments,
+                           List<PlanFragment> intermediateFragments) throws ExecutionSetupException{
     logger.debug("Setting up fragment runs.");
-    remainingFragmentCount.set(nonRootFragments.size() + 1);
+    remainingFragmentCount.set(intermediateFragments.size() + leafFragments.size() + 1);
     assert queryId == rootFragment.getHandle().getQueryId();
     workBus = bee.getContext().getWorkBus();
 
@@ -109,7 +105,7 @@ public class QueryManager implements FragmentStatusListener{
       logger.debug("Setting buffers on root context.");
       rootContext.setBuffers(buffers);
       // add fragment to local node.
-      status.add(new FragmentData(rootFragment.getHandle(), rootFragment.getAssignment(), true));
+      status.add(new FragmentData(rootFragment.getHandle(), null, true));
       logger.debug("Fragment added to local node.");
       rootRunner = new FragmentExecutor(rootContext, bee, rootOperator, new RootStatusHandler(rootContext, rootFragment));
       RootFragmentManager fragmentManager = new RootFragmentManager(rootFragment.getHandle(), buffers, rootRunner);
@@ -119,24 +115,19 @@ public class QueryManager implements FragmentStatusListener{
         bee.addFragmentRunner(fragmentManager.getRunnable());
       }else{
         // if we do, record the fragment manager in the workBus.
-        workBus.setFragmentManager(fragmentManager);
+        workBus.setRootFragmentManager(fragmentManager);
       }
     }
 
-    Multimap<DrillbitEndpoint, PlanFragment> fragmentMap = ArrayListMultimap.create();
-
-    // record all fragments for status purposes.
-    for (PlanFragment f : nonRootFragments) {
+    // keep track of intermediate fragments (not root or leaf)
+    for (PlanFragment f : intermediateFragments) {
       logger.debug("Tracking intermediate remote node {} with data {}", f.getAssignment(), f.getFragmentJson());
       status.add(new FragmentData(f.getHandle(), f.getAssignment(), false));
-      fragmentMap.put(f.getAssignment(), f);
     }
 
-
-
     // send remote (leaf) fragments.
-    for (DrillbitEndpoint ep : fragmentMap.keySet()) {
-      sendRemoteFragments(ep, fragmentMap.get(ep));
+    for (PlanFragment f : leafFragments) {
+      sendRemoteFragment(f);
     }
 
     bee.getContext().getAllocator().resetFragmentLimits();
@@ -148,16 +139,11 @@ public class QueryManager implements FragmentStatusListener{
     }
   }
 
-  private void sendRemoteFragments(DrillbitEndpoint assignment, Collection<PlanFragment> fragments){
-    InitializeFragments.Builder fb = InitializeFragments.newBuilder();
-    for(PlanFragment f : fragments){
-      fb.addFragment(f);
-    }
-    InitializeFragments initFrags = fb.build();
-
-    logger.debug("Sending remote fragments to node {} with data {}", assignment, initFrags);
-    FragmentSubmitListener listener = new FragmentSubmitListener(assignment, initFrags);
-    controller.getTunnel(assignment).sendFragments(listener, initFrags);
+  private void sendRemoteFragment(PlanFragment fragment){
+    logger.debug("Sending remote fragment to node {} with data {}", fragment.getAssignment(), fragment.getFragmentJson());
+    status.add(new FragmentData(fragment.getHandle(), fragment.getAssignment(), false));
+    FragmentSubmitListener listener = new FragmentSubmitListener(fragment.getAssignment(), fragment);
+    controller.getTunnel(fragment.getAssignment()).sendFragment(listener, fragment);
   }
 
 
@@ -275,16 +261,15 @@ public class QueryManager implements FragmentStatusListener{
 
   }
 
-  public RpcOutcomeListener<Ack> getSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value){
+  public RpcOutcomeListener<Ack> getSubmitListener(DrillbitEndpoint endpoint, PlanFragment value){
     return new FragmentSubmitListener(endpoint, value);
   }
 
-  private class FragmentSubmitListener extends EndpointListener<Ack, InitializeFragments>{
+  private class FragmentSubmitListener extends EndpointListener<Ack, PlanFragment>{
 
-    public FragmentSubmitListener(DrillbitEndpoint endpoint, InitializeFragments value) {
+    public FragmentSubmitListener(DrillbitEndpoint endpoint, PlanFragment value) {
       super(endpoint, value);
     }
-
 
     @Override
     public void failed(RpcException ex) {

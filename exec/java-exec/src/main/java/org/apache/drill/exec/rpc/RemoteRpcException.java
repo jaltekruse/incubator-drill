@@ -17,27 +17,22 @@
  */
 package org.apache.drill.exec.rpc;
 
-import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
-import org.apache.drill.exec.work.ErrorHelper;
+import org.apache.drill.exec.proto.GeneralRPCProtos.RpcFailure;
 
 public class RemoteRpcException extends RpcException{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RemoteRpcException.class);
 
-  private final DrillPBError failure;
+  private final RpcFailure failure;
 
-  public RemoteRpcException(DrillPBError failure) {
-    super(ErrorHelper.getErrorMessage(failure, false));
+  public RemoteRpcException(RpcFailure failure) {
+    super(String.format("Failure while executing rpc.  Remote failure message: [%s].  Error Code: [%d].  Remote Error Id: [%d]", failure.getShortError(), failure.getErrorId(), failure.getErrorCode()));
     this.failure = failure;
   }
 
-  @Override
-  public DrillPBError getRemoteError() {
+  public RpcFailure getFailure() {
     return failure;
   }
 
-  @Override
-  public boolean isRemote() {
-    return true;
-  }
+
 
 }

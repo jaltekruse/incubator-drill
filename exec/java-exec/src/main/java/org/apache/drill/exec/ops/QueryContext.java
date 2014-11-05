@@ -23,6 +23,7 @@ import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.exec.cache.DistributedCache;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
@@ -109,6 +110,11 @@ public class QueryContext{
 
   public StoragePluginRegistry getStorage(){
     return drillbitContext.getStorage();
+  }
+
+
+  public DistributedCache getCache(){
+    return drillbitContext.getCache();
   }
 
   public Collection<DrillbitEndpoint> getActiveEndpoints(){
