@@ -18,9 +18,16 @@
 package org.apache.drill.exec.physical.impl.flatten;
 
 import org.apache.drill.BaseTestQuery;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestFlatten extends BaseTestQuery {
+
+  @Test
+  public void testFlattenFailure() throws Exception {
+    test("select flatten(complex), rownum from cp.`/store/json/test_flatten_mappify2.json`");
+//    test("select complex, rownum from cp.`/store/json/test_flatten_mappify2.json`");
+  }
 
   @Test
   public void testKVGenFlatten1() throws Exception {
@@ -34,6 +41,13 @@ public class TestFlatten extends BaseTestQuery {
     // currently does not fail, but produces incorrect results, requires second re-write rule to split up expressions
     // with complex outputs
     test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
+  }
+
+  @Test
+  public void testFlattenRepeatedMap() throws Exception {
+    // currently does not fail, but produces incorrect results, requires second re-write rule to split up expressions
+    // with complex outputs
+    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2.json`");
   }
 
   @Test
@@ -73,18 +87,21 @@ public class TestFlatten extends BaseTestQuery {
   }
 
 
+  @Ignore
   @Test
   public void tstFlattenAndAdditionalColumn() throws Exception {
     // currently hangs, allocating indefinitely
     test("select business_id, flatten(categories) from dfs.`/tmp/yelp_academic_dataset_business.json` b");
   }
 
+  @Ignore
   @Test
   public void testFailingFlattenAlone() throws Exception {
     // no records, also allocating indefintely, allocations are all tiny
     test("select flatten(categories) from dfs.`/tmp/yelp_academic_dataset_business.json` b  ");
   }
 
+  @Ignore
   @Test
   public void testDistinctAggrFlattened() throws Exception {
     // weird tiny memory allocation until timeout
