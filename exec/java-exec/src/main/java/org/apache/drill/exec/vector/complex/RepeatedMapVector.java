@@ -536,7 +536,7 @@ public class RepeatedMapVector extends AbstractContainerVector implements Repeat
 
     @Override
     public int getGroupCount() {
-      return size();
+      return offsets.getAccessor().getValueCount() - 1;
     }
   }
 
