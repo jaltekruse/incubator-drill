@@ -38,16 +38,20 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void testTwoFlattens() throws Exception {
-    // currently does not fail, but produces incorrect results, requires second re-write rule to split up expressions
-    // with complex outputs
+    // second re-write rule has been added to test the fixes together, this now runs
     test("select `integer`, `float`, x, flatten(z), flatten(l) from cp.`/jsoninput/input2_modified.json`");
   }
 
   @Test
   public void testFlattenRepeatedMap() throws Exception {
+    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2.json`");
+  }
+
+  @Test
+  public void testFlattenKVGenFlatten() throws Exception {
     // currently does not fail, but produces incorrect results, requires second re-write rule to split up expressions
     // with complex outputs
-    test("select `integer`, `float`, x, flatten(z) from cp.`/jsoninput/input2.json`");
+    test("select `integer`, `float`, x, flatten(kvgen(flatten(z))) from cp.`/jsoninput/input2.json`");
   }
 
   @Test
