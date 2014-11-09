@@ -164,6 +164,8 @@
           <excludeSubprojects>false</excludeSubprojects>
           <excludes>
             <exclude>**/*.log</exclude>
+            <exclude>**/*.css</exclude>
+            <exclude>**/*.js</exclude>
             <exclude>**/*.md</exclude>
             <exclude>sandbox/**</exclude>
             <exclude>**/*.json</exclude>
