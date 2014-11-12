@@ -85,7 +85,7 @@ public class FilePStore<V> implements PStore<V> {
 
 
     DrillFileSystem fs = FileSystemCreator.getFileSystem(config, fsConf);
-    mk(blobRoot);
+    fs.getUnderlying().mkdirs(blobRoot);
     return fs;
   }
 
