@@ -165,6 +165,9 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
       if (col.getMaxRepetitionLevel() > 0) {
         return true;
       }
+      if (col.getMaxDefinitionLevel() > 0 ) {
+        return true;
+      }
     }
     return false;
   }
