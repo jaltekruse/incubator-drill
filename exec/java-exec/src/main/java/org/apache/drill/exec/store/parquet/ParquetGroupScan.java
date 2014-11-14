@@ -240,8 +240,13 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
             boolean statsAvail = (col.getStatistics() != null && !col.getStatistics().isEmpty());
 
             if (statsAvail && previousCount != GroupScan.NO_COLUMN_STATS) {
-              currentCount = col.getValueCount() - col.getStatistics().getNumNulls(); // only count non-nulls
-              columnValueCounts.put(path, previousCount + currentCount);
+              // if the column is repeated
+              if (footer.getParquetMetadata().getFileMetaData().getSchema().getColumnDescription(columnChunkMetaData.getPath().toArray()).getMaxRepetitionLevel() > 0) {
+                columnValueCounts.put(path, rowGroup.getRowCount());
+              } else {
+                currentCount = col.getValueCount() - col.getStatistics().getNumNulls(); // only count non-nulls
+                columnValueCounts.put(path, previousCount + currentCount);
+              }
             } else {
               // even if 1 chunk does not have stats, we cannot rely on the value count for this column
               columnValueCounts.put(path, GroupScan.NO_COLUMN_STATS);
