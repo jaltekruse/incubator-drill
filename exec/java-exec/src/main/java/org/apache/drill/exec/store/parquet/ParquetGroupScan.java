@@ -241,8 +241,11 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
 
             if (statsAvail && previousCount != GroupScan.NO_COLUMN_STATS) {
               // if the column is repeated
-              if (footer.getParquetMetadata().getFileMetaData().getSchema().getColumnDescription(columnChunkMetaData.getPath().toArray()).getMaxRepetitionLevel() > 0) {
-                columnValueCounts.put(path, rowGroup.getRowCount());
+              if (footer.getParquetMetadata().getFileMetaData().getSchema().getColumnDescription(col.getPath().toArray()).getMaxRepetitionLevel() > 0) {
+                columnValueCounts.put(path, GroupScan.NO_COLUMN_STATS);
+                // TODO - enable this when we add the count function that accepts repeated fields. This works, but will make
+                // the behavior inconsistent with the rest of drill if we enable it
+//                columnValueCounts.put(path, rowGroup.getRowCount());
               } else {
                 currentCount = col.getValueCount() - col.getStatistics().getNumNulls(); // only count non-nulls
                 columnValueCounts.put(path, previousCount + currentCount);

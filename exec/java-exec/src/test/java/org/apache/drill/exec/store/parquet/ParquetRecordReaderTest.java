@@ -81,7 +81,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
-@Ignore
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
@@ -205,6 +204,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
     testFull(QueryType.SQL, "select * from dfs.`/tmp/voter.parquet`", "", 1, 1, 1000, false);
   }
 
+  @Test
+  public void testCountOnRepeatedColumn() throws Exception {
+//    test("select count(topping) from cp.`/testRepeatedWrite.json`");
+    test("select count(topping) from dfs.`/tmp/repeated_json`");
+  }
   @Test
   public void testDrill_1314() throws Exception {
     testFull(QueryType.SQL, "select l_partkey " +
