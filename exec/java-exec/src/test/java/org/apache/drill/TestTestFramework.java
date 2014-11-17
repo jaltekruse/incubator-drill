@@ -25,6 +25,7 @@ import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.junit.Test;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,12 +65,37 @@ public class TestTestFramework extends BaseTestQuery{
 
   @Test
   public void testDecimalBaseline() throws  Exception {
+    // type information can be provided explicitly
     testBuilder()
         .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
         .unOrdered()
         .csvBaselineFile("testframework/decimal_test.tsv")
         .baselineTypes(Types.withScaleAndPrecision(TypeProtos.MinorType.DECIMAL38SPARSE, TypeProtos.DataMode.REQUIRED, 38, 2))
         .baselineColumns("dec_col")
+        .build().run();
+
+    // TODO - re-enable once DRILL-1737 is fixed
+    // type information can also be left out, this will prompt the result types of the test query to drive the
+    // interpretation of the test file
+//    testBuilder()
+//        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
+//        .unOrdered()
+//        .csvBaselineFile("testframework/decimal_test.tsv")
+//        .baselineColumns("dec_col")
+//        .build().run();
+
+    // TODO - update framework to remove any dependency on the Drill engine for reading baseline result sets
+    // currently using it with the assumption that the csv and json readers are well tested, and handling diverse
+    // types in the test framework would require doing some redundant work to enable casting outside of Drill or
+    // some better tooling to generate parquet files that have all of the parquet types
+
+    // Or you can provide explicit values to the builder itself to avoid going through the drill engine at all to
+    // populate the baseline results
+    testBuilder()
+        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
+        .unOrdered()
+        .baselineColumns("dec_col")
+        .baselineValues(new BigDecimal("3.70"))
         .build().run();
 
   }
@@ -97,9 +123,10 @@ public class TestTestFramework extends BaseTestQuery{
         .build().run();
   }
 
-  // TODO - add tests that verified nested and repeated fields without a baseline file
   @Test
   public void testBaselineValsVerificationWithComplexAndNulls() throws Exception {
+    // TODO - this is too verbose to include nested data, need to create builder or helper methods for creating nested
+    // baseline structures in java code without all of this mess
     JsonStringArrayList list = new JsonStringArrayList();
     JsonStringArrayList innerList1 = new JsonStringArrayList();
     innerList1.add(2l);
@@ -116,13 +143,22 @@ public class TestTestFramework extends BaseTestQuery{
 
     JsonStringHashMap x = new JsonStringHashMap();
     x.put("y", "kevin");
-    x.put("z", "kevin");
+    x.put("z", "paul");
+
+    JsonStringArrayList z = new JsonStringArrayList();
+    JsonStringHashMap z_1_1 = new JsonStringHashMap();
+    z_1_1.put("orange", "yellow");
+    z_1_1.put("pink", "red");
+    z.add(z_1_1);
+    JsonStringHashMap z_1_2 = new JsonStringHashMap();
+    z_1_2.put("pink", "purple");
+    z.add(z_1_2);
 
     testBuilder()
         .sqlQuery("select * from cp.`/jsoninput/input2.json` limit 1")
         .ordered()
         .baselineColumns("integer", "float", "x", "z", "l", "rl")
-        .baselineValues(2010l, 17.4, x, null, l_list, list)
+        .baselineValues(2010l, 17.4, x, z, l_list, list)
         .build().run();
   }
 
@@ -327,10 +363,10 @@ public class TestTestFramework extends BaseTestQuery{
   // for ordered(), check the query for an order by
   @Test
   public void testCSVVerificationTypeMap() throws Throwable {
-    Map<SchemaPath, TypeProtos.MinorType> typeMap = new HashMap<>();
-    typeMap.put(TestBuilder.parsePath("first_name"), TypeProtos.MinorType.VARCHAR);
-    typeMap.put(TestBuilder.parsePath("employee_id"), TypeProtos.MinorType.INT);
-    typeMap.put(TestBuilder.parsePath("last_name"), TypeProtos.MinorType.VARCHAR);
+    Map<SchemaPath, TypeProtos.MajorType> typeMap = new HashMap<>();
+    typeMap.put(TestBuilder.parsePath("first_name"), Types.optional(TypeProtos.MinorType.VARCHAR));
+    typeMap.put(TestBuilder.parsePath("employee_id"), Types.optional(TypeProtos.MinorType.INT));
+    typeMap.put(TestBuilder.parsePath("last_name"), Types.optional(TypeProtos.MinorType.VARCHAR));
     testBuilder()
         .sqlQuery("select cast(columns[0] as int) employee_id, columns[1] as first_name, columns[2] as last_name from cp.`testframework/small_test_data_reordered.tsv`")
         .unOrdered()
@@ -343,10 +379,10 @@ public class TestTestFramework extends BaseTestQuery{
         .build().run();
 
     typeMap.clear();
-    typeMap.put(TestBuilder.parsePath("first_name"), TypeProtos.MinorType.VARCHAR);
+    typeMap.put(TestBuilder.parsePath("first_name"), Types.optional(TypeProtos.MinorType.VARCHAR));
     // This is the wrong type intentionally to ensure failures happen when expected
-    typeMap.put(TestBuilder.parsePath("employee_id"), TypeProtos.MinorType.VARCHAR);
-    typeMap.put(TestBuilder.parsePath("last_name"), TypeProtos.MinorType.VARCHAR);
+    typeMap.put(TestBuilder.parsePath("employee_id"), Types.optional(TypeProtos.MinorType.VARCHAR));
+    typeMap.put(TestBuilder.parsePath("last_name"), Types.optional(TypeProtos.MinorType.VARCHAR));
 
     try {
     testBuilder()

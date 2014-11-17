@@ -51,7 +51,7 @@ public class TestBuilder {
   // ordering of the columns in the CSV file, or the default type inferences when reading JSON, this is used for the
   // case where results of the test query are adding type casts to the baseline queries, this saves a little bit of
   // setup in cases where strict type enforcement is not necessary for a given test
-  protected Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap;
+  protected Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap;
   // queries to run before the baseline or test queries, can be used to set options
   private String baselineOptionSettingQueries;
   private String testOptionSettingQueries;
@@ -81,7 +81,7 @@ public class TestBuilder {
   }
 
   public TestBuilder(BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
-                     boolean approximateEquality, Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap,
+                     boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
     this(allocator);
     if (ordered == null) {
@@ -216,7 +216,7 @@ public class TestBuilder {
         baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries, highPerformanceComparison);
   }
 
-  public TestBuilder baselineTypes(Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap) {
+  public TestBuilder baselineTypes(Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap) {
     this.baselineTypeMap = baselineTypeMap;
     return this;
   }
@@ -336,6 +336,7 @@ public class TestBuilder {
     switch(type.getMinorType()) {
       case DECIMAL18:
       case DECIMAL28SPARSE:
+      case DECIMAL38SPARSE:
       case DECIMAL38DENSE:
       case DECIMAL28DENSE:
       case DECIMAL9:
@@ -356,7 +357,7 @@ public class TestBuilder {
     private TypeProtos.MajorType[] baselineTypes;
 
     CSVTestBuilder(String baselineFile, BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
-                     boolean approximateEquality, Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap,
+                     boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
       super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
@@ -379,12 +380,6 @@ public class TestBuilder {
       }
       this.baselineTypes = majorTypes;
       this.baselineTypeMap = null;
-      return this;
-    }
-
-    public CSVTestBuilder baselineTypes(Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap) {
-      super.baselineTypes(baselineTypeMap);
-      this.baselineTypes = null;
       return this;
     }
 
@@ -416,17 +411,24 @@ public class TestBuilder {
       String[] aliasedExpectedColumns = new String[baselineColumns.length];
       for (int i = 0; i < baselineColumns.length; i++) {
         aliasedExpectedColumns[i] = "columns[" + i + "] ";
-        String precision = getDecimalPrecisionScaleInfo(baselineTypes[i]);
+        TypeProtos.MajorType majorType;
         if (baselineTypes != null) {
-          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMinorType(baselineTypes[i].getMinorType()) + " ) ";
+          majorType = baselineTypes[i];
         } else if (baselineTypeMap != null) {
-          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " +
-              Types.getNameOfMinorType(baselineTypeMap.get(parsePath(baselineColumns[i]))) + precision +  " ) ";
+          majorType = baselineTypeMap.get(parsePath(baselineColumns[i]));
+        } else {
+          throw new Exception("Type information not set for interpreting csv baseline file.");
         }
-        aliasedExpectedColumns[i] += baselineColumns[i];
+        String precision = getDecimalPrecisionScaleInfo(majorType);
+        // TODO - remove this once the defaulting to length 1 in a varchar cast is fixed
+        if (majorType.getMinorType() == TypeProtos.MinorType.VARCHAR) {
+          precision = "(100)";
+        }
+        aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " +
+            Types.getNameOfMinorType(majorType.getMinorType()) + precision +  " ) " + baselineColumns[i];
       }
       String query = "select " + Joiner.on(", ").join(aliasedExpectedColumns) + " from cp.`" + baselineFilePath + "`";
-//    System.out.println(query);
+      System.out.println(query);
       return query;
     }
 
@@ -442,7 +444,7 @@ public class TestBuilder {
     private String baselineFilePath;
 
     JSONTestBuilder(String baselineFile, BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
-                   boolean approximateEquality, Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap,
+                   boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                    String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
       super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
@@ -467,7 +469,7 @@ public class TestBuilder {
 
     BaselineQueryTestBuilder(String baselineQuery, UserBitShared.QueryType baselineQueryType, BufferAllocator allocator,
                              String query, UserBitShared.QueryType queryType, Boolean ordered,
-                             boolean approximateEquality, Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap,
+                             boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                              String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
       super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);

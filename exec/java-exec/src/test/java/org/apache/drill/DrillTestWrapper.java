@@ -370,17 +370,17 @@ public class DrillTestWrapper {
 
   private void addTypeInfoIfMissing(QueryResultBatch batch, TestBuilder testBuilder) {
     if (! testBuilder.typeInfoSet()) {
-      Map<SchemaPath, TypeProtos.MinorType> typeMap = getTypeMapFromBatch(batch);
+      Map<SchemaPath, TypeProtos.MajorType> typeMap = getTypeMapFromBatch(batch);
       testBuilder.baselineTypes(typeMap);
     }
 
   }
 
-  private Map<SchemaPath, TypeProtos.MinorType> getTypeMapFromBatch(QueryResultBatch batch) {
-    Map<SchemaPath, TypeProtos.MinorType> typeMap = new HashMap();
+  private Map<SchemaPath, TypeProtos.MajorType> getTypeMapFromBatch(QueryResultBatch batch) {
+    Map<SchemaPath, TypeProtos.MajorType> typeMap = new HashMap();
     for (int i = 0; i < batch.getHeader().getDef().getFieldCount(); i++) {
       typeMap.put(MaterializedField.create(batch.getHeader().getDef().getField(i)).getPath(),
-          batch.getHeader().getDef().getField(i).getMajorType().getMinorType());
+          batch.getHeader().getDef().getField(i).getMajorType());
     }
     return typeMap;
   }
