@@ -372,7 +372,7 @@ public class Types {
     }
   }
 
-  public static String getNameOfMajorType(MinorType type) {
+  public static String getNameOfMinorType(MinorType type) {
     switch (type) {
       case BIT:
         return "bool";
@@ -396,6 +396,12 @@ public class Types {
         return "float";
       case FLOAT8:
         return "double";
+      case DECIMAL9:
+        return "decimal";
+      case DECIMAL18:
+        return "decimal";
+      case DECIMAL28SPARSE:
+        return "decimal";
       case DECIMAL38SPARSE:
         return "decimal";
       case VARCHAR:
@@ -406,6 +412,8 @@ public class Types {
         return "date";
       case TIME:
         return "time";
+      case TIMESTAMP:
+        return "timestamp";
       case VARBINARY:
         return "binary";
       case LATE:

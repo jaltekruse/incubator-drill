@@ -21,8 +21,6 @@ import com.google.common.base.Joiner;
 import org.antlr.runtime.ANTLRStringStream;
 import org.antlr.runtime.CommonTokenStream;
 import org.antlr.runtime.RecognitionException;
-import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.parser.ExprLexer;
 import org.apache.drill.common.expression.parser.ExprParser;
@@ -333,13 +331,29 @@ public class TestBuilder {
         baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries, highPerformanceComparison);
   }
 
+  private String getDecimalPrecisionScaleInfo(TypeProtos.MajorType type) {
+    String precision = "";
+    switch(type.getMinorType()) {
+      case DECIMAL18:
+      case DECIMAL28SPARSE:
+      case DECIMAL38DENSE:
+      case DECIMAL28DENSE:
+      case DECIMAL9:
+        precision = String.format("(%d,%d)", type.getScale(), type.getPrecision());
+        break;
+      default:
+        ; // do nothing empty string set above
+    }
+    return precision;
+  }
+
   public class CSVTestBuilder extends TestBuilder {
 
     // path to the baseline file that will be inserted into the validation query
     private String baselineFilePath;
     // use to cast the baseline file columns, if not set the types
     // that come out of the test query drive interpretation of baseline
-    private TypeProtos.MinorType[] baselineTypes;
+    private TypeProtos.MajorType[] baselineTypes;
 
     CSVTestBuilder(String baselineFile, BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
                      boolean approximateEquality, Map<SchemaPath, TypeProtos.MinorType> baselineTypeMap,
@@ -349,8 +363,21 @@ public class TestBuilder {
       this.baselineFilePath = baselineFile;
     }
 
-    public CSVTestBuilder baselineTypes(TypeProtos.MinorType... baselineTypes) {
+    public CSVTestBuilder baselineTypes(TypeProtos.MajorType... baselineTypes) {
       this.baselineTypes = baselineTypes;
+      this.baselineTypeMap = null;
+      return this;
+    }
+
+    // convenience method to convert minor types to major types if no decimals with precisions are needed
+    public CSVTestBuilder baselineTypes(TypeProtos.MinorType ... baselineTypes) {
+      TypeProtos.MajorType[] majorTypes = new TypeProtos.MajorType[baselineTypes.length];
+      int i = 0;
+      for(TypeProtos.MinorType minorType : baselineTypes) {
+        majorTypes[i] = Types.required(minorType);
+        i++;
+      }
+      this.baselineTypes = majorTypes;
       this.baselineTypeMap = null;
       return this;
     }
@@ -389,10 +416,12 @@ public class TestBuilder {
       String[] aliasedExpectedColumns = new String[baselineColumns.length];
       for (int i = 0; i < baselineColumns.length; i++) {
         aliasedExpectedColumns[i] = "columns[" + i + "] ";
+        String precision = getDecimalPrecisionScaleInfo(baselineTypes[i]);
         if (baselineTypes != null) {
-          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMajorType(baselineTypes[i]) + " ) ";
+          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMinorType(baselineTypes[i].getMinorType()) + " ) ";
         } else if (baselineTypeMap != null) {
-          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " + Types.getNameOfMajorType(baselineTypeMap.get(parsePath(baselineColumns[i]))) + " ) ";
+          aliasedExpectedColumns[i] = "cast(" + aliasedExpectedColumns[i] + " as " +
+              Types.getNameOfMinorType(baselineTypeMap.get(parsePath(baselineColumns[i]))) + precision +  " ) ";
         }
         aliasedExpectedColumns[i] += baselineColumns[i];
       }

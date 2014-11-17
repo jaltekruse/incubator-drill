@@ -18,7 +18,9 @@
 package org.apache.drill;
 
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.types.MinorType;
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.junit.Test;
@@ -58,6 +60,18 @@ public class TestTestFramework extends BaseTestQuery{
         .baselineColumns("employee_id", "first_name", "last_name")
         .baselineValues(12l, "Jewel", "Creek")
         .build().run();
+  }
+
+  @Test
+  public void testDecimalBaseline() throws  Exception {
+    testBuilder()
+        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
+        .unOrdered()
+        .csvBaselineFile("testframework/decimal_test.tsv")
+        .baselineTypes(Types.withScaleAndPrecision(TypeProtos.MinorType.DECIMAL38SPARSE, TypeProtos.DataMode.REQUIRED, 38, 2))
+        .baselineColumns("dec_col")
+        .build().run();
+
   }
 
   @Test
