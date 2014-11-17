@@ -67,7 +67,7 @@ public class TestTestFramework extends BaseTestQuery{
   public void testDecimalBaseline() throws  Exception {
     // type information can be provided explicitly
     testBuilder()
-        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
+        .sqlQuery("select cast(dec_col as decimal(15, 30)) dec_col from cp.`testframework/decimal_test.json`")
         .unOrdered()
         .csvBaselineFile("testframework/decimal_test.tsv")
         .baselineTypes(Types.withScaleAndPrecision(TypeProtos.MinorType.DECIMAL38SPARSE, TypeProtos.DataMode.REQUIRED, 38, 2))
@@ -77,12 +77,12 @@ public class TestTestFramework extends BaseTestQuery{
     // TODO - re-enable once DRILL-1737 is fixed
     // type information can also be left out, this will prompt the result types of the test query to drive the
     // interpretation of the test file
-//    testBuilder()
-//        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
-//        .unOrdered()
-//        .csvBaselineFile("testframework/decimal_test.tsv")
-//        .baselineColumns("dec_col")
-//        .build().run();
+    testBuilder()
+        .sqlQuery("select cast(dec_col as decimal(15, 30)) dec_col from cp.`testframework/decimal_test.json`")
+        .unOrdered()
+        .csvBaselineFile("testframework/decimal_test.tsv")
+        .baselineColumns("dec_col")
+        .build().run();
 
     // TODO - update framework to remove any dependency on the Drill engine for reading baseline result sets
     // currently using it with the assumption that the csv and json readers are well tested, and handling diverse
@@ -92,7 +92,7 @@ public class TestTestFramework extends BaseTestQuery{
     // Or you can provide explicit values to the builder itself to avoid going through the drill engine at all to
     // populate the baseline results
     testBuilder()
-        .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
+        .sqlQuery("select cast(dec_col as decimal(15,30)) dec_col from cp.`testframework/decimal_test.json`")
         .unOrdered()
         .baselineColumns("dec_col")
         .baselineValues(new BigDecimal("3.70"))
