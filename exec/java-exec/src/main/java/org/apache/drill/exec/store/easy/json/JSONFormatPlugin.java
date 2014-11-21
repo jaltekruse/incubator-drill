@@ -50,7 +50,7 @@ public class JSONFormatPlugin extends EasyFormatPlugin<JSONFormatConfig> {
   }
 
   public JSONFormatPlugin(String name, DrillbitContext context, DrillFileSystem fs, StoragePluginConfig config, JSONFormatConfig formatPluginConfig) {
-    super(name, context, fs, config, formatPluginConfig, true, false, false, false, Lists.newArrayList("json"), "json");
+    super(name, context, fs, config, formatPluginConfig, true, false, false, false, formatPluginConfig.getExtensions(), "json");
   }
 
   @Override
@@ -72,7 +72,7 @@ public class JSONFormatPlugin extends EasyFormatPlugin<JSONFormatConfig> {
     options.put("separator", " ");
     options.put(FileSystem.FS_DEFAULT_NAME_KEY, ((FileSystemConfig)writer.getStorageConfig()).connection);
 
-    options.put("extension", "json");
+    options.put("extension", ((JSONFormatConfig)getConfig()).getExtensions().get(0));
 
     RecordWriter recordWriter = new JsonRecordWriter();
     recordWriter.init(options);
@@ -82,6 +82,16 @@ public class JSONFormatPlugin extends EasyFormatPlugin<JSONFormatConfig> {
 
   @JsonTypeName("json")
   public static class JSONFormatConfig implements FormatPluginConfig {
+
+    public List<String> extensions;
+
+    public List<String> getExtensions() {
+      if (extensions == null) {
+        // when loading an old JSONFormatConfig that doesn't contain an "extensions" attribute
+        return Lists.newArrayList("json");
+      }
+      return extensions;
+    }
 
     @Override
     public int hashCode() {
