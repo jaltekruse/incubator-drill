@@ -28,6 +28,11 @@ public class TestExampleQueries extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
   @Test
+  public void testTextInClasspathStorage() throws Exception {
+    test("select * from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
+  @Test
   public void testParquetComplex() throws Exception {
     test("select recipe from cp.`parquet/complex.parquet`");
     test("select * from cp.`parquet/complex.parquet`");
