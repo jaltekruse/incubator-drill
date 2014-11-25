@@ -33,7 +33,8 @@
           type: "parquet"
         },
         "json" : {
-          type: "json"
+          type: "json",
+          extensions: [ "json" ]
         }
       }
     },
@@ -53,7 +54,8 @@
                   delimiter: "\t"
         },
         "json" : {
-          type: "json"
+          type: "json",
+          extensions: [ "json" ]
         },
         "parquet" : {
           type: "parquet"
