@@ -24,6 +24,7 @@ import java.io.IOException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.vector.BaseDataValueVector;
 import org.apache.drill.exec.vector.NullableVarBinaryVector;
+import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.ValueVector;
 
 import org.apache.drill.exec.vector.VariableWidthVector;
@@ -103,8 +104,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
         (int) pageReader.readyToReadPosInBytes + 4, dataTypeLengthInBits);
     lengthToRead += dataTypeLengthInBits + 4;
     if (pageReader.readPosInBytes + lengthToRead > pageReader.pageDataByteArray.capacity()) {
-//      throw new RuntimeException("going to read out of the buffer");
-      Math.min(3,4);
+      throw new RuntimeException("going to read out of the buffer (1)");
     }
     if ( ! success ) {
       return true;
@@ -124,7 +124,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
       throw new RuntimeException("going to read out of the buffer");
     }
     try {
-      ((NullableVarBinaryVector)valueVec).getData().writeBytes(pageReader.pageDataByteArray,
+      ((NullableVarCharVector)valueVec).getData().writeBytes(pageReader.pageDataByteArray,
           (int) pageReader.readPosInBytes, lengthToRead);
     } catch (Exception ex) {
       throw ex;
