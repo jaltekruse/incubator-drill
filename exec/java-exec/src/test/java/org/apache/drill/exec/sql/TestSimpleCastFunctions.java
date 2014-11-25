@@ -32,4 +32,10 @@ public class TestSimpleCastFunctions extends BaseTestQuery {
   public void castToBoolean() throws Exception {
     test("select cast('false' as boolean), cast('true' as boolean) from sys.options limit 1;");
   }
+
+  @Test
+  public void testDecimalCastIssue_Drill1737() throws Exception {
+    test("select cast('3.7' as decimal(38,32)) dec_col from sys.options limit 1");
+  }
+
 }
