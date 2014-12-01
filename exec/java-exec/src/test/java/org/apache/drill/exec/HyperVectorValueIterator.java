@@ -80,7 +80,8 @@ public class HyperVectorValueIterator implements Iterator<Object> {
 
   @Override
   public Object next() {
-    if (currVec == null || indexInCurrentVector == currVec.getValueCapacity()) {
+    // load a new batch if needed, skipping batches with 0 records
+    while (currVec == null || indexInCurrentVector == currVec.getValueCapacity()) {
       currVec = hyperVector.getValueVectors()[indexInVectorList];
       indexInVectorList++;
       indexInCurrentVector = 0;

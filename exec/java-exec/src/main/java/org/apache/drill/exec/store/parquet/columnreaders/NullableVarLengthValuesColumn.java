@@ -57,6 +57,8 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
     valuesReadInCurrentPass = 0;
     nullsRead = 0;
     pageReader.valuesReadyToRead = 0;
+    // TODO - TEMPORARY HACK, NEED TO FIND WHERE THESE ARE GETTING OUT OF SYNC
+    pageReader.readPosInBytes = pageReader.readyToReadPosInBytes;
     lengthToRead = 0;
   }
 
