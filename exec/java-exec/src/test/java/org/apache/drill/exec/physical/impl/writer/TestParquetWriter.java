@@ -271,7 +271,7 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
-  public void testReadSf_1_supplier() throws Exception {
+  public void testReadSf_1_orders() throws Exception {
 //    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
 //    compareParquetReadersHyperVector("O_ORDERDTE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // works

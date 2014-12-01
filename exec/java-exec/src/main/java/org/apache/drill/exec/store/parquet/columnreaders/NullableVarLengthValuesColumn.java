@@ -113,8 +113,9 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
   }
 
   protected void readRecords(int recordsToRead) {
-    if (recordsToRead == 0)
+    if (recordsToRead == 0) {
       return;
+    }
 //    if (usingDictionary) {
 //      for (int i = 0; i < recordsToRead; i++) {
 //        readField(i);
@@ -124,7 +125,7 @@ public abstract class NullableVarLengthValuesColumn<V extends ValueVector> exten
       throw new RuntimeException("going to read out of the buffer");
     }
     try {
-      ((NullableVarCharVector)valueVec).getData().writeBytes(pageReader.pageDataByteArray,
+      ((BaseDataValueVector)valueVec).getData().writeBytes(pageReader.pageDataByteArray,
           (int) pageReader.readPosInBytes, lengthToRead);
     } catch (Exception ex) {
       throw ex;
