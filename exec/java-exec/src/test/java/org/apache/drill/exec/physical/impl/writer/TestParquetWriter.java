@@ -271,15 +271,25 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testRead_tpchSF10() throws Exception {
+    String[] files = { "customer","lineitem","nation","orders","part","partsupp","region", "supplier"};
+    for ( String file : files ) {
+//      compareParquetReadersHyperVector("*", "dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/" + file + "`");
+    }
+    String file = "lineitem";
+    compareParquetReadersHyperVector("*", "dfs.`/Users/jaltekruse/Downloads/sf-10_tpc-h_parquet/" + file + "`");
+  }
+
+  @Test
   public void testReadSf_1_orders() throws Exception {
-//    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
 //    compareParquetReadersHyperVector("O_ORDERDTE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // works
 //    compareParquetReadersHyperVector("O_CLERK, O_ORDERDATE, O_ORDERKEY", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // TODO - breaks
 //    compareParquetReadersHyperVector("O_CLERK, O_ORDERDATE, O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // this also breaks
-    compareParquetReadersHyperVector("O_CLERK, O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
+//    compareParquetReadersHyperVector("O_CLERK, O_ORDERKEY, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // works
 //    compareParquetReadersHyperVector("O_CLERK, O_TOTALPRICE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // works
