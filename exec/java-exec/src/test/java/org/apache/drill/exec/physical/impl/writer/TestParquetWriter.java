@@ -282,7 +282,14 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Test
   public void testReadSf_1_orders() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+
+    long startTime = System.nanoTime();
+    runSQL("select * from dfs.`/tmp/orders_part-m-00001.parquet`");
+//    runSQL("select * from dfs.`/tmp/part.parquet`");
+
+    System.out.println("Total read time:" + ((System.nanoTime() - startTime) / 1E9));
+
+//    compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
 //    compareParquetReadersHyperVector("O_ORDERDTE", "dfs.`/tmp/orders_part-m-00001.parquet`");
     // works
 //    compareParquetReadersHyperVector("O_CLERK, O_ORDERDATE, O_ORDERKEY", "dfs.`/tmp/orders_part-m-00001.parquet`");
