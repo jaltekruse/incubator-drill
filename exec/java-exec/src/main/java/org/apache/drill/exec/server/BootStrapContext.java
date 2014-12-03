@@ -69,6 +69,7 @@ public class BootStrapContext implements Closeable{
   }
 
   public void close(){
+    DrillMetrics.resetMetrics();
     loop.shutdownGracefully();
     allocator.close();
   }

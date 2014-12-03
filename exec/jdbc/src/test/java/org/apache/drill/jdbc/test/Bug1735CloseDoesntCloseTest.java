@@ -1,0 +1,89 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.apache.drill.jdbc.test;
+
+import org.apache.drill.common.util.TestTools;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TestRule;
+import org.slf4j.Logger;
+import static org.slf4j.LoggerFactory.getLogger;
+
+import com.google.common.base.Function;
+
+/**
+* Test for DRILL-1735:  closing local JDBC connection didn't shut down
+* local DrillBit (plus QueryResultBatch memory leak in DrillCursor.next()).
+*/
+public class Bug1735CloseDoesntCloseTest extends JdbcTestQueryBase {
+
+  @Rule
+  public TestRule TIMEOUT = TestTools.getTimeoutRule(Integer.MAX_VALUE);
+
+  static final Logger logger = getLogger( Bug1735CloseDoesntCloseTest.class );
+
+  // Disable Jetty status server so unit tests run (outside Maven setup).
+  // (TODO:  Move this to base test class and/or have Jetty try other ports.)
+  @BeforeClass
+  public static void setUpClass() {
+    System.setProperty( "drill.exec.http.enabled", "false" );
+  }
+
+
+  // Basic sanity test (too small to detect original Driver close problem
+  // but would detect QueryResultBatch release and metrics problems).
+
+  private static final int SMALL_ITERATION_COUNT = 3;
+
+  @Test
+  public void testCloseDoesntLeakResourcesBasic() throws Exception {
+    for ( int i = 0; i < SMALL_ITERATION_COUNT ; i++ ) {
+      logger.info( "iteration " + i + ":" );
+      JdbcAssert
+          .withNoDefaultSchema()
+          .sql( "SELECT 1 AS x \n" +
+                "FROM cp.`donuts.json` \n" +
+                "LIMIT 1" )
+          .returns( "x=1" );
+    }
+  }
+
+
+  // Test large enough to detect Driver close problem (at least on
+  // developer's machine).
+
+  private static final int LARGE_ITERATION_COUNT = 1000;
+
+  @Ignore( "Normally suppressed because slow" )
+  @Test
+  public void testCloseDoesntLeakResourcesMany() throws Exception {
+    for ( int i = 0; i < LARGE_ITERATION_COUNT ; i++ ) {
+      logger.info( "iteration " + i + ":" );
+      JdbcAssert
+          .withNoDefaultSchema()
+          .sql( "SELECT 1 AS x \n" +
+                "FROM cp.`donuts.json` \n" +
+                "LIMIT 1" )
+          .returns( "x=1" );
+    }
+  }
+
+
+}

@@ -71,7 +71,7 @@ public class Driver extends UnregisteredDriver {
 
   @Override
   protected Handler createHandler() {
-    return new HandlerImpl();
+    return new DrillHandler();
   }
 
   static {

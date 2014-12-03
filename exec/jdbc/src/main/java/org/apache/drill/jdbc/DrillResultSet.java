@@ -90,6 +90,7 @@ public class DrillResultSet extends AvaticaResultSet {
       listener.latch.await();
       cursor.next();
     } catch (InterruptedException e) {
+       // TODO Check: Should this call Thread.currentThread.interrupt()?
     }
 
     return this;

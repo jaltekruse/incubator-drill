@@ -95,11 +95,13 @@ public class DrillCursor implements Cursor{
         first = false;
 
         if (qrb == null) {
+          currentBatch.clear();
           finished = true;
           return false;
         } else {
           currentRecord = 0;
           boolean changed = currentBatch.load(qrb.getHeader().getDef(), qrb.getData());
+          qrb.release();
           schema = currentBatch.getSchema();
           if (changed) {
             updateColumns();
