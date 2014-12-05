@@ -265,27 +265,30 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersColumnar("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
   }
 
-  @Ignore
+  @Ignore("large binary file")
   @Test
   public void test958_sql() throws Exception {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
   }
 
-  @Ignore
+  @Ignore("large binary file")
   @Test
   public void testReadSf_1_supplier() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
   }
 
-  @Ignore
+//  @Ignore("large binary file")
   @Test
   public void test958_sql_all_columns() throws Exception {
     compareParquetReadersHyperVector("*",  "dfs.`/tmp/store_sales`");
     compareParquetReadersHyperVector("ss_addr_sk, ss_hdemo_sk", "dfs.`/tmp/store_sales`");
     // TODO - Drill 1388 - this currently fails, but it is an issue with project, not the reader, pulled out the physical plan
     // removed the unneeded project in the plan and ran it against both readers, they outputs matched
-//    compareParquetReadersHyperVector("pig_schema,ss_sold_date_sk,ss_item_sk,ss_cdemo_sk,ss_addr_sk, ss_hdemo_sk",
-//        "dfs.`/tmp/store_sales`");
+    compareParquetReadersHyperVector("pig_schema,ss_sold_date_sk,ss_item_sk,ss_cdemo_sk,ss_addr_sk, ss_hdemo_sk",
+        "dfs.`/tmp/store_sales`");
+
+    compareParquetReadersHyperVector("pig_schema",
+        "dfs.`/tmp/store_sales`");
   }
 
   @Ignore
