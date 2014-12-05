@@ -125,25 +125,28 @@ public class DrillTestWrapper {
 
   private void compareHyperVectors(Map<String, HyperVectorValueIterator> expectedRecords,
                                          Map<String, HyperVectorValueIterator> actualRecords) throws Exception {
-    for (String s : expectedRecords.keySet()) {
-      assertNotNull("Expected column '" + s + "' not found.", actualRecords.get(s));
-      assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
-      HyperVectorValueIterator expectedValues = expectedRecords.get(s);
-      HyperVectorValueIterator actualValues = actualRecords.get(s);
-      int i = 0;
-      while (expectedValues.hasNext()) {
-        compareValuesErrorOnMismatch(expectedValues.next(), actualValues.next(), i, s);
-        i++;
+    try {
+      for (String s : expectedRecords.keySet()) {
+        assertNotNull("Expected column '" + s + "' not found.", actualRecords.get(s));
+        assertEquals(expectedRecords.get(s).getTotalRecords(), actualRecords.get(s).getTotalRecords());
+        HyperVectorValueIterator expectedValues = expectedRecords.get(s);
+        HyperVectorValueIterator actualValues = actualRecords.get(s);
+        int i = 0;
+        while (expectedValues.hasNext()) {
+          compareValuesErrorOnMismatch(expectedValues.next(), actualValues.next(), i, s);
+          i++;
+        }
       }
-    }
-    for (HyperVectorValueIterator hvi : expectedRecords.values()) {
-      for (ValueVector vv : hvi.getHyperVector().getValueVectors()) {
-        vv.clear();
+    } finally {
+      for (HyperVectorValueIterator hvi : expectedRecords.values()) {
+        for (ValueVector vv : hvi.getHyperVector().getValueVectors()) {
+          vv.clear();
+        }
       }
-    }
-    for (HyperVectorValueIterator hvi : actualRecords.values()) {
-      for (ValueVector vv : hvi.getHyperVector().getValueVectors()) {
-        vv.clear();
+      for (HyperVectorValueIterator hvi : actualRecords.values()) {
+        for (ValueVector vv : hvi.getHyperVector().getValueVectors()) {
+          vv.clear();
+        }
       }
     }
   }
@@ -287,8 +290,11 @@ public class DrillTestWrapper {
       actualRecords = baselineRecords;
     }
 
-    compareResults(expectedRecords, actualRecords);
-    cleanupBatches(expected, results);
+    try {
+      compareResults(expectedRecords, actualRecords);
+    } finally {
+      cleanupBatches(expected, results);
+    }
   }
 
   /**
@@ -299,7 +305,7 @@ public class DrillTestWrapper {
    */
   protected void compareOrderedResults() throws Exception {
     if (highPerformanceComparison) {
-      if (baselineQueryType != null) {
+      if (baselineQueryType == null) {
         throw new Exception("Cannot do a high performance comparison without using a baseline file");
       }
       compareResultsHyperVector();
@@ -343,9 +349,11 @@ public class DrillTestWrapper {
       }
     }
 
-    compareMergedVectors(expectedSuperVectors, actualSuperVectors);
-
-    cleanupBatches(expected, results);
+    try {
+      compareMergedVectors(expectedSuperVectors, actualSuperVectors);
+    } finally {
+      cleanupBatches(expected, results);
+    }
   }
 
   public void compareResultsHyperVector() throws Exception {
@@ -364,8 +372,11 @@ public class DrillTestWrapper {
 
     Map<String, HyperVectorValueIterator> expectedSuperVectors = addToHyperVectorMap(expected, loader, schema);
 
-    compareHyperVectors(expectedSuperVectors, actualSuperVectors);
-    cleanupBatches(results, expected);
+    try {
+      compareHyperVectors(expectedSuperVectors, actualSuperVectors);
+    } finally {
+      cleanupBatches(results, expected);
+    }
   }
 
   private void addTypeInfoIfMissing(QueryResultBatch batch, TestBuilder testBuilder) {
