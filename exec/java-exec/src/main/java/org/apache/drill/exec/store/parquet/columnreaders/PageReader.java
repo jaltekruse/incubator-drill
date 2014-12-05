@@ -309,9 +309,10 @@ final class PageReader {
   private ByteBuf allocateBuffer(int size) {
     ByteBuf b;
     try {
-      b = parentColumnReader.parentReader.getOperatorContext().getAllocator().buffer(size);
+      b = parentColumnReader.parentReader.getAllocator().buffer(size);
       //b = UnpooledByteBufAllocator.DEFAULT.heapBuffer(size);
     }catch(Exception e){
+      e.printStackTrace();
       throw new DrillRuntimeException("Unable to allocate "+size+" bytes of memory in the Parquet Reader."+
         "[Exception: "+e.getMessage()+"]"
       );

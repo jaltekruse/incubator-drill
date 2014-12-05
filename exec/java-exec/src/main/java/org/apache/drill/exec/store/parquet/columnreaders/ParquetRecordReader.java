@@ -32,6 +32,7 @@ import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.expr.TypeHelper;
+import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
@@ -106,6 +107,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
   private final CodecFactoryExposer codecFactoryExposer;
   int rowGroupIndex;
   long totalRecordsRead;
+  private BufferAllocator allocator;
 
   public ParquetRecordReader(FragmentContext fragmentContext, //
                              String path, //
@@ -161,6 +163,15 @@ public class ParquetRecordReader extends AbstractRecordReader {
 
   public void setOperatorContext(OperatorContext operatorContext) {
     this.operatorContext = operatorContext;
+    this.allocator = operatorContext.getAllocator();
+  }
+
+  public BufferAllocator getAllocator() {
+    return allocator;
+  }
+
+  public void setAllocator(BufferAllocator allocator) {
+    this.allocator = allocator;
   }
 
   /**
