@@ -30,6 +30,13 @@ import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 
+/**
+ * This class provides a skeletal implementation of the RecordBatch interface.
+ *
+ * Some machinery encapsulated here includes handling of the
+ *
+ * @param <T> - the associated class that will represent this operator in a Drill physical plan
+ */
 public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements RecordBatch{
   final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
 
@@ -63,10 +70,13 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
     }
   }
 
+  /**
+   * State of the data processing for a series of batches
+   */
   protected static enum BatchState {
     BUILD_SCHEMA, // Need to build schema and return
     FIRST, // This is still the first data batch
-    NOT_FIRST, // The first data batch has alread been returned
+    NOT_FIRST, // The first data batch has already been returned
     DONE // All work is done, no more data to be sent
   }
 

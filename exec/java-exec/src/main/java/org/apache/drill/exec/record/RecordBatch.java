@@ -118,6 +118,9 @@ public interface RecordBatch extends VectorAccessible {
    */
   public WritableBatch getWritableBatch();
 
+  /**
+   * Free any currently allocated resources that will not be garbage collected.
+   */
   public void cleanup();
 
 }
