@@ -268,27 +268,27 @@ public class DrillTestWrapper {
     BatchSchema schema = null;
 
     BaseTestQuery.test(testOptionSettingQueries);
-    List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(queryType, query);
+    List<QueryResultBatch> actual = BaseTestQuery.testRunAndReturn(queryType, query);
 
-    addTypeInfoIfMissing(expected.get(0), testBuilder);
+    addTypeInfoIfMissing(actual.get(0), testBuilder);
 
-    List<Map> expectedRecords = new ArrayList<>();
-    addToMaterializedResults(expectedRecords, expected, loader, schema);
-
-    List<QueryResultBatch> results = new ArrayList();
     List<Map> actualRecords = new ArrayList<>();
+    addToMaterializedResults(actualRecords, actual, loader, schema);
+
+    List<QueryResultBatch> expected = new ArrayList();
+    List<Map> expectedRecords2 = new ArrayList<>();
     // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
     // the cases where the baseline is stored in a file.
     if (baselineRecords == null) {
       BaseTestQuery.test(baselineOptionSettingQueries);
-      results = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
-      addToMaterializedResults(actualRecords, results, loader, schema);
+      expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
+      addToMaterializedResults(expectedRecords2, expected, loader, schema);
     } else {
-      actualRecords = baselineRecords;
+      expectedRecords2 = baselineRecords;
     }
 
-    compareResults(expectedRecords, actualRecords);
-    cleanupBatches(expected, results);
+    compareResults(actualRecords, expectedRecords2);
+    cleanupBatches(actual, expected);
   }
 
   /**
