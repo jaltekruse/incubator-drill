@@ -52,6 +52,15 @@ public class TestTestFramework extends BaseTestQuery{
   }
 
   @Test
+  public void testDrill_1824() throws Exception {
+    testBuilder()
+        .sqlQuery("select b from dfs.`/tmp/drill_1824/`")
+        .unOrdered()
+        .jsonBaselineFile("/testframework/expected_drill_1824.json")
+        .build().run();
+  }
+
+  @Test
   public void testBaselineValsVerification() throws Exception {
     testBuilder()
         .sqlQuery("select employee_id, first_name, last_name from cp.`testframework/small_test_data.json` limit 1")
