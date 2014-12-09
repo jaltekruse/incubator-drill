@@ -266,21 +266,10 @@ public class VarLengthColumnReaders {
       }
 
       if (usingDictionary) {
-        DrillBuf b = DrillBuf.wrapByteBuffer(currDictValToWrite.toByteBuffer());
-        int st=0;
-        int len=currDictValToWrite.length();
-        VarBinaryHolder holder = new VarBinaryHolder();
-        holder.buffer=b;
-        holder.start=0;
-        holder.end=currDictValToWrite.length();
-        success = varBinaryVector.getMutator().setSafe(index, holder);
+        success = varBinaryVector.getMutator().setSafe(index, 0, currDictValToWrite.length(), DrillBuf.wrapByteBuffer(currDictVal.toByteBuffer()));
       }
       else {
-        VarBinaryHolder holder = new VarBinaryHolder();
-        holder.buffer=value;
-        holder.start=start;
-        holder.end=start+length;
-        success = varBinaryVector.getMutator().setSafe(index, holder);
+        success = varBinaryVector.getMutator().setSafe(index, start, start + length, value);
       }
       return success;
     }
@@ -313,21 +302,10 @@ public class VarLengthColumnReaders {
       }
 
       if (usingDictionary) {
-        DrillBuf b = DrillBuf.wrapByteBuffer(currDictValToWrite.toByteBuffer());
-        NullableVarBinaryHolder holder = new NullableVarBinaryHolder();
-        holder.buffer=b;
-        holder.start=0;
-        holder.end=currDictValToWrite.length();
-        holder.isSet=1;
-        success = nullableVarBinaryVector.getMutator().setSafe(index, holder);
+        success = nullableVarBinaryVector.getMutator().setSafe(index, 1, 0, currDictValToWrite.length(), DrillBuf.wrapByteBuffer(currDictVal.toByteBuffer()));
       }
       else {
-        NullableVarBinaryHolder holder = new NullableVarBinaryHolder();
-        holder.buffer=value;
-        holder.start=start;
-        holder.end=start+length;
-        holder.isSet=1;
-        success = nullableVarBinaryVector.getMutator().setSafe(index, holder);
+        success = nullableVarBinaryVector.getMutator().setSafe(index, 1, start, start + length, value);
       }
       return  success;
     }
