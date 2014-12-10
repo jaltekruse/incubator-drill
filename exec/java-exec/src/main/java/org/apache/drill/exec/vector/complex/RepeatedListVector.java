@@ -102,11 +102,11 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
 
   transient private RepeatedListTransferPair ephPair;
 
-  public boolean copyFromSafe(int fromIndex, int thisIndex, RepeatedListVector from) {
+  public void copyFromSafe(int fromIndex, int thisIndex, RepeatedListVector from) {
     if(ephPair == null || ephPair.from != from) {
       ephPair = (RepeatedListTransferPair) from.makeTransferPair(this);
     }
-    return ephPair.copyValueSafe(fromIndex, thisIndex);
+    ephPair.copyValueSafe(fromIndex, thisIndex);
   }
 
   public Mutator getMutator() {
@@ -145,12 +145,8 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
       int endOffset = index+1;
       int currentChildOffset = offsets.getAccessor().get(endOffset);
       int newChildOffset = currentChildOffset + 1;
-      boolean success = offsets.getMutator().setSafe(endOffset, newChildOffset);
+      offsets.getMutator().setSafe(endOffset, newChildOffset);
       lastSet = index;
-      if (!success) {
-        return -1;
-      }
-
       // this is done at beginning so return the currentChildOffset, not the new offset.
       return currentChildOffset;
 
@@ -183,8 +179,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     }
 
     @Override
-    public boolean setRepetitionAtIndexSafe(int index, int repetitionCount) {
-      return false;  //To change body of implemented methods use File | Settings | File Templates.
+    public void setRepetitionAtIndexSafe(int index, int repetitionCount) {
     }
 
     @Override
@@ -340,21 +335,16 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     }
 
     @Override
-    public boolean copyValueSafe(int from, int to) {
+    public void copyValueSafe(int from, int to) {
       RepeatedListHolder holder = new RepeatedListHolder();
       accessor.get(from, holder);
       int newIndex = this.to.offsets.getAccessor().get(to);
       //todo: make this a bulk copy.
       for (int i = holder.start; i < holder.end; i++, newIndex++) {
-        if (!vectorTransfer.copyValueSafe(i, newIndex)) {
-          return false;
-        }
+        vectorTransfer.copyValueSafe(i, newIndex);
       }
-      if (!this.to.offsets.getMutator().setSafe(to + 1, newIndex)) {
-        return false;
-      }
+      this.to.offsets.getMutator().setSafe(to + 1, newIndex);
       this.to.lastSet++;
-      return true;
     }
 
   }

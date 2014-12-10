@@ -71,7 +71,9 @@ public class HashAggBatch extends AbstractRecordBatch<HashAggregate> {
     GeneratorMapping.create("setupInterior" /* setup method */, "outputRecordValues" /* eval method */,
                             "resetValues" /* reset */, "cleanup" /* cleanup */) ;
 
-  private final MappingSet UpdateAggrValuesMapping = new MappingSet("incomingRowIdx" /* read index */, "outRowIdx" /* write index */, "htRowIdx" /* workspace index */, "incoming" /* read container */, "outgoing" /* write container */, "aggrValuesContainer" /* workspace container */, UPDATE_AGGR_INSIDE, UPDATE_AGGR_OUTSIDE, UPDATE_AGGR_INSIDE);
+  private final MappingSet UpdateAggrValuesMapping = new MappingSet("incomingRowIdx" /* read index */, "outRowIdx" /* write index */,
+          "htRowIdx" /* workspace index */, "incoming" /* read container */, "outgoing" /* write container */, "aggrValuesContainer" /* workspace container */,
+          UPDATE_AGGR_INSIDE, UPDATE_AGGR_OUTSIDE, UPDATE_AGGR_INSIDE);
 
 
   public HashAggBatch(HashAggregate popConfig, RecordBatch incoming, FragmentContext context) throws ExecutionSetupException {
@@ -275,10 +277,7 @@ public class HashAggBatch extends AbstractRecordBatch<HashAggregate> {
 
     for (LogicalExpression aggr : aggrExprs) {
       HoldingContainer hc = cg.addExpr(aggr);
-      cg.getBlock(BlockType.EVAL)._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
-
-    cg.getBlock(BlockType.EVAL)._return(JExpr.TRUE);
   }
 
   private void setupGetIndex(ClassGenerator<HashAggregator> cg) {

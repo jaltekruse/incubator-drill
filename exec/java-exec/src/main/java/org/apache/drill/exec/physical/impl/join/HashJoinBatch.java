@@ -365,15 +365,13 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                     // For every record in the build batch , hash the key columns
                     for (int i = 0; i < currentRecordCount; i++) {
 
-                        HashTable.PutStatus status = hashTable.put(i, htIndex, 1 /* retry count */);
+                        hashTable.put(i, htIndex, 1 /* retry count */);
 
-                        if (status != HashTable.PutStatus.PUT_FAILED) {
-                            /* Use the global index returned by the hash table, to store
-                             * the current record index and batch index. This will be used
-                             * later when we probe and find a match.
-                             */
-                            hjHelper.setCurrentIndex(htIndex.value, buildBatchIndex, i);
-                        }
+                        /* Use the global index returned by the hash table, to store
+                         * the current record index and batch index. This will be used
+                         * later when we probe and find a match.
+                         */
+                        hjHelper.setCurrentIndex(htIndex.value, buildBatchIndex, i);
                     }
 
                     /* Completed hashing all records in this batch. Transfer the batch
@@ -429,16 +427,14 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
 
                 JVar inVV = g.declareVectorValueSetupAndMember("buildBatch", new TypedFieldId(field.getType(), true, fieldId));
                 JVar outVV = g.declareVectorValueSetupAndMember("outgoing", new TypedFieldId(outputType, false, fieldId));
-                g.getEvalBlock()._if(outVV.invoke("copyFromSafe")
+                g.getEvalBlock().add(outVV.invoke("copyFromSafe")
                   .arg(buildIndex.band(JExpr.lit((int) Character.MAX_VALUE)))
                   .arg(outIndex)
-                  .arg(inVV.component(buildIndex.shrz(JExpr.lit(16)))).not())._then()._return(JExpr.FALSE);
+                  .arg(inVV.component(buildIndex.shrz(JExpr.lit(16)))));
 
                 fieldId++;
             }
         }
-        g.rotateBlock();
-        g.getEvalBlock()._return(JExpr.TRUE);
 
         // Generate the code to project probe side records
         g.setMappingSet(projectProbeMapping);
@@ -468,15 +464,13 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
                 JVar inVV = g.declareVectorValueSetupAndMember("probeBatch", new TypedFieldId(inputType, false, fieldId));
                 JVar outVV = g.declareVectorValueSetupAndMember("outgoing", new TypedFieldId(outputType, false, outputFieldId));
 
-                g.getEvalBlock()._if(outVV.invoke("copyFromSafe").arg(probeIndex).arg(outIndex).arg(inVV).not())._then()._return(JExpr.FALSE);
+                g.getEvalBlock().add(outVV.invoke("copyFromSafe").arg(probeIndex).arg(outIndex).arg(inVV));
 
                 fieldId++;
                 outputFieldId++;
             }
             recordCount = left.getRecordCount();
         }
-        g.rotateBlock();
-        g.getEvalBlock()._return(JExpr.TRUE);
 
         HashJoinProbe hj = context.getImplementationClass(cg);
 

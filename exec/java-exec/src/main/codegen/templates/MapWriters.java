@@ -109,7 +109,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
   <#if mode == "Repeated">
   public void start(){
     if(ok()){
-      checkValueCapacity();
+//      checkValueCapacity();
       if (!ok()) return;
       // update the repeated vector to state that there is current+1 objects.
       
@@ -148,7 +148,7 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
   public void start(){
     // check capacity only after we have a non empty container
     if(container.size() > 0 && ok()) {
-      checkValueCapacity();
+//      checkValueCapacity();
     }
   }
   

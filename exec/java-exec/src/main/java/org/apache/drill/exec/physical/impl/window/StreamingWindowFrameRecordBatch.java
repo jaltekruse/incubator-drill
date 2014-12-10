@@ -220,9 +220,9 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
     cg.setMappingSet(EVAL);
     for (LogicalExpression ex : valueExprs) {
       ClassGenerator.HoldingContainer hc = cg.addExpr(ex);
-      cg.getBlock(ClassGenerator.BlockType.EVAL)._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
+//      cg.getBlock(ClassGenerator.BlockType.EVAL)._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
-    cg.getBlock(ClassGenerator.BlockType.EVAL)._return(JExpr.TRUE);
+//    cg.getBlock(ClassGenerator.BlockType.EVAL)._return(JExpr.TRUE);
   }
 
   private final GeneratorMapping OUTPUT_WINDOW_VALUES = GeneratorMapping.create("setupInterior", "outputWindowValues", null, null);
@@ -232,9 +232,9 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
     cg.setMappingSet(WINDOW_VALUES);
     for (int i = 0; i < valueExprs.length; i++) {
       ClassGenerator.HoldingContainer hc = cg.addExpr(valueExprs[i]);
-      cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
+//      cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
-    cg.getEvalBlock()._return(JExpr.TRUE);
+//    cg.getEvalBlock()._return(JExpr.TRUE);
   }
 
   @Override

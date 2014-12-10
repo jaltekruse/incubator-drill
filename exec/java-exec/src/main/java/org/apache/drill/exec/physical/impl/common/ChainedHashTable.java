@@ -51,6 +51,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.TypedFieldId;
 import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.resolver.TypeCastRules;
+import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.ValueVector;
 
 import com.sun.codemodel.JConditional;
@@ -160,7 +161,11 @@ public class ChainedHashTable {
       final MaterializedField outputField = MaterializedField.create(ne.getRef(), expr.getMajorType());
       // create a type-specific ValueVector for this key
       ValueVector vv = TypeHelper.getNewVector(outputField, allocator);
-      vv.allocateNew();
+      if (!Types.isFixedWidthType(outputField.getType()) || Types.isRepeated(outputField.getType())) {
+        vv.allocateNew();
+      } else {
+        AllocationHelper.allocate(vv, HashTable.BATCH_SIZE, 1);
+      }
       htKeyFieldIds[i] = htContainerOrig.add(vv);
 
       i++;
@@ -262,14 +267,11 @@ public class ChainedHashTable {
 
     int i = 0;
     for (LogicalExpression expr : keyExprs) {
-      ValueVectorWriteExpression vvwExpr = new ValueVectorWriteExpression(htKeyFieldIds[i++], expr, true) ;
+      boolean useSetSafe = !Types.isFixedWidthType(expr.getMajorType()) || Types.isRepeated(expr.getMajorType());
+      ValueVectorWriteExpression vvwExpr = new ValueVectorWriteExpression(htKeyFieldIds[i++], expr, useSetSafe) ;
 
-      HoldingContainer hc = cg.addExpr(vvwExpr, false); // this will write to the htContainer at htRowIdx
-      cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
+      cg.addExpr(vvwExpr, false); // this will write to the htContainer at htRowIdx
     }
-
-    cg.getEvalBlock()._return(JExpr.TRUE);
-
   }
 
   private void setupOutputRecordKeys(ClassGenerator<HashTable> cg, TypedFieldId[] htKeyFieldIds, TypedFieldId[] outKeyFieldIds) {
@@ -279,14 +281,11 @@ public class ChainedHashTable {
     if (outKeyFieldIds != null) {
       for (int i = 0; i < outKeyFieldIds.length; i++) {
         ValueVectorReadExpression vvrExpr = new ValueVectorReadExpression(htKeyFieldIds[i]);
-        ValueVectorWriteExpression vvwExpr = new ValueVectorWriteExpression(outKeyFieldIds[i], vvrExpr, true);
-        HoldingContainer hc = cg.addExpr(vvwExpr);
-        cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
+        boolean useSetSafe = !Types.isFixedWidthType(vvrExpr.getMajorType()) || Types.isRepeated(vvrExpr.getMajorType());
+        ValueVectorWriteExpression vvwExpr = new ValueVectorWriteExpression(outKeyFieldIds[i], vvrExpr, useSetSafe);
+        cg.addExpr(vvwExpr);
       }
 
-      cg.getEvalBlock()._return(JExpr.TRUE);
-    } else {
-      cg.getEvalBlock()._return(JExpr.FALSE);
     }
   }
 
