@@ -294,11 +294,8 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       }
     }
     this.allocationVectors = Lists.newArrayList();
-    if (complexWriters != null) {
-      container.clear();
-    } else {
-      container.zeroVectors();
-    }
+    container.zeroVectors();
+
     final List<NamedExpression> exprs = getExpressionList();
     final ErrorCollector collector = new ErrorCollectorImpl();
     final List<TransferPair> transfers = Lists.newArrayList();
@@ -409,6 +406,8 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         // Lazy initialization of the list of complex writers, if not done yet.
         if (complexWriters == null) {
           complexWriters = Lists.newArrayList();
+        } else {
+          complexWriters.clear();
         }
 
         // The reference name will be passed to ComplexWriter, used as the name of the output vector from the writer.
