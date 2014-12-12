@@ -91,13 +91,11 @@ public class ParquetRecordReader extends AbstractRecordReader {
   private VarLenBinaryReader varLengthReader;
   private ParquetMetadata footer;
   private OperatorContext operatorContext;
-  // This is a parallel list to the columns list above, it is used to determine the subset of the project
-  // pushdown columns that do not appear in this file
-  private boolean[] columnsFound;
-  // For columns not found in the file, we need to return a schema element with the correct number of values
-  // at that position in the schema. Currently this requires a vector be present. Here is a list of all of these vectors
-  // that need only have their value count set at the end of each call to next(), as the values default to null.
-  private List<NullableIntVector> nullFilledVectors;
+  // If no columns are found in the file, we must populate at least a single vector with data, this stores a
+  // reference to the single column we will pass along with materialized data. The other selected columns will
+  // be available downstream through our regular field resolution mechanism, that assumes all fields 'exist' and will
+  // be materialized when requested.
+  private NullableIntVector nullFilledVector;
   // Keeps track of the number of records returned in the case where only columns outside of the file were selected.
   // No actual data needs to be read out of the file, we only need to return batches until we have 'read' the number of
   // records specified in the row group metadata
@@ -189,23 +187,20 @@ public class ParquetRecordReader extends AbstractRecordReader {
       return true;
     }
 
-    int i = 0;
     for (SchemaPath expr : getColumns()) {
       if ( field.matches(expr)) {
-        columnsFound[i] = true;
         return true;
       }
-      i++;
     }
     return false;
   }
 
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
-    if (!isStarQuery()) {
-      columnsFound = new boolean[getColumns().size()];
-      nullFilledVectors = new ArrayList();
-    }
+    // This is a list that is parallel to the list of column definition, it is used to determine the subset of the project
+    // pushdown columns that do not appear in this file
+    boolean[] columnsFound;
+    columnsFound = new boolean[getColumns().size()];
     columnStatuses = new ArrayList<>();
 //    totalRecords = footer.getBlocks().get(rowGroupIndex).getRowCount();
     List<ColumnDescriptor> columns = footer.getFileMetaData().getSchema().getColumns();
@@ -240,6 +235,8 @@ public class ParquetRecordReader extends AbstractRecordReader {
       field = MaterializedField.create(toFieldName(column.getPath()),mt);
       if ( ! fieldSelected(field)) {
         continue;
+      } else {
+        columnsFound[i] = true;
       }
       columnsToScan++;
       // sum the lengths of all of the fixed length fields
@@ -305,16 +302,17 @@ public class ParquetRecordReader extends AbstractRecordReader {
       }
       varLengthReader = new VarLenBinaryReader(this, varLengthColumns);
 
-      if (!isStarQuery()) {
+      // if this is not a start query, and we have not found any columns in the file
+      if (!isStarQuery() && columnStatuses.size() == 0 && varLengthColumns.size() == 0) {
         List<SchemaPath> projectedColumns = Lists.newArrayList(getColumns());
         SchemaPath col;
         for (int i = 0; i < columnsFound.length; i++) {
           col = projectedColumns.get(i);
           assert col!=null;
           if ( ! columnsFound[i] && !col.equals(STAR_COLUMN)) {
-            nullFilledVectors.add((NullableIntVector)output.addField(MaterializedField.create(col,
+            nullFilledVector = (NullableIntVector)output.addField(MaterializedField.create(col,
                     Types.optional(TypeProtos.MinorType.INT)),
-                (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT, DataMode.OPTIONAL)));
+                (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT, DataMode.OPTIONAL));
 
           }
         }
@@ -391,9 +389,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
           return 0;
         }
         recordsToRead = Math.min(DEFAULT_RECORDS_TO_READ_IF_NOT_FIXED_WIDTH, footer.getBlocks().get(rowGroupIndex).getRowCount() - mockRecordsRead);
-        for (ValueVector vv : nullFilledVectors ) {
-          vv.getMutator().setValueCount( (int) recordsToRead);
-        }
+        nullFilledVector.getMutator().setValueCount( (int) recordsToRead);
         mockRecordsRead += recordsToRead;
         totalRecordsRead += recordsToRead;
         return (int) recordsToRead;
@@ -415,10 +411,8 @@ public class ParquetRecordReader extends AbstractRecordReader {
 
       // if we have requested columns that were not found in the file fill their vectors with null
       // (by simply setting the value counts inside of them, as they start null filled)
-      if (nullFilledVectors != null) {
-        for (ValueVector vv : nullFilledVectors ) {
-          vv.getMutator().setValueCount(firstColumnStatus.getRecordsReadInCurrentPass());
-        }
+      if (nullFilledVector != null) {
+        nullFilledVector.getMutator().setValueCount(firstColumnStatus.getRecordsReadInCurrentPass());
       }
 
 //      logger.debug("So far read {} records out of row group({}) in file '{}'", totalRecordsRead, rowGroupIndex, hadoopPath.toUri().getPath());
