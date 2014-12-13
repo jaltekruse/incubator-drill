@@ -19,6 +19,17 @@ package org.apache.drill.common.logical;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
+/**
+ * Interface for defining a Drill format plugin.
+ *
+ * Format plugins are contained within a storage plugins to describe particular
+ * data formats available in a given storage system. These formats are not
+ * necessarily tied to how the data is stored, such file formats like as CSV or
+ * protobuf in a filesystem. Some storage systems like databases may only have a
+ * single format where the data is actually stored. This interface enables
+ * flexibility for configuring the different data formats that will live under
+ * one storage system, which will be described in a {@see StoragePluginConfig}.
+ */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
 public interface FormatPluginConfig {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfig.class);
