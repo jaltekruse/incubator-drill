@@ -15,20 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.logical;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
- * Interface for defining a Drill format plugin.
+ * Cluster coordination system based on Apache Zookeeper. TODO - add link to zookeeper
  *
- * A format plugin can be used within a storage plugin to read a particular data format from
- * that storage system. An example would be a filesystem acting as the storage plugin and
- * various supported file formats being described by format plugins.
+ * Zookeeper is a cluster coordination service used by Drill to maintain cluster
+ * membership information and some basic information about the cluster's state.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
-public interface FormatPluginConfig {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfig.class);
-
-
-}
+package org.apache.drill.exec.coord;
