@@ -15,20 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.logical;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
- * Interface for defining a Drill format plugin.
+ * Java client API for submitting queries and accepting result sets from a Drill
+ * server.
  *
- * A format plugin can be used within a storage plugin to read a particular data format from
- * that storage system. An example would be a filesystem acting as the storage plugin and
- * various supported file formats being described by format plugins.
+ * Data returned to this client is stored in the default columnar Value Vector
+ * data structures used by Drill internally. For users of Drill requiring a more
+ * traditional database interface to consume from an application, a JDBC driver
+ * is available as well; see the {@see org.apache.drill.jdbc} package.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
-public interface FormatPluginConfig {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfig.class);
-
-
-}
+package org.apache.drill.exec.client;

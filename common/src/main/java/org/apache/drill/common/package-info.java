@@ -15,20 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.logical;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
- * Interface for defining a Drill format plugin.
+ * Logical (execution-engine-independent) element definitions.
  *
- * A format plugin can be used within a storage plugin to read a particular data format from
- * that storage system. An example would be a filesystem acting as the storage plugin and
- * various supported file formats being described by format plugins.
+ * Drill has several representations of a query including SQL, logical plans and
+ * physical plans. All of the logical constructs of Drill are separated from
+ * their physical implementations in the Java execution engine. The components
+ * of this package can be used to share common logical constructs between the
+ * current engine and any other future alternative physical implementations of
+ * the same logical constructs. This is the same for the logical expression
+ * constructs defined within this package.
+ *
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
-public interface FormatPluginConfig {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfig.class);
-
-
-}
+package org.apache.drill.common;

@@ -15,20 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.logical;
-
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
- * Interface for defining a Drill format plugin.
+ * Bytecode manipulation utilities for stitching together runtime-generated code
+ * with prebuilt templates.
  *
- * A format plugin can be used within a storage plugin to read a particular data format from
- * that storage system. An example would be a filesystem acting as the storage plugin and
- * various supported file formats being described by format plugins.
+ * Also includes a number of performance optimizations, including scalar
+ * replacement for small data-only objects to avoid object churn and
+ * indirection. The object definitions are convenient for defining user-facing
+ * APIs, such as Drill's UDF interface, but end up slowing down execution
+ * significantly.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
-public interface FormatPluginConfig {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfig.class);
-
-
-}
+package org.apache.drill.exec.compile.bytecode;
