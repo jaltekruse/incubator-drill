@@ -15,8 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.expression.aggregate;
-
-public class BasicAggregates {
-
-}
+/**
+ * Drill execution engine, including: physical operators, runtime code generation, planning, RPC layer, Value Vector data structures.
+ *
+ * The Drill execution engine isa distributed query system, designed primarily for running SQL queries.
+ * TODO - copy a general description od Drill from the website.
+ */
+package org.apache.drill.exec;
