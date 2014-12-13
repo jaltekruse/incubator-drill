@@ -15,8 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.expression.aggregate;
-
-public class BasicAggregates {
-
-}
+/**
+ * Logical data types.
+ */
+package org.apache.drill.common.types;
