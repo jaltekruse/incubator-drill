@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
@@ -80,6 +81,9 @@ public class JSONFormatPlugin extends EasyFormatPlugin<JSONFormatConfig> {
     return recordWriter;
   }
 
+// to allow cross-compatibility of plugin configurations across Drill versions, allow the extensions attribute to be
+// left out when reading an old configuration
+  @JsonIgnoreProperties("extensions")
   @JsonTypeName("json")
   public static class JSONFormatConfig implements FormatPluginConfig {
 
