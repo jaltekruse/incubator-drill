@@ -44,6 +44,8 @@ import org.apache.drill.exec.work.foreman.DrillbitStatusListener;
 public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvider, Comparable<Object>{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentExecutor.class);
 
+  // TODO:  REVIEW:  Can't this be AtomicReference<FragmentState> (so that
+  // debugging and logging don't show just integer values--and for type safety)?
   private final AtomicInteger state = new AtomicInteger(FragmentState.AWAITING_ALLOCATION_VALUE);
   private final FragmentRoot rootOperator;
   private RootExec root;
@@ -54,11 +56,26 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
   private AtomicBoolean closed = new AtomicBoolean(false);
   private final DrillbitStatusListener drillbitStatusListener = new FragmentDrillbitStatusListener();
 
-  public FragmentExecutor(FragmentContext context, WorkerBee bee, FragmentRoot rootOperator, StatusReporter listener) {
+  public FragmentExecutor(FragmentContext context, WorkerBee bee,
+                          FragmentRoot rootOperator, StatusReporter listener) {
     this.context = context;
     this.bee = bee;
     this.rootOperator = rootOperator;
     this.listener = listener;
+  }
+
+  @Override
+  public String toString() {
+    return
+        super.toString()
+        + "[closed=" + closed
+        + ", state=" + state
+        + ", context=" + context
+        + ", context=" + context
+        + ", bee=" + bee
+        + ", rootOperator=" + rootOperator
+        + ", listener=" + listener
+        + "]";
   }
 
   @Override
@@ -68,13 +85,17 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
 
   @Override
   public void cancel() {
+    logger.debug("Cancelling fragment {}", context.getHandle());
+
+    // Change state checked by main loop to terminate it (if not already done):
     updateState(FragmentState.CANCELLED);
-    logger.debug("Cancelled Fragment {}", context.getHandle());
+
     context.cancel();
 
     if (executionThread != null) {
       executionThread.interrupt();
     }
+    logger.debug("CancellED fragment {}", context.getHandle());
   }
 
   public void receivingFragmentFinished(FragmentHandle handle) {
@@ -103,13 +124,18 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
 
       context.getDrillbitContext().getClusterCoordinator().addDrillbitStatusListener(drillbitStatusListener);
 
-      logger.debug("Starting fragment runner. {}:{}", context.getHandle().getMajorFragmentId(), context.getHandle().getMinorFragmentId());
+      logger.debug("Starting fragment runner. {}:{}", context.getHandle().getMajorFragmentId(),
+                                                      context.getHandle().getMinorFragmentId());
       if (!updateState(FragmentState.AWAITING_ALLOCATION, FragmentState.RUNNING, false)) {
-        internalFail(new RuntimeException(String.format("Run was called when fragment was in %s state.  FragmentRunnables should only be started when they are currently in awaiting allocation state.", FragmentState.valueOf(state.get()))));
+        internalFail(new RuntimeException(String.format(
+            "Run was called when fragment was in %s state.  "
+            + "FragmentRunnables should only be started when they are currently in awaiting allocation state.",
+            FragmentState.valueOf(state.get()))));
         return;
       }
 
-      // run the query until root.next returns false.
+      // Run the query until root.next returns false OR cancel() changes the
+      // state.
       while (state.get() == FragmentState.RUNNING_VALUE) {
         if (!root.next()) {
           if (context.isFailed()) {
@@ -128,6 +154,7 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
       context.fail(e);
       internalFail(e);
     } finally {
+      // TODO:  Check:  Where are resources closed out in this case?
       bee.removeFragment(context.getHandle());
       context.getDrillbitContext().getClusterCoordinator().removeDrillbitStatusListener(drillbitStatusListener);
 
@@ -175,7 +202,7 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
     boolean success = state.compareAndSet(current.getNumber(), update.getNumber());
     if (!success && exceptionOnFailure) {
       internalFail(new RuntimeException(String.format(
-          "State was different than expected.  Attempting to update state from %s to %s however current state was %s.",
+          "State was different than expected.  Attempting to update state from %s to %s, but current state was %s.",
           current.name(), update.name(), FragmentState.valueOf(state.get()))));
       return false;
     }
@@ -202,9 +229,9 @@ public class FragmentExecutor implements Runnable, CancelableQuery, StatusProvid
     @Override
     public void drillbitUnregistered(Set<CoordinationProtos.DrillbitEndpoint> unregisteredDrillbits) {
       if (unregisteredDrillbits.contains(FragmentExecutor.this.context.getForemanEndpoint())) {
-        logger.warn("Forman : {} no longer active. Cancelling fragment {}.",
-            FragmentExecutor.this.context.getForemanEndpoint().getAddress(),
-            QueryIdHelper.getQueryIdentifier(context.getHandle()));
+        logger.warn("Foreman {} no longer active.  Cancelling fragment {}.",
+                    FragmentExecutor.this.context.getForemanEndpoint().getAddress(),
+                    QueryIdHelper.getQueryIdentifier(context.getHandle()));
         FragmentExecutor.this.cancel();
       }
     }

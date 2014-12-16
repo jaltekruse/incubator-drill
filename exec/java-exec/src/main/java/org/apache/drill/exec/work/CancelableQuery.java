@@ -17,6 +17,12 @@
  */
 package org.apache.drill.exec.work;
 
+// TODO:  Why not simply "Cancelable"?
 public interface CancelableQuery {
+
+  // TODO:  Document whether this returns before or only after cancellation of
+  // the item is complete.  If after:  Document whether "complete" means that
+  // the item has released all resources it's responsible for, and that it
+  // will no longer use any other resources it has access to.
   public void cancel();
 }

@@ -81,8 +81,8 @@ public class QueryManager implements FragmentStatusListener, DrillbitStatusListe
   @Override
   public void statusUpdate(FragmentStatus status) {
 
-    logger.debug("New fragment status was provided to Foreman of {}", status);
-    switch(status.getProfile().getState()){
+    logger.debug("New fragment status was provided to Foreman of {}", status); // TODO:  Why "Foreman" when this is QueryManager?
+    switch (status.getProfile().getState()) {
     case AWAITING_ALLOCATION:
       updateFragmentStatus(status);
       break;

@@ -21,7 +21,7 @@ package org.apache.drill.exec.physical.impl;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 
-/**
+/**  TODO:  Doc.:  Fix "A FragmentRoot is ..." vs. "interface RootExec".
  * A FragmentRoot is a node which is the last processing node in a query plan. FragmentTerminals include Exchange
  * output nodes and storage nodes.  They are there driving force behind the completion of a query.
  */

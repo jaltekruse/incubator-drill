@@ -28,7 +28,10 @@ import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.work.WorkManager.WorkerBee;
 import org.apache.drill.exec.work.foreman.Foreman;
 
-public class UserWorker{
+// TODO:  Doc.:  What is UserWorker?  Is it worker for one user's (one client
+// connection's) queries?
+// TODO:  Doc.:  Disambiguate "worker" vs. "worker bee"
+public class UserWorker {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(UserWorker.class);
 
   private final WorkerBee bee;

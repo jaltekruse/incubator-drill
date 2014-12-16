@@ -19,6 +19,8 @@ package org.apache.drill.jdbc;
 
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.TimeZone;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -28,6 +30,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import net.hydromatic.avatica.AvaticaPrepareResult;
 import net.hydromatic.avatica.AvaticaResultSet;
 import net.hydromatic.avatica.AvaticaStatement;
+import net.hydromatic.avatica.Cursor;
+import net.hydromatic.avatica.Cursor.Accessor;
 
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
@@ -46,7 +50,7 @@ public class DrillResultSet extends AvaticaResultSet {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillResultSet.class);
 
   SchemaChangeListener changeListener;
-  final Listener listener = new Listener();
+  final ResultsListener resultslistener = new ResultsListener();
   private volatile QueryId queryId;
   private final DrillClient client;
   final RecordBatchLoader currentBatch;
@@ -70,26 +74,31 @@ public class DrillResultSet extends AvaticaResultSet {
   }
 
   synchronized void cleanup() {
-    if (queryId != null && !listener.completed) {
+    if (queryId != null && ! resultslistener.completed) {
       client.cancelQuery(queryId);
     }
-    listener.close();
+    resultslistener.close();
+    currentBatch.clear();
   }
 
-  @Override protected DrillResultSet execute() throws SQLException{
+  @Override
+  protected DrillResultSet execute() throws SQLException{
     // Call driver's callback. It is permitted to throw a RuntimeException.
     DrillConnectionImpl connection = (DrillConnectionImpl) statement.getConnection();
 
-    connection.getClient().runQuery(QueryType.SQL, this.prepareResult.getSql(), listener);
+    connection.getClient().runQuery(QueryType.SQL, this.prepareResult.getSql(),
+                                    resultslistener);
     connection.getDriver().handler.onStatementExecute(statement, null);
 
     super.execute();
 
     // don't return with metadata until we've achieved at least one return message.
     try {
-      listener.latch.await();
-      cursor.next();
+      resultslistener.latch.await();
+      boolean notAtEnd = cursor.next();
+      assert notAtEnd;
     } catch (InterruptedException e) {
+       // TODO:  Check:  Should this call Thread.currentThread.interrupt()?
     }
 
     return this;
@@ -103,7 +112,7 @@ public class DrillResultSet extends AvaticaResultSet {
     }
   }
 
-  class Listener implements UserResultsListener {
+  class ResultsListener implements UserResultsListener {
     private static final int MAX = 100;
     private volatile RpcException ex;
     volatile boolean completed = false;
@@ -117,6 +126,7 @@ public class DrillResultSet extends AvaticaResultSet {
 
     final LinkedBlockingDeque<QueryResultBatch> queue = Queues.newLinkedBlockingDeque();
 
+    // TODO:  Doc.:  Release what if what is first relative to what?
     private boolean releaseIfFirst() {
       if (receivedMessage.compareAndSet(false, true)) {
         latch.countDown();
@@ -144,14 +154,14 @@ public class DrillResultSet extends AvaticaResultSet {
         return;
       }
 
-      // if we're in a closed state, just release the message.
+      // If we're in a closed state, just release the message.
       if (closed) {
         result.release();
         completed = true;
         return;
       }
 
-      // we're active, let's add to the queue.
+      // We're active; let's add to the queue.
       queue.add(result);
       if (queue.size() >= MAX - 1) {
         throttle.setAutoRead(false);
@@ -171,6 +181,7 @@ public class DrillResultSet extends AvaticaResultSet {
 
     }
 
+    // TODO:  Doc.:  Specify whether result can be null and what that means.
     public QueryResultBatch getNext() throws RpcException, InterruptedException {
       while (true) {
         if (ex != null) {

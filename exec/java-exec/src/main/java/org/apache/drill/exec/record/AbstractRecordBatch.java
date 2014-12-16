@@ -62,7 +62,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
       state = BatchState.FIRST;
     }
   }
-
+  // TODO:  Put enumerator documentation in documentation comments.
   protected static enum BatchState {
     BUILD_SCHEMA, // Need to build schema and return
     FIRST, // This is still the first data batch
@@ -135,7 +135,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
             return IterOutcome.OK_NEW_SCHEMA;
           }
         }
-        case DONE: {
+        case DONE: { // TODO:: Why braces when no locals?
           return IterOutcome.NONE;
         }
         default:

@@ -47,7 +47,9 @@ public abstract class AbstractSingleRecordBatch<T extends PhysicalOperator> exte
     if (state == BatchState.DONE) {
       return IterOutcome.NONE;
     }
-
+    // TODO:  Resolve:  How can IterOutcome.OK && incoming.getRecordCount() == 0
+    // coexist, given that OK is documented as "A new range of records have been
+    // provided."  Is that range possibly an empty range?
     IterOutcome upstream = next(incoming);
     if (state != BatchState.FIRST && upstream == IterOutcome.OK && incoming.getRecordCount() == 0) {
       do {
@@ -108,6 +110,8 @@ public abstract class AbstractSingleRecordBatch<T extends PhysicalOperator> exte
         return IterOutcome.OK_NEW_SCHEMA;
       }
 
+      // TODO:  Use accurate name (and probably second variable) rather than
+      //  relying on comments like this:
       return upstream; // change if upstream changed, otherwise normal.
     default:
       throw new UnsupportedOperationException();

@@ -139,6 +139,12 @@ public class FragmentContext implements Closeable {
     setState(FragmentContextState.CANCELED);
   }
 
+  // TODO:  Resolve documentation and code:  Current documentation wording can
+  // be taken to say that only transitions "OK -> FAILED" and
+  // "FAILED -> CANCELED" are allowed, but code allows "OK -> <anything>" and
+  // "<anything> -> CANCELED".  Clarify which transitions are allowed, and
+  // clarify what happen for unallowed transitions.  (Are they ignored, must
+  // caller not request them, or should method throw an exception?)
   /**
    * Allowed transitions from left to right: OK -> FAILED -> CANCELED
    * @param newState

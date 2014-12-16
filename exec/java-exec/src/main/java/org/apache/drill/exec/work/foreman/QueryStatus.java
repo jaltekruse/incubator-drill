@@ -71,7 +71,7 @@ public class QueryStatus {
   public QueryStatus(RunQuery query, QueryId id, PStoreProvider provider, Foreman foreman) {
     this.id = id;
     this.query = query;
-    this.queryId = QueryIdHelper.getQueryId(id);
+    this.queryId = QueryIdHelper.getQueryId(id); // TODO:  Review:  Why not saving the QueryId?  At least rename getQueryID (e.g., getQueryIdAsString).
     try {
       this.profilePStore = provider.getStore(QUERY_PROFILE);
       this.profileEStore = provider.getStore(RUNNING_QUERY_INFO);

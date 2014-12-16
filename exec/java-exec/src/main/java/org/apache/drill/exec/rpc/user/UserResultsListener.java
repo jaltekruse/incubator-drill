@@ -20,6 +20,20 @@ package org.apache.drill.exec.rpc.user;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.rpc.RpcException;
 
+/**
+ * TODO:  Define the calling protocol.  In particular, define the sequence of
+ * QueryResultBatch objects passed, especially regarding conditions like the
+ * is-last-batch flag and the PENDING/COMPLETED/etc. status.
+ *
+ * <p>
+ *  <i>Apparently</i>:
+ * </p>
+ * <ul>
+ *   <li>{@link #queryIdArrived} is called first</li>
+ *   <li>{@link #resultArrived} is called after {@link #queryIdArrived}</li>
+ *   <li>{@link #resultArrived} is also called after {@link #resultArrived}</li>
+ * </ul>
+ */
 public interface UserResultsListener {
 
   public abstract void queryIdArrived(QueryId queryId);

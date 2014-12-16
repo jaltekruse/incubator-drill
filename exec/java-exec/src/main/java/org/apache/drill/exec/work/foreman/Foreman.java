@@ -558,7 +558,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
 
     // record all fragments for status purposes.
     for (PlanFragment f : fragments) {
-//      logger.debug("Tracking intermediate remote node {} with data {}", f.getAssignment(), f.getFragmentJson());
+      logger.trace("Tracking intermediate remote node {} with data {}", f.getAssignment(), f.getFragmentJson());
       queryManager.addFragmentStatusTracker(f, false);
       if (f.getLeafFragment()) {
         leafFragmentMap.put(f.getAssignment(), f);

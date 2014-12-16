@@ -34,6 +34,8 @@ import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.util.AssertionUtil;
 
+// TODO Doc. Say why this Drill code is in io.netty.buffer instead of somewhere
+// under org.apache.drill.
 public final class DrillBuf extends AbstractByteBuf {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillBuf.class);
 

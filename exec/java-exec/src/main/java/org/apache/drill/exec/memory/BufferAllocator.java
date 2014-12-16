@@ -53,6 +53,7 @@ public interface BufferAllocator extends Closeable {
 
   public abstract ByteBufAllocator getUnderlyingAllocator();
 
+  // TODO:  Document what null return value means.
   public abstract BufferAllocator getChildAllocator(FragmentContext context, long initialReservation,
       long maximumReservation, boolean applyFragmentLimit) throws OutOfMemoryException;
 

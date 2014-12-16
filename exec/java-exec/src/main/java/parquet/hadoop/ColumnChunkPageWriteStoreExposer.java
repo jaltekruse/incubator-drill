@@ -28,6 +28,8 @@ import parquet.hadoop.CodecFactory.BytesCompressor;
 import parquet.hadoop.metadata.CompressionCodecName;
 import parquet.schema.MessageType;
 
+// TODO Doc. Say why this Drill code is in parquet.hadoop instead of somewhere
+// under org.apache.drill.
 public class ColumnChunkPageWriteStoreExposer {
 
   public static ColumnChunkPageWriteStore newColumnChunkPageWriteStore(OperatorContext oContext,

@@ -149,7 +149,7 @@ public class ScanBatch implements RecordBatch {
       try {
         currentReader.allocate(fieldVectorMap);
       } catch (OutOfMemoryException e) {
-        logger.debug("Caught OutOfMemoryException");
+        logger.debug("Caught OutOfMemoryException");  // TODO  Log exception too (for stack)?
         for (ValueVector v : fieldVectorMap.values()) {
           v.clear();
         }

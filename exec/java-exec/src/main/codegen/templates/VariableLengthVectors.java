@@ -37,10 +37,16 @@ package org.apache.drill.exec.vector;
 <#include "/@includes/vv_imports.ftl" />
 
 /**
- * ${minor.class}Vector implements a vector of variable width values.  Elements in the vector
- * are accessed by position from the logical start of the vector.  A fixed width offsetVector
- * is used to convert an element's position to it's offset from the start of the (0-based)
+ * [TODO:  Fix ambiguous "by position from the logical start":  If it's
+ * zero-based, probably say "by offset from ..."  In either, clarify zero-based
+ * or one-based.]
+ * ${minor.class}Vector implements a vector of variable-width values.  Elements in the vector
+ * are accessed by position from the logical start of the vector.  A fixed-width offsetVector
+ * is used to convert an element's position to its offset from the start of the (0-based)
  * DrillBuf.  Size is inferred by adjacent elements.
+ * [TODO: Fix that "inferred by adjacent elements": 1) "implied by" (or maybe
+ * "inferred from"); 2) probably "adjacent elements" -> "position of adjacent
+ * values"]
  *   The width of each element is ${type.width} byte(s)
  *   The equivalent Java primitive is '${minor.javaType!type.javaType}'
  *
