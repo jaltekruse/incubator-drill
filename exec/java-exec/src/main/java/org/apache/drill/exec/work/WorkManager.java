@@ -17,14 +17,18 @@
  */
 package org.apache.drill.exec.work;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import com.google.common.collect.Queues;
 import org.apache.drill.common.SelfCleaningRunnable;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.proto.BitControl.FragmentStatus;
@@ -32,6 +36,7 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
+import org.apache.drill.exec.proto.helper.QueryIdHelper;
 import org.apache.drill.exec.rpc.DrillRpcFuture;
 import org.apache.drill.exec.rpc.NamedThreadFactory;
 import org.apache.drill.exec.rpc.RpcException;
@@ -61,6 +66,24 @@ import com.google.common.collect.Maps;
  */
 public class WorkManager implements AutoCloseable {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(WorkManager.class);
+
+  private Set<FragmentManager> incomingFragments =
+      Collections.newSetFromMap(Maps.<FragmentManager, Boolean>newConcurrentMap());
+
+  /**
+   * Pending tasks to be run by {@link eventThread}.
+   * Tasks are queued by:
+   * <ul>
+   *   <li> {@link WorkerBee#addFragmentRunner} </li>
+   *   <li> {@link WorkerBee#addNewForeman} </li>
+   *   <li> {@link WorkerBee#startFragmentPendingRemote} </li>
+   * </ul>
+   * <p>
+   *   and dequeued by {@link EventThread#run()}
+   *   (and monitored by Metrics Gauge set up in #start).
+   * </p>
+   */
+  private LinkedBlockingQueue<RunnableWrapper> pendingTasks = Queues.newLinkedBlockingQueue();
 
   /*
    * We use a {@see java.util.concurrent.ConcurrentHashMap} because it promises never to throw a
@@ -167,7 +190,12 @@ public class WorkManager implements AutoCloseable {
    * Narrowed interface to WorkManager that is made available to tasks it is managing.
    */
   public class WorkerBee {
+
+    // TODO:  Clarify name.  Maybe something like queueForeman, startForeman, etc.
     public void addNewForeman(final Foreman foreman) {
+      String id = "Foreman: " + QueryIdHelper.getQueryId(foreman.getQueryId());
+      RunnableWrapper wrapper = new RunnableWrapper(foreman, id);
+      pendingTasks.add(wrapper);
       queries.put(foreman.getQueryId(), foreman);
       executor.execute(new SelfCleaningRunnable(foreman) {
         @Override
@@ -248,5 +276,63 @@ public class WorkManager implements AutoCloseable {
         }
       }
     }
+
   }
+
+  private class EventThread extends Thread {
+    public EventThread() {
+      this.setDaemon(true);
+      this.setName("WorkManager Event Thread");
+    }
+
+    @Override
+    public void run() {
+      try {
+        while (true) {
+          logger.trace("Polling for pending work tasks.");
+          RunnableWrapper r = pendingTasks.take();
+          if (r != null) {
+            logger.debug("Starting pending task {}", r);
+            if (r.inner instanceof FragmentExecutor) {
+              FragmentExecutor fragmentExecutor = (FragmentExecutor) r.inner;
+              runningFragments.put(fragmentExecutor.getContext().getHandle(), fragmentExecutor);
+            }
+            executor.execute(r);
+          }
+
+        }
+      } catch (InterruptedException e) {
+        logger.info("Work Manager stopping as it was interrupted.");
+      }
+    }
+
+  }
+
+  private class RunnableWrapper implements Runnable {
+
+    final Runnable inner;
+    private final String id;
+
+    public RunnableWrapper(Runnable r, String id){
+      this.inner = r;
+      this.id = id;
+    }
+
+    @Override
+    public String toString() {
+      return super.toString() + "[id=" + id + ", inner=" + inner + "]";
+    }
+
+
+    @Override
+    public void run() {
+      try{
+        inner.run();
+      } catch(Exception | Error e) {
+        logger.error("Failure while running wrapper [{}]", id, e);
+      }
+    }
+
+  }
+
 }

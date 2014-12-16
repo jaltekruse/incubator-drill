@@ -71,7 +71,7 @@ abstract class DrillConnectionImpl extends AvaticaConnection implements org.apac
         this.allocator = new TopLevelAllocator(dConfig);
         RemoteServiceSet set = GlobalServiceSetReference.SETS.get();
         if (set == null) {
-          // we're embedded, start a local drill bit.
+          // We're embedded; start a local drill bit.
           serviceSet = RemoteServiceSet.getLocalServiceSet();
           set = serviceSet;
           try {
@@ -89,6 +89,10 @@ abstract class DrillConnectionImpl extends AvaticaConnection implements org.apac
       } else {
         final DrillConfig dConfig = DrillConfig.forClient();
         this.allocator = new TopLevelAllocator(dConfig);
+        // TODO:  Check:  Why does new DrillClient() create another DrillConfig,
+        // with enableServerConfigs true, and cause scanning for function
+        // implementations (needed by a server, but not by a client-only
+        // process, right?)?  Probably pass dConfig to construction.
         this.client = new DrillClient();
         this.client.connect(config.getZookeeperConnectionString(), info);
       }

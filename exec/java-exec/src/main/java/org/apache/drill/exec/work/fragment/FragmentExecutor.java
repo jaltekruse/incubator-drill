@@ -41,6 +41,8 @@ import org.apache.drill.exec.work.foreman.DrillbitStatusListener;
 public class FragmentExecutor implements Runnable {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentExecutor.class);
 
+  // TODO:  REVIEW:  Can't this be AtomicReference<FragmentState> (so that
+  // debugging and logging don't show just integer values--and for type safety)?
   private final AtomicInteger state = new AtomicInteger(FragmentState.AWAITING_ALLOCATION_VALUE);
   private final FragmentRoot rootOperator;
   private final FragmentContext context;
@@ -56,6 +58,19 @@ public class FragmentExecutor implements Runnable {
     this.listener = listener;
   }
 
+  @Override
+  public String toString() {
+    return
+        super.toString()
+        + "[closed=" + closed
+        + ", state=" + state
+        + ", context=" + context
+        + ", context=" + context
+        + ", rootOperator=" + rootOperator
+        + ", listener=" + listener
+        + "]";
+  }
+
   public FragmentStatus getStatus() {
     final FragmentStatus status =
         AbstractStatusReporter.getBuilder(context, FragmentState.RUNNING, null, null).build();
@@ -67,9 +82,14 @@ public class FragmentExecutor implements Runnable {
 
   public void cancel() {
     // Note this will be called outside of run(), from another thread
+    logger.debug("Cancelling fragment {}", context.getHandle());
+
+    // Change state checked by main loop to terminate it (if not already done):
     updateState(FragmentState.CANCELLED);
-    logger.debug("Cancelled Fragment {}", context.getHandle());
+
     context.cancel();
+
+    logger.debug("Cancelled fragment {}", context.getHandle());
   }
 
   public void receivingFragmentFinished(FragmentHandle handle) {
@@ -96,14 +116,19 @@ public class FragmentExecutor implements Runnable {
       root = ImplCreator.getExec(context, rootOperator);
       clusterCoordinator.addDrillbitStatusListener(drillbitStatusListener);
 
+      context.getDrillbitContext().getClusterCoordinator().addDrillbitStatusListener(drillbitStatusListener);
+
       logger.debug("Starting fragment runner. {}:{}",
           fragmentHandle.getMajorFragmentId(), fragmentHandle.getMinorFragmentId());
+      logger.debug("Starting fragment runner. {}:{}", context.getHandle().getMajorFragmentId(),
+                                                      context.getHandle().getMinorFragmentId());
       if (!updateStateOrFail(FragmentState.AWAITING_ALLOCATION, FragmentState.RUNNING)) {
-        logger.warn("Unable to set fragment state to RUNNING. Cancelled or failed?");
+        logger.warn("Unable to set fragment state to RUNNING.  Cancelled or failed?");
         return;
       }
 
-      // run the query until root.next returns false.
+      // Run the query until root.next returns false OR cancel() changes the
+      // state.
       while (state.get() == FragmentState.RUNNING_VALUE) {
         if (!root.next()) {
           if (context.isFailed()) {
@@ -157,8 +182,12 @@ public class FragmentExecutor implements Runnable {
 
   /**
    * Updates the fragment state with the given state
+<<<<<<< HEAD
    *
    * @param to target state
+=======
+   * @param  to  target state
+>>>>>>> 5369c51... DRILL-1735:  Have closing of JDBC connection free embedded-server resources.
    */
   private void updateState(final FragmentState to) {
     state.set(to.getNumber());
@@ -168,8 +197,8 @@ public class FragmentExecutor implements Runnable {
   /**
    * Updates the fragment state only if the current state matches the expected.
    *
-   * @param expected expected current state
-   * @param to target state
+   * @param  expected  expected current state
+   * @param  to  target state
    * @return true only if update succeeds
    */
   private boolean checkAndUpdateState(final FragmentState expected, final FragmentState to) {
@@ -196,8 +225,8 @@ public class FragmentExecutor implements Runnable {
    * Update the state if current state matches expected or fail the fragment if state transition fails even though
    * fragment is not in a terminal state.
    *
-   * @param expected current expected state
-   * @param to target state
+   * @param expected  current expected state
+   * @param to  target state
    * @return true only if update succeeds
    */
   private boolean updateStateOrFail(final FragmentState expected, final FragmentState to) {

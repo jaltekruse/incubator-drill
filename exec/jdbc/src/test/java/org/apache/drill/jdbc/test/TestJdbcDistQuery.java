@@ -22,6 +22,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -219,6 +220,15 @@ public class TestJdbcDistQuery extends JdbcTest{
     }
   }
 
+  /**
+   * Calls {@link ResultSet#next} on given {@code ResultSet} until it returns
+   * false.  (For TEMPORARY workaround for query cancelation race condition.)
+   */
+  private void nextUntilEnd(final ResultSet resultSet) throws SQLException {
+    while (resultSet.next()) {
+    }
+  }
+
   @Test
   public void testSchemaForEmptyResultSet() throws Exception {
     String query = "select fullname, occupation, postal_code from cp.`customer.json` where 0 = 1";
@@ -235,6 +245,7 @@ public class TestJdbcDistQuery extends JdbcTest{
       String[] expected = {"fullname", "occupation", "postal_code"};
       Assert.assertEquals(3, md.getColumnCount());
       Assert.assertArrayEquals(expected, columns.toArray());
+      nextUntilEnd(r);
     }
   }
 
