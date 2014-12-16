@@ -52,6 +52,7 @@ import org.apache.drill.exec.vector.ValueVector;
 import java.io.IOException;
 import java.util.List;
 
+// TODO - delete this comment
 public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<WindowPOP> {
   private StreamingWindowFramer framer;
 
@@ -76,6 +77,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
   }
 
   private void getIndex(ClassGenerator<StreamingWindowFramer> g) {
+    // TODO - delete this comment
     switch (incoming.getSchema().getSelectionVectorMode()) {
       case FOUR_BYTE: {
         JVar var = g.declareClassField("sv4_", g.getModel()._ref(SelectionVector4.class));
@@ -120,6 +122,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
       valueExprs.add(new ValueVectorWriteExpression(id, expr, true));
     }
 
+    // TODO - delete this comment
     int j = 0;
     LogicalExpression[] windowExprs = new LogicalExpression[incoming.getSchema().getFieldCount()];
     // TODO: Should transfer all existing columns instead of copy. Currently this is not easily doable because
@@ -152,6 +155,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
       throw new SchemaChangeException("Failure while materializing expression. " + collector.toErrorString());
     }
 
+    // TODO - delete this comment
     final ClassGenerator<StreamingWindowFramer> cg = CodeGenerator.getRoot(StreamingWindowFramer.TEMPLATE_DEFINITION, context.getFunctionRegistry());
     setupIsSame(cg, keyExprs);
     setupIsSameFromBatch(cg, keyExprs);
@@ -184,6 +188,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
       ClassGenerator.HoldingContainer first = cg.addExpr(expr, false);
       cg.setMappingSet(ISA_B2);
       ClassGenerator.HoldingContainer second = cg.addExpr(expr, false);
+      // TODO - delete this comment
 
       LogicalExpression fh = FunctionGenerationHelper.getComparator(first, second, context.getFunctionRegistry());
       ClassGenerator.HoldingContainer out = cg.addExpr(fh, false);
@@ -210,6 +215,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
       cg.getEvalBlock()._if(out.getValue().ne(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
     cg.getEvalBlock()._return(JExpr.TRUE);
+    // TODO - delete this comment
   }
 
   private final GeneratorMapping EVAL_INSIDE = GeneratorMapping.create("setupInterior", "addRecord", null, null);
@@ -234,6 +240,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
       ClassGenerator.HoldingContainer hc = cg.addExpr(valueExprs[i]);
       cg.getEvalBlock()._if(hc.getValue().eq(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
+    // TODO - delete this comment
     cg.getEvalBlock()._return(JExpr.TRUE);
   }
 
@@ -242,6 +249,7 @@ public class StreamingWindowFrameRecordBatch extends AbstractSingleRecordBatch<W
     StreamingWindowFramer.AggOutcome out = framer.doWork();
 
     while (out == StreamingWindowFramer.AggOutcome.UPDATE_AGGREGATOR) {
+      framer.cleanup();
       framer = null;
       try {
         setupNewSchema();
