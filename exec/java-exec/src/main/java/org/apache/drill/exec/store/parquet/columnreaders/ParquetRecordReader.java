@@ -304,18 +304,12 @@ public class ParquetRecordReader extends AbstractRecordReader {
 
       // if this is not a start query, and we have not found any columns in the file
       if (!isStarQuery() && columnStatuses.size() == 0 && varLengthColumns.size() == 0) {
-        List<SchemaPath> projectedColumns = Lists.newArrayList(getColumns());
-        SchemaPath col;
-        for (int i = 0; i < columnsFound.length; i++) {
-          col = projectedColumns.get(i);
-          assert col!=null;
-          if ( ! columnsFound[i] && !col.equals(STAR_COLUMN)) {
-            nullFilledVector = (NullableIntVector)output.addField(MaterializedField.create(col,
-                    Types.optional(TypeProtos.MinorType.INT)),
-                (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT, DataMode.OPTIONAL));
+        SchemaPath col = getColumns().iterator().next();
+        assert col!=null;
+          nullFilledVector = (NullableIntVector)output.addField(MaterializedField.create(col,
+                  Types.optional(TypeProtos.MinorType.INT)),
+              (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT, DataMode.OPTIONAL));
 
-          }
-        }
       }
     } catch (SchemaChangeException e) {
       throw new ExecutionSetupException(e);

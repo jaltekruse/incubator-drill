@@ -102,13 +102,13 @@ public class DrillParquetReader extends AbstractRecordReader {
   // For columns not found in the file, we need to return a schema element with the correct number of values
   // at that position in the schema. Currently this requires a vector be present. Here is a list of all of these vectors
   // that need only have their value count set at the end of each call to next(), as the values default to null.
-  private List<NullableIntVector> nullFilledVectors;
+  private NullableIntVector nullFilledVector;
   // Keeps track of the number of records returned in the case where only columns outside of the file were selected.
   // No actual data needs to be read out of the file, we only need to return batches until we have 'read' the number of
   // records specified in the row group metadata
   long mockRecordsRead=0;
-  private List<SchemaPath> columnsNotFound=null;
-  boolean noColumnsFound = false; // true if none of the columns in the projection list is found in the schema
+  boolean atLeastOneColumnFound;
+//  boolean noColumnsFound = false; // true if none of the columns in the projection list is found in the schema
 
 
   public DrillParquetReader(FragmentContext fragmentContext, ParquetMetadata footer, RowGroupReadEntry entry, List<SchemaPath> columns, Configuration conf) {
@@ -121,9 +121,9 @@ public class DrillParquetReader extends AbstractRecordReader {
     fillLevelCheckThreshold = this.fragmentContext.getOptions().getOption(ExecConstants.PARQUET_VECTOR_FILL_THRESHOLD).num_val.intValue();
   }
 
-  public static MessageType getProjection(MessageType schema,
-                                          Collection<SchemaPath> columns,
-                                          List<SchemaPath> columnsNotFound) {
+  public MessageType getProjection(MessageType schema,
+                                          Collection<SchemaPath> columns
+                                          ) {
     MessageType projection = null;
 
     String messageName = schema.getName();
@@ -160,15 +160,12 @@ public class DrillParquetReader extends AbstractRecordReader {
 
     // loop through projection columns and add any columns that are missing from parquet schema to columnsNotFound list
     outer: for (SchemaPath columnPath : modifiedColumns) {
-      boolean notFound = true;
       for (SchemaPath schemaPath : schemaPaths) {
         if (schemaPath.contains(columnPath)) {
           selectedSchemaPaths.add(schemaPath);
-          notFound = false;
+
+          break;
         }
-      }
-      if (notFound) {
-        columnsNotFound.add(columnPath);
       }
     }
 
@@ -213,24 +210,16 @@ public class DrillParquetReader extends AbstractRecordReader {
       if (isStarQuery()) {
         projection = schema;
       } else {
-        columnsNotFound=new ArrayList<SchemaPath>();
-        projection = getProjection(schema, getColumns(), columnsNotFound);
+        projection = getProjection(schema, getColumns());
         if(projection == null){
             projection = schema;
         }
-        if(columnsNotFound!=null && columnsNotFound.size()>0) {
-          nullFilledVectors = new ArrayList();
-          for(SchemaPath col: columnsNotFound){
-            nullFilledVectors.add(
-              (NullableIntVector)output.addField(MaterializedField.create(col,
-                  org.apache.drill.common.types.Types.optional(TypeProtos.MinorType.INT)),
-                (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT,
-                  TypeProtos.DataMode.OPTIONAL)));
-          }
-          if(columnsNotFound.size()==getColumns().size()){
-            noColumnsFound=true;
-          }
-        }
+        // TODO - add check to see if no columns were found
+        SchemaPath col = getColumns().iterator().next();
+        nullFilledVector = (NullableIntVector)output.addField(MaterializedField.create(col,
+              org.apache.drill.common.types.Types.optional(TypeProtos.MinorType.INT)),
+            (Class<? extends ValueVector>) TypeHelper.getValueVectorClass(TypeProtos.MinorType.INT,
+              TypeProtos.DataMode.OPTIONAL));
       }
 
       logger.debug("Requesting schema {}", projection);
@@ -262,7 +251,7 @@ public class DrillParquetReader extends AbstractRecordReader {
         }
       }
 
-      if(!noColumnsFound) {
+      if(atLeastOneColumnFound) {
         writer = new VectorContainerWriter(output);
         recordMaterializer = new DrillParquetRecordMaterializer(output, writer, projection, getColumns());
         primitiveVectors = writer.getMapVector().getPrimitiveVectors();
@@ -290,14 +279,14 @@ public class DrillParquetReader extends AbstractRecordReader {
     int count = 0;
 
     // No columns found in the file were selected, simply return a full batch of null records for each column requested
-    if (noColumnsFound) {
+    if (! atLeastOneColumnFound) {
       if (mockRecordsRead == footer.getBlocks().get(entry.getRowGroupIndex()).getRowCount()) {
         return 0;
       }
       long recordsToRead = 0;
       recordsToRead = Math.min(DEFAULT_RECORDS_TO_READ, footer.getBlocks().get(entry.getRowGroupIndex()).getRowCount() - mockRecordsRead);
-      for (ValueVector vv : nullFilledVectors ) {
-        vv.getMutator().setValueCount( (int) recordsToRead);
+      if (nullFilledVector != null) {
+        nullFilledVector.getMutator().setValueCount( (int) recordsToRead);
       }
       mockRecordsRead += recordsToRead;
       return (int) recordsToRead;
@@ -320,10 +309,8 @@ public class DrillParquetReader extends AbstractRecordReader {
     writer.setValueCount(count);
     // if we have requested columns that were not found in the file fill their vectors with null
     // (by simply setting the value counts inside of them, as they start null filled)
-    if (nullFilledVectors != null) {
-      for (ValueVector vv : nullFilledVectors ) {
-        vv.getMutator().setValueCount(count);
-      }
+    if (nullFilledVector != null) {
+      nullFilledVector.getMutator().setValueCount( (int) count);
     }
     return count;
   }
