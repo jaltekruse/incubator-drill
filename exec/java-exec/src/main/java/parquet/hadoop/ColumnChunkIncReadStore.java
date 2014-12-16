@@ -46,6 +46,8 @@ import parquet.hadoop.metadata.ColumnChunkMetaData;
 import parquet.hadoop.util.CompatibilityUtil;
 
 
+// TODO Doc. Say why this Drill code is in parquet.hadoop instead of somewhere
+// under org.apache.drill.
 public class ColumnChunkIncReadStore implements PageReadStore {
 
   private static ParquetMetadataConverter parquetMetadataConverter = new ParquetMetadataConverter();

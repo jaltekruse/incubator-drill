@@ -39,8 +39,15 @@ public interface RecordBatch extends VectorAccessible {
   /**
    * Describes the outcome of a RecordBatch being incremented forward.
    */
+  // TODO:  Put documentation text in documentation comments.
+  // TODO:  Resolve ambiguity/overlap between "No more records" and "a ... range
+  //   of records"--is that range a non-empty range, or a possibly empty range?
+  // TODO:  Fix OK_NEW_SCHEMA's text to be parallel (a statement that describes
+  //   the condition indicated by the enumerator, not simple a noun phrase
+  //   which clearly is not a description of the enumeration constant).
+
   public static enum IterOutcome {
-    NONE, // No more records were found.
+    NONE, // No more records were found.  TODO:  add sth. about also used when Limit short-circuits input
     OK, // A new range of records have been provided.
     OK_NEW_SCHEMA, // A full collection of records
     STOP, // Informs parent nodes that the query has terminated. In this case, a consumer can consume their QueryContext

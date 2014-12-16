@@ -37,6 +37,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 import parquet.bytes.BytesInput;
 import parquet.hadoop.metadata.CompressionCodecName;
 
+// TODO Doc. Say why this Drill code is in parquet.hadoop instead of somewhere
+// under org.apache.drill.
 public class CodecFactoryExposer{
 
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CodecFactoryExposer.class);

@@ -55,12 +55,27 @@ import com.codahale.metrics.MetricRegistry;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Queues;
 
+// TODO:  Doc.  Which work does this manage?  (What scope (e.g., Node/DrillBit
+// vs. client connection vs. query vs. fragment (etc.))?  What kinds of operations?)
 public class WorkManager implements Closeable {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(WorkManager.class);
 
-  private Set<FragmentManager> incomingFragments = Collections.newSetFromMap(Maps
-      .<FragmentManager, Boolean> newConcurrentMap());
+  private Set<FragmentManager> incomingFragments =
+      Collections.newSetFromMap(Maps.<FragmentManager, Boolean> newConcurrentMap());
 
+  /**
+   * Pending tasks to be run by {@link eventThread}.
+   * Tasks are queued by:
+   * <ul>
+   *   <li> {@link WorkerBee#addFragmentRunner} </li>
+   *   <li> {@link WorkerBee#addNewForeman} </li>
+   *   <li> {@link WorkerBee#startFragmentPendingRemote} </li>
+   * </ul>
+   * <p>
+   *   and dequeued by {@link EventThread#run()}
+   *   (and monitored by Metrics Gauge set up in #start).
+   * </p>
+   */
   private LinkedBlockingQueue<RunnableWrapper> pendingTasks = Queues.newLinkedBlockingQueue();
 
   private Map<FragmentHandle, FragmentExecutor> runningFragments = Maps.newConcurrentMap();
@@ -91,7 +106,7 @@ public class WorkManager implements Closeable {
   }
 
   public void start(DrillbitEndpoint endpoint, Controller controller,
-      DataConnectionCreator data, ClusterCoordinator coord, PStoreProvider provider) {
+                    DataConnectionCreator data, ClusterCoordinator coord, PStoreProvider provider) {
     this.dContext = new DrillbitContext(endpoint, bContext, coord, controller, data, workBus, provider);
     // executor = Executors.newFixedThreadPool(dContext.getConfig().getInt(ExecConstants.EXECUTOR_THREADS)
     executor = Executors.newCachedThreadPool(new NamedThreadFactory("WorkManager-"));
@@ -158,6 +173,12 @@ public class WorkManager implements Closeable {
     return "FragmentExecutor: " + QueryIdHelper.getQueryId(handle.getQueryId()) + ':' + handle.getMajorFragmentId() + ':' + handle.getMinorFragmentId();
   }
 
+  // TODO:  Doc.:  What is WorkerBee?  (The "worker bee" metaphor doesn't fit
+  // (or isn't clear) since WorkerBee isn't doing much work (e.g., working on
+  // tasks to execute).)  Is it some kind of task/work manager?  (Wait, it's
+  // in WorkManager.  So what portion of managing work does WorkerBee do?
+  // Is it a queue manager?)
+  // TODO:  Doc.:  Disambiguate "worker" vs. "worker bee"
   // create this so items can see the data here whether or not they are in this package.
   public class WorkerBee {
 
@@ -168,7 +189,7 @@ public class WorkManager implements Closeable {
       RunnableWrapper wrapper = new RunnableWrapper(runner, getId(runner.getContext().getHandle()));
       pendingTasks.add(wrapper);
     }
-
+    // TODO:  Clarify name.  Maybe something like queueForeman, startForeman, etc.
     public void addNewForeman(Foreman foreman) {
       String id = "Foreman: " + QueryIdHelper.getQueryId(foreman.getQueryId());
       RunnableWrapper wrapper = new RunnableWrapper(foreman, id);
@@ -202,13 +223,13 @@ public class WorkManager implements Closeable {
     public void retireForeman(Foreman foreman) {
       queries.remove(foreman.getQueryId(), foreman);
     }
-
+    // TODO:  Rename to getDrillContext for clarity (at call sites)?
     public DrillbitContext getContext() {
       return dContext;
     }
 
   }
-
+  // TODO:  Review:  Should this be named something like "TasksThread"?
   private class EventThread extends Thread {
     public EventThread() {
       this.setDaemon(true);
@@ -219,7 +240,7 @@ public class WorkManager implements Closeable {
     public void run() {
       try {
         while (true) {
-          // logger.debug("Polling for pending work tasks.");
+          logger.trace("Polling for pending work tasks.");
           RunnableWrapper r = pendingTasks.take();
           if (r != null) {
             logger.debug("Starting pending task {}", r);
@@ -249,10 +270,16 @@ public class WorkManager implements Closeable {
     }
 
     @Override
+    public String toString() {
+      return super.toString() + "[id=" + id + ", inner=" + inner + "]";
+    }
+
+
+    @Override
     public void run() {
       try{
         inner.run();
-      }catch(Exception | Error e){
+      } catch(Exception | Error e) {
         logger.error("Failure while running wrapper [{}]", id, e);
       }
     }

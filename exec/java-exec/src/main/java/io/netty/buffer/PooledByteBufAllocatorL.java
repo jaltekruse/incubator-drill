@@ -19,6 +19,8 @@ package io.netty.buffer;
 
 import java.nio.ByteBuffer;
 
+// TODO Doc. Say why this Drill code is in io.netty.buffer instead of somewhere
+// under org.apache.drill.
 public class PooledByteBufAllocatorL extends PooledByteBufAllocator{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PooledByteBufAllocatorL.class);
 

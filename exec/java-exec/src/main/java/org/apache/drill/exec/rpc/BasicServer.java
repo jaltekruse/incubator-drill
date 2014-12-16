@@ -159,7 +159,7 @@ public abstract class BasicServer<T extends EnumLite, C extends RemoteConnection
       }
     }
 
-    connect = !connect;
+    connect = !connect;  // TODO:  Review:  Why inverting rather than simply setting to true?
     logger.debug("Server started on port {} of type {} ", port, this.getClass().getSimpleName());
     return port;
   }

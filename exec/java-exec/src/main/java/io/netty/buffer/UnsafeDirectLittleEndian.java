@@ -22,6 +22,8 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteOrder;
 
+// TODO Doc. Say why this Drill code is in io.netty.buffer instead of somewhere
+// under org.apache.drill.
 public final class UnsafeDirectLittleEndian extends WrappedByteBuf {
     private static final boolean NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN;
     private final PooledUnsafeDirectByteBuf wrapped;

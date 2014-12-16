@@ -99,6 +99,9 @@ abstract class AbstractSqlAccessor implements SqlAccessor {
 
   @Override
   public String getString(int index) throws InvalidAccessException{
+    // TODO:  Object-specific result of toString(), which might not even
+    // contain class name, doesn't fit use of name in format in
+    // InvalidAccessException constructor.
     return getObject(index).toString();
   }
 
@@ -112,12 +115,18 @@ abstract class AbstractSqlAccessor implements SqlAccessor {
     throw new InvalidAccessException("Timestamp");
   }
 
+  // TODO  Doc.  Clarify (type of what?)
   abstract MajorType getType();
 
 
   public class InvalidAccessException extends SQLException{
+    // TODO:  Doc./Spec. what kind of name (type name, apparently)?
     public InvalidAccessException(String name){
-      super(String.format("Requesting class of type %s for an object of type %s:%s is not allowed.", name, getType().getMinorType().name(), getType().getMode().name()));
+      super(
+          String.format("Requesting class of type %s for an object of type %s:%s is not allowed.",
+                        name,
+                        getType().getMinorType().name(),
+                        getType().getMode().name()));
     }
   }
 }

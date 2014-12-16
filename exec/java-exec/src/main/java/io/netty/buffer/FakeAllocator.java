@@ -23,6 +23,8 @@ import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 
+// TODO Doc. Say why this Drill code is in io.netty.buffer instead of somewhere
+// under org.apache.drill.
 class FakeAllocator implements BufferAllocator {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FakeAllocator.class);
 

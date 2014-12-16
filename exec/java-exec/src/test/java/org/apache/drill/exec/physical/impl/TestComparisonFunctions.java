@@ -61,6 +61,7 @@ public class TestComparisonFunctions extends ExecTest {
       bitContext.getCompiler(); result = CodeCompiler.getTestCompiler(c);
     }};
 
+    // TODO:  Probably quote second parameter with Matcher.quoteReplacement(...):
     String planString = Resources.toString(Resources.getResource(COMPARISON_TEST_PHYSICAL_PLAN), Charsets.UTF_8).replaceAll("EXPRESSION", expression);
     if (reader == null) {
       reader = new PhysicalPlanReader(c, c.getMapper(), CoordinationProtos.DrillbitEndpoint.getDefaultInstance());
