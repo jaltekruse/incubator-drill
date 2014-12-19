@@ -36,7 +36,7 @@ import static org.junit.Assert.assertEquals;
 // currently using it with the assumption that the csv and json readers are well tested, and handling diverse
 // types in the test framework would require doing some redundant work to enable casting outside of Drill or
 // some better tooling to generate parquet files that have all of the parquet types
-public class TestTestFramework extends BaseTestQuery{
+public class TestFrameworkTest extends BaseTestQuery{
 
   private static String CSV_COLS = " cast(columns[0] as bigint) employee_id, columns[1] as first_name, columns[2] as last_name ";
 
@@ -97,6 +97,15 @@ public class TestTestFramework extends BaseTestQuery{
         .baselineValues(new BigDecimal("3.70"))
         .build().run();
 
+  }
+
+  @Test
+  public void testMapOrdering() throws Exception {
+    testBuilder()
+        .sqlQuery("select * from cp.`/testframework/map_reordering.json`")
+        .unOrdered()
+        .jsonBaselineFile("testframework/map_reordering2.json")
+        .build().run();
   }
 
   @Test
