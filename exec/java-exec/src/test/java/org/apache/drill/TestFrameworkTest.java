@@ -23,6 +23,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.util.JsonStringHashMap;
+import org.apache.hadoop.io.Text;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -148,17 +149,17 @@ public class TestFrameworkTest extends BaseTestQuery{
     l_list.add(2l);
 
     JsonStringHashMap x = new JsonStringHashMap();
-    x.put("y", "kevin");
-    x.put("z", "paul");
+    x.put("y", new Text("kevin"));
+    x.put("z", new Text("paul"));
 
     // [{"orange":"yellow","pink":"red"},{"pink":"purple"}]
     JsonStringArrayList z = new JsonStringArrayList();
     JsonStringHashMap z_1 = new JsonStringHashMap();
-    z_1.put("orange", "yellow");
-    z_1.put("pink", "red");
+    z_1.put("orange", new Text("yellow"));
+    z_1.put("pink", new Text("red"));
 
     JsonStringHashMap z_2 = new JsonStringHashMap();
-    z_2.put("pink", "purple");
+    z_2.put("pink", new Text("purple"));
     z.add(z_1);
     z.add(z_2);
 

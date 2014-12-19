@@ -57,6 +57,13 @@ public class JsonStringHashMap<K, V> extends LinkedHashMap<K, V> {
       return false;
     }
     for (K key : this.keySet()) {
+      if (this.get(key) == null ) {
+        if (other.get(key) == null) {
+          continue;
+        } else {
+          return false;
+        }
+      }
       if ( ! this.get(key).equals(other.get(key))) {
         return false;
       }
