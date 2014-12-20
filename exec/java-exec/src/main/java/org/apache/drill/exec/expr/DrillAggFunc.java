@@ -25,10 +25,10 @@ import org.apache.drill.exec.record.RecordBatch;
  */
 public interface DrillAggFunc extends DrillFunc{
   /**
-   * Method to be called upon the beginning of processing of
-   * @param incoming
+   * Initialization for the beginning of the aggregation.
+   *
    */
-  public void setup(RecordBatch incoming);
+  public void setup();
   public void add();
   public void output();
   public void reset();
