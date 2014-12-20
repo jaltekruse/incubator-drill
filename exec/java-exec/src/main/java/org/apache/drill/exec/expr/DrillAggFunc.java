@@ -19,7 +19,15 @@ package org.apache.drill.exec.expr;
 
 import org.apache.drill.exec.record.RecordBatch;
 
+/**
+ * Aggregate function interface.
+ *
+ */
 public interface DrillAggFunc extends DrillFunc{
+  /**
+   * Method to be called upon the beginning of processing of
+   * @param incoming
+   */
   public void setup(RecordBatch incoming);
   public void add();
   public void output();
