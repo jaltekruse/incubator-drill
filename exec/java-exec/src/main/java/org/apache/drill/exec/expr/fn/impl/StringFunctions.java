@@ -38,7 +38,6 @@ import org.apache.drill.exec.expr.holders.IntHolder;
 import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.apache.drill.exec.record.RecordBatch;
 
 public class StringFunctions{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StringFunctions.class);
@@ -57,7 +56,7 @@ public class StringFunctions{
     @Output BitHolder out;
     @Workspace java.util.regex.Matcher matcher;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       matcher = java.util.regex.Pattern.compile(org.apache.drill.exec.expr.fn.impl.RegexpUtil.sqlToRegexLike( //
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(pattern.start,  pattern.end,  pattern.buffer))).matcher("");
     }
@@ -78,7 +77,7 @@ public class StringFunctions{
     @Output BitHolder out;
     @Workspace java.util.regex.Matcher matcher;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       matcher = java.util.regex.Pattern.compile(org.apache.drill.exec.expr.fn.impl.RegexpUtil.sqlToRegexLike( //
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(pattern.start,  pattern.end,  pattern.buffer),
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(escape.start,  escape.end,  escape.buffer))).matcher("");
@@ -98,7 +97,7 @@ public class StringFunctions{
     @Output BitHolder out;
     @Workspace java.util.regex.Matcher matcher;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
 
       matcher = java.util.regex.Pattern.compile(org.apache.drill.exec.expr.fn.impl.RegexpUtil.sqlToRegexSimilar(org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(pattern.start,  pattern.end,  pattern.buffer))).matcher("");
     }
@@ -118,7 +117,7 @@ public class StringFunctions{
     @Output BitHolder out;
     @Workspace java.util.regex.Matcher matcher;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
 
       matcher = java.util.regex.Pattern.compile(org.apache.drill.exec.expr.fn.impl.RegexpUtil.sqlToRegexSimilar(
           org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(pattern.start,  pattern.end,  pattern.buffer),
@@ -145,7 +144,7 @@ public class StringFunctions{
     @Workspace java.util.regex.Matcher matcher;
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       matcher = java.util.regex.Pattern.compile(org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(pattern.start,  pattern.end,  pattern.buffer)).matcher("");
     }
 
@@ -167,7 +166,7 @@ public class StringFunctions{
     @Param  VarCharHolder input;
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       out.value = org.apache.drill.exec.expr.fn.impl.StringFunctionUtil.getUTF8CharLength(input.buffer, input.start, input.end);
@@ -180,7 +179,7 @@ public class StringFunctions{
     @Param  VarBinaryHolder input;
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       out.value = org.apache.drill.exec.expr.fn.impl.StringFunctionUtil.getUTF8CharLength(input.buffer, input.start, input.end);
@@ -193,7 +192,7 @@ public class StringFunctions{
     @Param  VarCharHolder input;
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       out.value = input.end - input.start;
@@ -206,7 +205,7 @@ public class StringFunctions{
     @Param  VarCharHolder input;
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       out.value = (input.end - input.start) * 8;
@@ -229,7 +228,7 @@ public class StringFunctions{
 
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       //Do string match.
@@ -254,7 +253,7 @@ public class StringFunctions{
 
     @Output BigIntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       //Do string match.
@@ -280,7 +279,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -311,7 +310,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -346,7 +345,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Workspace ByteBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
 
     }
 
@@ -385,7 +384,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Workspace ByteBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -423,7 +422,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Workspace ByteBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -458,7 +457,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Workspace ByteBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -500,7 +499,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -522,7 +521,7 @@ public class StringFunctions{
     @Inject DrillBuf buffer;
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       buffer = buffer.reallocIfNeeded(8000);
     }
 
@@ -588,7 +587,7 @@ public class StringFunctions{
 
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -661,7 +660,7 @@ public class StringFunctions{
 
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -734,7 +733,7 @@ public class StringFunctions{
 
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -767,7 +766,7 @@ public class StringFunctions{
 
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -802,7 +801,7 @@ public class StringFunctions{
 
     @Output VarCharHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -848,7 +847,7 @@ public class StringFunctions{
     @Inject DrillBuf buffer;
 
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -876,7 +875,7 @@ public class StringFunctions{
     @Inject DrillBuf buffer;
 
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -905,7 +904,7 @@ public class StringFunctions{
     @Inject DrillBuf buffer;
 
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -934,7 +933,7 @@ public class StringFunctions{
     @Inject DrillBuf buffer;
 
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -964,7 +963,7 @@ public class StringFunctions{
     @Param  VarCharHolder in;
     @Output VarBinaryHolder out;
 
-    public void setup(RecordBatch incoming) { }
+    public void setup() { }
 
     public void eval() {
       out.buffer = in.buffer;
@@ -1008,7 +1007,7 @@ public class StringFunctions{
     @Param  VarCharHolder in;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) { }
+    public void setup() { }
 
     public void eval() {
       out.value = in.buffer.getByte(in.start);
@@ -1025,7 +1024,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buf;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       buf = buf.reallocIfNeeded(1);
     }
 
@@ -1048,7 +1047,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -1075,7 +1074,7 @@ public class StringFunctions{
     @Workspace Charset inCharset;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       inCharset = java.nio.charset.Charset.forName(org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(enc.start, enc.end, enc.buffer));
     }
 
@@ -1103,7 +1102,7 @@ public class StringFunctions{
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {

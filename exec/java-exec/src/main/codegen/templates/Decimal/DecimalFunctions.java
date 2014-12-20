@@ -273,7 +273,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int size = (${type.storage} * (org.apache.drill.exec.util.DecimalUtility.integerSize));
             buffer = buffer.reallocIfNeeded(size);
             outputPrecision = Integer.MIN_VALUE;
@@ -311,7 +311,7 @@ public class ${type.name}Functions {
         @Inject DrillBuf buffer;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int size = (${type.storage} * (org.apache.drill.exec.util.DecimalUtility.integerSize));
             buffer = buffer.reallocIfNeeded(size);
             outputPrecision = Integer.MIN_VALUE;
@@ -350,7 +350,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int size = (${type.storage} * (org.apache.drill.exec.util.DecimalUtility.integerSize));
             buffer = buffer.reallocIfNeeded(size);
             tempResult = new int[${type.storage} * ${type.storage}];
@@ -519,7 +519,7 @@ public class ${type.name}Functions {
         @Workspace int outputScale;
         @Workspace int outputPrecision;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int size = (${type.storage} * (org.apache.drill.exec.util.DecimalUtility.integerSize));
             buffer = buffer.reallocIfNeeded(size);
             outputPrecision = Integer.MIN_VALUE;
@@ -556,7 +556,7 @@ public class ${type.name}Functions {
         @Workspace int outputScale;
         @Workspace int outputPrecision;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int size = (${type.storage} * (org.apache.drill.exec.util.DecimalUtility.integerSize));
             buffer = buffer.reallocIfNeeded(size);
             outputPrecision = Integer.MIN_VALUE;
@@ -589,7 +589,7 @@ public class ${type.name}Functions {
 
         @Param  ${type.name}Holder in;
         @Output ${type.name}Holder out;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -610,7 +610,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output IntHolder out;
 
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 
@@ -635,7 +635,7 @@ public class ${type.name}Functions {
 
         @Param  ${type.name}Holder in;
         @Output ${type.name}Holder out;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -701,7 +701,7 @@ public class ${type.name}Functions {
 
         @Param  ${type.name}Holder in;
         @Output ${type.name}Holder out;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -766,7 +766,7 @@ public class ${type.name}Functions {
 
         @Param  ${type.name}Holder in;
         @Output ${type.name}Holder out;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -801,7 +801,7 @@ public class ${type.name}Functions {
         @Param  ${type.name}Holder left;
         @Param  IntHolder right;
         @Output ${type.name}Holder result;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -877,7 +877,7 @@ public class ${type.name}Functions {
 
         @Param  ${type.name}Holder in;
         @Output ${type.name}Holder out;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -940,7 +940,7 @@ public class ${type.name}Functions {
         @Param  ${type.name}Holder left;
         @Param  IntHolder right;
         @Output ${type.name}Holder result;
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -963,7 +963,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output IntHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
              <@compareBlock holderType=type.name left="left" right="right" absCompare="false" output="out.value"/>
@@ -977,7 +977,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -992,7 +992,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1007,7 +1007,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1022,7 +1022,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1037,7 +1037,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1052,7 +1052,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1093,7 +1093,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output IntHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             out.value = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1106,7 +1106,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp  = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1120,7 +1120,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1134,7 +1134,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1148,7 +1148,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1162,7 +1162,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp = org.apache.drill.exec.util.DecimalUtility.compareDenseBytes(left.buffer, left.start, left.getSign(left.start, left.buffer), right.buffer, right.start, right.getSign(right.start, right.buffer), left.WIDTH);
@@ -1177,7 +1177,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 
@@ -1221,7 +1221,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             outputPrecision = Integer.MIN_VALUE;
         }
 
@@ -1250,7 +1250,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             outputPrecision = Integer.MIN_VALUE;
         }
 
@@ -1277,7 +1277,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             outputPrecision = Integer.MIN_VALUE;
         }
 
@@ -1300,7 +1300,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             out.precision = out.maxPrecision;
@@ -1323,7 +1323,7 @@ public class ${type.name}Functions {
         @Workspace int outputScale;
         @Workspace int outputPrecision;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             outputPrecision = Integer.MIN_VALUE;
         }
 
@@ -1356,7 +1356,7 @@ public class ${type.name}Functions {
         @Workspace int outputPrecision;
         @Output ${type.name}Holder result;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             outputPrecision = Integer.MIN_VALUE;
         }
 
@@ -1385,7 +1385,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output IntHolder out;
 
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 
@@ -1399,7 +1399,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 
@@ -1416,7 +1416,7 @@ public class ${type.name}Functions {
         @Param IntHolder right;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 
@@ -1432,7 +1432,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
         }
 
@@ -1459,7 +1459,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -1484,7 +1484,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder in;
         @Output ${type.name}Holder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -1519,7 +1519,7 @@ public class ${type.name}Functions {
         @Output ${type.name}Holder out;
 
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -1568,7 +1568,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output IntHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             <@adjustScale holderType=type.name javaType=type.storage left="left" right="right"/>
@@ -1582,7 +1582,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1597,7 +1597,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1612,7 +1612,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1627,7 +1627,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1642,7 +1642,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
             int cmp;
@@ -1658,7 +1658,7 @@ public class ${type.name}Functions {
         @Param ${type.name}Holder left;
         @Param ${type.name}Holder right;
         @Output BitHolder out;
-        public void setup(RecordBatch incoming) {}
+        public void setup() {}
 
         public void eval() {
 

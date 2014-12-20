@@ -30,7 +30,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value == right.value) ? 1 : 0;
@@ -44,7 +44,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value == right.value) ? 1 : 0;
@@ -58,7 +58,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value == right.value) ? 1 : 0;
@@ -72,7 +72,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value == right.value) ? 1 : 0;
@@ -86,7 +86,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value != right.value) ? 1 : 0;
@@ -100,7 +100,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value != right.value) ? 1 : 0;
@@ -114,7 +114,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value != right.value) ? 1 : 0;
@@ -128,7 +128,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value != right.value) ? 1 : 0;
@@ -142,7 +142,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value > right.value) ? 1 : 0;
@@ -156,7 +156,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value > right.value) ? 1 : 0;
@@ -170,7 +170,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value > right.value) ? 1 : 0;
@@ -184,7 +184,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value > right.value) ? 1 : 0;
@@ -198,7 +198,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value >= right.value) ? 1 : 0;
@@ -212,7 +212,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value >= right.value) ? 1 : 0;
@@ -226,7 +226,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value >= right.value) ? 1 : 0;
@@ -240,7 +240,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value >= right.value) ? 1 : 0;
@@ -254,7 +254,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value < right.value) ? 1 : 0;
@@ -268,7 +268,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value < right.value) ? 1 : 0;
@@ -282,7 +282,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value < right.value) ? 1 : 0;
@@ -296,7 +296,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value < right.value) ? 1 : 0;
@@ -310,7 +310,7 @@ public class ComparisonFunctions {
 //        @Param IntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value <= right.value) ? 1 : 0;
@@ -324,7 +324,7 @@ public class ComparisonFunctions {
 //        @Param BigIntHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value <= right.value) ? 1 : 0;
@@ -338,7 +338,7 @@ public class ComparisonFunctions {
 //        @Param Float4Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value <= right.value) ? 1 : 0;
@@ -352,7 +352,7 @@ public class ComparisonFunctions {
 //        @Param Float8Holder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = (left.value <= right.value) ? 1 : 0;
@@ -366,7 +366,7 @@ public class ComparisonFunctions {
 //        @Param VarBinaryHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 0 ? 1 : 0;
@@ -380,7 +380,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 0 ? 1 : 0;
@@ -394,7 +394,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 0 ? 1 : 0;
@@ -408,7 +408,7 @@ public class ComparisonFunctions {
 //        @Param VarBinaryHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) > -1 ? 1 : 0;
@@ -422,7 +422,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) > -1 ? 1 : 0;
@@ -436,7 +436,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) > -1 ? 1 : 0;
@@ -450,7 +450,7 @@ public class ComparisonFunctions {
 //        @Param VarBinaryHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 1 ? 1 : 0;
@@ -464,7 +464,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 1 ? 1 : 0;
@@ -478,7 +478,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == 1? 1 : 0;
@@ -492,7 +492,7 @@ public class ComparisonFunctions {
 //        @Param VarBinaryHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) < 1 ? 1 : 0;
@@ -506,7 +506,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) < 1 ? 1 : 0;
@@ -520,7 +520,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) < 1? 1 : 0;
@@ -534,7 +534,7 @@ public class ComparisonFunctions {
 //        @Param VarBinaryHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == -1 ? 1 : 0;
@@ -548,7 +548,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == -1 ? 1 : 0;
@@ -562,7 +562,7 @@ public class ComparisonFunctions {
 //        @Param VarCharHolder right;
 //        @Output BitHolder out;
 //
-//        public void setup(RecordBatch b) {}
+//        public void setup() {}
 //
 //        public void eval() {
 //            out.value = org.apache.drill.exec.expr.fn.impl.VarHelpers.compare(left, right) == -1 ? 1 : 0;

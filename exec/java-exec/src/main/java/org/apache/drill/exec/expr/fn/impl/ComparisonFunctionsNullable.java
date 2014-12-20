@@ -24,7 +24,6 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.NullableBigIntHolder;
 import org.apache.drill.exec.expr.holders.NullableIntHolder;
-import org.apache.drill.exec.record.RecordBatch;
 
 public class ComparisonFunctionsNullable {
     static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ComparisonFunctionsNullable.class);
@@ -38,7 +37,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -56,7 +55,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -74,7 +73,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -92,7 +91,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -110,7 +109,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -128,7 +127,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -146,7 +145,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -164,7 +163,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -182,7 +181,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -200,7 +199,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -218,7 +217,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
@@ -237,7 +236,7 @@ public class ComparisonFunctionsNullable {
         @Param NullableBigIntHolder right;
         @Output BitHolder out;
 
-        public void setup(RecordBatch b) {}
+        public void setup() {}
 
         public void eval() {
             if (left.isSet  == 0 || right.isSet == 0) {
