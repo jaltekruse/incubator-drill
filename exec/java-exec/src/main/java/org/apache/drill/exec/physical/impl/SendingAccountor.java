@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -19,32 +19,81 @@ package org.apache.drill.exec.physical.impl;
 
 import java.util.concurrent.Semaphore;
 
+import org.slf4j.Logger;
+import static org.slf4j.LoggerFactory.getLogger;
+
 /**
- * Account for whether all messages sent have been completed. Necessary before finishing a task so we don't think
- * buffers are hanging when they will be released.
- *
- * TODO: Need to update to use long for number of pending messages.
+ * Accountor for tracking completion of sending of items (e.g., messages,
+ * batches).
+ * <p>
+ *   Counts start and completion of sending of items and supports waiting for
+ *   completion of all start items.
+ * </p>
+ * <p>
+ *   (It is necessary to wait for completion of sending message before
+ *   finishing a task so we don't think buffers are hanging (leaked) when they
+ *   will be released once sending completes.)
+ * </p>
+ * <p>
+ *   TODO: Need to update to use long for number of pending messages.
+ * <p>
  */
 public class SendingAccountor {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SendingAccountor.class);
+  static final Logger logger = getLogger(SendingAccountor.class);
 
-  private int batchesSent = 0;
-  private Semaphore wait = new Semaphore(0);
+  /** Number of items started (per {@link #increment} calls) but not yet
+      waited for (via {@link #waitForSendComplete}). */
+  private int unawaitedStartedItemsCount = 0;
 
+  /** Effectively, number of completed items not yet waited for.
+      The number of available permits is the number of completed items
+      (per {@link# decrement()} calls) minus the number of items already waited
+      for (via {@link #waitForSendComplete}). */
+  private Semaphore unwaitedCompletedItemsCount = new Semaphore(0);
+
+  // TODO:  REVIEW:  Decide whether to 1) make increment() synchronized or
+  // 2) leave it unsynchronized but document that it isn't thread safe (that it
+  // and waitForSendComplete should be called from the same thread).
+
+  // Note:  This needs to be synchronized because this and waitForSendComplete()
+  // both access the not-yet-waited-for started items count (or documentation
+  // must specify that this and waitForSendComplete() must not be called
+  // concurrently).  (The count can't just be volatile or atomic because is it
+  // both read and written by each method.)
+  /**
+   * Counts the start of sending of an item.
+   * <p> Thread-safe. </p>
+   */
   public synchronized void increment() {
-    batchesSent++;
+    unawaitedStartedItemsCount++;
   }
 
+  /**
+   * Counts the completion of sending of an item.
+   * <p> Thread-safe. </p>
+   */
   public void decrement() {
-    wait.release();
+    unwaitedCompletedItemsCount.release();
   }
 
+  /**
+   * Waits for completion of sending of any pending items.
+   * <p>
+   *   Waits for completion of sending (per {@link #decrement()} calls) of any
+   *   started items (per {@link #increment()} calls) that have not already
+   *   been waited for (via this method).  (Doesn't wait if no such items.)
+   * </p>
+   * <p> Thread-safe. </p>
+   */
   public synchronized void waitForSendComplete() {
     try {
-      wait.acquire(batchesSent);
-      batchesSent = 0;
+      unwaitedCompletedItemsCount.acquire(unawaitedStartedItemsCount);
+      unawaitedStartedItemsCount = 0;
     } catch (InterruptedException e) {
-      logger.warn("Failure while waiting for send complete.", e);
+      logger.warn("Interruption while waiting for send to complete.", e);
+      // TODO:  Review:  Shouldn't this call Thread.currentThread().interrupt()
+      // to re-set the interrupt bit ?
     }
   }
+
 }
