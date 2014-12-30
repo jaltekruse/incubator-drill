@@ -31,7 +31,7 @@ public class SendingAccountor {
   private int batchesSent = 0;
   private Semaphore wait = new Semaphore(0);
 
-  public void increment() {
+  public synchronized void increment() {
     batchesSent++;
   }
 
