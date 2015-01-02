@@ -95,7 +95,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output IntHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         <@compareBlock mode=type.mode left=left right=right output="out.value" nullCompare=true />
@@ -111,7 +111,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         
@@ -133,7 +133,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         
@@ -155,7 +155,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         
@@ -177,7 +177,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         
@@ -199,7 +199,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
           <#if type.mode == "var" >
@@ -218,7 +218,7 @@ public class GCompare${left}${right}{
       @Param ${right}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         
