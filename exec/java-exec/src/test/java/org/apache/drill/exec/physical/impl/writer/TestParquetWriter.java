@@ -17,8 +17,10 @@
  */
 package org.apache.drill.exec.physical.impl.writer;
 
+import static org.apache.drill.common.types.TypeProtos.MinorType.*;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -28,7 +30,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.common.types.DataMode;
+import org.apache.drill.common.types.MinorType;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.HyperVectorValueIterator;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -54,6 +62,32 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
+  // This is a list of all of the defined physical types according to the protobuf definition that
+  // have not been fully implemented or are not currently supported
+  private List<TypeProtos.MinorType> toSkip = Lists.newArrayList(
+      // LATE - cannot appear in execution
+      // MAP - cannot be casted/mocked
+      // List - cannot be casted/mocked
+      // Dense decimal types  - in the process of being deprecated
+      LATE, DECIMAL28DENSE, DECIMAL38DENSE,
+      MAP, LIST, MONEY, TIMETZ, TIMESTAMPTZ,
+      // FixedChar, Fixed16cahr, FixedBinary - not yet implimented
+      // NULL - not used currently
+      // GENERIC OBJECT - not used currently, see MAP
+      FIXEDCHAR, FIXED16CHAR, FIXEDBINARY, NULL, GENERIC_OBJECT,
+      // INTERVAL - not recognized as valid in parsing, this fails, cast( col_1 as inteval)
+      INTERVAL
+      // TODO - cast is resolving to a boolean for TINYINT
+      , TINYINT, SMALLINT
+      // TODO - DRILL-1687: these are not documented on the WIKI, they are not currently supported but have many incorrect generated
+      // functions written against them
+      , UINT1, UINT2, UINT4, UINT8
+      // TODO - fix mock data generation to be valid dates
+//      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME
+      // TODO - re-enable this, fix parquet writer for decimal, or the DecimalUtiltiy which is providing byte[] for the wrap data
+//      ,TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE
+  );
+
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
@@ -67,6 +101,83 @@ public class TestParquetWriter extends BaseTestQuery {
     String selection = "*";
     String inputTable = "cp.`employee.json`";
     runTestAndValidate(selection, selection, inputTable, "employee_parquet");
+  }
+
+  @Test
+  public void testAllDataTypes() throws Exception {
+    String query = "SELECT ";
+    List<String> columnsAndCasts = new ArrayList();
+    List<String> columns = new ArrayList();
+    for (TypeProtos.MinorType minorType : values()) {
+      if (toSkip.contains(minorType)) {
+        continue;
+      }
+      try {
+        String s = "cast( " + minorType.name().toUpperCase() + "_col" + " as " + Types.getNameOfMinorType(minorType);
+        // cast to varchar currently defaults to length 1 unless specified
+        // decimal types default to a scale of 0 if not specified
+        switch(minorType) {
+          case VARCHAR:
+          case VAR16CHAR:
+          case VARBINARY:
+            s += "(65000)";
+            break;
+          case DECIMAL18:
+            s += "(18,9)";
+            break;
+          case DECIMAL28SPARSE:
+            s += "(28, 14)";
+            break;
+          case DECIMAL38SPARSE:
+            s += "(38, 19)";
+        }
+        s += ") " + minorType.name().toUpperCase() + "_col";
+
+        columnsAndCasts.add(s);
+        columns.add(minorType.name().toUpperCase() + "_col");
+
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+    }
+    String inputFile = "cp.`/parquet/alltypes.json`";
+//    System.out.println(query);
+//    test("alter system set `store.json.all_text_mode` = true;");
+//    test("use dfs.tmp");
+//    deleteIfExists("drilltest/parquet_all_types");
+//    test("create table parquet_all_types as " + query );
+    runTestAndValidate(Joiner.on(",").join(columnsAndCasts), Joiner.on(",").join(columns), inputFile, "parquet_all_types");
+
+        testBuilder()
+            .unOrdered()
+            .sqlQuery("select cast(BIT_col as boolean) as a FROM cp.`/parquet/alltypes.json` limit 1")
+            .baselineColumns("a")
+            .baselineValues(false)
+            .build().run();
+
+  }
+
+  @Test
+  public void generateTestFileWithMockScan() throws Exception {
+
+    Path path = new Path("/tmp/drilltest/parquet/all_types");
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+
+    List<String> mockDataConfigs = new ArrayList();
+    for (TypeProtos.MinorType minorType : values()) {
+      if (toSkip.contains(minorType)) {
+        continue;
+      }
+      for (DataMode dm : DataMode.values()) {
+        mockDataConfigs.add(String.format("{name: \"%s\", type:\"%s\", mode:\"%s\"}", dm.name() + "_" + minorType.name() + "_col", minorType.name(), dm.name()));
+      }
+    }
+    String plan = getFile("parquet/generate_all_types_physical_plan.json");
+    plan = plan.replace("REPLACED_IN_TEST", Joiner.on(",").join(mockDataConfigs));
+    System.out.println(plan);
+    testPhysical(plan);
   }
 
   @Test
@@ -326,6 +437,9 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testParquetReadWebReturns() throws Exception {
     compareParquetReadersColumnar("wr_returning_customer_sk", "dfs.`/tmp/web_returns`");
+  }
+
+  public void deleteIfExists(String outputFile) throws IOException {
   }
 
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
