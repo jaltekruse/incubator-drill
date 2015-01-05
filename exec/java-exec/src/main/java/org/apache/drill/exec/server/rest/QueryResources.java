@@ -67,7 +67,14 @@ public class QueryResources {
   @Consumes(MediaType.APPLICATION_FORM_URLENCODED)
   @Produces(MediaType.TEXT_HTML)
   public Viewable submitQuery(@FormParam("query") String query, @FormParam("queryType") String queryType) throws Exception {
-    List<Map<String, Object>> result = submitQueryJSON(new QueryWrapper(query, queryType));
+    List<Map<String, Object>> result;
+
+    try {
+      result = submitQueryJSON(new QueryWrapper(query, queryType));
+    } catch(Exception | Error e) {
+      logger.error("Query from Web UI Failed", e);
+      return new Viewable("/rest/query/errorMessage.ftl", e);
+    }
 
     List<String> columnNames;
     if (result.isEmpty()) {
