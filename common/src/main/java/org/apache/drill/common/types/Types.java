@@ -18,6 +18,7 @@
 package org.apache.drill.common.types;
 
 import static org.apache.drill.common.types.TypeProtos.DataMode.REPEATED;
+import static org.apache.drill.common.types.TypeProtos.DataMode.REQUIRED;
 import static org.apache.drill.common.types.TypeProtos.MinorType.*;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
@@ -363,6 +364,12 @@ public class Types {
       return withMode(MinorType.DATE, mode);
     case "time":
       return withMode(MinorType.TIME, mode);
+    case "interval":
+      return withMode(MinorType.INTERVAL, mode);
+    case "intervalday":
+      return withMode(MinorType.INTERVALDAY, mode);
+    case "intervalyear":
+      return withMode(MinorType.INTERVALYEAR, mode);
     case "binary":
       return withMode(MinorType.VARBINARY, mode);
     case "json":
@@ -375,7 +382,7 @@ public class Types {
   public static String getNameOfMinorType(MinorType type) {
     switch (type) {
       case BIT:
-        return "bool";
+        return "boolean";
       case TINYINT:
         return "tinyint";
       case UINT1:
@@ -407,13 +414,19 @@ public class Types {
       case VARCHAR:
         return "varchar";
       case VAR16CHAR:
-        return "utf16";
+        return "varchar";
       case DATE:
         return "date";
       case TIME:
         return "time";
       case TIMESTAMP:
         return "timestamp";
+      case INTERVAL:
+        return "interval";
+      case INTERVALDAY:
+        return "intervalday";
+      case INTERVALYEAR:
+        return "intervalyear";
       case VARBINARY:
         return "binary";
       case LATE:

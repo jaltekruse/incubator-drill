@@ -28,7 +28,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.common.types.MinorType;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.HyperVectorValueIterator;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -67,6 +72,30 @@ public class TestParquetWriter extends BaseTestQuery {
     String selection = "*";
     String inputTable = "cp.`employee.json`";
     runTestAndValidate(selection, selection, inputTable, "employee_parquet");
+  }
+
+  @Test
+  public void testAllDataTypes() throws Exception {
+    String query = "SELECT ";
+    List<String> columnsAndCasts = new ArrayList();
+    // The late type cannot appear in execution, and the dense type is in the process of being deprecated
+    List<TypeProtos.MinorType> toSkip = Lists.newArrayList(TypeProtos.MinorType.LATE, TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE,
+        TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.TIMESTAMPTZ,
+        TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
+        TypeProtos.MinorType.INTERVAL);
+    for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
+      if (toSkip.contains(minorType)) {
+        continue;
+      }
+      try {
+      columnsAndCasts.add("cast( " + minorType.name().toUpperCase() + "_col" + " as " + Types.getNameOfMinorType(minorType) + ")" + minorType.name().toUpperCase() + "_col");
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+    }
+    query += Joiner.on(",").join(columnsAndCasts);
+    query += " FROM cp.`/parquet/alltypes.json`";
+    test(query);
   }
 
   @Test
