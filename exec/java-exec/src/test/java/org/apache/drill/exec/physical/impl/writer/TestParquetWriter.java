@@ -31,6 +31,7 @@ import java.util.Map;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.common.types.DataMode;
 import org.apache.drill.common.types.MinorType;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
@@ -59,6 +60,22 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
+  // LATE - cannot appear in execution
+  // MAP - cannot be casted/mocked
+  // List - cannot be casted/mocked
+  // Dense decimal types  - in the process of being deprecated
+  // FixedChar, Fixed16cahr, FixedBinary - not yet implimented
+  // NULL - not used currently
+  // GENERIC OBJECT - not used currently, see MAP
+  // INTERVAL - not recognized as valid in parsing, this fails, cast( col_1 as inteval)
+  private List<TypeProtos.MinorType> toSkip = Lists.newArrayList(TypeProtos.MinorType.LATE, TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE,
+      TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.TIMESTAMPTZ,
+      TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
+      TypeProtos.MinorType.INTERVAL
+      // TODO - re-enable this, fix mock data generation to be valid dates
+      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME
+  );
+
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
@@ -78,11 +95,6 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testAllDataTypes() throws Exception {
     String query = "SELECT ";
     List<String> columnsAndCasts = new ArrayList();
-    // The late type cannot appear in execution, and the dense type is in the process of being deprecated
-    List<TypeProtos.MinorType> toSkip = Lists.newArrayList(TypeProtos.MinorType.LATE, TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE,
-        TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.TIMESTAMPTZ,
-        TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
-        TypeProtos.MinorType.INTERVAL);
     for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
       if (toSkip.contains(minorType)) {
         continue;
@@ -96,6 +108,23 @@ public class TestParquetWriter extends BaseTestQuery {
     query += Joiner.on(",").join(columnsAndCasts);
     query += " FROM cp.`/parquet/alltypes.json`";
     test(query);
+  }
+
+  @Test
+  public void generateTestFileWithMockScan() throws Exception {
+    List<String> mockDataConfigs = new ArrayList();
+    for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
+      if (toSkip.contains(minorType)) {
+        continue;
+      }
+      for (DataMode dm : DataMode.values()) {
+        mockDataConfigs.add(String.format("{name: \"%s\", type:\"%s\", mode:\"%s\"}", dm.name() + "_" + minorType.name() + "_col", minorType.name(), dm.name()));
+      }
+    }
+    String plan = getFile("parquet/generate_all_types_physical_plan.json");
+    plan = plan.replace("REPLACED_IN_TEST", Joiner.on(",").join(mockDataConfigs));
+    System.out.println(plan);
+    testPhysical(plan);
   }
 
   @Test

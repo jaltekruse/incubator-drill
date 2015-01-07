@@ -52,7 +52,7 @@ public class VectorUtil {
         try{
           o = vw.getValueVector().getAccessor().getObject(row);
         }catch(Exception e){
-          throw new RuntimeException("failure while trying to read column " + vw.getField().getPath().toExpr());
+          throw new RuntimeException("failure while trying to read column " + vw.getField().getPath().toExpr(), e);
         }
         if (o == null) {
           //null value
