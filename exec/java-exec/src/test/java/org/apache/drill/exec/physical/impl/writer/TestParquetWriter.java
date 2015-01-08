@@ -73,7 +73,9 @@ public class TestParquetWriter extends BaseTestQuery {
       TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
       TypeProtos.MinorType.INTERVAL
       // TODO - re-enable this, fix mock data generation to be valid dates
-      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME
+      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME,
+      // TODO - re-enable this, fix parquet writer for decimal, or the DecimalUtiltiy which is providing byte[] for the wrap data
+      TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE
   );
 
   @BeforeClass
@@ -112,6 +114,12 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Test
   public void generateTestFileWithMockScan() throws Exception {
+
+    Path path = new Path("/tmp/drilltest/parquet/all_types");
+    if (fs.exists(path)) {
+      fs.delete(path, true);
+    }
+
     List<String> mockDataConfigs = new ArrayList();
     for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
       if (toSkip.contains(minorType)) {

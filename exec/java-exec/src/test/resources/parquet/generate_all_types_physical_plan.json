@@ -8,7 +8,7 @@
     },
     graph:[
         {
-            @id:1,
+            @id:3,
             pop:"mock-scan",
             url: "http://apache.org",
             entries:[
@@ -16,11 +16,75 @@
                     REPLACED_IN_TEST
                 ]}
             ]
-        },
-        {
-            @id: 4,
-            child: 1,
-            pop: "screen"
-        }
+        }, {
+             "pop" : "parquet-writer",
+             "@id" : 2,
+             "child" : 3,
+             "location" : "/tmp/drilltest/parquet/all_types",
+             "storage" : {
+               "type" : "file",
+               "enabled" : true,
+               "connection" : "file:///",
+               "workspaces" : {
+                 "root" : {
+                   "location" : "/",
+                   "writable" : false,
+                   "defaultInputFormat" : null
+                 },
+                 "tmp" : {
+                   "location" : "/tmp",
+                   "writable" : true,
+                   "defaultInputFormat" : null
+                 }
+               },
+               "formats" : {
+                 "psv" : {
+                   "type" : "text",
+                   "extensions" : [ "tbl" ],
+                   "delimiter" : "|"
+                 },
+                 "csv" : {
+                   "type" : "text",
+                   "extensions" : [ "csv" ],
+                   "delimiter" : ","
+                 },
+                 "tsv" : {
+                   "type" : "text",
+                   "extensions" : [ "tsv" ],
+                   "delimiter" : "\t"
+                 },
+                 "parquet" : {
+                   "type" : "parquet"
+                 },
+                 "json" : {
+                   "type" : "json"
+                 }
+               }
+             },
+             "initialAllocation" : 1000000,
+             "maxAllocation" : 10000000000,
+             "cost" : 2.0
+           }, {
+             "pop" : "project",
+             "@id" : 1,
+             "exprs" : [ {
+               "ref" : "`Fragment`",
+               "expr" : "`Fragment`"
+             }, {
+               "ref" : "`Number of records written`",
+               "expr" : "`Number of records written`"
+             } ],
+             "child" : 2,
+             "initialAllocation" : 1000000,
+             "maxAllocation" : 10000000000,
+             "cost" : 2.0
+           }, {
+             "pop" : "screen",
+             "@id" : 0,
+             "child" : 1,
+             "initialAllocation" : 1000000,
+             "maxAllocation" : 10000000000,
+             "cost" : 2.0
+           }
     ]
 }
