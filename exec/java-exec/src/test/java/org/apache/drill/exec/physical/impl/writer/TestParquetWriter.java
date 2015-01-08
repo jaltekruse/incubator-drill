@@ -109,7 +109,13 @@ public class TestParquetWriter extends BaseTestQuery {
     }
     query += Joiner.on(",").join(columnsAndCasts);
     query += " FROM cp.`/parquet/alltypes.json`";
-    test(query);
+//    test(query);
+    testBuilder()
+        .unOrdered()
+        .sqlQuery("select cast(BIT_col as boolean) as a FROM cp.`/parquet/alltypes.json` limit 1")
+        .baselineColumns("a")
+        .baselineValues(false)
+        .build().run();
   }
 
   @Test
