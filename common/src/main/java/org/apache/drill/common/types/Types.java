@@ -424,11 +424,11 @@ public class Types {
       case INTERVAL:
         return "interval";
       case INTERVALDAY:
-        return "intervalday";
+        return "interval day";
       case INTERVALYEAR:
-        return "intervalyear";
+        return "interval year";
       case VARBINARY:
-        return "binary";
+        return "varbinary";
       case LATE:
         throw new DrillRuntimeException("The late type should never appear in execution or an SQL query, so it does not have a name to refer to it.");
       default:

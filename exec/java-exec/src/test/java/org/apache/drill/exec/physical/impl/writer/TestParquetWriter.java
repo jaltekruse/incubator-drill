@@ -72,6 +72,8 @@ public class TestParquetWriter extends BaseTestQuery {
       TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.TIMESTAMPTZ,
       TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
       TypeProtos.MinorType.INTERVAL
+      // TODO - these are not documented on the WIKI, also cannot figure out how to cast to them, are they supported?
+      , TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,TypeProtos.MinorType.UINT8, TypeProtos.MinorType.SMALLINT
       // TODO - re-enable this, fix mock data generation to be valid dates
       , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME,
       // TODO - re-enable this, fix parquet writer for decimal, or the DecimalUtiltiy which is providing byte[] for the wrap data
@@ -109,13 +111,17 @@ public class TestParquetWriter extends BaseTestQuery {
     }
     query += Joiner.on(",").join(columnsAndCasts);
     query += " FROM cp.`/parquet/alltypes.json`";
+    System.out.println(query);
+    test("alter system set `store.json.all_text_mode` = true;");
 //    test(query);
+    test("select cast( TINYINT_col as tinyint)TINYINT_col FROM cp.`/parquet/alltypes.json` limit 1");
     testBuilder()
         .unOrdered()
         .sqlQuery("select cast(BIT_col as boolean) as a FROM cp.`/parquet/alltypes.json` limit 1")
         .baselineColumns("a")
         .baselineValues(false)
         .build().run();
+
   }
 
   @Test
