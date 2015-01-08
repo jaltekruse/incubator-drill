@@ -142,7 +142,7 @@ public class DrillTextRecordReader extends AbstractRecordReader {
     int batchSize = 0;
     try {
       int recordCount = 0;
-      while (batchSize < 200*1000 && reader.next(key, value)) {
+      while (recordCount < Character.MAX_VALUE && batchSize < 200*1000 && reader.next(key, value)) {
         int start;
         int end = -1;
         int p = 0;
