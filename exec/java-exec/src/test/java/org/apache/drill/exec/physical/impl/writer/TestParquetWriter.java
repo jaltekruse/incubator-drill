@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.physical.impl.writer;
 
+import static org.apache.drill.common.types.TypeProtos.MinorType.*;
 import static org.junit.Assert.assertEquals;
 
 import java.io.UnsupportedEncodingException;
@@ -68,16 +69,18 @@ public class TestParquetWriter extends BaseTestQuery {
   // NULL - not used currently
   // GENERIC OBJECT - not used currently, see MAP
   // INTERVAL - not recognized as valid in parsing, this fails, cast( col_1 as inteval)
-  private List<TypeProtos.MinorType> toSkip = Lists.newArrayList(TypeProtos.MinorType.LATE, TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE,
-      TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.TIMESTAMPTZ,
-      TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR, TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.NULL, TypeProtos.MinorType.GENERIC_OBJECT,
-      TypeProtos.MinorType.INTERVAL
+  private List<TypeProtos.MinorType> toSkip = Lists.newArrayList(LATE, DECIMAL28DENSE, DECIMAL38DENSE,
+      MAP, LIST, MONEY, TIMETZ, TIMESTAMPTZ,
+      FIXEDCHAR, FIXED16CHAR, FIXEDBINARY, NULL, GENERIC_OBJECT,
+      INTERVAL
+      // TODO - cast is resolving to a boolean for TINYINT
+      , TINYINT
       // TODO - these are not documented on the WIKI, also cannot figure out how to cast to them, are they supported?
-      , TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,TypeProtos.MinorType.UINT8, TypeProtos.MinorType.SMALLINT
+      , UINT1, UINT2, UINT4, UINT8, SMALLINT
       // TODO - re-enable this, fix mock data generation to be valid dates
-      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME,
+//      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME
       // TODO - re-enable this, fix parquet writer for decimal, or the DecimalUtiltiy which is providing byte[] for the wrap data
-      TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE
+//      ,TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE
   );
 
   @BeforeClass
@@ -99,12 +102,31 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testAllDataTypes() throws Exception {
     String query = "SELECT ";
     List<String> columnsAndCasts = new ArrayList();
-    for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
+    for (TypeProtos.MinorType minorType : values()) {
       if (toSkip.contains(minorType)) {
         continue;
       }
       try {
-      columnsAndCasts.add("cast( " + minorType.name().toUpperCase() + "_col" + " as " + Types.getNameOfMinorType(minorType) + ")" + minorType.name().toUpperCase() + "_col");
+        String s = "cast( " + minorType.name().toUpperCase() + "_col" + " as " + Types.getNameOfMinorType(minorType);
+        // cast to varchar currently defaults to length 1 unless specified
+        switch(minorType) {
+          case VARCHAR:
+          case VAR16CHAR:
+          case VARBINARY:
+            s += "(65000)";
+            break;
+          case DECIMAL18:
+            s += "(18,9)";
+            break;
+          case DECIMAL28SPARSE:
+            s += "(28, 14)";
+            break;
+          case DECIMAL38SPARSE:
+            s += "(38, 19)";
+        }
+        s += ") " + minorType.name().toUpperCase() + "_col";
+
+        columnsAndCasts.add(s);
       } catch (Exception ex) {
         ex.printStackTrace();
       }
@@ -113,8 +135,8 @@ public class TestParquetWriter extends BaseTestQuery {
     query += " FROM cp.`/parquet/alltypes.json`";
     System.out.println(query);
     test("alter system set `store.json.all_text_mode` = true;");
-//    test(query);
-    test("select cast( TINYINT_col as tinyint)TINYINT_col FROM cp.`/parquet/alltypes.json` limit 1");
+    test(query);
+//    test("select cast( TINYINT_col as tinyint)TINYINT_col FROM cp.`/parquet/alltypes.json` limit 1");
     testBuilder()
         .unOrdered()
         .sqlQuery("select cast(BIT_col as boolean) as a FROM cp.`/parquet/alltypes.json` limit 1")
@@ -133,7 +155,7 @@ public class TestParquetWriter extends BaseTestQuery {
     }
 
     List<String> mockDataConfigs = new ArrayList();
-    for (TypeProtos.MinorType minorType : TypeProtos.MinorType.values()) {
+    for (TypeProtos.MinorType minorType : values()) {
       if (toSkip.contains(minorType)) {
         continue;
       }
