@@ -93,11 +93,15 @@ public class DrillTestWrapper {
   // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
   // and translated into a map in the builder
   private List<Map> baselineRecords;
+  // Expected exception, used to test for expected behavior in the case of user error or misconfiguration
+  private Class expectedExceptionClass;
+  private String expectedExceptionMessage;
 
   public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
-                          boolean highPerformanceComparison, List<Map> baselineRecords) {
+                          boolean highPerformanceComparison, List<Map> baselineRecords,
+                          Class expectedExceptionClass, String expectedExceptionMessage) {
     this.testBuilder = testBuilder;
     this.allocator = allocator;
     this.query = query;
@@ -109,6 +113,8 @@ public class DrillTestWrapper {
     this.testOptionSettingQueries = testOptionSettingQueries;
     this.highPerformanceComparison = highPerformanceComparison;
     this.baselineRecords = baselineRecords;
+    this.expectedExceptionClass = expectedExceptionClass;
+    this.expectedExceptionMessage = expectedExceptionMessage;
   }
 
   public void run() throws Exception {
@@ -313,7 +319,13 @@ public class DrillTestWrapper {
     BatchSchema schema = null;
 
     BaseTestQuery.test(testOptionSettingQueries);
-    List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
+
+    List<QueryResultBatch> results;
+    try {
+      results = BaseTestQuery.testRunAndReturn(queryType, query);
+    } catch (Exception ex) {
+      if (expectedException != null && ex.getClass() == ex)
+    }
     // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 

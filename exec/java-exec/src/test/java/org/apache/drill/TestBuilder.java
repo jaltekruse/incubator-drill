@@ -77,6 +77,8 @@ public class TestBuilder {
   // that would affect the reading of baseline files (i.e. we need robust test for storage engines, project and casting that
   // use this interface) and then rely on the engine for the rest of the tests that will use the baseline queries.
   private List<Map> baselineRecords;
+  // an expected exception, for tests of expected behavior user or configuration error
+  private Class expectedExceptionClass;
 
   public TestBuilder(BufferAllocator allocator) {
     this.allocator = allocator;
@@ -87,7 +89,7 @@ public class TestBuilder {
                      boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
     this(allocator);
-    if (ordered == null) {
+    if (expectedExceptionClass != null || ordered == null) {
       throw new RuntimeException("Ordering not set, when using a baseline file or query you must explicitly call the ordered() or unOrdered() method on the " + this.getClass().getSimpleName());
     }
     this.query = query;
@@ -101,6 +103,7 @@ public class TestBuilder {
   }
 
   protected TestBuilder reset() {
+    expectedExceptionClass = null;
     query = "";
     ordered = null;
     approximateEquality = false;
@@ -116,7 +119,7 @@ public class TestBuilder {
       throw new Exception("High performance comparison only available for ordered checks, to enforce this restriction, ordered() must be called first.");
     }
     return new DrillTestWrapper(this, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
-        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineRecords);
+        getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineRecords, expectedExceptionClass);
   }
 
   public void go() throws Exception {

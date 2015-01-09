@@ -296,11 +296,13 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
       parquetFileWriter.end(extraMetaData);
     }
     // store is only assigned if we have relieved a schema, early cancellation
-    // can cause this to fail without a null check
+    // can cause this to fail without the null checks
     if (store != null) {
       store.close();
     }
-    ColumnChunkPageWriteStoreExposer.close(pageStore);
+    if (pageStore != null) {
+      ColumnChunkPageWriteStoreExposer.close(pageStore);
+    }
     if(oContext!=null){
       oContext.close();
     }

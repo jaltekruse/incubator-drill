@@ -19,6 +19,7 @@ package org.apache.drill.exec.physical.impl.writer;
 
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -114,6 +115,15 @@ public class TestParquetWriter extends BaseTestQuery {
   public void testTPCHReadWrite2() throws Exception {
     String inputTable = "cp.`tpch/customer.parquet`";
     runTestAndValidate("*", "*", inputTable, "customer_parquet");
+  }
+
+  @Test
+  public void testDrill_1967() throws Exception {
+    test("use dfs.tmp");
+    testBuilder()
+        .sqlQuery("create table parquet_early_cancel_1967 as select field_2 from cp.`store/json/schema_change_int_to_string.json`")
+        .expectsEmptyResultSet()
+        .build().run();
   }
 
   @Test
@@ -288,7 +298,7 @@ public class TestParquetWriter extends BaseTestQuery {
   @Ignore
   @Test
   public void test958_sql_all_columns() throws Exception {
-    compareParquetReadersHyperVector("*",  "dfs.`/tmp/store_sales`");
+    compareParquetReadersHyperVector("*", "dfs.`/tmp/store_sales`");
     compareParquetReadersHyperVector("ss_addr_sk, ss_hdemo_sk", "dfs.`/tmp/store_sales`");
     // TODO - Drill 1388 - this currently fails, but it is an issue with project, not the reader, pulled out the physical plan
     // removed the unneeded project in the plan and ran it against both readers, they outputs matched
@@ -328,12 +338,15 @@ public class TestParquetWriter extends BaseTestQuery {
     compareParquetReadersColumnar("wr_returning_customer_sk", "dfs.`/tmp/web_returns`");
   }
 
-  public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
-
+  public void deleteIfExists(String outputFile) throws IOException {
     Path path = new Path("/tmp/" + outputFile);
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
+  }
+
+  public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
+    deleteIfExists(outputFile);
 
     test("use dfs.tmp");
 //    test("ALTER SESSION SET `planner.add_producer_consumer` = false");
