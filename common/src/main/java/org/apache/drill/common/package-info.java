@@ -1,5 +1,5 @@
 /**
- * Logical (execution engine independent) element definitions.
+ * Logical (execution-engine-independent) element definitions.
  *
  * Drill has several representations of a query including SQL, logical plans and
  * physical plans. All of the logical constructs of Drill are separated from their
