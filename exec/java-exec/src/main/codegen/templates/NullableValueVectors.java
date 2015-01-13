@@ -473,6 +473,9 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
       for (int i = lastSet + 1; i < index; i++) {
         values.getMutator().setSafe(i, new byte[]{});
       }
+      if (index > bits.getValueCapacity()) {
+        bits.reAlloc();
+      }
       lastSet = index;
     }
 
