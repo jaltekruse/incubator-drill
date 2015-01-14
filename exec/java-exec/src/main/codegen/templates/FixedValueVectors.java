@@ -102,6 +102,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   public void reAlloc() {
     allocationValueCount *= 2;
     DrillBuf newBuf = allocator.buffer(allocationValueCount * ${type.width});
+    newBuf.setZero(allocationValueCount / 2, data.capacity() / 2);
     newBuf.setBytes(0, data, 0, data.capacity());
     data.release();
     data = newBuf;
