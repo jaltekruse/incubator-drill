@@ -100,6 +100,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
  * Allocate new buffer with double capacity, and copy data into the new buffer. Replace vector's buffer with new buffer, and release old one
  */
   public void reAlloc() {
+    logger.info("Realloc vector {}. [{}] -> [{}]", field, allocationValueCount * ${type.width}, allocationValueCount * 2 * ${type.width});
     allocationValueCount *= 2;
     DrillBuf newBuf = allocator.buffer(allocationValueCount * ${type.width});
     newBuf.setZero(allocationValueCount / 2, data.capacity() / 2);

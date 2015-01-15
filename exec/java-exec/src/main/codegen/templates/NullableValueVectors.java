@@ -54,7 +54,7 @@ public final class ${className} extends BaseValueVector implements <#if type.maj
 
   public ${className}(MaterializedField field, BufferAllocator allocator) {
     super(field, allocator);
-    this.bits = new UInt1Vector(null, allocator);
+    this.bits = new UInt1Vector(MaterializedField.create(field + "_bits", Types.required(MinorType.UINT1)), allocator);
     this.values = new ${minor.class}Vector(field, allocator);
     this.accessor = new Accessor();
     this.mutator = new Mutator();
