@@ -103,7 +103,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
     logger.info("Realloc vector {}. [{}] -> [{}]", field, allocationValueCount * ${type.width}, allocationValueCount * 2 * ${type.width});
     allocationValueCount *= 2;
     DrillBuf newBuf = allocator.buffer(allocationValueCount * ${type.width});
-    newBuf.setZero(allocationValueCount / 2, data.capacity() / 2);
+    newBuf.setZero(0, newBuf.capacity());
     newBuf.setBytes(0, data, 0, data.capacity());
     data.release();
     data = newBuf;
