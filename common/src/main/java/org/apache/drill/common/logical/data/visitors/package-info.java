@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Visitors for drill logical plan graphs.
+ * Visitors for Drill logical plan graphs.
  */
 package org.apache.drill.common.logical.data.visitors;

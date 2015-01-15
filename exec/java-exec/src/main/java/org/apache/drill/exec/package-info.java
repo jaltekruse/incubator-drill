@@ -16,9 +16,11 @@
  * limitations under the License.
  */
 /**
- * Drill execution engine, including: physical operators, runtime code generation, planning, RPC layer, Value Vector data structures.
+ * Drill execution engine, including: physical operators, runtime code
+ * generation, planning, RPC layer, Value Vector data structures.
  *
- * The Drill execution engine isa distributed query system, designed primarily for running SQL queries.
- * TODO - copy a general description od Drill from the website.
+ * The Drill execution engine is a distributed query system, designed primarily
+ * for running SQL queries. TODO - copy a general description of Drill from the
+ * website.
  */
 package org.apache.drill.exec;
