@@ -20,6 +20,7 @@ package org.apache.drill;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.exec.expr.fn.impl.gcast.CastVarCharInt;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -32,6 +33,12 @@ public class TestExampleQueries extends BaseTestQuery{
     test("create view nation_view as select * from cp.`tpch/nation.parquet`;");
     test("select * from dfs.tmp.`nation_view.view.drill`");
     test("drop view nation_view");
+  }
+
+  @Test
+  public void testTextInClasspathStorage2() throws Exception {
+    CastVarCharInt func = new CastVarCharInt();
+
   }
 
   @Test

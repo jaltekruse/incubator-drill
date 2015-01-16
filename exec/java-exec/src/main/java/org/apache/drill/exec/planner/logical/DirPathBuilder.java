@@ -20,9 +20,13 @@ package org.apache.drill.exec.planner.logical;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.FieldReference;
+import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.expr.fn.interpreter.InterpreterEvaluator;
 import org.apache.drill.exec.planner.PartitionDescriptor;
+import org.apache.drill.exec.planner.sql.handlers.ExplainHandler;
 import org.eigenbase.relopt.RelOptUtil;
 import org.eigenbase.reltype.RelDataTypeField;
 import org.eigenbase.rex.RexBuilder;
@@ -197,6 +201,16 @@ public class DirPathBuilder extends RexVisitorImpl <SchemaPath> {
             // dirNameList.set(suffixIndex, e2.getRootSegment().getPath());
             conjunctList.set(hierarychyIndex, currentConjunct);
             return e1;
+          } else {
+            LogicalExpression logEx;
+            try {
+              logEx = DrillOptiq.toDrill(new DrillParseContext(), inputRel, call.getOperands().get(1));
+            } catch (Exception ex) {
+              throw new RuntimeException("Unsupported filter on directory: " + call.toString());
+            }
+            // TODO - add check to see if the expression includes functions which require query context, such
+            // as the current time based functions
+            InterpreterEvaluator.evaluate();
           }
         }
       }
