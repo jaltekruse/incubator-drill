@@ -545,7 +545,7 @@ public class HashFunctions {
     @Param NullableBitHolder in;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
@@ -563,7 +563,7 @@ public class HashFunctions {
     @Param BitHolder in;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
     }
 
     public void eval() {
