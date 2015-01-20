@@ -134,7 +134,7 @@ public class InterpreterEvaluator {
 
         Preconditions.checkArgument(interpreter != null, "interpreter could not be null when use interpreted model to evaluate function " + holder.getRegisteredNames()[0]);
 
-        interpreter.doSetup(args, incoming);
+        interpreter.doSetup(args);
         ValueHolder out = interpreter.doEval(args);
 
         if (TypeHelper.getValueHolderType(out).getMode() == TypeProtos.DataMode.OPTIONAL &&
