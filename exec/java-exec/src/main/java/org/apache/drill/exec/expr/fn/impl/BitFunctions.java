@@ -93,7 +93,7 @@ public class BitFunctions {
     @Param BitHolder right;
     @Output IntHolder out;
 
-    public void setup(RecordBatch b) {}
+    public void setup() {}
 
     public void eval() {
       out.value = left.value < right.value ? -1 : ((left.value == right.value)? 0 : 1);
