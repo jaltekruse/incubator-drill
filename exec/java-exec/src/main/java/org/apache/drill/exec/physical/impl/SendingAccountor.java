@@ -51,11 +51,9 @@ public class SendingAccountor {
       for (via {@link #waitForSendComplete}). */
   private Semaphore unwaitedCompletedItemsCount = new Semaphore(0);
 
-  // Note:  This needs to be synchronized because this and waitForSendComplete()
-  // both access the not-yet-waited-for started items count (or documentation
-  // must specify that this and waitForSendComplete() must not be called
-  // concurrently).  (The count can't just be volatile or atomic because is it
-  // both read and written by each method.)
+  // Note:  This is synchronized because this and waitForSendComplete() both
+  // access the not-yet-waited-for started items count.  (The count can't just
+  // be volatile or atomic because is it both read and written by each method.)
   /**
    * Counts the start of sending of an item.
    * <p> Thread-safe. </p>
