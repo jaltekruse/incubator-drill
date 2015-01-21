@@ -275,6 +275,7 @@ public class HiveTestDataGenerator {
         "uniontypeType UNIONTYPE<int, double, array<string>>)"
     );
 
+    // DRILL-1970 unit tests assume there is at least a hive view in the database
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
 
