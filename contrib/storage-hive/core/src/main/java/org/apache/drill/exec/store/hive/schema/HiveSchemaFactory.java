@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.hive.schema;
 
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -211,6 +212,16 @@ public class HiveSchemaFactory implements SchemaFactory {
           return null;
         }
         tables = tableNameLoader.get(name);
+
+        // remove VIEWS from tables
+        for (Iterator<String> iterator = tables.iterator(); iterator.hasNext();) {
+          String tableName = iterator.next();
+          HiveReadEntry entry = getSelectionBaseOnName(name, tableName);
+          if (entry.getJdbcTableType() == TableType.VIEW) {
+            iterator.remove();
+          }
+        }
+
         HiveDatabaseSchema schema = new HiveDatabaseSchema(tables, this, name);
         if (name.equals("default")) {
           this.defaultSchema = schema;
