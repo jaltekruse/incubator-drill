@@ -31,7 +31,8 @@ public class TestInfoSchemaOnHiveStorage extends HiveTestBase {
         .baselineValues("hive.default", "readtest")
         .baselineValues("hive.default", "empty_table")
         .baselineValues("hive.default", "infoschematest")
-        .baselineValues("hive.default", "hiveview")
+        // DRILL-1970: do not include hive views with show tables (querying views is currently unsupported)
+//        .baselineValues("hive.default", "hiveview")
         .baselineValues("hive.default", "kv")
         .go();
 
