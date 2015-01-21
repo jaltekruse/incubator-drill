@@ -51,10 +51,6 @@ public class SendingAccountor {
       for (via {@link #waitForSendComplete}). */
   private Semaphore unwaitedCompletedItemsCount = new Semaphore(0);
 
-  // TODO:  REVIEW:  Decide whether to 1) make increment() synchronized or
-  // 2) leave it unsynchronized but document that it isn't thread safe (that it
-  // and waitForSendComplete should be called from the same thread).
-
   // Note:  This needs to be synchronized because this and waitForSendComplete()
   // both access the not-yet-waited-for started items count (or documentation
   // must specify that this and waitForSendComplete() must not be called
