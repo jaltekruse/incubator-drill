@@ -261,6 +261,7 @@ public class HiveTestDataGenerator {
     );
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
+    // DRILL-1970 unit tests assume there is at least a hive view in the database
     executeQuery("CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
 
     // create partitioned hive table to test partition pruning

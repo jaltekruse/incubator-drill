@@ -87,13 +87,13 @@ public class TestMetadataDDL extends JdbcTestQueryBase {
 
   @Test
   public void testShowTables() throws Exception{
+    // DRILL-1970: Hive views won't show up in 'SHOW TABLES' results
     JdbcAssert.withFull("hive_test.`default`")
         .sql("SHOW TABLES")
         .returnsSet(ImmutableSet.of(
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=readtest",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=empty_table",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=infoschematest",
-            "TABLE_SCHEMA=hive_test.default; TABLE_NAME=hiveview",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=kv",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=foodate",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=partition_pruning_test"
@@ -103,6 +103,7 @@ public class TestMetadataDDL extends JdbcTestQueryBase {
 
   @Test
   public void testShowTablesFromDb() throws Exception{
+    // DRILL-1970: Hive views won't show up in 'SHOW TABLES FROM INFORMATION_SCHEMA' results
     JdbcAssert.withNoDefaultSchema()
         .sql("SHOW TABLES FROM INFORMATION_SCHEMA")
         .returnsSet(ImmutableSet.of(
@@ -118,7 +119,6 @@ public class TestMetadataDDL extends JdbcTestQueryBase {
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=readtest",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=empty_table",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=infoschematest",
-            "TABLE_SCHEMA=hive_test.default; TABLE_NAME=hiveview",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=kv",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=foodate",
             "TABLE_SCHEMA=hive_test.default; TABLE_NAME=partition_pruning_test"));
