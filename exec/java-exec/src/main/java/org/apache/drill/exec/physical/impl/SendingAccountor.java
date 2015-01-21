@@ -84,9 +84,8 @@ public class SendingAccountor {
       unwaitedCompletedItemsCount.acquire(unawaitedStartedItemsCount);
       unawaitedStartedItemsCount = 0;
     } catch (InterruptedException e) {
-      logger.warn("Interruption while waiting for send to complete.", e);
-      // TODO:  Review:  Shouldn't this call Thread.currentThread().interrupt()
-      // to re-set the interrupt bit ?
+      logger.warn("Interruption while waiting for sending to complete.", e);
+      Thread.currentThread().interrupt();
     }
   }
 
