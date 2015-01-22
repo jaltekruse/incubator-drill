@@ -31,6 +31,7 @@ final class BitReader extends ColumnReader {
   BitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
             boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+    logger.info("Creating parquet bit column reader, reading file " +  parentReader.hadoopPath.toUri());
   }
 
   @Override
