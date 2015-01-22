@@ -983,7 +983,7 @@ public class StringFunctions{
     @Workspace Charset charset;
     @Inject DrillBuf buffer;
 
-    public void setup(RecordBatch incoming) {
+    public void setup() {
       charset = java.nio.charset.Charset.forName("UTF-8");
     }
 
