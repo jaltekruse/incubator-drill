@@ -29,10 +29,12 @@ import parquet.format.SchemaElement;
 import parquet.hadoop.metadata.ColumnChunkMetaData;
 
 final class BitReader extends ColumnReader {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BitReader.class);
 
   BitReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
             boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
     super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+    logger.info("Creating parquet bit column reader, reading file " +  parentReader.hadoopPath.toUri());
   }
 
   @Override
