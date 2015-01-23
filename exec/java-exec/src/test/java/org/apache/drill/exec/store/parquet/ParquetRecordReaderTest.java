@@ -81,7 +81,6 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
-@Ignore
 public class ParquetRecordReaderTest extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordReaderTest.class);
 
@@ -146,11 +145,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   public void testNullableAgg() throws Exception {
 
     List<QueryResultBatch> result = testSqlWithResults("select sum(a) as total_sum from dfs.`/tmp/parquet_with_nulls_should_sum_100000_nulls_first.parquet`");
-    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 2, result.size());
+    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 3, result.size());
     RecordBatchLoader loader = new RecordBatchLoader(bit.getContext()
         .getAllocator());
 
-    QueryResultBatch b = result.get(0);
+    QueryResultBatch b = result.get(1);
     loader.load(b.getHeader().getDef(), b.getData());
 
     VectorWrapper vw = loader.getValueAccessorById(
@@ -165,11 +164,11 @@ public class ParquetRecordReaderTest extends BaseTestQuery{
   @Test
   public void testNullableFilter() throws Exception {
     List<QueryResultBatch> result = testSqlWithResults("select count(wr_return_quantity) as row_count from dfs.`/tmp/web_returns` where wr_return_quantity = 1");
-    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 2, result.size());
+    assertEquals("Only expected one batch with data, and then the empty finishing batch.", 3, result.size());
     RecordBatchLoader loader = new RecordBatchLoader(bit.getContext()
         .getAllocator());
 
-    QueryResultBatch b = result.get(0);
+    QueryResultBatch b = result.get(1);
     loader.load(b.getHeader().getDef(), b.getData());
 
     VectorWrapper vw = loader.getValueAccessorById(
