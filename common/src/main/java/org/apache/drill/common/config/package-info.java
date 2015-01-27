@@ -19,7 +19,8 @@
  * Internal configuration state definitions.
  *
  * Overall structure allows for configurations to be nested within one another
- * to provide hierarchical organization of configuration options.
- *
+ * to provide hierarchical organization of configuration options. Drill configurations
+ * are stored in a JSON format in files named drill-override.conf available on the classpath.
+ * See the DrillConfig class for more information on config file loading.
  */
 package org.apache.drill.common.config;

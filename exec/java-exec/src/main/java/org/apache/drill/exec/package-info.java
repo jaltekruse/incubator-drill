@@ -20,7 +20,8 @@
  * generation, planning, RPC layer, Value Vector data structures.
  *
  * The Drill execution engine is a distributed query system, designed primarily
- * for running SQL queries. TODO - copy a general description of Drill from the
- * website.
+ * for running interactive SQL queries on Big Data. For more
+ * information see the project architecture page on the wiki @See 
+ * <a href="http://drill.apache.org/architecture/"> Drill Architecture</a>
  */
 package org.apache.drill.exec;

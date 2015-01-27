@@ -23,12 +23,8 @@ import org.apache.drill.common.config.CommonConstants;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.util.PathScanner;
 
-/**
- * Base class for drill format plugins.
- */
 public abstract class FormatPluginConfigBase implements FormatPluginConfig{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FormatPluginConfigBase.class);
-
 
   /**
    * Use reflection to scan for implementations of {@see FormatPlugin}.

@@ -22,9 +22,13 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 /**
  * Interface for defining a Drill format plugin.
  *
- * A format plugin can be used within a storage plugin to read a particular data format from
- * that storage system. An example would be a filesystem acting as the storage plugin and
- * various supported file formats being described by format plugins.
+ * Format plugins are contained within a storage plugins to describe particular
+ * data formats available in a given storage system. These formats are not
+ * necessarily tied to how the data is stored, such file formats like as CSV or
+ * protobuf in a filesystem. Some storage systems like databases may only have a
+ * single format where the data is actually stored. This interface enables
+ * flexibility for configuring the different data formats that will live under
+ * one storage system, which will be described in a {@see StoragePluginConfig}.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property="type")
 public interface FormatPluginConfig {

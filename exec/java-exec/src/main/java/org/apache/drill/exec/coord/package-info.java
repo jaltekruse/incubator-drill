@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 /**
- * Cluster coordination system based on Apache Zookeeper.
+ * Cluster coordination system based on Apache Zookeeper and Curator.
  *
  * Zookeeper is a cluster coordination service used by Drill to maintain cluster
  * membership information and some basic information about the cluster's state.
