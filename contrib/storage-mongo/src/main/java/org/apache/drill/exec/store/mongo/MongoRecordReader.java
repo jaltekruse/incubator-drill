@@ -59,6 +59,7 @@ import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
 import com.mongodb.MongoClientOptions;
+import com.mongodb.MongoCredential;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
 
@@ -80,6 +81,7 @@ public class MongoRecordReader extends AbstractRecordReader {
   private DBObject fields;
 
   private MongoClientOptions clientOptions;
+  private MongoCredential credential;
   private FragmentContext fragmentContext;
   private OperatorContext operatorContext;
 
@@ -87,8 +89,9 @@ public class MongoRecordReader extends AbstractRecordReader {
 
   public MongoRecordReader(MongoSubScan.MongoSubScanSpec subScanSpec,
       List<SchemaPath> projectedColumns, FragmentContext context,
-      MongoClientOptions clientOptions) {
+      MongoClientOptions clientOptions, MongoCredential credential) {
     this.clientOptions = clientOptions;
+    this.credential = credential;
     this.fields = new BasicDBObject();
     // exclude _id field, if not mentioned by user.
     this.fields.put(DrillMongoConstants.ID, Integer.valueOf(0));
@@ -151,7 +154,8 @@ public class MongoRecordReader extends AbstractRecordReader {
       for (String host : hosts) {
         addresses.add(new ServerAddress(host));
       }
-      MongoClient client = MongoCnxnManager.getClient(addresses, clientOptions);
+      MongoClient client = MongoCnxnManager.getClient(addresses, clientOptions,
+          credential);
       DB db = client.getDB(subScanSpec.getDbName());
       db.setReadPreference(ReadPreference.nearest());
       collection = db.getCollection(subScanSpec.getCollectionName());
