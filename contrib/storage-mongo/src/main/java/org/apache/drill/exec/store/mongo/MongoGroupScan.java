@@ -71,7 +71,6 @@ import com.mongodb.DBCollection;
 import com.mongodb.DBCursor;
 import com.mongodb.DBObject;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoClientURI;
 import com.mongodb.ReadPreference;
 import com.mongodb.ServerAddress;
 
@@ -130,7 +129,6 @@ public class MongoGroupScan extends AbstractGroupScan implements
     this.storagePluginConfig = storagePlugin.getConfig();
     this.scanSpec = scanSpec;
     this.columns = columns;
-    this.storagePluginConfig.getConnection();
     init();
   }
 
@@ -421,21 +419,23 @@ public class MongoGroupScan extends AbstractGroupScan implements
 
   @Override
   public ScanStats getScanStats() {
-    MongoClientURI clientURI = new MongoClientURI(
-        this.storagePluginConfig.getConnection());
     try {
-      List<String> hosts = clientURI.getHosts();
+      List<String> hosts = storagePluginConfig.getHosts();
       List<ServerAddress> addresses = Lists.newArrayList();
       for (String host : hosts) {
         addresses.add(new ServerAddress(host));
       }
       MongoClient client = MongoCnxnManager.getClient(addresses,
-          clientURI.getOptions(), clientURI.getCredentials());
+          storagePluginConfig.getMongoOptions(),
+          storagePluginConfig.getMongoCrendials());
       DB db = client.getDB(scanSpec.getDbName());
       db.setReadPreference(ReadPreference.nearest());
       DBCollection collection = db.getCollectionFromString(scanSpec
           .getCollectionName());
       CommandResult stats = collection.getStats();
+      if (stats.getErrorMessage() != null) {
+        throw stats.getException();
+      }
       return new ScanStats(GroupScanProperty.EXACT_ROW_COUNT,
           stats.getLong(COUNT), 1, (float) stats.getDouble(SIZE));
     } catch (Exception e) {
