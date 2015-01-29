@@ -17,11 +17,11 @@
  ******************************************************************************/
 package org.apache.drill.exec.ops;
 
-public class QueryDateTime {
+public class QueryDateTimeInfo {
   private final long queryStartTime;
   private final int rootFragmentTimeZone;
 
-  public QueryDateTime(long queryStartTime, int rootFragmentTimeZone) {
+  public QueryDateTimeInfo(long queryStartTime, int rootFragmentTimeZone) {
     this.queryStartTime = queryStartTime;
     this.rootFragmentTimeZone = rootFragmentTimeZone;
   }
