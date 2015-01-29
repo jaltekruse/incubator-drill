@@ -70,7 +70,7 @@ public class FragmentContext implements Closeable {
   private final BufferAllocator allocator;
   private final PlanFragment fragment;
   private List<Thread> daemonThreads = Lists.newLinkedList();
-  private QueryDateTime queryDateTime;
+  private QueryDateTimeInfo queryDateTimeInfo;
   private IncomingBuffers buffers;
   private final OptionManager fragmentOptions;
   private final UserCredentials credentials;
@@ -92,7 +92,7 @@ public class FragmentContext implements Closeable {
     this.connection = connection;
     this.fragment = fragment;
     this.funcRegistry = funcRegistry;
-    this.queryDateTime = new QueryDateTime(fragment.getQueryStartTime(), fragment.getTimeZone());
+    this.queryDateTimeInfo = new QueryDateTimeInfo(fragment.getQueryStartTime(), fragment.getTimeZone());
     this.credentials = fragment.getCredentials();
     logger.debug("Getting initial memory allocation of {}", fragment.getMemInitial());
     logger.debug("Fragment max allocation: {}", fragment.getMemMax());
@@ -177,12 +177,8 @@ public class FragmentContext implements Closeable {
     return this.stats;
   }
 
-  public long getQueryStartTime() {
-    return this.queryDateTime.getQueryStartTime();
-  }
-
-  public int getRootFragmentTimeZone() {
-    return this.queryDateTime.getRootFragmentTimeZone();
+  public QueryDateTimeInfo getQueryDateTimeInfo(){
+    return this.queryDateTimeInfo;
   }
 
   public DrillbitEndpoint getForemanEndpoint() {return fragment.getForeman();}

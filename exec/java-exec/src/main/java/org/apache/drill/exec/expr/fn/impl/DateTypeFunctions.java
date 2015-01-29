@@ -37,7 +37,7 @@ import org.apache.drill.exec.expr.holders.TimeHolder;
 import org.apache.drill.exec.expr.holders.TimeStampHolder;
 import org.apache.drill.exec.expr.holders.TimeStampTZHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.apache.drill.exec.ops.QueryDateTime;
+import org.apache.drill.exec.ops.QueryDateTimeInfo;
 
 public class DateTypeFunctions {
 
@@ -214,7 +214,7 @@ public class DateTypeFunctions {
     public static class CurrentDate implements DrillSimpleFunc {
         @Workspace long queryStartDate;
         @Output DateHolder out;
-        @Inject QueryDateTime dateTime;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
 
@@ -235,7 +235,7 @@ public class DateTypeFunctions {
         @Workspace long queryStartDate;
         @Workspace int timezoneIndex;
         @Output TimeStampTZHolder out;
-        @Inject QueryDateTime dateTime;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
 
@@ -308,7 +308,7 @@ public class DateTypeFunctions {
     public static class CurrentTime implements DrillSimpleFunc {
         @Workspace int queryStartTime;
         @Output TimeHolder out;
-        @Inject QueryDateTime dateTime;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
 
@@ -402,7 +402,7 @@ public class DateTypeFunctions {
         @Param TimeStampHolder right;
         @Workspace long queryStartDate;
         @Output IntervalHolder out;
-        @Inject QueryDateTime dateTime;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
             int timeZoneIndex = dateTime.getRootFragmentTimeZone();
@@ -445,7 +445,7 @@ public class DateTypeFunctions {
         @Param DateHolder right;
         @Workspace long queryStartDate;
         @Output IntervalHolder out;
-        @Inject QueryDateTime dateTime;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
             int timeZoneIndex = dateTime.getRootFragmentTimeZone();

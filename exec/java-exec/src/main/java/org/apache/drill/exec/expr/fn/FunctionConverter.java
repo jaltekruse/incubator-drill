@@ -33,7 +33,6 @@ import javax.inject.Inject;
 
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.util.FileUtils;
-import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.DrillFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
@@ -44,7 +43,7 @@ import org.apache.drill.exec.expr.fn.DrillFuncHolder.ValueReference;
 import org.apache.drill.exec.expr.fn.DrillFuncHolder.WorkspaceReference;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterGenerator;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.ops.QueryDateTime;
+import org.apache.drill.exec.ops.QueryDateTimeInfo;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 import org.codehaus.commons.compiler.CompileException;
@@ -192,7 +191,7 @@ public class FunctionConverter {
       } else {
         // workspace work.
         boolean isInject = inject != null;
-        Class[] injectableTypes = { DrillBuf.class};
+        Class[] injectableTypes = { DrillBuf.class, QueryDateTimeInfo.class};
         if (isInject && !Arrays.asList(injectableTypes).contains(field.getType())) {
           return failure(String.format("A %s cannot be injected into a %s, available injectable classes are: .",
               field.getType(), DrillFunc.class.getSimpleName(), Joiner.on(",").join(injectableTypes)), clazz, field);
