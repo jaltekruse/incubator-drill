@@ -40,6 +40,9 @@ import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
+import org.reflections.Reflections;
+
+import java.lang.reflect.Field;
 
 
 public class InterpreterEvaluator {
@@ -63,7 +66,7 @@ public class InterpreterEvaluator {
 
   public static void evaluate(int recordCount, BufferAllocator allocator, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
 
-    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor();
+    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(allocator);
     InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, allocator);
 
     expr.accept(initVisitor, incoming);
@@ -78,6 +81,12 @@ public class InterpreterEvaluator {
 
   public static class InterpreterInitVisitor extends AbstractExprVisitor<LogicalExpression, RecordBatch, RuntimeException> {
 
+    private BufferAllocator allocator;
+
+    protected InterpreterInitVisitor(BufferAllocator allocator) {
+      super();
+      this.allocator = allocator;
+    }
     @Override
     public LogicalExpression visitFunctionHolderExpression(FunctionHolderExpression holderExpr, RecordBatch incoming) {
       if (! (holderExpr.getHolder() instanceof DrillSimpleFuncHolder)) {
@@ -92,6 +101,13 @@ public class InterpreterEvaluator {
 
       try {
         DrillSimpleFuncInterpreter interpreter = holder.createInterpreter();
+        Field[] fields = interpreter.getClass().getDeclaredFields();
+        for (Field f : fields) {
+          if (f.getType().equals(DrillBuf.class)) {
+            f.setAccessible(true);
+            f.set(interpreter, allocator.buffer(INITIAL_ALLOCATION));
+          }
+        }
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
 
