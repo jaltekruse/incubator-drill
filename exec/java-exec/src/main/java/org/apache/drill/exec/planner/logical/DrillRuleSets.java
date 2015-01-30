@@ -23,6 +23,7 @@ import java.util.List;
 
 import net.hydromatic.optiq.tools.RuleSet;
 
+import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.planner.physical.ConvertCountToDirectScan;
 import org.apache.drill.exec.planner.physical.FilterPrule;
@@ -109,6 +110,8 @@ public class DrillRuleSets {
 
       ////////////////////////////////
       DrillScanRule.INSTANCE,
+      // TODO - possibly re-enable, should be handled by the new constant folding rule
+      // which is a superset of this
       DrillFilterRule.INSTANCE,
       DrillProjectRule.INSTANCE,
       DrillWindowRule.INSTANCE,
@@ -118,6 +121,11 @@ public class DrillRuleSets {
       DrillSortRule.INSTANCE,
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
+      // Add rule for constant expression folding, cannot be added in the static basic rule
+      // set, because it needs a direct reference to the FunctionImplementationRegistry
+      // TODO - figure out if I can get access to the memory management here
+      // TODO - review null passed as FelOptFactory here as well as in RewriteProjectToFlatten
+      new DrillFilterConstantExprReduxRule(context.getFunctionRegistry(), new TopLevelAllocator()),
       DrillReduceAggregatesRule.INSTANCE
       ));
     }
