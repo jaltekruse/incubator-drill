@@ -29,4 +29,10 @@ public class TestConstantFolding extends BaseTestQuery {
     test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = concat('little','file')");
 //    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = 'littlefile'");
   }
+
+
+  @Test
+  public void testConstExprFolding_ToLimit0() throws Exception {
+    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where 1=0");
+  }
 }
