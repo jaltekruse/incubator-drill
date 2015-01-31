@@ -25,7 +25,10 @@ import org.eigenbase.rel.EmptyRel;
 import org.eigenbase.rel.FilterRel;
 import org.eigenbase.rel.JoinRelBase;
 import org.eigenbase.rel.ProjectRel;
+import org.eigenbase.rel.RelCollation;
+import org.eigenbase.rel.RelCollationImpl;
 import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.SortRel;
 import org.eigenbase.rel.rules.ReduceExpressionsRule;
 import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.relopt.RelOptRule;
@@ -52,23 +55,24 @@ import org.eigenbase.sql.SqlKind;
 import org.eigenbase.sql.SqlOperator;
 import org.eigenbase.sql.fun.SqlRowOperator;
 import org.eigenbase.sql.fun.SqlStdOperatorTable;
+import org.eigenbase.sql.type.BasicSqlType;
+import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.Stacks;
 import org.eigenbase.util.Util;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * This class uses a copy-paste of a class defined in optiq. There are two
- * reasons why we cannot extend it. I was hoping to only copy the annonymous
- * inner class FILTER_INSTANCE and make a few modifications, but unfortunately
- * the constructor is private, which requires copying the whole class or
- * using the rules as is. As we do nut support EmptyRel, we need to fork it
- * for now to replace this with a limit 0.
+ * This class is nearly a copy-paste of the ReduceExpressionsRule class defined
+ * in optiq. There are two reasons why we cannot extend it. I was hoping to
+ * only copy the annonymous inner class FILTER_INSTANCE and make a few
+ * modifications, but unfortunately the constructor is private, which requires
+ * copying the whole class or using the rules as is. As we do nut support
+ * EmptyRel, we need to fork it for now to replace this with a limit 0.
  */
-//public class OptiqForkedConstantReduxRule extends ReduceExpressionsRule {
-
 
 /**
  * Collection of planner rules that apply various simplifying transformations on
@@ -127,10 +131,13 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           } else if (
               (newConditionExp instanceof RexLiteral)
                   || RexUtil.isNullLiteral(newConditionExp, true)) {
+            // THIS HAS BEEN MODIFIED FOR DRILL TO INSERT A LIMIT 0 WHERE A FILTER IS ALWAYS FALSE
             call.transformTo(
-                new EmptyRel(
-                    filter.getCluster(),
-                    filter.getRowType()));
+                new SortRel(filter.getCluster(), filter.getTraitSet(),
+                    filter.getChild(),
+                    RelCollationImpl.EMPTY,
+                    filter.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)),
+                    filter.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0))));
           } else if (reduced) {
             call.transformTo(
                 CalcRel.createFilter(
@@ -377,6 +384,13 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
     }
 
     // Compute the values they reduce to.
+    /***************************************
+     * TODO - figure out how to get this plugged in without creating a new instance here
+     * the planner referred in the commented out line was a volcano planner created by a chain
+     * of optiq calls. The hep planner we keep a reference to in SqlHandlerConfig was not the proper
+     * one to set the executor of to make it appear here. Wasn't sure how to get them stitched together,
+     * so this is the workaround for now.
+     */
     RelOptPlanner.Executor executor =
         new DrillFilterConstantExprReduxRule.DrillConstExecutor(funcImplReg, new TopLevelAllocator());
 //        rel.getCluster().getPlanner().getExecutor();

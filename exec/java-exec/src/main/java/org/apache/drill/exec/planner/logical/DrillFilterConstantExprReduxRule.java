@@ -27,6 +27,7 @@ import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterEvaluator;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.vector.BitVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.rel.FilterRel;
@@ -103,7 +104,6 @@ public class DrillFilterConstantExprReduxRule extends RelOptRule {
           logger.error("Failure while materializing expression [{}].  Errors: {}", newCall, errors);
         }
         // TODO - remove this restriction by addressing the TODOs below
-        if (materializedExpr.getMajorType().getMinorType() == TypeProtos.MinorType.VARCHAR) {
           final MaterializedField outputField = MaterializedField.create("outCol", materializedExpr.getMajorType());
           ValueVector vector = TypeHelper.getNewVector(outputField, allocator);
           vector.allocateNewSafe();
@@ -111,11 +111,16 @@ public class DrillFilterConstantExprReduxRule extends RelOptRule {
 
           // TODO - add a switch here to translate expression results to the appropriate literal type
           try {
-            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
+            switch(materializedExpr.getMajorType().getMinorType()) {
+              case VARCHAR:
+                reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
+                break;
+              case BIT:
+                reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
+            }
           } catch (UnsupportedEncodingException e) {
             throw new RuntimeException("Invalid string returned from constant expression evaluation");
           }
-        }
       }
     }
   }
