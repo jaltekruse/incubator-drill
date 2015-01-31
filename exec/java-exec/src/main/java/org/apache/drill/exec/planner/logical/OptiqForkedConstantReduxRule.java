@@ -17,6 +17,9 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.eigenbase.rel.CalcRel;
 import org.eigenbase.rel.EmptyRel;
 import org.eigenbase.rel.FilterRel;
@@ -82,6 +85,9 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
 
   //~ Static fields/initializers ---------------------------------------------
 
+  static FunctionImplementationRegistry funcImplReg;
+  BufferAllocator allocator;
+
   /**
    * Regular expression that matches the description of all instances of this
    * rule and {@link ReduceValuesRule} also. Use
@@ -95,9 +101,9 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
    * condition is a constant, the filter is removed (if TRUE) or replaced with
    * {@link EmptyRel} (if FALSE or NULL).
    */
-  public static final OptiqForkedConstantReduxRule FILTER_INSTANCE =
-      new OptiqForkedConstantReduxRule(FilterRel.class,
-          "ReduceExpressionsRule[Filter]") {
+  public static final OptiqForkedConstantReduxRule createFilterInstance(FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
+      return new OptiqForkedConstantReduxRule(FilterRel.class,
+          "ReduceExpressionsRule[Filter]", funcImplReg, allocator) {
         public void onMatch(RelOptRuleCall call) {
           FilterRel filter = call.rel(0);
           List<RexNode> expList = new ArrayList<RexNode>(filter.getChildExps());
@@ -188,10 +194,11 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule PROJECT_INSTANCE =
-      new OptiqForkedConstantReduxRule(ProjectRel.class,
-          "ReduceExpressionsRule[Project]") {
+  public static final OptiqForkedConstantReduxRule createProjectInstance(FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
+      return new OptiqForkedConstantReduxRule(ProjectRel.class,
+          "ReduceExpressionsRule[Project]", funcImplReg, allocator) {
         public void onMatch(RelOptRuleCall call) {
           ProjectRel project = call.rel(0);
           List<RexNode> expList =
@@ -211,10 +218,11 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule JOIN_INSTANCE =
-      new OptiqForkedConstantReduxRule(JoinRelBase.class,
-          "ReduceExpressionsRule[Join]") {
+  public static final OptiqForkedConstantReduxRule createJoinInstance(FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
+      return new OptiqForkedConstantReduxRule(JoinRelBase.class,
+          "ReduceExpressionsRule[Join]", funcImplReg, allocator) {
         public void onMatch(RelOptRuleCall call) {
           final JoinRelBase join = call.rel(0);
           List<RexNode> expList = new ArrayList<RexNode>(join.getChildExps());
@@ -233,9 +241,12 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule CALC_INSTANCE =
-      new OptiqForkedConstantReduxRule(CalcRel.class, "ReduceExpressionsRule[Calc]") {
+
+  public static final OptiqForkedConstantReduxRule createCalcInstance(FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
+      return new OptiqForkedConstantReduxRule(CalcRel.class, "ReduceExpressionsRule[Calc]",
+          funcImplReg, allocator) {
         public void onMatch(RelOptRuleCall call) {
           CalcRel calc = call.rel(0);
           RexProgram program = calc.getProgram();
@@ -303,6 +314,7 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
   //~ Constructors -----------------------------------------------------------
 
@@ -311,8 +323,10 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
    *
    * @param clazz class of rels to which this rule should apply
    */
-  private OptiqForkedConstantReduxRule(Class<? extends RelNode> clazz, String desc) {
+  private OptiqForkedConstantReduxRule(Class<? extends RelNode> clazz, String desc, FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
     super(operand(clazz, any()), desc);
+    this.funcImplReg = funcImplReg;
+    this.allocator = allocator;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -364,7 +378,8 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
 
     // Compute the values they reduce to.
     RelOptPlanner.Executor executor =
-        rel.getCluster().getPlanner().getExecutor();
+        new DrillFilterConstantExprReduxRule.DrillConstExecutor(funcImplReg, new TopLevelAllocator());
+//        rel.getCluster().getPlanner().getExecutor();
     List<RexNode> reducedValues = new ArrayList<RexNode>();
     executor.reduce(rexBuilder, constExps, reducedValues);
 

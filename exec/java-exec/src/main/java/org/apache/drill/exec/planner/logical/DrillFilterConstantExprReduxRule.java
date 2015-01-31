@@ -32,6 +32,7 @@ import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.rel.FilterRel;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.Convention;
+import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.relopt.RelOptRule;
 import org.eigenbase.relopt.RelOptRuleCall;
 import org.eigenbase.reltype.RelDataTypeFactory;
@@ -47,6 +48,7 @@ import org.eigenbase.util.NlsString;
 
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Rule that converts a {@link org.eigenbase.rel.FilterRel} to a Drill "filter" operation.
@@ -80,6 +82,43 @@ public class DrillFilterConstantExprReduxRule extends RelOptRule {
     call.transformTo(new DrillFilterRel(filter.getCluster(), convertedInput.getTraitSet(), convertedInput,convertedFilterExpr));
   }
 
+  public static class DrillConstExecutor implements RelOptPlanner.Executor {
+
+    FunctionImplementationRegistry funcImplReg;
+    BufferAllocator allocator;
+
+    public DrillConstExecutor (FunctionImplementationRegistry funcImplReg, BufferAllocator allocator) {
+      this.funcImplReg = funcImplReg;
+      this.allocator = allocator;
+    }
+
+    @Override
+    public void reduce(RexBuilder rexBuilder, List<RexNode> constExps, List<RexNode> reducedValues) {
+      for (RexNode newCall : constExps) {
+        LogicalExpression logEx = DrillOptiq.toDrill(new DrillParseContext(), null /* input rel */, newCall);
+
+        ErrorCollectorImpl errors = new ErrorCollectorImpl();
+        LogicalExpression materializedExpr = ExpressionTreeMaterializer.materialize(logEx, null, errors, funcImplReg);
+        if (errors.getErrorCount() != 0) {
+          logger.error("Failure while materializing expression [{}].  Errors: {}", newCall, errors);
+        }
+        // TODO - remove this restriction by addressing the TODOs below
+        if (materializedExpr.getMajorType().getMinorType() == TypeProtos.MinorType.VARCHAR) {
+          final MaterializedField outputField = MaterializedField.create("outCol", materializedExpr.getMajorType());
+          ValueVector vector = TypeHelper.getNewVector(outputField, allocator);
+          vector.allocateNewSafe();
+          InterpreterEvaluator.evaluateConstantExpr(vector, allocator, materializedExpr);
+
+          // TODO - add a switch here to translate expression results to the appropriate literal type
+          try {
+            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
+          } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException("Invalid string returned from constant expression evaluation");
+          }
+        }
+      }
+    }
+  }
 
   private class ConstantExprEvaluator extends RexShuttle {
 
@@ -88,8 +127,6 @@ public class DrillFilterConstantExprReduxRule extends RelOptRule {
     // return true if the immediate children are literatls
     public RexNode visitCall(final RexCall call) {
 
-      // TODO - see if there is a way to get a particular holder from a type and data mode
-      // TODO - add a switch here to translate expression results to the appropriate literal type
       RexBuilder rexBuilder = new RexBuilder(new SqlTypeFactoryImpl());
 
       boolean exprIsConst = true;
