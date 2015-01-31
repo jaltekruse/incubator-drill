@@ -17,6 +17,9 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.eigenbase.rel.CalcRel;
 import org.eigenbase.rel.EmptyRel;
 import org.eigenbase.rel.FilterRel;
