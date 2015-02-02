@@ -56,7 +56,7 @@ import com.google.common.collect.Maps;
 /**
  * Contextual objects required for execution of a particular fragment.
  */
-public class FragmentContext implements Closeable {
+public class FragmentContext implements AllocatorOwningContext, Closeable {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
 
 

@@ -28,6 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.ops.AllocatorOwningContext;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 import org.apache.drill.exec.proto.helper.QueryIdHelper;
@@ -59,16 +60,16 @@ public class Accountor {
 
   private final boolean applyFragmentLimit;
 
-  private final FragmentContext fragmentContext;
+  private final AllocatorOwningContext allocatorOwningContext;
   long fragmentLimit;
 
   private long peakMemoryAllocation = 0;
 
   // The top level Allocator has an accountor that keeps track of all the FragmentContexts currently executing.
   // This enables the top level accountor to calculate a new fragment limit whenever necessary.
-  private final List<FragmentContext> fragmentContexts;
+  private final List<AllocatorOwningContext> allocatorOwningContexts;
 
-  public Accountor(DrillConfig config, boolean errorOnLeak, FragmentContext context, Accountor parent, long max, long preAllocated, boolean applyFragLimit) {
+  public Accountor(DrillConfig config, boolean errorOnLeak, AllocatorOwningContext context, Accountor parent, long max, long preAllocated, boolean applyFragLimit) {
     // TODO: fix preallocation stuff
     this.errorOnLeak = errorOnLeak;
     AtomicRemainder parentRemainder = parent != null ? parent.remainder : null;
@@ -92,7 +93,7 @@ public class Accountor {
 
     this.remainder = new AtomicRemainder(errorOnLeak, parentRemainder, max, preAllocated, applyFragmentLimit);
     this.total = max;
-    this.fragmentContext=context;
+    this.allocatorOwningContext =context;
     this.handle = (context!=null) ? context.getHandle() : null;
     this.fragmentStr= (handle!=null) ? ( handle.getMajorFragmentId()+":"+handle.getMinorFragmentId() ) : "0:0";
     this.fragmentLimit=this.total; // Allow as much as possible to start with;
@@ -101,10 +102,10 @@ public class Accountor {
     } else {
       buffers = null;
     }
-    this.fragmentContexts = new ArrayList<FragmentContext>();
+    this.allocatorOwningContexts = new ArrayList<AllocatorOwningContext>();
     if(parent!=null && parent.parent==null){ // Only add the fragment context to the fragment level accountor
       synchronized(this) {
-        addFragmentContext(this.fragmentContext);
+        addFragmentContext(this.allocatorOwningContext);
       }
     }
   }
@@ -196,7 +197,7 @@ public class Accountor {
     }
   }
 
-  private void addFragmentContext(FragmentContext c) {
+  private void addFragmentContext(AllocatorOwningContext c) {
     if (parent != null){
       parent.addFragmentContext(c);
     }else {
@@ -220,12 +221,12 @@ public class Accountor {
         logger.trace("Fragment " + fragStr + " added to root accountor.\n"+sb.toString());
       }
       synchronized(this) {
-        fragmentContexts.add(c);
+        allocatorOwningContexts.add(c);
       }
     }
   }
 
-  private void removeFragmentContext(FragmentContext c) {
+  private void removeFragmentContext(AllocatorOwningContext c) {
     if (parent != null){
       if (parent.parent==null){
         // only fragment level allocators will have the fragment context saved
@@ -245,7 +246,7 @@ public class Accountor {
         logger.trace("Fragment " + fragStr + " removed from root accountor");
       }
       synchronized(this) {
-        fragmentContexts.remove(c);
+        allocatorOwningContexts.remove(c);
       }
     }
   }
@@ -265,9 +266,9 @@ public class Accountor {
       //If the already running fragments end quickly, their limits will be assigned back to the remaining fragments
       //quickly. If they are long running, then we want to favour them with larger limits anyway.
       synchronized (this) {
-        int nFragments=fragmentContexts.size();
+        int nFragments= allocatorOwningContexts.size();
         long allocatedMemory=0;
-        for(FragmentContext fragment: fragmentContexts){
+        for(AllocatorOwningContext fragment: allocatorOwningContexts){
           BufferAllocator a = fragment.getAllocator();
           if(a!=null) {
             allocatedMemory += fragment.getAllocator().getAllocatedMemory();
@@ -283,7 +284,7 @@ public class Accountor {
         }
         if(nFragments>0) {
           long rem = (total - allocatedMemory) / nFragments;
-          for (FragmentContext fragment : fragmentContexts) {
+          for (AllocatorOwningContext fragment : allocatorOwningContexts) {
             fragment.setFragmentLimit((long) (rem * fragmentMemOvercommitFactor));
           }
         }
@@ -295,7 +296,7 @@ public class Accountor {
           sb.append(" Fragment Limit: ");
           sb.append(this.getFragmentLimit());
           logger.trace(sb.toString());
-          for(FragmentContext fragment: fragmentContexts){
+          for(AllocatorOwningContext fragment: allocatorOwningContexts){
             sb= new StringBuffer();
             if (handle != null) {
               sb.append("[");
@@ -325,7 +326,7 @@ public class Accountor {
     // remove the fragment context and reset fragment limits whenever an allocator closes
     if(parent!=null && parent.parent==null) {
       logger.debug("Fragment " + fragmentStr + "  accountor being closed");
-      removeFragmentContext(fragmentContext);
+      removeFragmentContext(allocatorOwningContext);
     }
     resetFragmentLimits();
 

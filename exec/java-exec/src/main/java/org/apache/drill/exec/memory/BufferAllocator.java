@@ -22,6 +22,7 @@ import io.netty.buffer.DrillBuf;
 
 import java.io.Closeable;
 
+import org.apache.drill.exec.ops.AllocatorOwningContext;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 
@@ -53,7 +54,7 @@ public interface BufferAllocator extends Closeable {
 
   public abstract ByteBufAllocator getUnderlyingAllocator();
 
-  public abstract BufferAllocator getChildAllocator(FragmentContext context, long initialReservation,
+  public abstract BufferAllocator getChildAllocator(AllocatorOwningContext context, long initialReservation,
       long maximumReservation, boolean applyFragmentLimit) throws OutOfMemoryException;
 
   /**

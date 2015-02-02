@@ -19,16 +19,20 @@ package org.apache.drill.exec.ops;
 
 import java.util.Collection;
 
+import com.google.protobuf.GeneratedMessage;
 import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.planner.sql.DrillOperatorTable;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
+import org.apache.drill.exec.proto.ExecProtos;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.rpc.control.WorkEventBus;
 import org.apache.drill.exec.rpc.data.DataConnectionCreator;
@@ -39,7 +43,7 @@ import org.apache.drill.exec.server.options.QueryOptionManager;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.sys.PStoreProvider;
 
-public class QueryContext{
+public class QueryContext implements AllocatorOwningContext {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryContext.class);
 
   private final QueryId queryId;
@@ -50,6 +54,11 @@ public class QueryContext{
   public final Multitimer<QuerySetup> timer;
   private final PlannerSettings plannerSettings;
   private final DrillOperatorTable table;
+  // this is used only for off-heap memory required during the planning phase of the query
+  // current use includes evaluating constant expressions to fold them into constants
+  private final BufferAllocator allocator;
+  private static final int INITIAL_PLANNING_OFF_HEAP_ALLOCATION = 1024;
+  private static final int MAX_PLANNING_OFF_HEAP_ALLOCATION = 20 * 1024;
 
   public QueryContext(UserSession session, QueryId queryId, DrillbitContext drllbitContext) {
     super();
@@ -62,6 +71,16 @@ public class QueryContext{
     this.plannerSettings = new PlannerSettings(queryOptions, getFunctionRegistry());
     this.plannerSettings.setNumEndPoints(this.getActiveEndpoints().size());
     this.table = new DrillOperatorTable(getFunctionRegistry());
+    try {
+      this.allocator = drllbitContext.getAllocator().getChildAllocator(this, INITIAL_PLANNING_OFF_HEAP_ALLOCATION, MAX_PLANNING_OFF_HEAP_ALLOCATION, true);
+      assert (allocator != null);
+    }catch(Throwable e){
+      throw new ExecutionSetupException("Failure while getting memory allocator for fragment.", e);
+    }
+  }
+
+  public ExecProtos.FragmentHandle getHandle() {
+    return null;
   }
 
   public PStoreProvider getPersistentStoreProvider(){
