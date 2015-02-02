@@ -18,6 +18,7 @@
 package org.apache.drill.exec.expr.fn.interpreter;
 
 import com.google.common.base.Preconditions;
+import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.BooleanOperator;
 import org.apache.drill.common.expression.FunctionHolderExpression;
@@ -34,6 +35,8 @@ import org.apache.drill.exec.expr.fn.DrillSimpleFuncHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.NullableBitHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
+import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
@@ -41,22 +44,40 @@ import org.apache.drill.exec.vector.ValueVector;
 
 public class InterpreterEvaluator {
 
+  // allocation for managed buffers needed by function interpreters, specified
+  // as injected DrillBufs
+  public static int INITIAL_ALLOCATION = 1024;
+  public static int MAX_ALLOCATION = 8 * 1024;
+
+  public static void evaluateConstantExpr(ValueVector outVV, BufferAllocator allocator, LogicalExpression expr) {
+    evaluate(1, allocator, null, outVV, expr);
+  }
+
   public static void evaluate(RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
+    try {
+      evaluate(incoming.getRecordCount(), incoming.getContext().getNewChildAllocator(INITIAL_ALLOCATION, MAX_ALLOCATION, true), incoming, outVV, expr);
+    } catch (OutOfMemoryException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public static void evaluate(int recordCount, BufferAllocator allocator, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
 
     InterpreterInitVisitor initVisitor = new InterpreterInitVisitor();
-    InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming);
+    InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, allocator);
 
     expr.accept(initVisitor, incoming);
 
-    for (int i = 0; i < incoming.getRecordCount(); i++) {
+    for (int i = 0; i < recordCount; i++) {
       ValueHolder out = expr.accept(evalVisitor, i);
       TypeHelper.setValueSafe(outVV, i, out);
     }
 
-    outVV.getMutator().setValueCount(incoming.getRecordCount());
+    outVV.getMutator().setValueCount(recordCount);
   }
 
   public static class InterpreterInitVisitor extends AbstractExprVisitor<LogicalExpression, RecordBatch, RuntimeException> {
+
     @Override
     public LogicalExpression visitFunctionHolderExpression(FunctionHolderExpression holderExpr, RecordBatch incoming) {
       if (! (holderExpr.getHolder() instanceof DrillSimpleFuncHolder)) {
@@ -94,11 +115,22 @@ public class InterpreterEvaluator {
 
   public static class InterEvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
     private RecordBatch incoming;
+    private BufferAllocator allocator;
 
-    protected InterEvalVisitor(RecordBatch incoming) {
+    protected InterEvalVisitor(RecordBatch incoming, BufferAllocator allocator) {
       super();
       this.incoming = incoming;
+      this.allocator = allocator;
     }
+
+    public DrillBuf getManagedBufferIfAvailable() {
+      if (incoming != null) {
+        return incoming.getContext().getManagedBuffer();
+      } else {
+        return allocator.buffer(INITIAL_ALLOCATION);
+      }
+    }
+
 
     @Override
     public ValueHolder visitFunctionHolderExpression(FunctionHolderExpression holderExpr, Integer inIndex) {
@@ -148,7 +180,7 @@ public class InterpreterEvaluator {
         }
 
       } catch (Exception ex) {
-        throw new RuntimeException("Error in evaluating function of " + holderExpr.getName() + ": " + ex);
+        throw new RuntimeException("Error in evaluating function of " + holderExpr.getName() + ": " + ex, ex);
       }
 
     }
@@ -206,7 +238,7 @@ public class InterpreterEvaluator {
 
     @Override
     public ValueHolder visitQuotedStringConstant(ValueExpressions.QuotedString e, Integer value) throws RuntimeException {
-      return ValueHolderHelper.getVarCharHolder((incoming).getContext().getManagedBuffer(), e.value);
+      return ValueHolderHelper.getVarCharHolder(getManagedBufferIfAvailable(), e.value);
     }
 
 
@@ -234,7 +266,7 @@ public class InterpreterEvaluator {
             holder = TypeHelper.getValue(vv, inIndex.intValue());
             return holder;
           default:
-            throw new UnsupportedOperationException("Type of " + type + " is not supported yet!");
+            throw new UnsupportedOperationException("Type of " + type + " is not supported yet in interpreted expression evaluation!");
         }
       } catch (Exception ex){
         throw new DrillRuntimeException("Error when evaluate a ValueVectorReadExpression: " + ex);
