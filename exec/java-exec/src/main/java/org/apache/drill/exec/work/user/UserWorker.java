@@ -19,6 +19,7 @@ package org.apache.drill.exec.work.user;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserProtos.RunQuery;
@@ -38,7 +39,7 @@ public class UserWorker{
     this.bee = bee;
   }
 
-  public QueryId submitWork(UserClientConnection connection, RunQuery query) {
+  public QueryId submitWork(UserClientConnection connection, RunQuery query) throws ExecutionSetupException {
     ThreadLocalRandom r = ThreadLocalRandom.current();
 
     // create a new queryid where the first four bytes are a growing time (each new value comes earlier in sequence).  Last 12 bytes are random.

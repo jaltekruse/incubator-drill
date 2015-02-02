@@ -24,6 +24,7 @@ import io.netty.channel.EventLoopGroup;
 
 import java.io.IOException;
 
+import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.physical.impl.materialize.QueryWritableBatch;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
@@ -80,9 +81,11 @@ public class UserServer extends BasicServer<RpcType, UserServer.UserClientConnec
         return new Response(RpcType.QUERY_HANDLE, worker.submitWork(connection, query));
       } catch (InvalidProtocolBufferException e) {
         throw new RpcException("Failure while decoding RunQuery body.", e);
+      } catch (ExecutionSetupException e) {
+        throw new RuntimeException("Failure parsing or planning query.", e);
       }
 
-    case RpcType.CANCEL_QUERY_VALUE:
+      case RpcType.CANCEL_QUERY_VALUE:
       try {
         QueryId queryId = QueryId.PARSER.parseFrom(new ByteBufInputStream(pBody));
         return new Response(RpcType.ACK, worker.cancelQuery(queryId));

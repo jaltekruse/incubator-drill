@@ -60,7 +60,7 @@ public class QueryContext implements AllocatorOwningContext {
   private static final int INITIAL_PLANNING_OFF_HEAP_ALLOCATION = 1024;
   private static final int MAX_PLANNING_OFF_HEAP_ALLOCATION = 20 * 1024;
 
-  public QueryContext(UserSession session, QueryId queryId, DrillbitContext drllbitContext) {
+  public QueryContext(UserSession session, QueryId queryId, DrillbitContext drllbitContext) throws ExecutionSetupException {
     super();
     this.queryId = queryId;
     this.drillbitContext = drllbitContext;
@@ -145,6 +145,16 @@ public class QueryContext implements AllocatorOwningContext {
 
   public DrillConfig getConfig(){
     return drillbitContext.getConfig();
+  }
+
+  @Override
+  public BufferAllocator getAllocator() {
+    return allocator;
+  }
+
+  @Override
+  public void setFragmentLimit(long limit) {
+    allocator.setFragmentLimit(limit);
   }
 
   public WorkEventBus getWorkBus(){

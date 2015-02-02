@@ -117,7 +117,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
   private final ResponseSendListener responseListener = new ResponseSendListener();
 
   public Foreman(WorkerBee bee, DrillbitContext dContext, UserClientConnection connection, QueryId queryId,
-      RunQuery queryRequest) {
+      RunQuery queryRequest) throws ExecutionSetupException {
     this.queryId = queryId;
     this.queryRequest = queryRequest;
     this.context = new QueryContext(connection.getSession(), queryId, dContext);
