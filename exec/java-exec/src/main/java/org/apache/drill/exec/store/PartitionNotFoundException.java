@@ -15,25 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-package org.apache.drill.exec.expr;
+package org.apache.drill.exec.store;
 
-import org.apache.drill.BaseTestQuery;
-import org.junit.Ignore;
-import org.junit.Test;
+public class PartitionNotFoundException extends Exception {
 
-public class TestConstantFolding extends BaseTestQuery {
-
-  @Ignore("Add temporary file generation so this test can be run elsewhere")
-  @Test
-  public void testConstExprFolding_withPartitionPrune() throws Exception {
-//    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = 'littlefile'");
-//    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = concat('little','file')");
-    test("select * from dfs.`/tmp/drilltest/tpch_orders/*/*.parquet` where dir0 = maxdir('dfs','root','/tmp/drilltest/tpch_orders')");
+  public PartitionNotFoundException() {
+    super();
   }
 
-  @Ignore("Add temporary file generation so this test can be run elsewhere")
-  @Test
-  public void testConstExprFolding_ToLimit0() throws Exception {
-    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where 1=0");
+  public PartitionNotFoundException(String s) {
+    super(s);
+  }
+
+  public PartitionNotFoundException(Exception ex) {
+    super(ex);
+  }
+
+  public PartitionNotFoundException(String s, Exception ex) {
+    super(s, ex);
   }
 }
