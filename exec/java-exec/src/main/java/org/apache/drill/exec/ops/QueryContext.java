@@ -36,6 +36,7 @@ import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.QueryOptionManager;
+import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 
 // TODO - consider re-name to PlanningContext, as the query execution context actually appears
@@ -148,6 +149,11 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
   @Override
   public DrillBuf getManagedBuffer() {
     return bufferManager.getManagedBuffer();
+  }
+
+  @Override
+  public PartitionExplorer getPartitionExplorer() {
+    return drillbitContext.getStorage();
   }
 
   @Override
