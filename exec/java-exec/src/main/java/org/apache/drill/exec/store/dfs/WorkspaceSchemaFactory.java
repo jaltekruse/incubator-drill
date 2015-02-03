@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.dfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,9 +44,11 @@ import org.apache.drill.exec.planner.logical.FileSystemCreateTableEntry;
 import org.apache.drill.exec.planner.sql.ExpandingConcurrentMap;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.store.AbstractSchema;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.sys.PStore;
 import org.apache.drill.exec.store.sys.PStoreConfig;
 import org.apache.drill.exec.store.sys.PStoreProvider;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -178,6 +181,21 @@ public class WorkspaceSchemaFactory implements ExpandingConcurrentMap.MapValueFa
         knownViews.put(view.getName(), viewPath.toString());
       }
       return replaced;
+    }
+
+    @Override
+    public Iterable<String> getSubPartitions(String table,
+                                             Collection<String> partitionColumns,
+                                             Collection<String> partitionValues
+    ) throws PartitionNotFoundException {
+
+      List<FileStatus> fileStatuses;
+      try {
+        fileStatuses = getFS().list(false, new Path(getDefaultLocation(), table));
+      } catch (IOException e) {
+        throw new PartitionNotFoundException("Error finding partitions for table " + table, e);
+      }
+      return new FileSystemSchemaFactory.SubDirectoryList(fileStatuses);
     }
 
     public boolean viewExists(String viewName) throws Exception {
