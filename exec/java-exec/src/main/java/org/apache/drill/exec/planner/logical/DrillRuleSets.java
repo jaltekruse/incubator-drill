@@ -111,7 +111,6 @@ public class DrillRuleSets {
       ////////////////////////////////
       DrillScanRule.INSTANCE,
       DrillFilterRule.INSTANCE,
-      OptiqForkedConstantReduxRule.createFilterInstance(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context),
       DrillProjectRule.INSTANCE,
       DrillWindowRule.INSTANCE,
       DrillAggregateRule.INSTANCE,
@@ -124,7 +123,9 @@ public class DrillRuleSets {
       // set, because it needs a direct reference to the FunctionImplementationRegistry
       // TODO - figure out if I can get access to the memory management here
       // TODO - review null passed as FelOptFactory here as well as in RewriteProjectToFlatten
-      new DrillFilterConstantExprReduxRule(context.getFunctionRegistry(), new TopLevelAllocator()),
+//      ReduceExpressionsRule.FILTER_INSTANCE,
+//      new DrillFilterConstantExprReduxRule(context.getFunctionRegistry(), new TopLevelAllocator()),
+      OptiqForkedConstantReduxRule.createFilterInstance(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context)),
       DrillReduceAggregatesRule.INSTANCE
       ));
     }

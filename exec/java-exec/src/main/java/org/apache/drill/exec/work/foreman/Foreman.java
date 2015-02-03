@@ -120,6 +120,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
       RunQuery queryRequest) {
     this.queryId = queryId;
     this.queryRequest = queryRequest;
+    // TODO - add a close to query context and properly handle memory release after planning completes
     this.context = new QueryContext(connection.getSession(), queryId, dContext);
 
     // set up queuing
