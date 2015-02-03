@@ -18,6 +18,8 @@
 package org.apache.drill.exec.fn.interp;
 
 import org.apache.drill.PlanTestBase;
+import org.apache.drill.exec.util.JsonStringArrayList;
+import org.apache.hadoop.io.Text;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -114,6 +116,29 @@ public class TestConstantFolding extends PlanTestBase {
         "select * from dfs.`" + path + "/*/*.csv` where dir0 = concat('small','file')",
         "smallfile",
         "bigfile");
+  }
+
+  @Test
+  public void testConstExprFolding_maxDir0() throws Exception {
+    createFiles(1, 1000);
+    String path = folder.getRoot().toPath().toString();
+    test("use dfs.root");
+    String query = "select * from dfs.`" + path + "/*/*.csv` where dir0 = maxdir('dfs.root','" + path + "')";
+    JsonStringArrayList list = new JsonStringArrayList();
+    list.add(new Text("1"));
+    list.add(new Text("2"));
+    list.add(new Text("3"));
+
+    testPlanOneExpectedPatternOneExcluded(
+        query,
+        "smallfile",
+        "bigfile");
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("columns", "dir0")
+        .baselineValues(list, "smallfile")
+        .go();
   }
 
   @Test
