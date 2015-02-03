@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 
 import com.google.common.collect.ImmutableSet;
@@ -31,6 +32,11 @@ public abstract class AbstractStoragePlugin implements StoragePlugin{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractStoragePlugin.class);
 
   protected AbstractStoragePlugin(){
+  }
+
+  public Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    throw new UnsupportedOperationException("Storage plugin of type: " + this.getClass().getSimpleName() +
+                                            "does not support retrieving sub-partition information.");
   }
 
   @Override
