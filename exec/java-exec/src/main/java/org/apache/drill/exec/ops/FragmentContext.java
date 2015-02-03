@@ -47,6 +47,7 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.FragmentOptionManager;
 import org.apache.drill.exec.server.options.OptionList;
 import org.apache.drill.exec.server.options.OptionManager;
+import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.work.batch.IncomingBuffers;
 
 import com.carrotsearch.hppc.LongObjectOpenHashMap;
@@ -320,4 +321,8 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     return bufferManager.getManagedBuffer(size);
   }
 
+  @Override
+  public PartitionExplorer getPartitionExplorer() {
+    return context.getStorage();
+  }
 }
