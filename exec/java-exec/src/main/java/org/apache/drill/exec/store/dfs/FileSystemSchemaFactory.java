@@ -17,7 +17,10 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,14 +30,19 @@ import net.hydromatic.optiq.Schema;
 import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.Table;
 
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.planner.logical.CreateTableEntry;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.store.AbstractSchema;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.SchemaFactory;
 import org.apache.drill.exec.store.dfs.WorkspaceSchemaFactory.WorkspaceSchema;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 
 /**
@@ -61,6 +69,54 @@ public class FileSystemSchemaFactory implements SchemaFactory{
     schema.setPlus(plusOfThis);
   }
 
+  static class SubDirectoryList implements Iterable<String>{
+    final List<FileStatus> fileStatuses;
+
+    SubDirectoryList(List<FileStatus> fileStatuses) {
+      this.fileStatuses = fileStatuses;
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+      return new SubDirectoryIterator(fileStatuses.iterator());
+    }
+
+    private class SubDirectoryIterator implements Iterator<String> {
+
+      final Iterator<FileStatus> fileStatusIterator;
+
+      SubDirectoryIterator(Iterator<FileStatus> fileStatusIterator) {
+        this.fileStatusIterator = fileStatusIterator;
+      }
+
+      @Override
+      public boolean hasNext() {
+        return fileStatusIterator.hasNext();
+      }
+
+      @Override
+      public String next() {
+        return fileStatusIterator.next().getPath().toUri().toString();
+      }
+
+      /**
+       * This class is designed specifically for use in conjunction with the
+       * {@link org.apache.drill.exec.store.PartitionExplorer} interface.
+       * This is only designed for accessing partition information, not
+       * modifying it. To avoid confusing users of the interface this
+       * method throws UnsupportedOperationException.
+       *
+       * @throws UnsupportedOperationException - this is not useful here, the
+       *           list being iterated over should not be used in a way that
+       *           removing an element would be meaningful.
+       */
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    }
+  }
+
   public class FileSystemSchema extends AbstractSchema {
 
     private final WorkspaceSchema defaultSchema;
@@ -80,6 +136,20 @@ public class FileSystemSchemaFactory implements SchemaFactory{
       for(WorkspaceSchema s : schemaMap.values()){
         plusOfThis.add(s.getName(), s);
       }
+    }
+
+    @Override
+    public Iterable<String> getSubPartitions(String table,
+                                             Collection<String> partitionColumns,
+                                             Collection<String> partitionValues
+                                            ) throws PartitionNotFoundException {
+      List<FileStatus> fileStatuses;
+      try {
+        fileStatuses = defaultSchema.getFS().list(false, new Path(defaultSchema.getDefaultLocation(), table));
+      } catch (IOException e) {
+        throw new PartitionNotFoundException("Error finding partitions for table " + table, e);
+      }
+      return new SubDirectoryList(fileStatuses);
     }
 
     @Override
@@ -108,7 +178,7 @@ public class FileSystemSchemaFactory implements SchemaFactory{
     }
 
     @Override
-    public Schema getSubSchema(String name) {
+    public AbstractSchema getSubSchema(String name) {
       return schemaMap.get(name);
     }
 
