@@ -65,7 +65,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 
-public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>> {
+public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>>, PartitionExplorer {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StoragePluginRegistry.class);
 
   public static final String SYS_PLUGIN = "sys";
@@ -78,6 +78,8 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
   private DrillbitContext context;
   private final DrillSchemaFactory schemaFactory = new DrillSchemaFactory();
   private final PStore<StoragePluginConfig> pluginSystemTable;
+
+  // TODO - remove these as they are unused
   private final Object updateLock = new Object();
   private volatile long lastUpdate = 0;
   private static final long UPDATE_FREQUENCY = 2 * 60 * 1000;
@@ -296,6 +298,11 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
 
   public DrillSchemaFactory getSchemaFactory() {
     return schemaFactory;
+  }
+
+  @Override
+  public List<String> getSubPartitions(String plugin, String workspace, String partition) throws PartitionNotFoundException {
+    return plugins.get(plugin).getSubPartitions(workspace, partition);
   }
 
   public class DrillSchemaFactory implements SchemaFactory {

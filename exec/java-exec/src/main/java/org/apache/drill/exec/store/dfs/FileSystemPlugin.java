@@ -17,7 +17,9 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,14 +37,17 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStoragePlugin;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.LocalSyncableFileSystem;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.fs.Path;
 
 /**
  * A Storage engine associated with a Hadoop FileSystem Implementation. Examples include HDFS, MapRFS, QuantacastFileSystem,
@@ -105,6 +110,24 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
   @Override
   public StoragePluginConfig getConfig() {
     return config;
+  }
+
+  public List<String> getSubPartitions(String workspace, String partition) throws PartitionNotFoundException {
+    Path p = new Path(config.workspaces.get(workspace).getLocation() + File.separator + partition);
+    List<String> subPartitions = new ArrayList<>();
+    List<FileStatus> fileStatuses;
+    try {
+      fileStatuses = fs.list(false, p);
+    } catch (IOException e) {
+      // TODO - figure out if I can separate out the case of a partition not being found, or at least
+      // take a look at what the error message comes out looking like to a user.
+      throw new RuntimeException("Error trying to read sub-partitions." , e);
+    }
+    for (FileStatus fStatus : fileStatuses) {
+      // TODO - check to make sure this is exactly the right way to serialize the path
+      subPartitions.add(fStatus.getPath().toUri().toString());
+    }
+    return subPartitions;
   }
 
   @Override
