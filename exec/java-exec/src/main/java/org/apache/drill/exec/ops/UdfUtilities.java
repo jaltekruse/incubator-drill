@@ -18,6 +18,7 @@
 package org.apache.drill.exec.ops;
 
 import io.netty.buffer.DrillBuf;
+import org.apache.drill.exec.store.PartitionExplorer;
 
 /**
  * Defines the query state and shared resources available to UDFs through
@@ -27,7 +28,9 @@ import io.netty.buffer.DrillBuf;
  */
 public interface UdfUtilities {
 
-  public static final Class[] INJECTABLE_TYPES = {DrillBuf.class, QueryDateTimeInfo.class};
+  public static final Class[] INJECTABLE_TYPES = {DrillBuf.class,
+                                                  QueryDateTimeInfo.class,
+                                                  PartitionExplorer.class};
 
   /**
    * Get the query start time and timezone recorded by the head node during
@@ -47,4 +50,14 @@ public interface UdfUtilities {
    *           for memory management
    */
   DrillBuf getManagedBuffer();
+
+  /**
+   * A partition explorer allows UDFs to view the sub-partitions below a
+   * particular partition. This allows for the implementation of UDFs to
+   * query against the partition information, without having to read
+   * the actual data contained in the partition.
+   * @return - an object for exploring partitions of all available storage
+   *           plugins
+   */
+  PartitionExplorer getPartitionExplorer();
 }
