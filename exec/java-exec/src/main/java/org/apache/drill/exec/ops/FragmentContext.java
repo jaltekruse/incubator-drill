@@ -47,6 +47,7 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.FragmentOptionManager;
 import org.apache.drill.exec.server.options.OptionList;
 import org.apache.drill.exec.server.options.OptionManager;
+import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.work.batch.IncomingBuffers;
 
 import com.carrotsearch.hppc.LongObjectOpenHashMap;
@@ -56,7 +57,7 @@ import com.google.common.collect.Maps;
 /**
  * Contextual objects required for execution of a particular fragment.
  */
-public class FragmentContext implements Closeable {
+public class FragmentContext implements Closeable, UdfUtilities {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
 
 
@@ -324,4 +325,8 @@ public class FragmentContext implements Closeable {
     return bufferManager.getManagedBuffer(size);
   }
 
+  @Override
+  public PartitionExplorer getPartitionExplorer() {
+    return context.getStorage();
+  }
 }
