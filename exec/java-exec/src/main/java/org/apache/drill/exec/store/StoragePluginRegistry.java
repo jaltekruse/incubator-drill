@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -42,6 +43,8 @@ import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.common.util.PathScanner;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.DrillbitStartupException;
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.planner.logical.DrillRuleSets;
 import org.apache.drill.exec.planner.logical.StoragePlugins;
 import org.apache.drill.exec.rpc.user.UserSession;
@@ -65,7 +68,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 
-public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>> {
+public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>>, PartitionExplorer {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StoragePluginRegistry.class);
 
   public static final String SYS_PLUGIN = "sys";
@@ -78,9 +81,6 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
   private DrillbitContext context;
   private final DrillSchemaFactory schemaFactory = new DrillSchemaFactory();
   private final PStore<StoragePluginConfig> pluginSystemTable;
-  private final Object updateLock = new Object();
-  private volatile long lastUpdate = 0;
-  private static final long UPDATE_FREQUENCY = 2 * 60 * 1000;
 
   public StoragePluginRegistry(DrillbitContext context) {
     try {
@@ -296,6 +296,12 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
 
   public DrillSchemaFactory getSchemaFactory() {
     return schemaFactory;
+  }
+
+  @Override
+  public Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    final String pluginStr = StringFunctionHelpers.getStringFromVarCharHolder(plugin);
+    return plugins.get(pluginStr).getSubPartitions(workspace, partition);
   }
 
   public class DrillSchemaFactory implements SchemaFactory {
