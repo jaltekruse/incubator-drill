@@ -23,6 +23,7 @@ import java.util.Set;
 
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 
 import com.google.common.collect.ImmutableSet;
