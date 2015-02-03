@@ -24,8 +24,11 @@ import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.planner.sql.DrillOperatorTable;
@@ -54,6 +57,14 @@ public class QueryContext implements UdfUtilities{
   private final PlannerSettings plannerSettings;
   private final DrillOperatorTable table;
 
+  // most of the memory consumed by planning is on-heap, as the calcite planning library
+  // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
+  // which is used for planning time
+  private final BufferAllocator allocator;
+  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024;
+  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024;
+
+
   public QueryContext(UserSession session, QueryId queryId, DrillbitContext drllbitContext) {
     super();
     this.queryId = queryId;
@@ -65,6 +76,11 @@ public class QueryContext implements UdfUtilities{
     this.plannerSettings = new PlannerSettings(queryOptions, getFunctionRegistry());
     this.plannerSettings.setNumEndPoints(this.getActiveEndpoints().size());
     this.table = new DrillOperatorTable(getFunctionRegistry());
+    try {
+      this.allocator = drllbitContext.getAllocator().getChildAllocator(null, INITIAL_OFF_HEAP_ALLOCATION, MAX_OFF_HEAP_ALLOCATION, false);
+    } catch (OutOfMemoryException e) {
+      throw new DrillRuntimeException("Error creating off-heap allocator for planning context.",e);
+    }
   }
 
   public PStoreProvider getPersistentStoreProvider(){
@@ -77,6 +93,10 @@ public class QueryContext implements UdfUtilities{
 
   public UserSession getSession(){
     return session;
+  }
+
+  public BufferAllocator getAllocator() {
+    return allocator;
   }
 
   public SchemaPlus getNewDefaultSchema(){
