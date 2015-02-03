@@ -28,13 +28,16 @@ import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
 import org.apache.drill.common.DeferredException;
 import org.apache.drill.common.config.DrillConfig;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryException;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
@@ -45,6 +48,8 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.FragmentOptionManager;
 import org.apache.drill.exec.server.options.OptionList;
 import org.apache.drill.exec.server.options.OptionManager;
+import org.apache.drill.exec.store.PartitionExplorer;
+import org.apache.drill.exec.store.PartitionExplorerImpl;
 import org.apache.drill.exec.work.batch.IncomingBuffers;
 
 import com.google.common.collect.Maps;
@@ -315,5 +320,12 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
 
   public DrillBuf getManagedBuffer(int size) {
     return bufferManager.getManagedBuffer(size);
+  }
+
+  @Override
+  public PartitionExplorer getPartitionExplorer() {
+    throw new UnsupportedOperationException(String.format("The partition explorer interface can only be used " +
+        "in functions that can be evaluated at planning time. Make sure that the %s configuration " +
+        "option is set to true.", PlannerSettings.CONSTANT_FOLDING.getOptionName()));
   }
 }
