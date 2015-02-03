@@ -17,7 +17,10 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,20 +32,25 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStoragePlugin;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.LocalSyncableFileSystem;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.fs.Path;
 
 /**
  * A Storage engine associated with a Hadoop FileSystem Implementation. Examples include HDFS, MapRFS, QuantacastFileSystem,
@@ -105,6 +113,74 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
   @Override
   public StoragePluginConfig getConfig() {
     return config;
+  }
+
+  private static class SubDirectoryList implements Iterable<String>{
+    final List<FileStatus> fileStatuses;
+
+    SubDirectoryList(List<FileStatus> fileStatuses) {
+      this.fileStatuses = fileStatuses;
+    }
+
+    @Override
+    public Iterator<String> iterator() {
+      return new SubDirectoryIterator(fileStatuses.iterator());
+    }
+
+    private class SubDirectoryIterator implements Iterator<String> {
+
+      final Iterator<FileStatus> fileStatusIterator;
+
+      SubDirectoryIterator(Iterator<FileStatus> fileStatusIterator) {
+        this.fileStatusIterator = fileStatusIterator;
+      }
+
+      @Override
+      public boolean hasNext() {
+        return fileStatusIterator.hasNext();
+      }
+
+      @Override
+      public String next() {
+        return fileStatusIterator.next().getPath().toUri().toString();
+      }
+
+      /**
+       * This class is designed specifically for use in conjunction with the
+       * {@link org.apache.drill.exec.store.PartitionExplorer} interface.
+       * This is only designed for accessing partition information, not
+       * modifying it. To avoid confusing users of the interface this
+       * method throws UnsupportedOperationException.
+       *
+       * @throws UnsupportedOperationException - this is not useful here, the
+       *           list being iterated over should not be used in a way that
+       *           removing an element would be meaningful.
+       */
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    }
+  }
+
+  public Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    final String workspaceStr = StringFunctionHelpers.getStringFromVarCharHolder(workspace);
+    final String partitionStr = StringFunctionHelpers.getStringFromVarCharHolder(partition);
+
+    final Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
+    List<FileStatus> fileStatuses;
+    try {
+      // if the path passed is a file, return an empty list of sub-partitions
+      if (fs.isFile(p)) {
+        return new SubDirectoryList(new ArrayList<FileStatus>());
+      }
+      fileStatuses = fs.list(false, p);
+    } catch (IOException e) {
+      // TODO - figure out if we can separate out the case of a partition not being found, or at least
+      // take a look at what the error message comes out looking like to a user.
+      throw new PartitionNotFoundException("Error trying to read sub-partitions." , e);
+    }
+    return new SubDirectoryList(fileStatuses);
   }
 
   @Override
