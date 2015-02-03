@@ -17,7 +17,10 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,20 +32,24 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStoragePlugin;
 import org.apache.drill.exec.store.ClassPathFileSystem;
 import org.apache.drill.exec.store.LocalSyncableFileSystem;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSet.Builder;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.fs.Path;
 
 /**
  * A Storage engine associated with a Hadoop FileSystem Implementation. Examples include HDFS, MapRFS, QuantacastFileSystem,
@@ -105,6 +112,43 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
   @Override
   public StoragePluginConfig getConfig() {
     return config;
+  }
+
+  public String[] getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    String workspaceStr = null;
+    String partitionStr = null;
+    try {
+      VarCharHolder currentInput = workspace;
+      byte[] temp = new byte[currentInput.end - currentInput.start];
+      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+      workspaceStr = new String(temp, "UTF-8");
+
+      currentInput = partition;
+      temp = new byte[currentInput.end - currentInput.start];
+      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+      partitionStr = new String(temp, "UTF-8");
+    } catch (java.io.UnsupportedEncodingException e) {
+      // should not happen, UTF-8 encoding should be available
+      throw new RuntimeException(e);
+    }
+    Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
+    String[] subPartitions;
+    List<FileStatus> fileStatuses;
+    try {
+      fileStatuses = fs.list(false, p);
+    } catch (IOException e) {
+      // TODO - figure out if I can separate out the case of a partition not being found, or at least
+      // take a look at what the error message comes out looking like to a user.
+      throw new RuntimeException("Error trying to read sub-partitions." , e);
+    }
+    subPartitions = new String[fileStatuses.size()];
+    int i = 0;
+    for (FileStatus fStatus : fileStatuses) {
+      // TODO - check to make sure this is exactly the right way to serialize the path
+      subPartitions[i] = fStatus.getPath().toUri().toString();
+      i++;
+    }
+    return subPartitions;
   }
 
   @Override
