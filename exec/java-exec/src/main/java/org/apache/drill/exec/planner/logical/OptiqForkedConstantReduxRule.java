@@ -66,9 +66,15 @@ import java.util.regex.Pattern;
  * This class is nearly a copy-paste of the ReduceExpressionsRule class defined
  * in optiq. There are two reasons why we cannot extend it. I was hoping to
  * only copy the annonymous inner class FILTER_INSTANCE and make a few
- * modifications, but unfortunately the constructor is private, which requires
- * copying the whole class or using the rules as is. As we do nut support
- * EmptyRel, we need to fork it for now to replace this with a limit 0.
+ * modifications, but unfortunately the constructor of the abstract class
+ * is private, which requires copying the whole class or using the rules as
+ * is. As we do not support EmptyRel, we need to fork it for now to replace
+ * this with a limit 0.
+ *
+ * I also had difficulties getting a custom Executor available to actually
+ * evaluate the constant functions and allow usage of Drill UDFs. See the
+ * comment below in the reduceExpressions(RelNode, List<RexNode>) method for
+ * details.
  */
 
 /**
@@ -384,11 +390,11 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
      * the planner referred in the commented out line was a volcano planner created by a chain
      * of optiq calls. The hep planner we keep a reference to in SqlHandlerConfig was not the proper
      * one to set the executor of to make it appear here. Wasn't sure how to get them stitched together,
-     * so this is the workaround for now.
+     * so this is just a workaround to get the rest of the work hooked together.
      */
 //    RelOptPlanner.Executor executor =
 //        rel.getCluster().getPlanner().getExecutor();
-    List<RexNode> reducedValues = new ArrayList<RexNode>();
+    List<RexNode> reducedValues = new ArrayList<>();
     constantExpressionExecutor.reduce(rexBuilder, constExps, reducedValues);
 
     // For ProjectRel, we have to be sure to preserve the result
