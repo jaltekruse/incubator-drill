@@ -44,6 +44,7 @@ import org.apache.drill.exec.expr.fn.DrillFuncHolder.WorkspaceReference;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterGenerator;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.ops.QueryDateTimeInfo;
+import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 import org.codehaus.commons.compiler.CompileException;
@@ -191,10 +192,9 @@ public class FunctionConverter {
       } else {
         // workspace work.
         boolean isInject = inject != null;
-        Class[] injectableTypes = { DrillBuf.class, QueryDateTimeInfo.class};
-        if (isInject && !Arrays.asList(injectableTypes).contains(field.getType())) {
+        if (isInject && !Arrays.asList(UdfUtilities.INJECTABLE_TYPES).contains(field.getType())) {
           return failure(String.format("A %s cannot be injected into a %s, available injectable classes are: .",
-              field.getType(), DrillFunc.class.getSimpleName(), Joiner.on(",").join(injectableTypes)), clazz, field);
+              field.getType(), DrillFunc.class.getSimpleName(), Joiner.on(",").join(UdfUtilities.INJECTABLE_TYPES)), clazz, field);
         }
         WorkspaceReference wsReference = new WorkspaceReference(field.getType(), field.getName(), isInject);
 

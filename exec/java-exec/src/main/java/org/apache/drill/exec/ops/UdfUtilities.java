@@ -19,7 +19,15 @@ package org.apache.drill.exec.ops;
 
 import io.netty.buffer.DrillBuf;
 
+/**
+ * Defines the query state and shared resources available to UDFs through
+ * injectables. For use in a function, include a {@see javax.inject.Inject}
+ * annotation on a UDF class member with any of the types available through
+ * this interface.
+ */
 public interface UdfUtilities {
+
+  public static final Class[] INJECTABLE_TYPES = {DrillBuf.class, QueryDateTimeInfo.class};
 
   /**
    * Get the query start time and timezone recorded by the head node during
