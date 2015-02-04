@@ -99,16 +99,20 @@ public class InterpreterEvaluator {
         DrillSimpleFuncInterpreter interpreter = holder.createInterpreter();
         Field[] fields = interpreter.getClass().getDeclaredFields();
         for (Field f : fields) {
-          if ( f.getAnnotation(Inject.class) != null ) {
+          // the current interpreter strips off annotations, so we just need to assume
+          // the type available as injectable are only used as injectable
+//          if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
             if (f.getType().equals(DrillBuf.class)) {
               f.set(interpreter, udfUtilities.getManagedBuffer());
             } else if (f.getType().equals(QueryDateTimeInfo.class)) {
               f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
+            } else {
+              // do nothing with the field
             }
-          } else { // do nothing with non-inject fields here
-            continue;
-          }
+//          } else { // do nothing with non-inject fields here
+//            continue;
+//          }
         }
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
