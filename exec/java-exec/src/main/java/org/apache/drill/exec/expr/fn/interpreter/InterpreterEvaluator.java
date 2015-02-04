@@ -18,6 +18,7 @@
 package org.apache.drill.exec.expr.fn.interpreter;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.BooleanOperator;
@@ -37,37 +38,32 @@ import org.apache.drill.exec.expr.holders.NullableBitHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryException;
+import org.apache.drill.exec.ops.QueryDateTimeInfo;
+import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
 import org.reflections.Reflections;
 
+import javax.inject.Inject;
 import java.lang.reflect.Field;
+import java.util.Arrays;
 
 
 public class InterpreterEvaluator {
 
-  // allocation for managed buffers needed by function interpreters, specified
-  // as injected DrillBufs
-  public static int INITIAL_ALLOCATION = 1024;
-  public static int MAX_ALLOCATION = 8 * 1024;
-
-  public static void evaluateConstantExpr(ValueVector outVV, BufferAllocator allocator, LogicalExpression expr) {
-    evaluate(1, allocator, null, outVV, expr);
+  public static void evaluateConstantExpr(ValueVector outVV, UdfUtilities udfUtilities, LogicalExpression expr) {
+    evaluate(1, udfUtilities, null, outVV, expr);
   }
 
   public static void evaluate(RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
-    try {
-      evaluate(incoming.getRecordCount(), incoming.getContext().getNewChildAllocator(INITIAL_ALLOCATION, MAX_ALLOCATION, true), incoming, outVV, expr);
-    } catch (OutOfMemoryException e) {
-      throw new RuntimeException(e);
-    }
+    evaluate(incoming.getRecordCount(), incoming.getContext(), incoming, outVV, expr);
   }
 
-  public static void evaluate(int recordCount, BufferAllocator allocator, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
+  public static void evaluate(int recordCount, UdfUtilities udfUtilities, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
 
-    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(allocator);
-    InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, allocator);
+    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(udfUtilities);
+    InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, udfUtilities);
 
     expr.accept(initVisitor, incoming);
 
@@ -81,11 +77,11 @@ public class InterpreterEvaluator {
 
   public static class InterpreterInitVisitor extends AbstractExprVisitor<LogicalExpression, RecordBatch, RuntimeException> {
 
-    private BufferAllocator allocator;
+    private UdfUtilities udfUtilities;
 
-    protected InterpreterInitVisitor(BufferAllocator allocator) {
+    protected InterpreterInitVisitor(UdfUtilities udfUtilities) {
       super();
-      this.allocator = allocator;
+      this.udfUtilities = udfUtilities;
     }
     @Override
     public LogicalExpression visitFunctionHolderExpression(FunctionHolderExpression holderExpr, RecordBatch incoming) {
@@ -103,9 +99,15 @@ public class InterpreterEvaluator {
         DrillSimpleFuncInterpreter interpreter = holder.createInterpreter();
         Field[] fields = interpreter.getClass().getDeclaredFields();
         for (Field f : fields) {
-          if (f.getType().equals(DrillBuf.class)) {
+          if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
-            f.set(interpreter, allocator.buffer(INITIAL_ALLOCATION));
+            if (f.getType().equals(DrillBuf.class)) {
+              f.set(interpreter, udfUtilities.getManagedBuffer());
+            } else if (f.getType().equals(QueryDateTimeInfo.class)) {
+              f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
+            }
+          } else { // do nothing with non-inject fields here
+            continue;
           }
         }
 
@@ -131,19 +133,19 @@ public class InterpreterEvaluator {
 
   public static class InterEvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
     private RecordBatch incoming;
-    private BufferAllocator allocator;
+    private UdfUtilities udfUtilities;
 
-    protected InterEvalVisitor(RecordBatch incoming, BufferAllocator allocator) {
+    protected InterEvalVisitor(RecordBatch incoming, UdfUtilities udfUtilities) {
       super();
       this.incoming = incoming;
-      this.allocator = allocator;
+      this.udfUtilities = udfUtilities;
     }
 
     public DrillBuf getManagedBufferIfAvailable() {
       if (incoming != null) {
         return incoming.getContext().getManagedBuffer();
       } else {
-        return allocator.buffer(INITIAL_ALLOCATION);
+        return udfUtilities.getManagedBuffer();
       }
     }
 
