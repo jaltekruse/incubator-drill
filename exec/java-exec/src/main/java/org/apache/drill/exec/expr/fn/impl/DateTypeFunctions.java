@@ -292,11 +292,12 @@ public class DateTypeFunctions {
     public static class LocalTimeStamp implements DrillSimpleFunc {
         @Workspace long queryStartDate;
         @Output TimeStampHolder out;
+        @Inject QueryDateTimeInfo dateTime;
 
         public void setup() {
 
-//            org.joda.time.DateTime now = (new org.joda.time.DateTime(incoming.getContext().getQueryStartTime())).withZoneRetainFields(org.joda.time.DateTimeZone.UTC);
-//            queryStartDate = now.getMillis();
+            org.joda.time.DateTime now = (new org.joda.time.DateTime(dateTime)).withZoneRetainFields(org.joda.time.DateTimeZone.UTC);
+            queryStartDate = now.getMillis();
         }
 
         public void eval() {
@@ -482,10 +483,11 @@ public class DateTypeFunctions {
     public static class UnixTimeStamp implements DrillSimpleFunc {
       @Output BigIntHolder out;
       @Workspace long queryStartDate;
+      @Inject QueryDateTimeInfo dateTime;
 
       @Override
       public void setup() {
-//         queryStartDate = incoming.getContext().getQueryStartTime();
+         queryStartDate = dateTime.getQueryStartTime();
       }
 
       @Override
