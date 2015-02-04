@@ -49,7 +49,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class ExpressionInterpreterTest  extends PopUnitTestBase {
+public class xpressionInterpreterTest  extends PopUnitTestBase {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionInterpreterTest.class);
 
   @Test
@@ -94,6 +94,15 @@ public class ExpressionInterpreterTest  extends PopUnitTestBase {
     doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
   }
 
+  @Test
+  public void interpreterDateTest() throws Exception {
+    String[] colNames = {"col1"};
+    TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.INT)};
+    String expressionStr = "now()";
+    String[] expectedFirstTwoValues = {"-2147483548", "null"};
+
+    doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
+  }
 
   protected void doTest(String expressionStr, String[] colNames, TypeProtos.MajorType[] colTypes, String[] expectFirstTwoValues) throws Exception {
     RemoteServiceSet serviceSet = RemoteServiceSet.getLocalServiceSet();
