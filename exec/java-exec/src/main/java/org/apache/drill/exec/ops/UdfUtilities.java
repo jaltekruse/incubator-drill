@@ -18,6 +18,7 @@
 package org.apache.drill.exec.ops;
 
 import io.netty.buffer.DrillBuf;
+import org.apache.drill.exec.store.PartitionExplorer;
 
 /**
  * Defines the query state and shared resources available to UDFs through
@@ -47,4 +48,10 @@ public interface UdfUtilities {
    *           for memory management
    */
   DrillBuf getManagedBuffer();
+
+  /**
+   * 
+   * @return
+   */
+  PartitionExplorer getPartitionExplorer();
 }
