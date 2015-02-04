@@ -180,7 +180,7 @@ public class InterpreterEvaluator {
         }
 
       } catch (Exception ex) {
-        throw new RuntimeException("Error in evaluating function of " + holderExpr.getName() + ": " + ex, ex);
+        throw new RuntimeException("Error in evaluating function of " + holderExpr.getName(), ex);
       }
 
     }
