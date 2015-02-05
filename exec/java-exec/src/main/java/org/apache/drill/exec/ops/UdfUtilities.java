@@ -28,7 +28,9 @@ import org.apache.drill.exec.store.PartitionExplorer;
  */
 public interface UdfUtilities {
 
-  public static final Class[] INJECTABLE_TYPES = {DrillBuf.class, QueryDateTimeInfo.class};
+  public static final Class[] INJECTABLE_TYPES = {DrillBuf.class,
+                                                  QueryDateTimeInfo.class,
+                                                  PartitionExplorer.class};
 
   /**
    * Get the query start time and timezone recorded by the head node during
