@@ -40,6 +40,7 @@ import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.QueryOptionManager;
+import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.sys.PStoreProvider;
 
@@ -181,5 +182,10 @@ public class QueryContext implements UdfUtilities{
   @Override
   public DrillBuf getManagedBuffer() {
     return allocator.buffer(100, MAX_OFF_HEAP_ALLOCATION);
+  }
+
+  @Override
+  public PartitionExplorer getPartitionExplorer() {
+    return drillbitContext.getStorage();
   }
 }
