@@ -167,13 +167,19 @@ public class QueryContext implements UdfUtilities{
     return drillbitContext.getClusterCoordinator();
   }
 
+  /**
+   * TODO - generate the query start time and record the current timezone
+   * at the start of planning instead of the start of physical plan materialization.
+   *
+   * @return
+   */
   @Override
   public QueryDateTimeInfo getQueryDateTimeInfo() {
-    return null;
+    throw new UnsupportedOperationException("Query start time not currently available during planning.");
   }
 
   @Override
   public DrillBuf getManagedBuffer() {
-    return null;
+    return allocator.buffer(100, MAX_OFF_HEAP_ALLOCATION);
   }
 }
