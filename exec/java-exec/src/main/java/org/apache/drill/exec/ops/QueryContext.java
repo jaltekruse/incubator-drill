@@ -19,6 +19,7 @@ package org.apache.drill.exec.ops;
 
 import java.util.Collection;
 
+import io.netty.buffer.DrillBuf;
 import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
@@ -39,7 +40,9 @@ import org.apache.drill.exec.server.options.QueryOptionManager;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.sys.PStoreProvider;
 
-public class QueryContext{
+// TODO - consider re-name to PlanningContext, as the query execution context actually appears
+// in fragment contexts
+public class QueryContext implements UdfUtilities{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryContext.class);
 
   private final QueryId queryId;
@@ -142,5 +145,15 @@ public class QueryContext{
 
   public ClusterCoordinator getClusterCoordinator() {
     return drillbitContext.getClusterCoordinator();
+  }
+
+  @Override
+  public QueryDateTimeInfo getQueryDateTimeInfo() {
+    return null;
+  }
+
+  @Override
+  public DrillBuf getManagedBuffer() {
+    return null;
   }
 }

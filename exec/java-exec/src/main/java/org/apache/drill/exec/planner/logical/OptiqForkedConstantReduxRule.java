@@ -82,6 +82,8 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
 
   //~ Static fields/initializers ---------------------------------------------
 
+  RelOptPlanner.Executor constantExpressionExecutor;
+
   /**
    * Regular expression that matches the description of all instances of this
    * rule and {@link ReduceValuesRule} also. Use
@@ -95,9 +97,9 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
    * condition is a constant, the filter is removed (if TRUE) or replaced with
    * {@link EmptyRel} (if FALSE or NULL).
    */
-  public static final OptiqForkedConstantReduxRule FILTER_INSTANCE =
-      new OptiqForkedConstantReduxRule(FilterRel.class,
-          "ReduceExpressionsRule[Filter]") {
+  public static final OptiqForkedConstantReduxRule createFilterInstance(RelOptPlanner.Executor executor) {
+      return new OptiqForkedConstantReduxRule(FilterRel.class,
+          "ReduceExpressionsRule[Filter]", executor) {
         public void onMatch(RelOptRuleCall call) {
           FilterRel filter = call.rel(0);
           List<RexNode> expList = new ArrayList<RexNode>(filter.getChildExps());
@@ -188,10 +190,11 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule PROJECT_INSTANCE =
-      new OptiqForkedConstantReduxRule(ProjectRel.class,
-          "ReduceExpressionsRule[Project]") {
+  public static final OptiqForkedConstantReduxRule createProjectInstance(RelOptPlanner.Executor executor) {
+      return new OptiqForkedConstantReduxRule(ProjectRel.class,
+          "ReduceExpressionsRule[Project]", executor) {
         public void onMatch(RelOptRuleCall call) {
           ProjectRel project = call.rel(0);
           List<RexNode> expList =
@@ -211,10 +214,11 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule JOIN_INSTANCE =
-      new OptiqForkedConstantReduxRule(JoinRelBase.class,
-          "ReduceExpressionsRule[Join]") {
+  public static final OptiqForkedConstantReduxRule createJoinInstance(RelOptPlanner.Executor executor) {
+      return new OptiqForkedConstantReduxRule(JoinRelBase.class,
+          "ReduceExpressionsRule[Join]", executor) {
         public void onMatch(RelOptRuleCall call) {
           final JoinRelBase join = call.rel(0);
           List<RexNode> expList = new ArrayList<RexNode>(join.getChildExps());
@@ -233,9 +237,12 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
-  public static final OptiqForkedConstantReduxRule CALC_INSTANCE =
-      new OptiqForkedConstantReduxRule(CalcRel.class, "ReduceExpressionsRule[Calc]") {
+
+  public static final OptiqForkedConstantReduxRule createCalcInstance(RelOptPlanner.Executor executor) {
+      return new OptiqForkedConstantReduxRule(CalcRel.class, "ReduceExpressionsRule[Calc]",
+          executor) {
         public void onMatch(RelOptRuleCall call) {
           CalcRel calc = call.rel(0);
           RexProgram program = calc.getProgram();
@@ -303,6 +310,7 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
           }
         }
       };
+  }
 
   //~ Constructors -----------------------------------------------------------
 
@@ -311,8 +319,9 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
    *
    * @param clazz class of rels to which this rule should apply
    */
-  private OptiqForkedConstantReduxRule(Class<? extends RelNode> clazz, String desc) {
+  private OptiqForkedConstantReduxRule(Class<? extends RelNode> clazz, String desc, RelOptPlanner.Executor executor) {
     super(operand(clazz, any()), desc);
+    this.constantExpressionExecutor = executor;
   }
 
   //~ Methods ----------------------------------------------------------------
@@ -324,7 +333,7 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
    * @param expList List of expressions, modified in place
    * @return whether reduction found something to change, and succeeded
    */
-  static boolean reduceExpressions(RelNode rel, List<RexNode> expList) {
+  boolean reduceExpressions(RelNode rel, List<RexNode> expList) {
     RexBuilder rexBuilder = rel.getCluster().getRexBuilder();
 
     // Find reducible expressions.
@@ -363,10 +372,17 @@ public abstract class OptiqForkedConstantReduxRule extends RelOptRule {
     }
 
     // Compute the values they reduce to.
-    RelOptPlanner.Executor executor =
-        rel.getCluster().getPlanner().getExecutor();
+    /***************************************
+     * TODO - figure out how to get this plugged in without creating a new instance here
+     * the planner referred in the commented out line was a volcano planner created by a chain
+     * of optiq calls. The hep planner we keep a reference to in SqlHandlerConfig was not the proper
+     * one to set the executor of to make it appear here. Wasn't sure how to get them stitched together,
+     * so this is the workaround for now.
+     */
+//    RelOptPlanner.Executor executor =
+//        rel.getCluster().getPlanner().getExecutor();
     List<RexNode> reducedValues = new ArrayList<RexNode>();
-    executor.reduce(rexBuilder, constExps, reducedValues);
+    constantExpressionExecutor.reduce(rexBuilder, constExps, reducedValues);
 
     // For ProjectRel, we have to be sure to preserve the result
     // types, so always cast regardless of the expression type.
