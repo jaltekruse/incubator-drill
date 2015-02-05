@@ -110,9 +110,8 @@ public class DrillRuleSets {
 
       ////////////////////////////////
       DrillScanRule.INSTANCE,
-      // TODO - possibly re-enable, should be handled by the new constant folding rule
-      // which is a superset of this
       DrillFilterRule.INSTANCE,
+      OptiqForkedConstantReduxRule.createFilterInstance(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context),
       DrillProjectRule.INSTANCE,
       DrillWindowRule.INSTANCE,
       DrillAggregateRule.INSTANCE,
