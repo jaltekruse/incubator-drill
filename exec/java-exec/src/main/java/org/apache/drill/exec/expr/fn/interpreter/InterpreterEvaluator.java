@@ -41,6 +41,7 @@ import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.QueryDateTimeInfo;
 import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.RecordBatch;
+import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
 import org.reflections.Reflections;
@@ -107,6 +108,8 @@ public class InterpreterEvaluator {
               f.set(interpreter, udfUtilities.getManagedBuffer());
             } else if (f.getType().equals(QueryDateTimeInfo.class)) {
               f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
+            } else if (f.getType().equals(PartitionExplorer.class)) {
+              f.set(interpreter, udfUtilities.getPartitionExplorer());
             } else {
               // do nothing with the field
             }
