@@ -62,15 +62,16 @@ public class DirectoryExplorers {
         subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
-            String.format("Partition `%s`.`%s` does not exist in storage plugin %s.",
-                workspaceStr, pluginStr, partitionStr));
+            "Error in %s function: " + org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME +
+                "Partition `" +  workspaceStr + "`.`" + pluginStr + "`" +
+                " does not exist in storage plugin " + partitionStr);
       }
 
       if (subPartitions.length == 0) {
         throw new RuntimeException(
-            String.format("Error in %s function: " +
-                "Partition `%s`.`%s` in storage plugin %s does not contain sub-partitions.",
-                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME, workspaceStr, pluginStr, partitionStr));
+            "Error in %s function: " + org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME +
+             "Partition `" +  workspaceStr + "`.`" + pluginStr + "`" +
+                " in storage plugin " + partitionStr + "  does not contain sub-partitions.");
       }
       String subPartitionStr = subPartitions[0];
       // find the maximum directory in the list using a case-insensitive string comparison
