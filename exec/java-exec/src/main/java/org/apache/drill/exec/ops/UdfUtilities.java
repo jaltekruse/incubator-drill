@@ -50,8 +50,12 @@ public interface UdfUtilities {
   DrillBuf getManagedBuffer();
 
   /**
-   * 
-   * @return
+   * A partition explorer allows UDFs to view the sub-partitions below a
+   * particular partition. This allows for the implementation of UDFs to
+   * query against the partition information, without having to read
+   * the actual data contained in the partition.
+   * @return - an object for exploring partitions of all available storage
+   *           plugins
    */
   PartitionExplorer getPartitionExplorer();
 }
