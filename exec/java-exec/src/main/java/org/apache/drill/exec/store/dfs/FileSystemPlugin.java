@@ -31,6 +31,7 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
@@ -112,9 +113,18 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     return config;
   }
 
-  public List<String> getSubPartitions(String workspace, String partition) throws PartitionNotFoundException {
-    Path p = new Path(config.workspaces.get(workspace).getLocation() + File.separator + partition);
-    List<String> subPartitions = new ArrayList<>();
+  public String[] getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    String workspaceStr = null;
+    String partitionStr = null;
+    try {
+      workspaceStr = new String(workspace.buffer.array(), "UTF-8");
+      partitionStr = new String(partition.buffer.array(), "UTF-8");
+    } catch (java.io.UnsupportedEncodingException e) {
+      // should not happen, UTF-8 encoding should be available
+      throw new RuntimeException(e);
+    }
+    Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
+    String[] subPartitions;
     List<FileStatus> fileStatuses;
     try {
       fileStatuses = fs.list(false, p);
@@ -123,9 +133,12 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
       // take a look at what the error message comes out looking like to a user.
       throw new RuntimeException("Error trying to read sub-partitions." , e);
     }
+    subPartitions = new String[fileStatuses.size()];
+    int i = 0;
     for (FileStatus fStatus : fileStatuses) {
       // TODO - check to make sure this is exactly the right way to serialize the path
-      subPartitions.add(fStatus.getPath().toUri().toString());
+      subPartitions[i] = fStatus.getPath().toUri().toString();
+      i++;
     }
     return subPartitions;
   }

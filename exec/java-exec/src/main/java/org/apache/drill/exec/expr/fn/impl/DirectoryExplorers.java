@@ -55,12 +55,12 @@ public class DirectoryExplorers {
         pluginStr = new String(plugin.buffer.array(), "UTF-8");
         workspaceStr = new String(workspace.buffer.array(), "UTF-8");
         partitionStr = new String(partition.buffer.array(), "UTF-8");
-      } catch (java.io.UnsupportedEncodingException e) {
+      } catch (java.io.UnsupportedEncodingException ex) {
         // should not happen, UTF-8 encoding should be available
-        throw new RuntimeException(e);
+        throw new RuntimeException(ex);
       }
       try {
-        subPartitions = partitionExplorer.getSubPartitions(pluginStr, workspaceStr, partitionStr);
+        subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
             String.format("Partition `%s`.`%s` does not exist in storage plugin %s.",
@@ -74,8 +74,11 @@ public class DirectoryExplorers {
                 MAXDIR_NAME, workspaceStr, pluginStr, partitionStr));
       }
       String subPartitionStr = subPartitions[0];
-      for (int i = 0; i < subPartitions.length; i++) {
-
+      // find the maximum directory in the list using a case-insensitive string comparison
+      for (int i = 1; i < subPartitions.length; i++) {
+        if (subPartitionStr.compareToIgnoreCase(subPartitions[i]) > 0) {
+          subPartitionStr = subPartitions[i];
+        }
       }
       String[] subPartitionParts = subPartitionStr.split(File.separator);
       subPartitionStr = subPartitionParts[subPartitionParts.length - 1];
