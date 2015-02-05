@@ -92,8 +92,18 @@ public class ExpressionInterpreterTest  extends PopUnitTestBase {
   public void interpreterCaseExpr() throws Exception {
     String[] colNames = {"col1"};
     TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
-    String expressionStr =  "case when substr(col1, 1, 3)='aaa' then 'ABC' else 'XYZ' end";
-    String[] expectedFirstTwoValues = {"ABC", "XYZ"};
+    String expressionStr = "col1 + 100 - 1 * 2 + 2";
+    String[] expectedFirstTwoValues = {"-2147483548", "null"};
+
+    doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
+  }
+
+  @Test
+  public void interpreterMaxDir() throws Exception {
+    String[] colNames = {"col1"};
+    TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
+    String expressionStr =  "maxdir('dfs','root','/tmp/drilltest/tpch_orders')";
+    String[] expectedFirstTwoValues = {"bigfile", "bigfile"};
 
     doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
   }
