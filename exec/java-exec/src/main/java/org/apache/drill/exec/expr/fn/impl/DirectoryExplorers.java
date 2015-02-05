@@ -26,12 +26,11 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
-import java.io.File;
 
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
 
-  private static final String MAXDIR_NAME = "maxdir";
+  public static final String MAXDIR_NAME = "maxdir";
 
   @FunctionTemplate(name = MAXDIR_NAME, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.INTERNAL)
   public static class MaxDir implements DrillSimpleFunc {
@@ -71,7 +70,7 @@ public class DirectoryExplorers {
         throw new RuntimeException(
             String.format("Error in %s function: " +
                 "Partition `%s`.`%s` in storage plugin %s does not contain sub-partitions.",
-                MAXDIR_NAME, workspaceStr, pluginStr, partitionStr));
+                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME, workspaceStr, pluginStr, partitionStr));
       }
       String subPartitionStr = subPartitions[0];
       // find the maximum directory in the list using a case-insensitive string comparison
@@ -80,9 +79,8 @@ public class DirectoryExplorers {
           subPartitionStr = subPartitions[i];
         }
       }
-      String[] subPartitionParts = subPartitionStr.split(File.separator);
+      String[] subPartitionParts = subPartitionStr.split(java.io.File.separator);
       subPartitionStr = subPartitionParts[subPartitionParts.length - 1];
-      logger.debug("Partition found: {}", subPartitionStr);
       out.buffer = buffer = buffer.reallocIfNeeded(subPartitionStr.length());
       for (int i = 0; i < subPartitionStr.length(); i++) {
         out.buffer.setByte(i, subPartitionStr.charAt(i));
