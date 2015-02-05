@@ -17,6 +17,8 @@
  ******************************************************************************/
 package org.apache.drill.exec.store;
 
+import org.apache.drill.exec.expr.holders.VarCharHolder;
+
 import java.util.List;
 
 public interface StoragePluginPartitionExplorer {
@@ -45,5 +47,5 @@ public interface StoragePluginPartitionExplorer {
    * @return - list of sub-partitions, will be empty if a there is not another
    *           level of sub-partitions below, i.e. hit a leaf partition
    */
-  List<String> getSubPartitions(String workspace, String partition) throws PartitionNotFoundException;
+  String[] getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
 }
