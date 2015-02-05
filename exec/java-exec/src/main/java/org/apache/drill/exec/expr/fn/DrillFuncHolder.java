@@ -140,7 +140,7 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
         } else if (ref.getType() == QueryDateTimeInfo.class) {
           g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], g.getMappingSet().getIncoming().invoke("getContext").invoke("getQueryDateTimeInfo"));
         } else if (ref.getType() == PartitionExplorer.class) {
-          g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], g.getMappingSet().getIncoming().invoke("getContext").invoke("getQueryDateTimeInfo"));
+          g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], g.getMappingSet().getIncoming().invoke("getContext").invoke("getPartitionExplorer"));
         } else {
            ;// error for unsupported injectable types is throw in the FunctionConverter.getHolder() method
         }
