@@ -17,5 +17,15 @@
  */
 package org.apache.drill.exec.expr.holders;
 
+/**
+ * Wrapper object for an individual value in Drill.
+ *
+ * ValueHolders are designed to be mutable wrapper objects for defining clean
+ * APIs that access data in Drill. For performance, object creation is avoided
+ * at all costs throughout execution. For this reason, ValueHolders are
+ * disallowed from implementing any methods, this allows for them to be
+ * replaced by their java primitive inner members during optimization of
+ * run-time generated code.
+ */
 public interface ValueHolder {
 }
