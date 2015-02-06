@@ -37,7 +37,6 @@ import org.apache.drill.exec.expr.holders.TimeHolder;
 import org.apache.drill.exec.expr.holders.TimeStampHolder;
 import org.apache.drill.exec.expr.holders.TimeStampTZHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
-import org.apache.drill.exec.record.RecordBatch;
 
 public class DateTypeFunctions {
 
@@ -53,7 +52,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputMilliSeconds;
         @Output IntervalHolder out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -75,7 +74,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputMonths;
         @Output IntervalYearHolder out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -95,7 +94,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputMillis;
         @Output IntervalDayHolder out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -116,7 +115,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputDays;
         @Output DateHolder   out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -143,7 +142,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputMilliSeconds;
         @Output TimeStampHolder out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -171,7 +170,7 @@ public class DateTypeFunctions {
         @Param  VarCharHolder inputTimeZone;
         @Output TimeStampTZHolder out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -199,7 +198,7 @@ public class DateTypeFunctions {
         @Param  BigIntHolder inputMilliSeconds;
         @Output TimeHolder   out;
 
-        public void setup(RecordBatch b) {
+        public void setup() {
         }
 
         public void eval() {
@@ -215,7 +214,7 @@ public class DateTypeFunctions {
         @Workspace long queryStartDate;
         @Output DateHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
             int timeZoneIndex = incoming.getContext().getRootFragmentTimeZone();
             org.joda.time.DateTimeZone timeZone = org.joda.time.DateTimeZone.forID(org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeZone(timeZoneIndex));
@@ -235,7 +234,7 @@ public class DateTypeFunctions {
         @Workspace int timezoneIndex;
         @Output TimeStampTZHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
             int timeZoneIndex = incoming.getContext().getRootFragmentTimeZone();
             org.joda.time.DateTimeZone timeZone = org.joda.time.DateTimeZone.forID(org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeZone(timeZoneIndex));
@@ -256,7 +255,7 @@ public class DateTypeFunctions {
         @Workspace int timezoneIndex;
         @Output TimeStampTZHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             org.joda.time.DateTime now = new org.joda.time.DateTime();
             timezoneIndex = org.apache.drill.exec.expr.fn.impl.DateUtility.getIndex(now.getZone().toString());
         }
@@ -273,7 +272,7 @@ public class DateTypeFunctions {
         @Inject DrillBuf buffer;
         @Output VarCharHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -291,7 +290,7 @@ public class DateTypeFunctions {
         @Workspace long queryStartDate;
         @Output TimeStampHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
             org.joda.time.DateTime now = (new org.joda.time.DateTime(incoming.getContext().getQueryStartTime())).withZoneRetainFields(org.joda.time.DateTimeZone.UTC);
             queryStartDate = now.getMillis();
@@ -307,7 +306,7 @@ public class DateTypeFunctions {
         @Workspace int queryStartTime;
         @Output TimeHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
 
             int timeZoneIndex = incoming.getContext().getRootFragmentTimeZone();
             org.joda.time.DateTimeZone timeZone = org.joda.time.DateTimeZone.forID(org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeZone(timeZoneIndex));
@@ -330,7 +329,7 @@ public class DateTypeFunctions {
     @Param TimeHolder right;
     @Output TimeStampHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -345,7 +344,7 @@ public class DateTypeFunctions {
         @Param DateHolder left;
         @Output TimeStampHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -364,7 +363,7 @@ public class DateTypeFunctions {
         @Param DateHolder right;
         @Output BigIntHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -381,7 +380,7 @@ public class DateTypeFunctions {
         @Param TimeStampHolder right;
         @Output IntervalHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -400,7 +399,7 @@ public class DateTypeFunctions {
         @Workspace long queryStartDate;
         @Output IntervalHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int timeZoneIndex = incoming.getContext().getRootFragmentTimeZone();
             org.joda.time.DateTimeZone timeZone = org.joda.time.DateTimeZone.forID(org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeZone(timeZoneIndex));
             org.joda.time.DateTime now = new org.joda.time.DateTime(incoming.getContext().getQueryStartTime(), timeZone);
@@ -423,7 +422,7 @@ public class DateTypeFunctions {
         @Param DateHolder right;
         @Output IntervalHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         public void eval() {
@@ -442,7 +441,7 @@ public class DateTypeFunctions {
         @Workspace long queryStartDate;
         @Output IntervalHolder out;
 
-        public void setup(RecordBatch incoming) {
+        public void setup() {
             int timeZoneIndex = incoming.getContext().getRootFragmentTimeZone();
             org.joda.time.DateTimeZone timeZone = org.joda.time.DateTimeZone.forID(org.apache.drill.exec.expr.fn.impl.DateUtility.getTimeZone(timeZoneIndex));
             org.joda.time.DateTime now = new org.joda.time.DateTime(incoming.getContext().getQueryStartTime(), timeZone);
@@ -464,7 +463,7 @@ public class DateTypeFunctions {
         @Output TimeHolder out;
 
         @Override
-        public void setup(RecordBatch incoming) {
+        public void setup() {
         }
 
         @Override
@@ -479,7 +478,7 @@ public class DateTypeFunctions {
       @Workspace long queryStartDate;
 
       @Override
-      public void setup(RecordBatch incoming) {
+      public void setup() {
          queryStartDate = incoming.getContext().getQueryStartTime();
       }
 
@@ -497,7 +496,7 @@ public class DateTypeFunctions {
       @Workspace org.joda.time.format.DateTimeFormatter formatter;
 
       @Override
-      public void setup(RecordBatch incoming) {
+      public void setup() {
          formatter = org.joda.time.format.DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss");
       }
 
@@ -518,7 +517,7 @@ public class DateTypeFunctions {
       @Workspace org.joda.time.format.DateTimeFormatter formatter;
 
       @Override
-      public void setup(RecordBatch incoming) {
+      public void setup() {
          String pattern = org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.toStringFromUTF8(inputPattern.start, inputPattern.end, inputPattern.buffer);
          formatter = org.joda.time.format.DateTimeFormat.forPattern(pattern);
       }

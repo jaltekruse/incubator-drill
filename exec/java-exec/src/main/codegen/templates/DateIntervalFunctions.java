@@ -46,7 +46,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output IntHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -61,7 +61,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value < right.value ? 1 : 0;
@@ -75,7 +75,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value <= right.value ? 1 : 0;
@@ -89,7 +89,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value > right.value ? 1 : 0;
@@ -103,7 +103,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value >= right.value ? 1 : 0;
@@ -117,7 +117,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value == right.value ? 1 : 0;
@@ -131,7 +131,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
         out.value = left.value != right.value ? 1 : 0;
@@ -208,7 +208,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output IntHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -229,7 +229,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -251,7 +251,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -273,7 +273,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -295,7 +295,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
 
@@ -317,7 +317,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
           <#if type.name == "Interval">
@@ -338,7 +338,7 @@ public class GCompare${type.name}Functions {
       @Param ${type.name}Holder right;
       @Output BitHolder out;
 
-      public void setup(RecordBatch b) {}
+      public void setup() {}
 
       public void eval() {
           <#if type.name == "Interval">
