@@ -51,7 +51,7 @@ import com.google.common.collect.Maps;
 /**
  * Contextual objects required for execution of a particular fragment.
  */
-public class FragmentContext implements AutoCloseable {
+public class FragmentContext implements AutoCloseable, UdfUtilities {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
 
   private final Map<FragmentHandle, DataTunnel> tunnels = Maps.newHashMap();
@@ -62,9 +62,8 @@ public class FragmentContext implements AutoCloseable {
   private final FunctionImplementationRegistry funcRegistry;
   private final BufferAllocator allocator;
   private final PlanFragment fragment;
+  private QueryDateTimeInfo queryDateTimeInfo;
   private IncomingBuffers buffers;
-  private final long queryStartTime;
-  private final int rootFragmentTimeZone;
   private final OptionManager fragmentOptions;
   private final LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
 
@@ -89,10 +88,7 @@ public class FragmentContext implements AutoCloseable {
     this.connection = connection;
     this.fragment = fragment;
     this.funcRegistry = funcRegistry;
-
-    queryStartTime = fragment.getQueryStartTime();
-    rootFragmentTimeZone = fragment.getTimeZone();
-
+    this.queryDateTimeInfo = new QueryDateTimeInfo(fragment.getQueryStartTime(), fragment.getTimeZone());
     logger.debug("Getting initial memory allocation of {}", fragment.getMemInitial());
     logger.debug("Fragment max allocation: {}", fragment.getMemMax());
 
@@ -179,12 +175,8 @@ public class FragmentContext implements AutoCloseable {
     return stats;
   }
 
-  public long getQueryStartTime() {
-    return queryStartTime;
-  }
-
-  public int getRootFragmentTimeZone() {
-    return rootFragmentTimeZone;
+  public QueryDateTimeInfo getQueryDateTimeInfo(){
+    return this.queryDateTimeInfo;
   }
 
   public DrillbitEndpoint getForemanEndpoint() {
