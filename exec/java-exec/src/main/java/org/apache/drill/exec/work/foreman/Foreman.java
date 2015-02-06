@@ -531,6 +531,7 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
 
   @Override
   public void close() throws IOException {
+    context.close();
   }
 
   public QueryStatus getQueryStatus() {

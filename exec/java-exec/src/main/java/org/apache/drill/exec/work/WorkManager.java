@@ -155,6 +155,7 @@ public class WorkManager implements Closeable {
     try {
       if (executor != null) {
         executor.awaitTermination(1, TimeUnit.SECONDS);
+
       }
     } catch (InterruptedException e) {
       logger.warn("Executor interrupted while awaiting termination");
@@ -211,6 +212,12 @@ public class WorkManager implements Closeable {
     }
 
     public void retireForeman(Foreman foreman) {
+      try {
+        queries.get(foreman.getQueryId()).close();
+      } catch (IOException e) {
+        throw new RuntimeException("Error closing query Foreman", e);
+      }
+
       queries.remove(foreman.getQueryId(), foreman);
     }
 

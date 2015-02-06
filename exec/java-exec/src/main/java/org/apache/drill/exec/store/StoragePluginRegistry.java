@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
@@ -308,7 +309,16 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
 
   @Override
   public String[] getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-    return plugins.get(plugin).getSubPartitions(workspace, partition);
+
+    VarCharHolder currentInput = plugin;
+    byte[] temp = new byte[currentInput.end - currentInput.start];
+    currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+    try {
+      return plugins.get(new String(temp, "UTF-8")).getSubPartitions(workspace, partition);
+    } catch (UnsupportedEncodingException e) {
+      // should not happen, UTF- 8 should be available
+      throw new RuntimeException(e);
+    }
   }
 
   public class DrillSchemaFactory implements SchemaFactory {
