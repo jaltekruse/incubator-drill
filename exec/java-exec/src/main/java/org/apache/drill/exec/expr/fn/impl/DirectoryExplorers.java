@@ -50,10 +50,24 @@ public class DirectoryExplorers {
       String pluginStr = null;
       String workspaceStr = null;
       String partitionStr = null;
+      byte[] temp;
+      VarCharHolder currentInput;
       try {
-        pluginStr = new String(plugin.buffer.array(), "UTF-8");
-        workspaceStr = new String(workspace.buffer.array(), "UTF-8");
-        partitionStr = new String(partition.buffer.array(), "UTF-8");
+        currentInput = plugin;
+        temp = new byte[currentInput.end - currentInput.start];
+        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+        pluginStr = new String(temp, "UTF-8");
+
+        currentInput = workspace;
+        temp = new byte[currentInput.end - currentInput.start];
+        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+        workspaceStr = new String(temp, "UTF-8");
+
+        currentInput = partition;
+        temp = new byte[currentInput.end - currentInput.start];
+        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+        partitionStr = new String(temp, "UTF-8");
+
       } catch (java.io.UnsupportedEncodingException ex) {
         // should not happen, UTF-8 encoding should be available
         throw new RuntimeException(ex);
@@ -76,16 +90,18 @@ public class DirectoryExplorers {
       String subPartitionStr = subPartitions[0];
       // find the maximum directory in the list using a case-insensitive string comparison
       for (int i = 1; i < subPartitions.length; i++) {
-        if (subPartitionStr.compareToIgnoreCase(subPartitions[i]) > 0) {
+        if (subPartitionStr.compareToIgnoreCase(subPartitions[i]) < 0) {
           subPartitionStr = subPartitions[i];
         }
       }
       String[] subPartitionParts = subPartitionStr.split(java.io.File.separator);
       subPartitionStr = subPartitionParts[subPartitionParts.length - 1];
-      out.buffer = buffer = buffer.reallocIfNeeded(subPartitionStr.length());
-      for (int i = 0; i < subPartitionStr.length(); i++) {
-        out.buffer.setByte(i, subPartitionStr.charAt(i));
-      }
+      byte[] result = subPartitionStr.getBytes();
+      out.buffer = buffer = buffer.reallocIfNeeded(result.length);
+
+      out.buffer.setBytes(0, subPartitionStr.getBytes(), 0, result.length);
+      out.start = 0;
+      out.end = result.length;
     }
 
   }

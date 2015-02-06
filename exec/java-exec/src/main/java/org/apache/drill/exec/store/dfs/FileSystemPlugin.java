@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.dfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -117,8 +118,15 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     String workspaceStr = null;
     String partitionStr = null;
     try {
-      workspaceStr = new String(workspace.buffer.array(), "UTF-8");
-      partitionStr = new String(partition.buffer.array(), "UTF-8");
+      VarCharHolder currentInput = workspace;
+      byte[] temp = new byte[currentInput.end - currentInput.start];
+      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+      workspaceStr = new String(temp, "UTF-8");
+
+      currentInput = partition;
+      temp = new byte[currentInput.end - currentInput.start];
+      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
+      partitionStr = new String(temp, "UTF-8");
     } catch (java.io.UnsupportedEncodingException e) {
       // should not happen, UTF-8 encoding should be available
       throw new RuntimeException(e);

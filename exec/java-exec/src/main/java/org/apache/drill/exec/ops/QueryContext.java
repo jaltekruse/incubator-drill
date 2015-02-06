@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.ops;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 
 import io.netty.buffer.DrillBuf;
@@ -46,7 +48,7 @@ import org.apache.drill.exec.store.sys.PStoreProvider;
 
 // TODO - consider re-name to PlanningContext, as the query execution context actually appears
 // in fragment contexts
-public class QueryContext implements UdfUtilities{
+public class QueryContext implements Closeable, UdfUtilities{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryContext.class);
 
   private final QueryId queryId;
@@ -62,8 +64,8 @@ public class QueryContext implements UdfUtilities{
   // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
   // which is used for planning time constant expression evaluation)
   private final BufferAllocator allocator;
-  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024;
-  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024;
+  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024 * 1024;
+  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024 * 1024;
 
 
   public QueryContext(UserSession session, QueryId queryId, DrillbitContext drllbitContext) {
@@ -187,5 +189,10 @@ public class QueryContext implements UdfUtilities{
   @Override
   public PartitionExplorer getPartitionExplorer() {
     return drillbitContext.getStorage();
+  }
+
+  @Override
+  public void close() throws IOException {
+    allocator.close();
   }
 }
