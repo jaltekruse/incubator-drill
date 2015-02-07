@@ -24,8 +24,6 @@ public class TestConstantFolding extends BaseTestQuery {
 
   @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
-
-//    test("select * from dfs.`/tmp/drilltest/littlefile/orders.parquet`");
     test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = concat('little','file')");
 //    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = 'littlefile'");
   }
