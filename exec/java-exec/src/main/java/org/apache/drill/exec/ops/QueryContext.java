@@ -59,7 +59,7 @@ public class QueryContext implements UdfUtilities{
 
   // most of the memory consumed by planning is on-heap, as the calcite planning library
   // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
-  // which is used for planning time
+  // which is used for planning time constant expression evaluation)
   private final BufferAllocator allocator;
   private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024;
   private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024;
