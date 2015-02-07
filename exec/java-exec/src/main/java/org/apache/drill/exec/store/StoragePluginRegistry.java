@@ -81,11 +81,6 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
   private final DrillSchemaFactory schemaFactory = new DrillSchemaFactory();
   private final PStore<StoragePluginConfig> pluginSystemTable;
 
-  // TODO - remove these as they are unused
-  private final Object updateLock = new Object();
-  private volatile long lastUpdate = 0;
-  private static final long UPDATE_FREQUENCY = 2 * 60 * 1000;
-
   public StoragePluginRegistry(DrillbitContext context) {
     try {
       this.context = context;
@@ -167,11 +162,6 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
       Map<String, StoragePlugin> activePlugins = new HashMap<String, StoragePlugin>();
       for (Map.Entry<String, StoragePluginConfig> entry : pluginSystemTable) {
         String name = entry.getKey();
-        // hack to make tests run: JsonMappingException: Could not resolve type id 'hbase' into a subtype of
-        if (name.equals("hbase") || name.equals("hive") || name.equals("mongo")) {
-          continue;
-        }
-
         StoragePluginConfig config = entry.getValue();
         if (config.isEnabled()) {
           try {

@@ -155,7 +155,6 @@ public class WorkManager implements Closeable {
     try {
       if (executor != null) {
         executor.awaitTermination(1, TimeUnit.SECONDS);
-
       }
     } catch (InterruptedException e) {
       logger.warn("Executor interrupted while awaiting termination");

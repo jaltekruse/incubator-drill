@@ -46,6 +46,7 @@ import org.apache.drill.exec.store.mock.MockScanBatchCreator;
 import org.apache.drill.exec.store.mock.MockSubScanPOP;
 import org.apache.drill.exec.vector.ValueVector;
 import org.joda.time.DateTime;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -92,18 +93,19 @@ public class ExpressionInterpreterTest  extends PopUnitTestBase {
   public void interpreterCaseExpr() throws Exception {
     String[] colNames = {"col1"};
     TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
-    String expressionStr = "col1 + 100 - 1 * 2 + 2";
-    String[] expectedFirstTwoValues = {"-2147483548", "null"};
+    String expressionStr =  "case when substr(col1, 1, 3)='aaa' then 'ABC' else 'XYZ' end";
+    String[] expectedFirstTwoValues = {"ABC", "XYZ"};
 
     doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
   }
 
+  @Ignore("TODO - add temporary file generation to allow this to run elsewhere")
   @Test
   public void interpreterMaxDir() throws Exception {
     String[] colNames = {"col1"};
     TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
     String expressionStr =  "maxdir('dfs','root','/tmp/drilltest/tpch_orders')";
-    String[] expectedFirstTwoValues = {"bigfile", "bigfile"};
+    String[] expectedFirstTwoValues = {"smallfile", "smallfile"};
 
     doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
   }
