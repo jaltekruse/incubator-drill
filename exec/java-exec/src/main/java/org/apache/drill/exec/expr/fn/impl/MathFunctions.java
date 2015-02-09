@@ -65,6 +65,21 @@ public class MathFunctions{
 
   }
 
+  // TODO - delete this
+  // testing to see if Drill currently exposes determinism to optiq
+  @FunctionTemplate(name = "random2", isRandom = true,
+      scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
+  public static class Random2 implements DrillSimpleFunc{
+    @Output  Float8Holder out;
+
+    public void setup(){}
+
+    public void eval(){
+      out.value = java.lang.Math.random();
+    }
+
+  }
+
   @FunctionTemplate(name = "random", isRandom = true,
     scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
   public static class Random implements DrillSimpleFunc{

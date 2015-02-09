@@ -35,6 +35,7 @@ import org.eigenbase.rex.RexNode;
 import org.eigenbase.util.NlsString;
 
 import java.io.UnsupportedEncodingException;
+import java.math.BigDecimal;
 import java.util.List;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
@@ -69,6 +70,18 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       // TODO - add a switch here to translate expression results to the appropriate literal type
       try {
         switch(materializedExpr.getMajorType().getMinorType()) {
+          case INT:
+            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
+            break;
+          case BIGINT:
+            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Long)vector.getAccessor().getObject(0))));
+            break;
+          case FLOAT4:
+            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Float)vector.getAccessor().getObject(0))));
+            break;
+          case FLOAT8:
+            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
+            break;
           case VARCHAR:
             reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
             break;
@@ -79,6 +92,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       } catch (UnsupportedEncodingException e) {
         throw new RuntimeException("Invalid string returned from constant expression evaluation");
       }
+      vector.clear();
     }
   }
 }
