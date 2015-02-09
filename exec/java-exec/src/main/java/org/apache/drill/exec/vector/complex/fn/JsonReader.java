@@ -55,6 +55,7 @@ public class JsonReader extends BaseJsonProcessor {
   private final MapVectorOutput mapOutput;
   private final ListVectorOutput listOutput;
   private final boolean extended = true;
+  private final boolean readNumbersAsDouble;
 
   /**
    * Describes whether or not this reader can unwrap a single root array record and treat it like a set of distinct records.
@@ -68,11 +69,11 @@ public class JsonReader extends BaseJsonProcessor {
 
   private FieldSelection selection;
 
-  public JsonReader(DrillBuf managedBuf, boolean allTextMode, boolean skipOuterList) {
-    this(managedBuf, GroupScan.ALL_COLUMNS, allTextMode, skipOuterList);
+  public JsonReader(DrillBuf managedBuf, boolean allTextMode, boolean skipOuterList, boolean readNumbersAsDouble) {
+    this(managedBuf, GroupScan.ALL_COLUMNS, allTextMode, skipOuterList, readNumbersAsDouble);
   }
 
-  public JsonReader(DrillBuf managedBuf, List<SchemaPath> columns, boolean allTextMode, boolean skipOuterList) {
+  public JsonReader(DrillBuf managedBuf, List<SchemaPath> columns, boolean allTextMode, boolean skipOuterList, boolean readNumbersAsDouble) {
     super(managedBuf);
     assert Preconditions.checkNotNull(columns).size() > 0 : "json record reader requires at least a column";
     this.selection = FieldSelection.getFieldSelection(columns);
@@ -82,6 +83,7 @@ public class JsonReader extends BaseJsonProcessor {
     this.columns = columns;
     this.mapOutput = new MapVectorOutput(workingBuffer);
     this.listOutput = new ListVectorOutput(workingBuffer);
+    this.readNumbersAsDouble = readNumbersAsDouble;
   }
 
   @Override
@@ -303,7 +305,12 @@ public class JsonReader extends BaseJsonProcessor {
         atLeastOneWrite = true;
         break;
       case VALUE_NUMBER_INT:
-        map.bigInt(fieldName).writeBigInt(parser.getLongValue());
+        if (this.readNumbersAsDouble) {
+          map.float8(fieldName).writeFloat8(parser.getDoubleValue());
+        }
+        else {
+          map.bigInt(fieldName).writeBigInt(parser.getLongValue());
+        }
         atLeastOneWrite = true;
         break;
       case VALUE_STRING:
@@ -460,7 +467,12 @@ public class JsonReader extends BaseJsonProcessor {
         atLeastOneWrite = true;
         break;
       case VALUE_NUMBER_INT:
-        list.bigInt().writeBigInt(parser.getLongValue());
+        if (this.readNumbersAsDouble) {
+          list.float8().writeFloat8(parser.getDoubleValue());
+        }
+        else {
+          list.bigInt().writeBigInt(parser.getLongValue());
+        }
         atLeastOneWrite = true;
         break;
       case VALUE_STRING:
