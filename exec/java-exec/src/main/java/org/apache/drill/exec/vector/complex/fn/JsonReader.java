@@ -62,6 +62,7 @@ public class JsonReader {
   private final List<SchemaPath> columns;
   private final boolean allTextMode;
   private boolean atLeastOneWrite = false;
+  private final boolean readNumbersAsDouble;
 
   private FieldSelection selection;
 
@@ -78,14 +79,14 @@ public class JsonReader {
   }
 
   public JsonReader() throws IOException {
-    this(null, false);
+    this(null, false, false);
   }
 
-  public JsonReader(DrillBuf managedBuf, boolean allTextMode) {
-    this(managedBuf, GroupScan.ALL_COLUMNS, allTextMode);
+  public JsonReader(DrillBuf managedBuf, boolean allTextMode, boolean readNumbersAsDouble) {
+    this(managedBuf, GroupScan.ALL_COLUMNS, allTextMode, readNumbersAsDouble);
   }
 
-  public JsonReader(DrillBuf managedBuf, List<SchemaPath> columns, boolean allTextMode) {
+  public JsonReader(DrillBuf managedBuf, List<SchemaPath> columns, boolean allTextMode, boolean readNumbersAsDouble) {
     BufferRecycler recycler = new BufferRecycler();
     IOContext context = new IOContext(recycler, this, false);
     final int features = JsonParser.Feature.collectDefaults() //
@@ -101,6 +102,7 @@ public class JsonReader {
     this.workBuf = managedBuf;
     this.allTextMode = allTextMode;
     this.columns = columns;
+    this.readNumbersAsDouble = readNumbersAsDouble;
   }
 
   public void ensureAtLeastOneField(ComplexWriter writer){
@@ -284,7 +286,12 @@ public class JsonReader {
         atLeastOneWrite = true;
         break;
       case VALUE_NUMBER_INT:
-        map.bigInt(fieldName).writeBigInt(parser.getLongValue());
+        if (this.readNumbersAsDouble) {
+          map.float8(fieldName).writeFloat8(parser.getDoubleValue());
+        }
+        else {
+          map.bigInt(fieldName).writeBigInt(parser.getLongValue());
+        }
         atLeastOneWrite = true;
         break;
       case VALUE_STRING:
@@ -419,7 +426,12 @@ public class JsonReader {
         atLeastOneWrite = true;
         break;
       case VALUE_NUMBER_INT:
-        list.bigInt().writeBigInt(parser.getLongValue());
+        if (this.readNumbersAsDouble) {
+          list.float8().writeFloat8(parser.getDoubleValue());
+        }
+        else {
+          list.bigInt().writeBigInt(parser.getLongValue());
+        }
         atLeastOneWrite = true;
         break;
       case VALUE_STRING:
