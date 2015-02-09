@@ -34,7 +34,9 @@ public class TestConstantFolding extends PlanTestBase {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
+  @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
+    test("select * from dfs.`/tmp/drilltest/tpch_orders/*/*.parquet` where dir0 = maxdir('dfs','root','/tmp/drilltest/tpch_orders')");
 
 //    test("select * from dfs.`/tmp/drilltest/*/*.parquet` where dir0 = concat('small','file')");
   }
@@ -67,13 +69,13 @@ public class TestConstantFolding extends PlanTestBase {
     // Check and make sure that Filter is not present in the plan
     Pattern p = Pattern.compile("bigfile");
     Matcher m = p.matcher(plan);
-    // should not read the big file after the pruning has been applied
+    // should not read the *big* file after the pruning has been applied
     assert ! m.find();
 
 
     p = Pattern.compile("smallfile");
     m = p.matcher(plan);
-    // should read the small file after the pruning has been applied
+    // should read the *small* file after the pruning has been applied
     assert m.find();
   }
 
