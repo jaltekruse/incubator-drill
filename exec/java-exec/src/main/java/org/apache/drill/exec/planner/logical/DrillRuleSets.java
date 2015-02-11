@@ -116,9 +116,11 @@ public class DrillRuleSets {
       DrillSortRule.INSTANCE,
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
+//      ReduceExpressionsRuleDrill.createFilterInstance(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context)),
+
       ReduceExpressionsRule.FILTER_INSTANCE,
-      ReduceExpressionsRule.CALC_INSTANCE,
-      ReduceExpressionsRule.PROJECT_INSTANCE,
+//      ReduceExpressionsRule.CALC_INSTANCE,
+//      ReduceExpressionsRule.PROJECT_INSTANCE,
       DrillReduceAggregatesRule.INSTANCE
       ));
     }
