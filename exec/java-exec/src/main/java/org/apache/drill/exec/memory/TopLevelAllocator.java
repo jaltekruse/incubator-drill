@@ -22,6 +22,7 @@ import io.netty.buffer.DrillBuf;
 import io.netty.buffer.PooledByteBufAllocatorL;
 import io.netty.buffer.UnsafeDirectLittleEndian;
 
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,7 +61,7 @@ public class TopLevelAllocator implements BufferAllocator {
     this.errorOnLeak = errorOnLeak;
     this.acct = new Accountor(config, errorOnLeak, null, null, maximumAllocation, 0, true);
     this.empty = DrillBuf.getEmpty(this, acct);
-    this.childrenMap = ENABLE_ACCOUNTING ? new IdentityHashMap<ChildAllocator, StackTraceElement[]>() : null;
+    this.childrenMap = ENABLE_ACCOUNTING ? Collections.synchronizedMap(new IdentityHashMap<ChildAllocator, StackTraceElement[]>()) : null;
   }
 
   public TopLevelAllocator(DrillConfig config) {
