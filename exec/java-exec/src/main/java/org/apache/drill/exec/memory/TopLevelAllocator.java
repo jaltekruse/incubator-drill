@@ -17,16 +17,14 @@
  */
 package org.apache.drill.exec.memory;
 
+import com.google.common.collect.MapMaker;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.DrillBuf;
 import io.netty.buffer.PooledByteBufAllocatorL;
 import io.netty.buffer.UnsafeDirectLittleEndian;
 
-import java.util.IdentityHashMap;
-import java.util.HashMap;
-import java.util.Map;
-
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
@@ -39,7 +37,12 @@ public class TopLevelAllocator implements BufferAllocator {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TopLevelAllocator.class);
 
   private static final boolean ENABLE_ACCOUNTING = AssertionUtil.isAssertionsEnabled();
-  private final Map<ChildAllocator, StackTraceElement[]> childrenMap;
+
+  // Map to keep track of the child allocators. When iterating over the keys in the close method
+  // to log the outstanding unexpected remaining allocators, there is still a risk
+  // of a fragment trying to request a new child allocator unexpectedly, as such this must be
+  // a ConcurrentMap to prevent a ConcurrentModificationException.
+  private final ConcurrentMap<ChildAllocator, StackTraceElement[]> childrenMap;
   private final PooledByteBufAllocatorL innerAllocator = PooledByteBufAllocatorL.DEFAULT;
   private final Accountor acct;
   private final boolean errorOnLeak;
@@ -61,7 +64,8 @@ public class TopLevelAllocator implements BufferAllocator {
     this.errorOnLeak = errorOnLeak;
     this.acct = new Accountor(config, errorOnLeak, null, null, maximumAllocation, 0, true);
     this.empty = DrillBuf.getEmpty(this, acct);
-    this.childrenMap = ENABLE_ACCOUNTING ? new IdentityHashMap<ChildAllocator, StackTraceElement[]>() : null;
+    // This builder usage allows for both concurrency protection and identity key comparison
+    this.childrenMap = ENABLE_ACCOUNTING ? new MapMaker().weakKeys().<ChildAllocator, StackTraceElement[]>makeMap() : null;
   }
 
   public TopLevelAllocator(DrillConfig config) {
@@ -169,18 +173,23 @@ public class TopLevelAllocator implements BufferAllocator {
   private class ChildAllocator implements BufferAllocator{
     private final DrillBuf empty;
     private Accountor childAcct;
-    private Map<ChildAllocator, StackTraceElement[]> children = new HashMap<>();
+
+    // Map to keep track of the child allocators. When iterating over the keys in the close method
+    // to log the outstanding unexpected remaining allocators, there is still a risk
+    // of a fragment trying to request a new child allocator unexpectedly, as such this must be
+    // a ConcurrentMap to prevent a ConcurrentModificationException.
+    private final ConcurrentMap<ChildAllocator, StackTraceElement[]> childrenMap;
     private boolean closed = false;
     private FragmentHandle handle;
     private FragmentContext fragmentContext;
-    private Map<ChildAllocator, StackTraceElement[]> thisMap;
+    private ConcurrentMap<ChildAllocator, StackTraceElement[]> thisMap;
     private boolean applyFragmentLimit;
 
     public ChildAllocator(FragmentContext context,
                           Accountor parentAccountor,
                           long max,
                           long pre,
-                          Map<ChildAllocator,
+                          ConcurrentMap<ChildAllocator,
                           StackTraceElement[]> map,
                           boolean applyFragmentLimit) throws OutOfMemoryException{
       assert max >= pre;
@@ -188,6 +197,8 @@ public class TopLevelAllocator implements BufferAllocator {
       childAcct = new Accountor(context.getConfig(), errorOnLeak, context, parentAccountor, max, pre, applyFragmentLimit);
       this.fragmentContext=context;
       this.handle = context.getHandle();
+      // This builder usage allows for both concurrency protection and identity key comparison
+      this.childrenMap = ENABLE_ACCOUNTING ? new MapMaker().weakKeys().<ChildAllocator, StackTraceElement[]>makeMap() : null;
       thisMap = map;
       this.empty = DrillBuf.getEmpty(this, childAcct);
     }
@@ -230,7 +241,7 @@ public class TopLevelAllocator implements BufferAllocator {
       };
       logger.debug("New child allocator with initial reservation {}", initialReservation);
       ChildAllocator newChildAllocator = new ChildAllocator(context, childAcct, maximumReservation, initialReservation, null, applyFragmentLimit);
-      this.children.put(newChildAllocator, Thread.currentThread().getStackTrace());
+      this.childrenMap.put(newChildAllocator, Thread.currentThread().getStackTrace());
       return newChildAllocator;
     }
 
@@ -259,10 +270,10 @@ public class TopLevelAllocator implements BufferAllocator {
         if (thisMap != null) {
           thisMap.remove(this);
         }
-        for (ChildAllocator child : children.keySet()) {
+        for (ChildAllocator child : childrenMap.keySet()) {
           if (!child.isClosed()) {
             StringBuilder sb = new StringBuilder();
-            StackTraceElement[] elements = children.get(child);
+            StackTraceElement[] elements = childrenMap.get(child);
             for (int i = 3; i < elements.length; i++) {
               sb.append("\t\t");
               sb.append(elements[i]);
