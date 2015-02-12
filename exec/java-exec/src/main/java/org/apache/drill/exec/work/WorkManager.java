@@ -186,6 +186,11 @@ public class WorkManager implements AutoCloseable {
     return dContext;
   }
 
+
+  // TODO - delete me, for debugging
+  public static int passCount = 0;
+  public static int completedCount = 0;
+
   /**
    * Narrowed interface to WorkManager that is made available to tasks it is managing.
    */

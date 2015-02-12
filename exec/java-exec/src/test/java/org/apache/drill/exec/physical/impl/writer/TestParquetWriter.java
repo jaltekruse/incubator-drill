@@ -17,8 +17,10 @@
  */
 package org.apache.drill.exec.physical.impl.writer;
 
+import static org.apache.drill.common.types.TypeProtos.MinorType.*;
 import static org.junit.Assert.assertEquals;
 
+import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -28,7 +30,14 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.DrillTestWrapper;
+import org.apache.drill.common.types.DataMode;
+import org.apache.drill.common.types.MinorType;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.HyperVectorValueIterator;
 import org.apache.drill.exec.exception.SchemaChangeException;
@@ -54,6 +63,32 @@ public class TestParquetWriter extends BaseTestQuery {
 
   static FileSystem fs;
 
+  // This is a list of all of the defined physical types according to the protobuf definition that
+  // have not been fully implemented or are not currently supported
+  private List<TypeProtos.MinorType> toSkip = Lists.newArrayList(
+      // LATE - cannot appear in execution
+      // MAP - cannot be casted/mocked
+      // List - cannot be casted/mocked
+      // Dense decimal types  - in the process of being deprecated
+      LATE, DECIMAL28DENSE, DECIMAL38DENSE,
+      MAP, LIST, MONEY, TIMETZ, TIMESTAMPTZ,
+      // FixedChar, Fixed16cahr, FixedBinary - not yet implimented
+      // NULL - not used currently
+      // GENERIC OBJECT - not used currently, see MAP
+      FIXEDCHAR, FIXED16CHAR, FIXEDBINARY, NULL, GENERIC_OBJECT,
+      // INTERVAL - not recognized as valid in parsing, this fails, cast( col_1 as inteval)
+      INTERVAL
+      // TODO - cast is resolving to a boolean for TINYINT
+      , TINYINT, SMALLINT
+      // TODO - DRILL-1687: these are not documented on the WIKI, they are not currently supported but have many incorrect generated
+      // functions written against them
+      , UINT1, UINT2, UINT4, UINT8
+      // TODO - fix mock data generation to be valid dates
+//      , TypeProtos.MinorType.DATE, TypeProtos.MinorType.TIMESTAMP, TypeProtos.MinorType.TIME
+      // TODO - re-enable this, fix parquet writer for decimal, or the DecimalUtiltiy which is providing byte[] for the wrap data
+//      ,TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE
+  );
+
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
@@ -67,6 +102,179 @@ public class TestParquetWriter extends BaseTestQuery {
     String selection = "*";
     String inputTable = "cp.`employee.json`";
     runTestAndValidate(selection, selection, inputTable, "employee_parquet");
+  }
+
+  @Ignore("for debugging")
+  @Test
+  public void testAllDataTypes() throws Exception {
+    String query = "SELECT ";
+    List<String> columnsAndCastsAndComparisons = new ArrayList();
+    List<String> columnsAndCasts = new ArrayList();
+    List<String> columns = new ArrayList();
+
+    query = "select INT_col,BIGINT_col,DECIMAL9_col,DECIMAL18_col,DECIMAL28SPARSE_col,DECIMAL38SPARSE_col,DATE_col,TIME_col,TIMESTAMP_col,FLOAT4_col,FLOAT8_col,BIT_col,VARCHAR_col,VAR16CHAR_col,VARBINARY_col,INTERVALYEAR_col,INTERVALDAY_col from cp.`/parquet/alltypes.json`";
+
+    RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
+    BatchSchema schema = null;
+    String inputFile = "cp.`/parquet/alltypes.json`";
+
+    List<QueryResultBatch> results = new ArrayList();
+    List<Map> actualRecords = new ArrayList<>();
+    System.out.println(query);
+    results = BaseTestQuery.testRunAndReturn(UserBitShared.QueryType.SQL, query);
+    DrillTestWrapper.addToMaterializedResults(actualRecords, results, loader, schema);
+
+    int i = 0;
+    for (TypeProtos.MinorType minorType : values()) {
+      if (toSkip.contains(minorType)) {
+        continue;
+      }
+
+      // TODO - remove - old strategy - select cast( INT_col as INT) INT_col, ... from inputTable t1 where t1.INT_col = cast('1' as INT) AND ..
+      // select * FROM inputTable where cast(INT_col as INT) = castINT('1') AND ...
+      try {
+        String literal =  generateCast("`" + minorType.name().toUpperCase() + "_col`", minorType) + " = " + "cast" + minorType.name().toUpperCase() + "('" + actualRecords.get(0).get("`" + minorType.name().toUpperCase() + "_col`") + "')";
+        String castExpr = generateCast("`" + minorType.name().toUpperCase() + "_col`", minorType) + " " + minorType.name().toUpperCase() + "_col";
+
+        columnsAndCastsAndComparisons.add(literal);
+        columns.add(castExpr);
+        i++;
+
+      } catch (Exception ex) {
+        ex.printStackTrace();
+      }
+    }
+
+    // convertFrom takes varbinary, not varchar
+    String query2 = "SELECT Cast( `int_col` AS             INT)             int_col, \n" +
+        "       Cast( `bigint_col` AS          BIGINT)          bigint_col, \n" +
+        "       Cast( `decimal9_col` AS        DECIMAL)         decimal9_col, \n" +
+        "       Cast( `decimal18_col` AS       DECIMAL(18,9))   decimal18_col, \n" +
+        "       Cast( `decimal28sparse_col` AS DECIMAL(28, 14)) decimal28sparse_col, \n" +
+        "       Cast( `decimal38sparse_col` AS DECIMAL(38, 19)) decimal38sparse_col, \n" +
+        "       Cast( `date_col` AS            DATE)            date_col, \n" +
+        "       Cast( `time_col` AS            TIME)            time_col, \n" +
+        "       Cast( `timestamp_col` AS TIMESTAMP)             timestamp_col, \n" +
+        "       Cast( `float4_col` AS FLOAT)                    float4_col, \n" +
+        "       Cast( `float8_col` AS DOUBLE)                   float8_col, \n" +
+        "       Cast( `bit_col` AS       BOOLEAN)                     bit_col, \n" +
+        "       Cast( `varchar_col` AS   VARCHAR(65000))              varchar_col, \n" +
+        "       Cast( `varbinary_col` AS VARBINARY(65000))            varbinary_col, \n" +
+        "       Cast( `intervalyear_col` AS INTERVAL year)            intervalyear_col, \n" +
+        "       Cast( `intervalday_col` AS INTERVAL day)              intervalday_col \n" +
+        "FROM   cp.`/parquet/alltypes.json` \n" +
+        "WHERE  `int_col` = convert_fromint('1') \n" +
+        "AND    `bigint_col` = convert_frombigint('1') \n" +
+
+        // TODO - these are broken in execution, they are using utility to convert varchar to int, which considers .
+        // a format exception
+        "AND    `decimal9_col` = cast( '1.0' AS                        decimal)  " +
+        "AND    `decimal18_col` = cast( '123456789.000000000' AS       decimal(18,9))  " +
+        "AND    `decimal28sparse_col` = cast( '123456789.000000000' AS decimal(28, 14))  " +
+        "AND    `decimal38sparse_col` = cast( '123456789.000000000' AS decimal(38, 19))  " +
+
+        // TODO - these are not defined, not sure if this is intentional
+//        "AND    `decimal9_col` = convert_fromdecimal9('1.0') \n" +
+//        "AND    `decimal18_col` = convert_fromdecimal18('123456789.000000000') \n" +
+//        "AND    `decimal28sparse_col` = convert_fromdecimal28sparse('123456789.000000000') \n" +
+//        "AND    `decimal38sparse_col` = convert_fromdecimal38sparse('123456789.000000000') \n" +
+
+        "AND    `date_col` = convert_fromDATE_EPOCH('1995-01-01') \n" +
+        "AND    `time_col` = convert_fromTIME_EPOCH('01:00:00') \n" +
+//        "AND    `timestamp_col` = convert_fromtimestamp('1995-01-01 01:00:10.000') \n" +
+        "AND    `float4_col` = convert_fromFLOAT('1') \n" +
+        "AND    `float8_col` = convert_fromDOUBLE('1') \n" +
+        "AND    `bit_col` = convert_fromBOOLEAN_BYTE('0') \n" +
+        // TODO - how to test folding here
+        "AND    `varchar_col` = 'qwerty' \n" +
+        "AND    `varbinary_col` = converttonullablevarbinary('qwerty') \n" +
+        "AND    `intervalyear_col` = converttonullableintervalyear( 'P1Y') \n" +
+        "AND    `intervalday_col` = converttonullableintervalday( 'P1D' )";
+
+    // casts did not work, they were not being folding, trying convertfrom functions instead
+
+    // select cast( INT_col as INT) INT_col, ... from inputTable t1 where t1.INT_col = cast('1' as INT) AND ..
+    query = "SELECT * FROM " + inputFile + " WHERE " + Joiner.on(" AND ").join(columnsAndCastsAndComparisons);
+    /*
+    String query2 = "SELECT Cast( `int_col` AS             INT)             int_col,  " +
+        "       Cast( `bigint_col` AS          BIGINT)          bigint_col,  " +
+        "       Cast( `decimal9_col` AS        DECIMAL)         decimal9_col,  " +
+        "       Cast( `decimal18_col` AS       DECIMAL(18,9))   decimal18_col,  " +
+        "       Cast( `decimal28sparse_col` AS DECIMAL(28, 14)) decimal28sparse_col,  " +
+        "       Cast( `decimal38sparse_col` AS DECIMAL(38, 19)) decimal38sparse_col,  " +
+        "       Cast( `date_col` AS            DATE)            date_col,  " +
+        "       Cast( `time_col` AS            TIME)            time_col,  " +
+        "       Cast( `timestamp_col` AS TIMESTAMP)             timestamp_col,  " +
+        "       Cast( `float4_col` AS FLOAT)                    float4_col,  " +
+        "       Cast( `float8_col` AS DOUBLE)                   float8_col,  " +
+        "       Cast( `bit_col` AS       BOOLEAN)                     bit_col,  " +
+        "       Cast( `varchar_col` AS   VARCHAR(65000))              varchar_col,  " +
+        "       Cast( `var16char_col` AS VARCHAR(65000))              var16char_col,  " +
+        "       Cast( `varbinary_col` AS VARBINARY(65000))            varbinary_col,  " +
+        "       Cast( `intervalyear_col` AS INTERVAL year)            intervalyear_col,  " +
+        "       Cast( `intervalday_col` AS INTERVAL day)              intervalday_col  " +
+        "FROM   cp.`/parquet/alltypes.json`  " +
+        "WHERE  `int_col` = cast( '1' AS                               int)  " +
+        "AND    `bigint_col` = cast( '1' AS                            bigint)  " +
+//        "AND    `decimal9_col` = cast( '1.0' AS                        decimal)  " +
+//        "AND    `decimal18_col` = cast( '123456789.000000000' AS       decimal(18,9))  " +
+//        "AND    `decimal28sparse_col` = cast( '123456789.000000000' AS decimal(28, 14))  " +
+//        "AND    `decimal38sparse_col` = cast( '123456789.000000000' AS decimal(38, 19))  " +
+        "AND    `date_col` = cast( '1995-01-01' AS                     date)  " +
+        "AND    `time_col` = cast( '01:00:00' AS                       time)  " +
+        "AND    `timestamp_col` = cast( '1995-01-01 01:00:10.000' AS timestamp)  " +
+        "AND    `float4_col` = cast( '1' AS float)  " +
+        "AND    `float8_col` = cast( '1' AS DOUBLE)  " +
+        "AND    `bit_col` = cast( 'false' AS        boolean)  " +
+        "AND    `varchar_col` = cast( 'qwerty' AS   varchar(65000))  " +
+        "AND    `var16char_col` = cast( 'qwerty' AS varchar(65000))  " +
+        "AND    `varbinary_col` = converttonullablevarbinary('qwerty')  " +
+        "AND    `intervalyear_col` = converttonullableintervalyear( 'P1Y')  " +
+        "AND    `intervalday_col` = converttonullableintervalday( 'P1D' )";
+        */
+    System.out.println(query);
+//    System.out.println(query);
+    test("alter system set `store.json.all_text_mode` = true;");
+    test(query);
+//    test("use dfs.tmp");
+//    deleteIfExists("drilltest/parquet_all_types");
+//    test("create table parquet_all_types as " + query );
+
+
+
+//    runTestAndValidate(Joiner.on(",").join(columnsAndCasts), Joiner.on(",").join(columns), inputFile, "parquet_all_types");
+//
+//        testBuilder()
+//            .unOrdered()
+//            .sqlQuery("select cast(BIT_col as boolean) as a FROM cp.`/parquet/alltypes.json` limit 1")
+//            .baselineColumns("a")
+//            .baselineValues(false)
+//            .build().run();
+
+  }
+
+  public String generateCast(String value, TypeProtos.MinorType minorType) {
+
+    String s = "cast( " + value + " as " + Types.getNameOfMinorType(minorType);
+    // cast to varchar currently defaults to length 1 unless specified
+    // decimal types default to a scale of 0 if not specified
+    switch(minorType) {
+      case VARCHAR:
+      case VAR16CHAR:
+      case VARBINARY:
+        s += "(65000)";
+        break;
+      case DECIMAL18:
+        s += "(18,9)";
+        break;
+      case DECIMAL28SPARSE:
+        s += "(28, 14)";
+        break;
+      case DECIMAL38SPARSE:
+        s += "(38, 19)";
+    }
+    s += ") ";
+    return s;
   }
 
   @Test
@@ -352,6 +560,9 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testParquetReadWebReturns() throws Exception {
     compareParquetReadersColumnar("wr_returning_customer_sk", "dfs.`/tmp/web_returns`");
+  }
+
+  public void deleteIfExists(String outputFile) throws IOException {
   }
 
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {

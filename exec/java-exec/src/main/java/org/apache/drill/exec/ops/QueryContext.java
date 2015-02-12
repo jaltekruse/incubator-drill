@@ -60,6 +60,7 @@ public class QueryContext implements Closeable, UdfUtilities{
   // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
   // which is used for planning time constant expression evaluation)
   private final BufferAllocator allocator;
+  private final BufferManager bufferManager;
   private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024 * 1024;
   private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024 * 1024;
 
@@ -77,6 +78,7 @@ public class QueryContext implements Closeable, UdfUtilities{
     } catch (OutOfMemoryException e) {
       throw new DrillRuntimeException("Error creating off-heap allocator for planning context.",e);
     }
+    this.bufferManager = new BufferManager(this.allocator, null);
   }
 
 
@@ -149,7 +151,7 @@ public class QueryContext implements Closeable, UdfUtilities{
 
   @Override
   public DrillBuf getManagedBuffer() {
-    return allocator.buffer(100, MAX_OFF_HEAP_ALLOCATION);
+    return bufferManager.getManagedBuffer();
   }
 
   @Override
@@ -157,8 +159,17 @@ public class QueryContext implements Closeable, UdfUtilities{
     return drillbitContext.getStorage();
   }
 
+  public static int closedAttemptedCount = 0;
+  public static int closedFinishedCount = 0;
+
   @Override
   public void close() throws IOException {
+    System.out.println("closes attempted: " + closedAttemptedCount + " closed completed: " + closedFinishedCount );
+    closedAttemptedCount++;
+    bufferManager.close();
     allocator.close();
+    closedFinishedCount++;
+    System.out.println("closes attempted: " + closedAttemptedCount + " closed completed: " + closedFinishedCount );
   }
+
 }

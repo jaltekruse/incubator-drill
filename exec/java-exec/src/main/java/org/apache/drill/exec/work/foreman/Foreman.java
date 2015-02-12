@@ -17,12 +17,17 @@
  */
 package org.apache.drill.exec.work.foreman;
 
+import com.google.common.base.Joiner;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -187,6 +192,12 @@ public class Foreman implements Runnable {
 
     drillbitContext.getWorkBus().removeFragmentStatusListener(queryId);
     drillbitContext.getClusterCoordinator().removeDrillbitStatusListener(queryManager);
+
+    try {
+      queryContext.close();
+    } catch (IOException e) {
+      moveToState(QueryState.FAILED, e);
+    }
 
     if (result != null) {
       assert !resultSent;
@@ -511,6 +522,20 @@ public class Foreman implements Runnable {
     return queryWorkUnit;
   }
 
+  // TODO - delete me, for debugging
+  public static int failedCount = 0;
+  public static int canceledCount = 0;
+  public static int finishedCount = 0;
+
+  class MutableInt {
+    int value = 1; // note that we start at 1 since we're counting
+    public void increment () { ++value;      }
+    public int  get ()       { return value; }
+    public String toString() { return "" + value; }
+  }
+
+  public static final Map<String, MutableInt> queryStateTransitions = Collections.synchronizedMap(new HashMap<String, MutableInt>());
+
   /**
    * Tells the foreman to move to a new state.
    *
@@ -519,6 +544,19 @@ public class Foreman implements Runnable {
    */
   private synchronized void moveToState(final QueryState newState, final Exception exception) {
     logger.info("State change requested.  {} --> {}", state, newState, exception);
+
+
+    // TODO - delete me, for debugging
+    String transition = state.name() + " to " + newState.name();
+    MutableInt count = queryStateTransitions.get(transition);
+    if (count == null) {
+      queryStateTransitions.put(transition, new MutableInt());
+    }
+    else {
+      count.increment();
+    }
+    Joiner.MapJoiner mapJoiner = Joiner.on(',').withKeyValueSeparator("=");
+    System.out.println(mapJoiner.join(queryStateTransitions));
     switch(state) {
     case PENDING:
       if (newState == QueryState.RUNNING) {

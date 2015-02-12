@@ -88,7 +88,7 @@ public class TestAggregateFunctions extends BaseTestQuery {
     testBuilder()
     .sqlQuery(query)
     .ordered()
-    .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false")
+    .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false;")
     .sqlBaselineQuery(baselineQuery)
     .build().run();
 

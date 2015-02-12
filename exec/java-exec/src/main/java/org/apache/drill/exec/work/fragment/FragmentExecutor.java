@@ -72,11 +72,17 @@ public class FragmentExecutor implements Runnable {
   }
 
   public FragmentStatus getStatus() {
-    final FragmentStatus status =
-        AbstractStatusReporter.getBuilder(context, FragmentState.RUNNING, null, null).build();
-    if (state.get() != FragmentState.RUNNING_VALUE) {
+    // If the query is not in a running state, the operator tree is still being constructed and
+    // there is no reason to poll for intermediate results.
+
+    // Previously the call to get the operator stats with the AbstractStatusReporter was happening
+    // before this check. This caused a concurrent modification exception as the list of operator
+    // stats is iterated over while collecting info, and added to while building the operator tree.
+    if(state.get() != FragmentState.RUNNING_VALUE){
       return null;
     }
+    final FragmentStatus status =
+        AbstractStatusReporter.getBuilder(context, FragmentState.RUNNING, null, null).build();
     return status;
   }
 
@@ -182,12 +188,8 @@ public class FragmentExecutor implements Runnable {
 
   /**
    * Updates the fragment state with the given state
-<<<<<<< HEAD
    *
    * @param to target state
-=======
-   * @param  to  target state
->>>>>>> 5369c51... DRILL-1735:  Have closing of JDBC connection free embedded-server resources.
    */
   private void updateState(final FragmentState to) {
     state.set(to.getNumber());

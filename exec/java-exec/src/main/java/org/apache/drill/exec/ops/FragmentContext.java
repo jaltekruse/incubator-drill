@@ -66,7 +66,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
   private QueryDateTimeInfo queryDateTimeInfo;
   private IncomingBuffers buffers;
   private final OptionManager fragmentOptions;
-  private final LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
+  private final BufferManager bufferManager;
 
   private volatile Throwable failureCause;
   private volatile FragmentContextState state = FragmentContextState.OK;
@@ -114,6 +114,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     } catch(Throwable e) {
       throw new ExecutionSetupException("Failure while getting memory allocator for fragment.", e);
     }
+    this.bufferManager = new BufferManager(this.allocator, this);
 
     stats = new FragmentStats(allocator, dbContext.getMetrics(), fragment.getAssignment());
   }
@@ -281,12 +282,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
      * TODO wait for threads working on this Fragment to terminate (or at least stop working
      * on this Fragment's query)
      */
-    final Object[] mbuffers = ((LongObjectOpenHashMap<Object>) (Object) managedBuffers).values;
-    for (int i = 0; i < mbuffers.length; i++) {
-      if (managedBuffers.allocated[i]) {
-        ((DrillBuf) mbuffers[i]).release();
-      }
-    }
+    bufferManager.close();
 
     if (buffers != null) {
       buffers.close();
@@ -297,23 +293,16 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
         + " After close allocator is: " + allocator != null ? "OK" : "NULL");
   }
 
-  public DrillBuf replace(final DrillBuf old, final int newSize) {
-    if (managedBuffers.remove(old.memoryAddress()) == null) {
-      throw new IllegalStateException("Tried to remove unmanaged buffer.");
-    }
-    old.release();
-    return getManagedBuffer(newSize);
+  public DrillBuf replace(DrillBuf old, int newSize) {
+    return bufferManager.replace(old, newSize);
   }
 
   public DrillBuf getManagedBuffer() {
     return getManagedBuffer(256);
   }
 
-  public DrillBuf getManagedBuffer(final int size) {
-    final DrillBuf newBuf = allocator.buffer(size);
-    managedBuffers.put(newBuf.memoryAddress(), newBuf);
-    newBuf.setFragmentContext(this);
-    return newBuf;
+  public DrillBuf getManagedBuffer(int size) {
+    return bufferManager.getManagedBuffer(size);
   }
 
   @Override
