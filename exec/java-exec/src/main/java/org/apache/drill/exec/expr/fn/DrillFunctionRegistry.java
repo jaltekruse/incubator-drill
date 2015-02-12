@@ -70,6 +70,8 @@ public class DrillFunctionRegistry {
           if ((existingImplementation = functionSignatureMap.get(functionSignature)) != null) {
             throw new AssertionError(String.format("Conflicting functions with similar signature found. Func Name: %s, Class name: %s " +
                 " Class name: %s", functionName, clazz.getName(), existingImplementation));
+          } else if (holder.isAggregating() && holder.isRandom() ) {
+            logger.warn("Aggregate functions cannot be random, did not register function {}", clazz.getName());
           } else {
             functionSignatureMap.put(functionSignature, clazz.getName());
           }
@@ -102,7 +104,7 @@ public class DrillFunctionRegistry {
           if (func.isAggregating()) {
             op = new DrillSqlAggOperator(name, func.getParamCount());
           } else {
-            op = new DrillSqlOperator(name, func.getParamCount(), func.getReturnType());
+            op = new DrillSqlOperator(name, func.getParamCount(), func.getReturnType(), func.isRandom());
           }
           operatorTable.add(function.getKey(), op);
         }

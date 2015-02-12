@@ -43,10 +43,8 @@ import org.apache.drill.exec.planner.physical.UnionAllPrule;
 import org.apache.drill.exec.planner.physical.WriterPrule;
 import org.eigenbase.rel.RelFactories;
 import org.eigenbase.rel.rules.PushFilterPastJoinRule;
-import org.eigenbase.rel.rules.PushFilterPastProjectRule;
 import org.eigenbase.rel.rules.PushJoinThroughJoinRule;
-import org.eigenbase.rel.rules.PushProjectPastFilterRule;
-import org.eigenbase.rel.rules.PushProjectPastJoinRule;
+import org.eigenbase.rel.rules.ReduceExpressionsRule;
 import org.eigenbase.rel.rules.RemoveDistinctAggregateRule;
 import org.eigenbase.rel.rules.RemoveDistinctRule;
 import org.eigenbase.rel.rules.RemoveSortRule;
@@ -118,7 +116,10 @@ public class DrillRuleSets {
       DrillSortRule.INSTANCE,
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
-      OptiqForkedConstantReduxRule.createFilterInstance(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context)),
+
+      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
+      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+      ReduceExpressionsRule.PROJECT_INSTANCE,
       DrillReduceAggregatesRule.INSTANCE
       ));
     }
