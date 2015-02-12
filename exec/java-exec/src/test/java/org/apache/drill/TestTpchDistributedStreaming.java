@@ -67,7 +67,9 @@ public class TestTpchDistributedStreaming extends BaseTestQuery{
 
   @Test
   public void tpch08() throws Exception{
-    testDistributed("queries/tpch/08.sql");
+    for (int i = 0; i < 20; i++) {
+      testDistributed("queries/tpch/08.sql");
+    }
   }
 
   @Test

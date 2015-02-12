@@ -75,7 +75,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
   private IncomingBuffers buffers;
   private final OptionManager fragmentOptions;
   private final UserCredentials credentials;
-  private LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
+  private final BufferManager bufferManager;
 
   private volatile Throwable failureCause;
   private volatile FragmentContextState state = FragmentContextState.OK;
@@ -117,6 +117,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
     }catch(Throwable e){
       throw new ExecutionSetupException("Failure while getting memory allocator for fragment.", e);
     }
+    this.bufferManager = new BufferManager(this.allocator, this);
     this.stats = new FragmentStats(allocator, dbContext.getMetrics(), fragment.getAssignment());
 
     this.loader = new QueryClassLoader(dbContext.getConfig(), fragmentOptions);
@@ -296,12 +297,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
     for (Thread thread: daemonThreads) {
      thread.interrupt();
     }
-    Object[] mbuffers = ((LongObjectOpenHashMap<Object>)(Object)managedBuffers).values;
-    for (int i =0; i < mbuffers.length; i++) {
-      if (managedBuffers.allocated[i]) {
-        ((DrillBuf)mbuffers[i]).release();
-      }
-    }
+    bufferManager.close();
 
     if (buffers != null) {
       buffers.close();
@@ -314,11 +310,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
   }
 
   public DrillBuf replace(DrillBuf old, int newSize) {
-    if (managedBuffers.remove(old.memoryAddress()) == null) {
-      throw new IllegalStateException("Tried to remove unmanaged buffer.");
-    }
-    old.release();
-    return getManagedBuffer(newSize);
+    return bufferManager.replace(old, newSize);
   }
 
   public DrillBuf getManagedBuffer() {
@@ -331,10 +323,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
   }
 
   public DrillBuf getManagedBuffer(int size) {
-    DrillBuf newBuf = allocator.buffer(size);
-    managedBuffers.put(newBuf.memoryAddress(), newBuf);
-    newBuf.setFragmentContext(this);
-    return newBuf;
+    return bufferManager.getManagedBuffer(size);
   }
 
 }

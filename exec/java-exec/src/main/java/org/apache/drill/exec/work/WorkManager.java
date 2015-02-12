@@ -169,6 +169,10 @@ public class WorkManager implements Closeable {
     return "FragmentExecutor: " + QueryIdHelper.getQueryId(handle.getQueryId()) + ':' + handle.getMajorFragmentId() + ':' + handle.getMinorFragmentId();
   }
 
+  // TODO - delete me, for debugging
+  public static int passCount = 0;
+  public static int completedCount = 0;
+
   // create this so items can see the data here whether or not they are in this package.
   public class WorkerBee {
 
@@ -212,10 +216,13 @@ public class WorkManager implements Closeable {
 
     public void retireForeman(Foreman foreman) {
       try {
+        passCount++;
         queries.get(foreman.getQueryId()).close();
+        completedCount++;
       } catch (IOException e) {
         throw new RuntimeException("Error closing query Foreman", e);
       }
+      System.out.println("pass count: " + passCount + " completed count: " + completedCount);
 
       queries.remove(foreman.getQueryId(), foreman);
     }

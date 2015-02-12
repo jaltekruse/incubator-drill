@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.work.foreman;
 
+import com.google.common.base.Joiner;
 import io.netty.buffer.ByteBuf;
 
 import java.io.Closeable;
@@ -24,7 +25,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -155,12 +158,26 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
     stateListener.moveToState(QueryState.CANCELED, null);
   }
 
+  /**
+   * To ensure all failures are reported back to the user, all resource cleanup/closing should happen
+   * in the here before the call to send the final message to the client.
+   *
+   * All resource releasing belong here, not in the close method!
+   *
+   * @param result - the final batch to send back to the client
+   */
   private void cleanup(QueryResult result) {
     logger.info("foreman cleaning up - status: {}", queryManager.getStatus());
 
     bee.retireForeman(this);
     context.getWorkBus().removeFragmentStatusListener(queryId);
     context.getClusterCoordinator().removeDrillbitStatusListener(queryManager);
+    try {
+      context.close();
+    } catch (IOException e) {
+      moveToState(QueryState.FAILED, e);
+    }
+
     if(result != null){
       initiatingClient.sendResult(responseListener, new QueryWritableBatch(result), true);
     }
@@ -381,6 +398,20 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
         initiatingClient.getSession());
   }
 
+  // TODO - delete me, for debugging
+  public static int failedCount = 0;
+  public static int canceledCount = 0;
+  public static int finishedCount = 0;
+
+  class MutableInt {
+    int value = 1; // note that we start at 1 since we're counting
+    public void increment () { ++value;      }
+    public int  get ()       { return value; }
+    public String toString() { return "" + value; }
+  }
+
+  public static final Map<String, MutableInt> queryStateTransitions = Collections.synchronizedMap(new HashMap<String, MutableInt>());
+
   /**
    * Tells the foreman to move to a new state.  Note that
    * @param state
@@ -388,6 +419,19 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
    */
   private synchronized boolean moveToState(QueryState newState, Exception exception){
     logger.info("State change requested.  {} --> {}", state, newState, exception);
+
+    // TODO - delete me, for debugging
+    String transition = state.name() + " to " + newState.name();
+    MutableInt count = queryStateTransitions.get(transition);
+    if (count == null) {
+      queryStateTransitions.put(transition, new MutableInt());
+    }
+    else {
+      count.increment();
+    }
+    Joiner.MapJoiner mapJoiner = Joiner.on(',').withKeyValueSeparator("=");
+    System.out.println(mapJoiner.join(queryStateTransitions));
+
     outside: switch(state) {
 
     case PENDING:
@@ -529,9 +573,18 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
     return queryId;
   }
 
+  /**
+   * Method called after the final message has been sent to the client. To ensure
+   * all failures are reported back to the user, all resource cleanup/closing should happen
+   * in the cleanup method before the call to send the final message to the client.
+   *
+   * Unless there is a very good reason, put anything that would usually go in a close
+   * method over in cleanup()!
+   *
+   * @throws IOException
+   */
   @Override
   public void close() throws IOException {
-    context.close();
   }
 
   public QueryStatus getQueryStatus() {
