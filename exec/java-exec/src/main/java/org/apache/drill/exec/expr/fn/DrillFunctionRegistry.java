@@ -108,7 +108,7 @@ public class DrillFunctionRegistry {
             boolean isRandom;
             // prevent Drill from folding constant functions with types that cannot be materialized
             // into literals
-            if (DrillConstExecutor.NON_REDUCIBLE_TYPES.contains(func.getReturnType())) {
+            if (DrillConstExecutor.NON_REDUCIBLE_TYPES.contains(func.getReturnType().getMinorType())) {
               isRandom = true;
             } else {
               isRandom = func.isRandom();
