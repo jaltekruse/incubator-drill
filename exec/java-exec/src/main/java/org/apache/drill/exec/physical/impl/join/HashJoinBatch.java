@@ -181,8 +181,8 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     hjHelper = new HashJoinHelper(context, oContext.getAllocator());
     try {
       rightSchema = right.getSchema();
-      VectorContainer vectors = new VectorContainer(oContext);
-      for (VectorWrapper w : right) {
+      final VectorContainer vectors = new VectorContainer(oContext);
+      for (VectorWrapper<?> w : right) {
         vectors.addOrGet(w.getField());
       }
       vectors.buildSchema(SelectionVectorMode.NONE);
@@ -193,7 +193,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
       setupHashTable();
       hashJoinProbe = setupHashJoinProbe();
       // Build the container schema and set the counts
-      for (VectorWrapper w : container) {
+      for (VectorWrapper<?> w : container) {
         w.getValueVector().allocateNew();
       }
       container.buildSchema(BatchSchema.SelectionVectorMode.NONE);
@@ -317,12 +317,11 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
   }
 
   public void executeBuildPhase() throws SchemaChangeException, ClassTransformationException, IOException {
-
     //Setup the underlying hash table
 
     // skip first batch if count is zero, as it may be an empty schema batch
     if (right.getRecordCount() == 0) {
-      for (VectorWrapper w : right) {
+      for (VectorWrapper<?> w : right) {
         w.clear();
       }
       rightUpstream = next(right);
@@ -333,7 +332,6 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     while (moreData) {
 
       switch (rightUpstream) {
-
       case OUT_OF_MEMORY:
       case NONE:
       case NOT_YET:
@@ -451,7 +449,6 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     int outputFieldId = fieldId;
     fieldId = 0;
     JExpression probeIndex = JExpr.direct("probeIndex");
-    int recordCount = 0;
 
     if (leftUpstream == IterOutcome.OK || leftUpstream == IterOutcome.OK_NEW_SCHEMA) {
       for (VectorWrapper<?> vv : left) {
@@ -468,7 +465,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
           outputType = inputType;
         }
 
-        ValueVector v = container.addOrGet(MaterializedField.create(vv.getField().getPath(), outputType));
+        final ValueVector<?, ?, ?> v = container.addOrGet(MaterializedField.create(vv.getField().getPath(), outputType));
         if (v instanceof AbstractContainerVector) {
           vv.getValueVector().makeTransferPair(v);
           v.clear();
@@ -482,7 +479,6 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
         fieldId++;
         outputFieldId++;
       }
-      recordCount = left.getRecordCount();
     }
 
     HashJoinProbe hj = context.getImplementationClass(cg);
@@ -523,7 +519,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
   }
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     if (hjHelper != null) {
       hjHelper.clear();
     }
@@ -538,5 +534,4 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     }
     super.close();
   }
-
 }

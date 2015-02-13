@@ -20,22 +20,22 @@ package org.apache.drill.exec.vector;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
 
 public class AllocationHelper {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AllocationHelper.class);
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AllocationHelper.class);
 
-  public static void allocate(ValueVector v, int valueCount, int bytesPerValue){
+  public static void allocate(ValueVector v, int valueCount, int bytesPerValue) {
     allocate(v, valueCount, bytesPerValue, 5);
   }
 
   public static void allocatePrecomputedChildCount(ValueVector v, int valueCount, int bytesPerValue, int childValCount){
-    if(v instanceof FixedWidthVector){
+    if(v instanceof FixedWidthVector) {
       ((FixedWidthVector) v).allocateNew(valueCount);
     } else if (v instanceof VariableWidthVector) {
       ((VariableWidthVector) v).allocateNew(valueCount * bytesPerValue, valueCount);
-    }else if(v instanceof RepeatedFixedWidthVector){
+    } else if(v instanceof RepeatedFixedWidthVector) {
       ((RepeatedFixedWidthVector) v).allocateNew(valueCount, childValCount);
-    }else if(v instanceof RepeatedVariableWidthVector){
+    } else if(v instanceof RepeatedVariableWidthVector) {
       ((RepeatedVariableWidthVector) v).allocateNew(childValCount * bytesPerValue, valueCount, childValCount);
-    }else{
+    } else {
       v.allocateNew();
     }
   }
@@ -57,5 +57,4 @@ public class AllocationHelper {
       v.allocateNew();
     }
   }
-
 }

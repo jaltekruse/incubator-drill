@@ -17,10 +17,13 @@
  */
 package org.apache.drill.exec.vector;
 
+import io.netty.buffer.DrillBuf;
+
 import java.util.Iterator;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterators;
+
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.UserBitShared.SerializedField;
@@ -28,7 +31,7 @@ import org.apache.drill.exec.record.MaterializedField;
 
 public abstract class BaseValueVector<V extends BaseValueVector<V, A, M>, A extends BaseValueVector.BaseAccessor,
     M extends BaseValueVector.BaseMutator> implements ValueVector<V, A, M> {
-  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseValueVector.class);
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseValueVector.class);
 
   protected final BufferAllocator allocator;
   protected final MaterializedField field;
@@ -76,6 +79,7 @@ public abstract class BaseValueVector<V extends BaseValueVector<V, A, M>, A exte
   public abstract static class BaseMutator implements ValueVector.Mutator {
     protected BaseMutator() { }
 
+    @Override
     public void reset() { }
   }
 
@@ -84,5 +88,14 @@ public abstract class BaseValueVector<V extends BaseValueVector<V, A, M>, A exte
     return Iterators.emptyIterator();
   }
 
+  public static boolean checkBufRefs(final ValueVector<?, ?, ?> vv) {
+    for(final DrillBuf buffer : vv.getBuffers(false)) {
+      if (buffer.refCnt() <= 0) {
+        throw new IllegalStateException("zero refcount");
+      }
+    }
+
+    return true;
+  }
 }
 

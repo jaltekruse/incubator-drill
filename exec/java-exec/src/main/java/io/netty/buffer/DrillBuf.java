@@ -22,35 +22,44 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.drill.common.StackTrace;
 import org.apache.drill.exec.memory.Accountor;
+import org.apache.drill.exec.memory.BaseAllocator;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.BufferManager;
+import org.apache.drill.exec.memory.BufferLedger;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.util.AssertionUtil;
+import org.apache.drill.exec.util.Pointer;
+import org.slf4j.Logger;
 
 import com.google.common.base.Preconditions;
 
 public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillBuf.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillBuf.class);
 
   private static final boolean BOUNDS_CHECKING_ENABLED = AssertionUtil.BOUNDS_CHECKING_ENABLED;
+  private static final boolean DEBUG = BaseAllocator.isDebug();
+  private static final AtomicInteger idGenerator = new AtomicInteger(0);
 
-  private final ByteBuf b;
+  private final ByteBuf byteBuf; // TODO -> UnsafeDirectLittleEndian
   private final long addr;
   private final int offset;
   private final boolean rootBuffer;
-  private final AtomicLong rootRefCnt = new AtomicLong(1);
+  private final AtomicInteger rootRefCnt;
   private volatile BufferAllocator allocator;
-  private volatile Accountor acct;
-  private volatile int length;
 
   // TODO - cleanup
   // The code is partly shared and partly copy-pasted between
@@ -58,30 +67,96 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
   // to share code and to remove the hacky code here to use only
   // one of these types at a time and use null checks to find out
   // which.
-  private OperatorContext context;
-  private FragmentContext fContext;
   private BufferManager bufManager;
 
-  public DrillBuf(BufferAllocator allocator, Accountor a, UnsafeDirectLittleEndian b) {
-    super(b.maxCapacity());
-    this.b = b;
-    this.addr = b.memoryAddress();
-    this.acct = a;
-    this.length = b.capacity();
-    this.offset = 0;
-    this.rootBuffer = true;
+  private volatile BufferLedger bufferLedger;
+  @Deprecated private volatile Accountor acct; // TODO(cwestin) remove
+  private volatile int length; // TODO this just seems to duplicate .capacity()
+
+  // TODO(cwestin) remove
+  @Deprecated private OperatorContext operatorContext;
+  @Deprecated private FragmentContext fragmentContext;
+
+  // members used purely for debugging
+  // TODO(cwestin) once we have a reduced number of constructors, move these to DEBUG clauses in them
+  private final int id = idGenerator.incrementAndGet();
+  private final StackTrace creationStack = DEBUG ? new StackTrace() : null;
+  private final List<StackTrace> refCntHistory = DEBUG ? new LinkedList<StackTrace>() : null;
+
+  @Deprecated
+  public DrillBuf(BufferAllocator allocator, Accountor accountor, UnsafeDirectLittleEndian byteBuf) {
+    super(byteBuf.maxCapacity());
+    this.byteBuf = byteBuf;
+    byteBuf.retain(1);
     this.allocator = allocator;
+    addr = byteBuf.memoryAddress();
+    acct = accountor;
+    bufferLedger = null;
+    length = byteBuf.capacity();
+    offset = 0;
+    rootBuffer = true;
+    rootRefCnt = new AtomicInteger(1);
   }
 
+  public DrillBuf(final BufferLedger bufferLedger, final BufferAllocator bufferAllocator,
+      final UnsafeDirectLittleEndian byteBuf) {
+    super(byteBuf.maxCapacity());
+    this.byteBuf = byteBuf;
+    byteBuf.retain(1);
+    this.bufferLedger = bufferLedger;
+    addr = byteBuf.memoryAddress();
+    acct = null;
+    allocator = bufferAllocator;
+    length = byteBuf.capacity();
+    offset = 0;
+    rootBuffer = true;
+    rootRefCnt = new AtomicInteger(1);
+
+    if (DEBUG) {
+      recordHistory("DrillBuf(BufferLedger, BufferAllocator["
+          + bufferAllocator.getId() + "], UnsafeDirectLittleEndian("
+          + byteBuf.toString() + "))"
+          + " => rootRefCnt identityHashCode == " + System.identityHashCode(rootRefCnt));
+    }
+  }
+
+  @Deprecated
   private DrillBuf(BufferAllocator allocator, Accountor a) {
     super(0);
-    this.b = new EmptyByteBuf(allocator.getUnderlyingAllocator()).order(ByteOrder.LITTLE_ENDIAN);
+    byteBuf = new EmptyByteBuf(allocator.getUnderlyingAllocator()).order(ByteOrder.LITTLE_ENDIAN);
     this.allocator = allocator;
     this.acct = a;
-    this.length = 0;
-    this.addr = 0;
-    this.rootBuffer = false;
-    this.offset = 0;
+    bufferLedger = null;
+    length = 0;
+    addr = 0;
+    rootBuffer = false;
+    offset = 0;
+    rootRefCnt = new AtomicInteger(1);
+  }
+
+  private DrillBuf(final BufferLedger bufferLedger, final BufferAllocator bufferAllocator) {
+    super(0);
+    this.bufferLedger = bufferLedger;
+    allocator = bufferAllocator;
+
+    byteBuf = new EmptyByteBuf(bufferLedger.getUnderlyingAllocator()).order(ByteOrder.LITTLE_ENDIAN);
+    length = 0;
+    addr = 0;
+    rootBuffer = true;
+    rootRefCnt = new AtomicInteger(1);
+    offset = 0;
+
+    acct = null;
+
+    if (DEBUG) {
+      recordHistory("DrillBuf(BufferLedger, BufferAllocator["
+          + bufferAllocator.getId() + "])"
+          + " => rootRefCnt identityHashCode == " + System.identityHashCode(rootRefCnt));
+    }
+  }
+
+  public static DrillBuf getEmpty(final BufferLedger bufferLedger, final BufferAllocator bufferAllocator) {
+    return new DrillBuf(bufferLedger, bufferAllocator);
   }
 
   /**
@@ -90,51 +165,139 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
    *  twice on the provided DrillBuf and expecting an UnsafeDirectLittleEndian buffer. This operation
    *  includes taking a new reference count on the underlying buffer and maintaining returning with a
    *  current reference count for itself (masking the underlying reference count).
+   *
+   *  WARNING: unwrap() is called twice because this DrillBuf is already assumed to be a slice because
+   *  of how this ends up getting called under the RPC layer. Won't work in other circumstances.
+   *
    * @param allocator
    * @param a Allocator used when users try to receive allocator from buffer.
    * @param b Accountor used for accounting purposes.
    */
+  @Deprecated
   public DrillBuf(BufferAllocator allocator, Accountor a, DrillBuf b) {
-    this(allocator, a, getUnderlying(b), b, 0, b.length, true);
-    assert b.unwrap().unwrap() instanceof UnsafeDirectLittleEndian;
-    b.unwrap().unwrap().retain();
+    this(allocator, a, null, getUnderlying(b), b, 0, b.length, F_ROOT);
+    final ByteBuf ununwrapped = b.unwrap().unwrap();
+    assert ununwrapped instanceof UnsafeDirectLittleEndian;
+    ununwrapped.retain(1);
   }
 
-
-  private DrillBuf(DrillBuf buffer, int index, int length) {
-    this(buffer.allocator, null, buffer, buffer, index, length, false);
-  }
-
-  private static ByteBuf getUnderlying(DrillBuf b){
+  private static ByteBuf getUnderlying(DrillBuf b) {
     ByteBuf underlying = b.unwrap().unwrap();
     return underlying.slice((int) (b.memoryAddress() - underlying.memoryAddress()), b.length);
   }
-  private DrillBuf(BufferAllocator allocator, Accountor a, ByteBuf replacement, DrillBuf buffer, int index, int length, boolean root) {
-    super(length);
-    if (index < 0 || index > buffer.capacity() - length) {
-      throw new IndexOutOfBoundsException(buffer.toString() + ".slice(" + index + ", " + length + ')');
+
+  // flags for constructors
+  @Deprecated
+  private final static int F_ROOT = 0x0001;
+  private final static int F_DERIVED = 0x0002; // shared refcount, as per http://netty.io/wiki/reference-counted-objects.html#wiki-h3-5
+
+  // TODO(cwestin) javadoc
+  /**
+   * Used for sharing.
+   *
+   * @param bufferLedger
+   * @param bufferAllocator
+   * @param originalBuf
+   * @param index
+   * @param length
+   * @param flags
+   */
+  public DrillBuf(final BufferLedger bufferLedger, final BufferAllocator bufferAllocator,
+      final DrillBuf originalBuf, final int index, final int length, final int flags) {
+    this(bufferAllocator, null, bufferLedger, getUnderlyingUdle(originalBuf),
+        originalBuf, index + originalBuf.offset, length, flags);
+  }
+
+  /**
+   * Unwraps a DrillBuf until the underlying UnsafeDirectLittleEndian buffer is
+   * found.
+   *
+   * @param originalBuf the original DrillBuf
+   * @return the underlying UnsafeDirectLittleEndian ByteBuf
+   */
+  private static ByteBuf getUnderlyingUdle(final DrillBuf originalBuf) {
+    int count = 1;
+    ByteBuf unwrapped = originalBuf.unwrap();
+    while(!(unwrapped instanceof UnsafeDirectLittleEndian)) {
+      unwrapped = unwrapped.unwrap();
+      ++count;
     }
 
-    this.length = length;
+    if (DEBUG) {
+      if (count > 1) {
+        throw new IllegalStateException("UnsafeDirectLittleEndian is wrapped more than one level");
+      }
+    }
+
+    return unwrapped;
+  }
+
+  // TODO(cwestin) javadoc
+  private DrillBuf(DrillBuf buffer, int index, int length) {
+    this(buffer.allocator, null, buffer.bufferLedger, buffer, buffer, index, length, F_DERIVED);
+  }
+
+  // TODO(cwestin) javadoc
+  // TODO(cwestin) the replacement argument becomes an UnsafeDirectLittleEndian; buffer argument may go away
+  private DrillBuf(BufferAllocator allocator, Accountor a, BufferLedger bufferLedger,
+      ByteBuf replacement, DrillBuf buffer, int index, int length, int flags) {
+    super(replacement.maxCapacity());
+
+    if (index < 0 || index > (replacement.maxCapacity() - length)) {
+      throw new IndexOutOfBoundsException(replacement.toString() + ".slice(" + index + ", " + length + ')');
+    }
+
+    this.length = length; // capacity()
     writerIndex(length);
 
-    this.b = replacement;
-    this.addr = buffer.memoryAddress() + index;
-    this.offset = index;
-    this.acct = a;
-    this.length = length;
-    this.rootBuffer = root;
+    byteBuf = replacement;
+    if ((flags & F_DERIVED) == 0) {
+      replacement.retain(1);
+    }
+
+    addr = replacement.memoryAddress() + index;
+    offset = index;
+    acct = a;
+    this.bufferLedger = bufferLedger;
+    rootBuffer = (flags & F_ROOT) != 0;
+    if (rootBuffer) {
+      rootRefCnt = new AtomicInteger(1);
+    } else {
+      if (!(buffer instanceof DrillBuf)) {
+        throw new IllegalArgumentException("DrillBuf slicing can only be performed on other DrillBufs");
+      }
+
+      if ((flags & F_DERIVED) != 0) {
+        final DrillBuf rootBuf = (DrillBuf) buffer;
+        rootRefCnt = rootBuf.rootRefCnt;
+      } else {
+        rootRefCnt = new AtomicInteger(1);
+      }
+    }
     this.allocator = allocator;
+
+    if (DEBUG) {
+      recordHistory("DrillBuf(BufferAllocator["
+          + allocator.getId() + "], Accountor, BufferLedger, ByteBuf("
+          + replacement.toString() + "), DrillBuf, index = " + index
+          + ", length = " + length + ", flags = " + String.format("0x%08x", flags) + ")"
+          + " => rootRefCnt identityHashCode == " + System.identityHashCode(rootRefCnt));
+    }
   }
 
+  @Deprecated
   public void setOperatorContext(OperatorContext c) {
-    this.context = c;
+    this.operatorContext = c;
   }
+
+  @Deprecated
   public void setFragmentContext(FragmentContext c) {
-    this.fContext = c;
+    this.fragmentContext = c;
   }
 
   public void setBufferManager(BufferManager bufManager) {
+    Preconditions.checkState(this.bufManager == null,
+        "the BufferManager for a buffer can only be set once");
     this.bufManager = bufManager;
   }
 
@@ -142,42 +305,35 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
     return allocator;
   }
 
-  public DrillBuf reallocIfNeeded(int size) {
+  public DrillBuf reallocIfNeeded(final int size) {
+    Preconditions.checkArgument(size >= 0, "reallocation size must be non-negative");
+
     if (this.capacity() >= size) {
       return this;
     }
-    if (context != null) {
-      return context.replace(this, size);
-    } else if(fContext != null) {
-      return fContext.replace(this, size);
+
+    if (operatorContext != null) {
+      return operatorContext.replace(this, size);
+    } else if(fragmentContext != null) {
+      return fragmentContext.replace(this, size);
     } else if (bufManager != null) {
       return bufManager.replace(this, size);
     } else {
       throw new UnsupportedOperationException("Realloc is only available in the context of an operator's UDFs");
     }
-
   }
 
   @Override
   public int refCnt() {
-    if(rootBuffer){
-      return (int) this.rootRefCnt.get();
-    }else{
-      return b.refCnt();
+    if (rootBuffer) {
+      return rootRefCnt.get();
     }
 
+    return byteBuf.refCnt();
   }
 
   private long addr(int index) {
     return addr + index;
-  }
-
-  private final void checkIndexD(int index) {
-    ensureAccessible();
-    if (index < 0 || index >= capacity()) {
-      throw new IndexOutOfBoundsException(String.format(
-              "index: %d (expected: range(0, %d))", index, capacity()));
-    }
   }
 
   private final void checkIndexD(int index, int fieldLength) {
@@ -200,7 +356,7 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
    * @param start The starting position of the bytes to be read.
    * @param end The exclusive endpoint of the bytes to be read.
    */
-  public void checkBytes(int start, int end){
+  public void checkBytes(int start, int end) {
     if (BOUNDS_CHECKING_ENABLED) {
       checkIndexD(start, end - start);
     }
@@ -212,31 +368,81 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
     }
   }
 
-  private void chk(int index) {
-    if (BOUNDS_CHECKING_ENABLED) {
-      checkIndexD(index);
-    }
-  }
-
   private void ensure(int width) {
     if (BOUNDS_CHECKING_ENABLED) {
       ensureWritable(width);
     }
   }
 
-  public boolean transferAccounting(Accountor target) {
+  @Deprecated // TODO(cwestin) remove
+  public boolean transferAccounting(final Accountor target) {
     if (rootBuffer) {
-      boolean outcome = acct.transferTo(target, this, length);
+      final boolean outcome = acct.transferTo(target, this, length);
       acct = target;
       return outcome;
     } else {
-      throw new UnsupportedOperationException();
+      throw new UnsupportedOperationException("Accounting transfer is not supported for non-root buffers");
     }
   }
 
+  /**
+   * Used by allocators to transfer ownership from one allocator to another.
+   *
+   * @param newLedger the new allocator's ledger
+   * @param newAllocator the new allocator
+   * @return
+   */
+  public boolean transferTo(final BufferAllocator newAllocator, final BufferLedger newLedger) {
+    final Pointer<BufferLedger> pNewLedger = new Pointer<>(newLedger);
+    final boolean fitsAllocation = bufferLedger.transferTo(newAllocator, pNewLedger, this);
+    allocator = newAllocator;
+    bufferLedger = pNewLedger.value;
+    return fitsAllocation;
+  }
+
+  // TODO(cwestin) javadoc
+  public DrillBuf shareWith(final BufferLedger otherLedger, final BufferAllocator otherAllocator,
+      final int index, final int length) {
+    return shareWith(otherLedger, otherAllocator, index, length, 0);
+  }
+
+  // TODO(cwestin) javadoc
+  private DrillBuf shareWith(final BufferLedger otherLedger, final BufferAllocator otherAllocator,
+      final int index, final int length, final int flags) {
+    if ((bufferLedger == null) && !rootBuffer) {
+      throw new UnsupportedOperationException("Ownership sharing is not supported for non-root buffers");
+    }
+
+    final Pointer<DrillBuf> pDrillBuf = new Pointer<>();
+    bufferLedger = bufferLedger.shareWith(pDrillBuf, otherLedger, otherAllocator, this, index, length, flags);
+    return pDrillBuf.value;
+  }
+
   @Override
-  public synchronized boolean release() {
+  public boolean release() {
     return release(1);
+  }
+
+  /**
+   * Record history as a stack trace. Only valid for DEBUG.
+   *
+   * @param message short string to indicate what happened
+   */
+  private void recordHistory(final String message) {
+    final StackTrace stackTrace = new StackTrace();
+    final StringWriter writer = new StringWriter();
+    writer.write("DrillBuf[");
+    writer.write(Integer.toString(id));
+    writer.write("] ");
+    if (message != null) {
+      writer.write(message);
+    }
+    writer.write('\n');
+
+    stackTrace.write(writer, 2);
+    logger.debug(writer.toString());
+
+    refCntHistory.add(stackTrace);
   }
 
   /**
@@ -244,20 +450,30 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
    */
   @Override
   public synchronized boolean release(int decrement) {
-
-    if(rootBuffer){
-      final long newRefCnt = this.rootRefCnt.addAndGet(-decrement);
-      Preconditions.checkArgument(newRefCnt > -1, "Buffer has negative reference count.");
-      if (newRefCnt == 0) {
-        b.release(decrement);
-        acct.release(this, length);
-        return true;
-      }else{
-        return false;
+    if (DEBUG) {
+      if (decrement < 1) {
+        throw new IllegalArgumentException("release(" + decrement
+            + ") argument is not positive");
       }
-    }else{
-      return b.release(decrement);
+
+      recordHistory("release(" + decrement + ')');
     }
+
+    final int refCnt = rootRefCnt.addAndGet(-decrement);
+    if (refCnt < 0) {
+      throw new IllegalStateException("DrillBuf[" + id
+          + "] refCnt has gone below zero");
+    }
+    if (refCnt == 0) {
+      bufferLedger.release(this);
+
+      // release the underlying buffer
+      byteBuf.release(1);
+
+      return true;
+    }
+
+    return false;
   }
 
   @Override
@@ -271,27 +487,24 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
       if (newCapacity == length) {
         return this;
       } else if (newCapacity < length) {
-        b.capacity(newCapacity);
-        int diff = length - b.capacity();
-        acct.releasePartial(this, diff);
-        this.length = length - diff;
+        byteBuf.capacity(newCapacity);
+        final int diff = length - byteBuf.capacity();
+        if (acct != null) {
+          acct.releasePartial(this, diff);
+        }
+        length -= diff;
         return this;
       } else {
         throw new UnsupportedOperationException("Accounting byte buf doesn't support increasing allocations.");
       }
     } else {
-      throw new UnsupportedOperationException("Non root bufs doen't support changing allocations.");
+      throw new UnsupportedOperationException("Non root bufs don't support changing allocations.");
     }
   }
 
   @Override
-  public int maxCapacity() {
-    return length;
-  }
-
-  @Override
   public ByteBufAllocator alloc() {
-    return b.alloc();
+    return byteBuf.alloc();
   }
 
   @Override
@@ -301,14 +514,12 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf order(ByteOrder endianness) {
-    // if(endianness != ByteOrder.LITTLE_ENDIAN) throw new
-    // UnsupportedOperationException("Drill buffers only support little endian.");
     return this;
   }
 
   @Override
   public ByteBuf unwrap() {
-    return b;
+    return byteBuf;
   }
 
   @Override
@@ -323,7 +534,7 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf readSlice(int length) {
-    ByteBuf slice = slice(readerIndex(), length);
+    final ByteBuf slice = slice(readerIndex(), length);
     readerIndex(readerIndex() + length);
     return slice;
   }
@@ -343,16 +554,41 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
     return slice(readerIndex(), readableBytes());
   }
 
+  public static String bufferState(final ByteBuf buf) {
+    final int cap = buf.capacity();
+    final int mcap = buf.maxCapacity();
+    final int ri = buf.readerIndex();
+    final int rb = buf.readableBytes();
+    final int wi = buf.writerIndex();
+    final int wb = buf.writableBytes();
+    return String.format("cap/max: %d/%d, ri: %d, rb: %d, wi: %d, wb: %d",
+        cap, mcap, ri, rb, wi, wb);
+  }
+
   @Override
   public DrillBuf slice(int index, int length) {
-    DrillBuf buf = new DrillBuf(this, index, length);
-    buf.writerIndex = length;
+    /*
+     * Re the behavior of reference counting,
+     * see http://netty.io/wiki/reference-counted-objects.html#wiki-h3-5, which explains
+     * that derived buffers share their reference count with their parent
+     */
+    final DrillBuf buf;
+    if (bufferLedger == null) { // TODO(cwestin) remove once we have new allocator
+      buf = new DrillBuf(this, index, length);
+      buf.writerIndex = length;
+    } else {
+      buf = shareWith(bufferLedger, allocator, index, length, F_DERIVED);
+      buf.writerIndex(length);
+    }
     return buf;
   }
 
   @Override
   public DrillBuf duplicate() {
-    return new DrillBuf(this, 0, length);
+    if (bufferLedger == null) { // TODO(cwestin) remove once we have new allocator
+      return new DrillBuf(this, 0, length);
+    }
+    return slice(0, length);
   }
 
   @Override
@@ -367,12 +603,12 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuffer nioBuffer(int index, int length) {
-    return b.nioBuffer(offset + index, length);
+    return byteBuf.nioBuffer(offset + index, length);
   }
 
   @Override
   public ByteBuffer internalNioBuffer(int index, int length) {
-    return b.internalNioBuffer(offset + index, length);
+    return byteBuf.internalNioBuffer(offset + index, length);
   }
 
   @Override
@@ -387,17 +623,17 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public boolean hasArray() {
-    return b.hasArray();
+    return byteBuf.hasArray();
   }
 
   @Override
   public byte[] array() {
-    return b.array();
+    return byteBuf.array();
   }
 
   @Override
   public int arrayOffset() {
-    return b.arrayOffset();
+    return byteBuf.arrayOffset();
   }
 
   @Override
@@ -412,7 +648,7 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public String toString(Charset charset) {
-      return toString(readerIndex, readableBytes(), charset);
+    return toString(readerIndex, readableBytes(), charset);
   }
 
   @Override
@@ -446,11 +682,16 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf retain(int increment) {
-    if(rootBuffer){
-      this.rootRefCnt.addAndGet(increment);
-    }else{
-      b.retain(increment);
+    if (DEBUG) {
+      if (increment < 1) {
+        throw new IllegalArgumentException("retain(" + increment
+            + ") argument is not positive");
+      }
+
+      recordHistory("retain(" + increment + ')');
     }
+
+    rootRefCnt.addAndGet(increment);
     return this;
   }
 
@@ -462,7 +703,7 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
   @Override
   public long getLong(int index) {
     chk(index, 8);
-    long v = PlatformDependent.getLong(addr(index));
+    final long v = PlatformDependent.getLong(addr(index));
     return v;
   }
 
@@ -489,7 +730,7 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
   @Override
   public int getInt(int index) {
     chk(index, 4);
-    int v = PlatformDependent.getInt(addr(index));
+    final int v = PlatformDependent.getInt(addr(index));
     return v;
   }
 
@@ -597,13 +838,13 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf getBytes(int index, byte[] dst, int dstIndex, int length) {
-    b.getBytes(index + offset,  dst, dstIndex, length);
+    byteBuf.getBytes(index + offset, dst, dstIndex, length);
     return this;
   }
 
   @Override
   public ByteBuf getBytes(int index, ByteBuffer dst) {
-    b.getBytes(index + offset, dst);
+    byteBuf.getBytes(index + offset, dst);
     return this;
   }
 
@@ -670,19 +911,19 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
-    b.getBytes(index + offset, dst, dstIndex, length);
+    byteBuf.getBytes(index + offset, dst, dstIndex, length);
     return this;
   }
 
   @Override
   public ByteBuf getBytes(int index, OutputStream out, int length) throws IOException {
-    b.getBytes(index + offset, out, length);
+    byteBuf.getBytes(index + offset, out, length);
     return this;
   }
 
   @Override
   protected int _getUnsignedMedium(int index) {
-    long addr = addr(index);
+    final long addr = addr(index);
     return (PlatformDependent.getByte(addr) & 0xff) << 16 |
             (PlatformDependent.getByte(addr + 1) & 0xff) << 8 |
             PlatformDependent.getByte(addr + 2) & 0xff;
@@ -690,12 +931,12 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public int getBytes(int index, GatheringByteChannel out, int length) throws IOException {
-    return b.getBytes(index + offset, out, length);
+    return byteBuf.getBytes(index + offset, out, length);
   }
 
   @Override
   public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
-    b.setBytes(index + offset, src, srcIndex, length);
+    byteBuf.setBytes(index + offset, src, srcIndex, length);
     return this;
   }
 
@@ -706,12 +947,12 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
           length);
     } else {
       if (srcIndex == 0 && src.capacity() == length) {
-        b.setBytes(index + offset, src);
+        byteBuf.setBytes(index + offset, src);
       } else {
         ByteBuffer newBuf = src.duplicate();
         newBuf.position(srcIndex);
         newBuf.limit(srcIndex + length);
-        b.setBytes(index + offset, src);
+        byteBuf.setBytes(index + offset, src);
       }
     }
 
@@ -720,24 +961,24 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
 
   @Override
   public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
-    b.setBytes(index + offset, src, srcIndex, length);
+    byteBuf.setBytes(index + offset, src, srcIndex, length);
     return this;
   }
 
   @Override
   public ByteBuf setBytes(int index, ByteBuffer src) {
-    b.setBytes(index + offset, src);
+    byteBuf.setBytes(index + offset, src);
     return this;
   }
 
   @Override
   public int setBytes(int index, InputStream in, int length) throws IOException {
-    return b.setBytes(index + offset, in, length);
+    return byteBuf.setBytes(index + offset, in, length);
   }
 
   @Override
   public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
-    return b.setBytes(index + offset, in, length);
+    return byteBuf.setBytes(index + offset, in, length);
   }
 
   @Override
@@ -746,10 +987,28 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
     return PlatformDependent.getByte(addr(index));
   }
 
+  @Deprecated
   public static DrillBuf getEmpty(BufferAllocator allocator, Accountor a) {
     return new DrillBuf(allocator, a);
   }
 
+  /**
+   * Find out if this is a "root buffer." This is obsolete terminology
+   * based on the original implementation of DrillBuf, which would layer
+   * DrillBufs on top of other DrillBufs when slicing (or duplicating).
+   * The buffer at the bottom of the layer was the "root buffer." However,
+   * the current implementation flattens such references to always make
+   * DrillBufs that are wrap a single buffer underneath, and slices and
+   * their original source have a shared fate as per
+   * http://netty.io/wiki/reference-counted-objects.html#wiki-h3-5, so
+   * this concept isn't really meaningful anymore. But there are callers
+   * that want to know a buffer's original size, and whether or not it
+   * is "primal" in some sense. Perhaps this just needs a new name that
+   * indicates that the buffer was an "original" and not a slice.
+   *
+   * @return whether or not the buffer is an original
+   */
+  @Deprecated
   public boolean isRootBuffer() {
     return rootBuffer;
   }
@@ -759,4 +1018,112 @@ public final class DrillBuf extends AbstractByteBuf implements AutoCloseable {
     release();
   }
 
+  /**
+   * Return the ref count history of this buffer as a string. This can be
+   * large, and only works in DEBUG mode.
+   *
+   * @return the history
+   */
+  public String stateAsString() {
+    final StringWriter stringWriter = new StringWriter();
+    try {
+      writeState(stringWriter);
+    } catch(IOException e) {
+      throw new RuntimeException(e); // we won't get IOExceptions from StringWriter
+    }
+    return stringWriter.toString();
+  }
+
+  /**
+   * Write the state of this DrillBuf to the supplied writer. This includes its
+   * capacity, current reference count, creation stack, and retention history.
+   *
+   * @param writer where to write the state to
+   * @throws IOException if the writer throws
+   */
+  public void writeState(final Writer writer) throws IOException {
+    if (!DEBUG) {
+      throw new UnsupportedOperationException("DrillBuf can only write its state in DEBUG mode");
+    }
+
+    writer.write("  DrillBuf[" + id + "] " + toString());
+
+    writer.write(" refCnt(): ");
+    writer.write(Integer.toString(refCnt()));
+
+    writer.write('\n');
+
+    writer.write("  DrillBuf created at\n");
+    creationStack.write(writer, 4);
+    writeRefHistory(writer);
+  }
+
+  /**
+   * Write the history of retain() and release() calls as stack traces.
+   *
+   * <p>Only valid if DEBUG.</p>
+   *
+   * @param writer where to write the history to
+   * @throws IOException if the writer throws it
+   */
+  private void writeRefHistory(final Writer writer) throws IOException {
+    writer.write("  DrillBuf ");
+    writer.write(toString()); // TODO do we need an id and idGenerator?
+    writer.write('\n');
+
+    writer.write("  refCntHistory\n");
+    int counter = 0;
+    for(StackTrace st : refCntHistory) {
+      ++counter;
+      writer.write("  (");
+      writer.write(Integer.toString(counter));
+      writer.write(")\n");
+      st.write(writer, 4);
+    }
+  }
+
+  // TODO(cwestin) javadoc
+  public boolean hasSharedFate(final DrillBuf otherBuf) {
+    return rootRefCnt == otherBuf.rootRefCnt;
+  }
+
+  // TODO(cwestin) javadoc
+  public static void traceBuffersStats(final Logger logger, final ByteBuf[] buffers) {
+    final StringBuilder sb = new StringBuilder();
+    int index = 0;
+    for(final ByteBuf byteBuf : buffers) {
+      sb.append(" buffer[");
+      sb.append(Integer.toString(index));
+      sb.append("]\n");
+      sb.append("  ");
+      sb.append(byteBuf.toString());
+      sb.append('\n');
+
+      ++index;
+    }
+
+    logger.trace(sb.toString());
+  }
+
+  // TODO(cwestin) javadoc
+  private final static int LOG_BYTES_PER_ROW = 10;
+  public void logBytes(final Logger logger, final int start, final int length) {
+    final int roundedStart = (start / LOG_BYTES_PER_ROW) * LOG_BYTES_PER_ROW;
+
+    final StringBuilder sb = new StringBuilder("buffer byte dump\n");
+    int index = roundedStart;
+    for(int nLogged = 0; nLogged < length; nLogged += LOG_BYTES_PER_ROW) {
+      sb.append(String.format(" [%05d-%05d]", index, index + LOG_BYTES_PER_ROW - 1));
+      for(int i = 0; i < LOG_BYTES_PER_ROW; ++i) {
+        try {
+          final byte b = getByte(index++);
+          sb.append(String.format(" 0x%02x", b));
+        } catch(IndexOutOfBoundsException ioob) {
+          sb.append(" <ioob>");
+        }
+      }
+      sb.append('\n');
+    }
+    logger.trace(sb.toString());
+  }
 }

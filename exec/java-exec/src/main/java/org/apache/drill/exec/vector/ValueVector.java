@@ -19,8 +19,6 @@ package org.apache.drill.exec.vector;
 
 import io.netty.buffer.DrillBuf;
 
-import java.io.Closeable;
-
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
 import org.apache.drill.exec.proto.UserBitShared.SerializedField;
@@ -42,7 +40,7 @@ import org.apache.drill.exec.vector.complex.reader.FieldReader;
  * @param <M>  mutator type that supports writing to this vector
  */
 public interface ValueVector<V extends ValueVector, A extends ValueVector.Accessor, M extends ValueVector.Mutator>
-    extends Closeable, Iterable<ValueVector<V, A, M>> {
+    extends AutoCloseable, Iterable<ValueVector<V, A, M>> {
 
   /**
    * Allocate new buffers. ValueVector implements logic to determine how much to allocate.
@@ -60,7 +58,7 @@ public interface ValueVector<V extends ValueVector, A extends ValueVector.Access
    * Set the initial record capacity
    * @param numRecords
    */
-  public void setInitialCapacity(int numRecords);
+  void setInitialCapacity(int numRecords);
 
   /**
    * Returns the maximum number of values that can be stored in this vector instance.
@@ -68,8 +66,9 @@ public interface ValueVector<V extends ValueVector, A extends ValueVector.Access
   int getValueCapacity();
 
   /**
-   * Alternative to clear(). Allows use as closeable in try-with-resources.
+   * Alternative to clear(). Allows use as an AutoCloseable in try-with-resources.
    */
+  @Override
   void close();
 
   /**
@@ -95,11 +94,6 @@ public interface ValueVector<V extends ValueVector, A extends ValueVector.Access
    * buffers into the target vector.
    */
   TransferPair makeTransferPair(V target);
-
-  /**
-   * Returns an {@link org.apache.drill.exec.vector.ValueVector.Accessor accessor} that is used to read from this vector
-   * instance.
-   */
   A getAccessor();
 
   /**
@@ -130,9 +124,8 @@ public interface ValueVector<V extends ValueVector, A extends ValueVector.Access
    * Return the underlying buffers associated with this vector. Note that this doesn't impact the reference counts for
    * this buffer so it only should be used for in-context access. Also note that this buffer changes regularly thus
    * external classes shouldn't hold a reference to it (unless they change it).
-   *
-   * @param clear
-   *          Whether to clear vector
+   * @param clear Whether to clear vector before returning; the buffers will still be refcounted;
+   *   but the returned array will be the only reference to them
    *
    * @return The underlying {@link io.netty.buffer.DrillBuf buffers} that is used by this vector instance.
    */
@@ -195,5 +188,4 @@ public interface ValueVector<V extends ValueVector, A extends ValueVector.Access
     @Deprecated
     void generateTestData(int values);
   }
-
 }

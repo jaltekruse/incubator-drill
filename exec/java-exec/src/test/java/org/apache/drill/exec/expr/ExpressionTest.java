@@ -40,8 +40,7 @@ import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
-import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.memory.RootAllocator;
 import org.apache.drill.exec.physical.impl.project.Projector;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.TypedFieldId;
@@ -51,7 +50,7 @@ import org.apache.drill.exec.vector.ValueVector;
 import org.junit.Test;
 
 public class ExpressionTest extends ExecTest {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionTest.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExpressionTest.class);
 
   DrillConfig c = DrillConfig.create();
   FunctionImplementationRegistry registry = new FunctionImplementationRegistry(c);
@@ -72,7 +71,7 @@ public class ExpressionTest extends ExecTest {
   }
 
   @Test
-  public void testSpecial(final @Injectable RecordBatch batch, @Injectable ValueVector vector) throws Exception {
+  public void testSpecial(final @Injectable RecordBatch batch, @Injectable ValueVector<?, ?, ?> vector) throws Exception {
     final TypedFieldId tfid = new TypedFieldId(Types.optional(MinorType.INT), false, 0);
 
     new NonStrictExpectations() {
@@ -83,7 +82,7 @@ public class ExpressionTest extends ExecTest {
         batch.getValueAccessorById(IntVector.class, tfid.getFieldIds());
         result = wrapper;
         wrapper.getValueVector();
-        result = new IntVector(null, new TopLevelAllocator(0));
+        result = new IntVector(null, new RootAllocator(DrillConfig.create()));
       }
 
     };

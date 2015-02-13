@@ -40,7 +40,6 @@ import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.TypedFieldId;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.vector.AllocationHelper;
-
 import com.google.common.base.Preconditions;
 import com.sun.codemodel.JExpr;
 import com.sun.codemodel.JExpression;
@@ -180,7 +179,7 @@ public class NestedLoopJoinBatch extends AbstractRecordBatch<NestedLoopJoinPOP> 
     outputRecords = nljWorker.outputRecords();
 
     // Set the record count
-    for (VectorWrapper vw : container) {
+    for (VectorWrapper<?> vw : container) {
       vw.getValueVector().getMutator().setValueCount(outputRecords);
     }
 
@@ -260,7 +259,7 @@ public class NestedLoopJoinBatch extends AbstractRecordBatch<NestedLoopJoinPOP> 
    * Simple method to allocate space for all the vectors in the container.
    */
   private void allocateVectors() {
-    for (VectorWrapper vw : container) {
+    for (VectorWrapper<?> vw : container) {
       AllocationHelper.allocateNew(vw.getValueVector(), MAX_BATCH_SIZE);
     }
   }
@@ -284,7 +283,7 @@ public class NestedLoopJoinBatch extends AbstractRecordBatch<NestedLoopJoinPOP> 
 
       if (leftUpstream != IterOutcome.NONE) {
         leftSchema = left.getSchema();
-        for (VectorWrapper vw : left) {
+        for (VectorWrapper<?> vw : left) {
           container.addOrGet(vw.getField());
         }
 
@@ -296,7 +295,7 @@ public class NestedLoopJoinBatch extends AbstractRecordBatch<NestedLoopJoinPOP> 
 
       if (rightUpstream != IterOutcome.NONE) {
         rightSchema = right.getSchema();
-        for (VectorWrapper vw : right) {
+        for (VectorWrapper<?> vw : right) {
           container.addOrGet(vw.getField());
         }
         addBatchToHyperContainer(right);
@@ -322,7 +321,7 @@ public class NestedLoopJoinBatch extends AbstractRecordBatch<NestedLoopJoinPOP> 
   }
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     rightContainer.clear();
     rightCounts.clear();
     super.close();

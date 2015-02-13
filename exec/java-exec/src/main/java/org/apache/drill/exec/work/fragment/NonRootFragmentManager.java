@@ -40,7 +40,7 @@ import com.google.common.base.Preconditions;
  */
 // TODO a lot of this is the same as RootFragmentManager
 public class NonRootFragmentManager implements FragmentManager {
-  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NonRootFragmentManager.class);
+  //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(NonRootFragmentManager.class);
 
   private final PlanFragment fragment;
   private FragmentRoot root;
@@ -100,15 +100,17 @@ public class NonRootFragmentManager implements FragmentManager {
     runner.receivingFragmentFinished(handle);
   }
 
-  /* (non-Javadoc)
-   * @see org.apache.drill.exec.work.fragment.FragmentHandler#cancel()
-   */
   @Override
   public void cancel() {
     synchronized(this) {
       cancel = true;
       runner.cancel();
     }
+  }
+
+  @Override
+  public boolean isCancelled() {
+    return cancel;
   }
 
   @Override

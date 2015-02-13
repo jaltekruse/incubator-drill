@@ -54,8 +54,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 
 public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixedWidthVector {
-
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RepeatedMapVector.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RepeatedMapVector.class);
 
   public final static MajorType TYPE = MajorType.newBuilder().setMinorType(MinorType.MAP).setMode(DataMode.REPEATED).build();
 
@@ -71,9 +70,10 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     this.emptyPopulator = new EmptyValuePopulator(offsets);
   }
 
+  @Override
   public void setInitialCapacity(int numRecords) {
     offsets.setInitialCapacity(numRecords + 1);
-    for(ValueVector v : (ValueVector<?,?,?>)this) {
+    for(final ValueVector<?, ?, ?> v : (ValueVector<?,?,?>)this) {
       v.setInitialCapacity(numRecords * DEFAULT_REPEAT_PER_RECORD);
     }
   }
@@ -88,7 +88,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     clear();
     offsets.allocateNew(groupCount+1);
     offsets.zeroVector();
-    for (ValueVector v : getChildren()) {
+    for (final ValueVector<?, ?, ?> v : getChildren()) {
       AllocationHelper.allocatePrecomputedChildCount(v, groupCount, 50, valueCount);
     }
     mutator.reset();
@@ -104,7 +104,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
   @Override
   public List<ValueVector> getPrimitiveVectors() {
-    List<ValueVector> primitiveVectors = super.getPrimitiveVectors();
+    final List<ValueVector> primitiveVectors = super.getPrimitiveVectors();
     primitiveVectors.add(offsets);
     return primitiveVectors;
   }
@@ -115,7 +115,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
       return 0;
     }
     long buffer = offsets.getBufferSize();
-    for (ValueVector v : (Iterable<ValueVector>)this) {
+    for (final ValueVector<?, ?, ?> v : (Iterable<ValueVector>) this) {
       buffer += v.getBufferSize();
     }
     return (int) buffer;
@@ -123,8 +123,8 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
   @Override
   public void close() {
-    super.close();
     offsets.close();
+    super.close();
   }
 
   @Override
@@ -151,13 +151,13 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
       int i = 0;
       ValueVector vector;
-      for (String child:from.getChildFieldNames()) {
+      for (final String child:from.getChildFieldNames()) {
         int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
         }
-        ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        final ValueVector<?, ?, ?> newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
         if (to.size() != preSize) {
           newVector.allocateNew();
         }
@@ -230,13 +230,13 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
       this.pairs = new TransferPair[from.size()];
       int i = 0;
       ValueVector vector;
-      for (String child:from.getChildFieldNames()) {
+      for (final String child : from.getChildFieldNames()) {
         int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
         }
-        ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        final ValueVector<?, ?, ?> newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
         if (allocate && to.size() != preSize) {
           newVector.allocateNew();
         }
@@ -255,7 +255,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     }
 
     @Override
-    public ValueVector getTo() {
+    public ValueVector<?, ?, ?> getTo() {
       return to;
     }
 
@@ -297,13 +297,13 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
       int i = 0;
       ValueVector vector;
-      for (String child:from.getChildFieldNames()) {
+      for (final String child : from.getChildFieldNames()) {
         int preSize = to.size();
         vector = from.getChild(child);
         if (vector == null) {
           continue;
         }
-        ValueVector newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
+        final ValueVector<?, ?, ?> newVector = to.addOrGet(child, vector.getField().getType(), vector.getClass());
         if (to.size() != preSize) {
           newVector.allocateNew();
         }
@@ -322,7 +322,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     }
 
     @Override
-    public ValueVector getTo() {
+    public ValueVector<?, ?, ?> getTo() {
       return to;
     }
 
@@ -392,8 +392,8 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
   @Override
   public DrillBuf[] getBuffers(boolean clear) {
-    int expectedBufferSize = getBufferSize();
-    int actualBufferSize = super.getBufferSize();
+    final int expectedBufferSize = getBufferSize();
+    final int actualBufferSize = super.getBufferSize();
 
     Preconditions.checkArgument(expectedBufferSize == actualBufferSize + offsets.getBufferSize());
     return ArrayUtils.addAll(offsets.getBuffers(clear), super.getBuffers(clear));
@@ -433,7 +433,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
         .setGroupCount(accessor.getGroupCount())
         // while we don't need to actually read this on load, we need it to make sure we don't skip deserialization of this vector
         .setValueCount(accessor.getGroupCount());
-    for (ValueVector v : getChildren()) {
+    for (final ValueVector<?, ?, ?> v : getChildren()) {
       b.addChild(v.getMetadata());
     }
     return b.build();
@@ -448,7 +448,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
 
     @Override
     public Object getObject(int index) {
-      List<Object> l = new JsonStringArrayList();
+      final List<Object> l = new JsonStringArrayList<>();
       int end = offsets.getAccessor().get(index+1);
       String fieldName;
       for (int i =  offsets.getAccessor().get(index); i < end; i++) {
@@ -470,12 +470,13 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
       return offsets.getAccessor().get(offsets.getAccessor().getValueCount() - 1);
     }
 
+    @Override
     public int getGroupSizeAtIndex(int index) {
       return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
     }
 
     @Override
-    public ValueVector getAllChildValues() {
+    public ValueVector<?, ?, ?> getAllChildValues() {
       throw new UnsupportedOperationException("Cannot retrieve inner vector from repeated map.");
     }
 
@@ -530,11 +531,12 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
       return prevEnd;
     }
 
+    @Override
     public void setValueCount(int topLevelValueCount) {
       emptyPopulator.populate(topLevelValueCount);
       offsets.getMutator().setValueCount(topLevelValueCount == 0 ? 0 : topLevelValueCount+1);
       int childValueCount = offsets.getAccessor().get(topLevelValueCount);
-      for (ValueVector v : getChildren()) {
+      for (final ValueVector<?, ?, ?> v : getChildren()) {
         v.getMutator().setValueCount(childValueCount);
       }
     }
@@ -557,7 +559,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     }
 
     @Override
-    public BaseDataValueVector getDataVector() {
+    public BaseDataValueVector<?, ?, ?> getDataVector() {
       return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
   }
@@ -567,7 +569,7 @@ public class RepeatedMapVector extends AbstractMapVector implements RepeatedFixe
     getMutator().reset();
 
     offsets.clear();
-    for(ValueVector vector:getChildren()) {
+    for(final ValueVector<?, ?, ?> vector:getChildren()) {
       vector.clear();
     }
   }

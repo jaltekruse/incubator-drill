@@ -33,8 +33,9 @@ public class FieldInfo {
     this.bitLength  = bitLength;
     this.numberOfPages = Math.max(1, (int) Math.ceil( ((long) props.recordsPerRowGroup) * bitLength / 8.0 / props.bytesPerPage));
     this.values = values;
-    // generator is designed to use 3 values
-    assert values.length == 3;
+    if (values.length != 3) {
+      throw new IllegalStateException("generator is designed to use 3 values");
+    }
     this.type = type;
   }
 }

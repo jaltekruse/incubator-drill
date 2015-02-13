@@ -20,6 +20,7 @@ package org.apache.drill.common.config;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Properties;
@@ -45,8 +46,8 @@ import com.google.common.collect.ImmutableList;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public final class DrillConfig extends NestedConfig{
-//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConfig.class);
+public final class DrillConfig extends NestedConfig {
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConfig.class);
   private final ObjectMapper mapper;
   private final ImmutableList<String> startupArguments;
 
@@ -54,8 +55,8 @@ public final class DrillConfig extends NestedConfig{
 
   @SuppressWarnings("restriction")  private static final long MAX_DIRECT_MEMORY = sun.misc.VM.maxDirectMemory();
 
-  @SuppressWarnings("unchecked")
-  private volatile List<Queue<Object>> sinkQueues = new CopyOnWriteArrayList<Queue<Object>>(new Queue[1]);
+  private final List<Queue<Object>> sinkQueues =
+      new CopyOnWriteArrayList<Queue<Object>>(new ArrayList<Queue<Object>>(1));
 
   @VisibleForTesting
   public DrillConfig(Config config, boolean enableServer) {
@@ -79,11 +80,10 @@ public final class DrillConfig extends NestedConfig{
       mapper.registerSubtypes(FormatPluginConfigBase.getSubTypes(this));
     }
 
-
-    RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
-    this.startupArguments = ImmutableList.copyOf(bean.getInputArguments());
+    final RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+    startupArguments = ImmutableList.copyOf(bean.getInputArguments());
     logger.debug("Config object initialized.");
-  };
+  }
 
   public List<String> getStartupArguments() {
     return startupArguments;
@@ -143,7 +143,9 @@ public final class DrillConfig extends NestedConfig{
   }
 
   private static DrillConfig create(String overrideFileName, Properties overriderProps, boolean enableServerConfigs) {
-    overrideFileName = overrideFileName == null ? CommonConstants.CONFIG_OVERRIDE : overrideFileName;
+    if (overrideFileName == null) {
+      overrideFileName = CommonConstants.CONFIG_OVERRIDE;
+    }
 
     // first we load defaults.
     Config fallback = null;
@@ -155,7 +157,7 @@ public final class DrillConfig extends NestedConfig{
       }
     }
 
-    Collection<URL> urls = PathScanner.getConfigURLs();
+    final Collection<URL> urls = PathScanner.getConfigURLs();
     logger.debug("Loading configs at the following URLs {}", urls);
     for (URL url : urls) {
       fallback = ConfigFactory.parseURL(url).withFallback(fallback);
@@ -169,15 +171,19 @@ public final class DrillConfig extends NestedConfig{
     return new DrillConfig(effectiveConfig.resolve(), enableServerConfigs);
   }
 
-  public <T> Class<T> getClassAt(String location, Class<T> clazz) throws DrillConfigurationException{
-    String className = this.getString(location);
+  public <T> Class<T> getClassAt(String location, Class<T> clazz) throws DrillConfigurationException {
+    final String className = getString(location);
     if (className == null) {
-      throw new DrillConfigurationException(String.format("No class defined at location '%s'.  Expected a definition of the class []", location, clazz.getCanonicalName()));
+      throw new DrillConfigurationException(String.format(
+          "No class defined at location '%s'. Expected a definition of the class []",
+          location, clazz.getCanonicalName()));
     }
-    try{
-      Class<?> c = Class.forName(className);
+
+    try {
+      final Class<?> c = Class.forName(className);
       if (clazz.isAssignableFrom(c)) {
-        @SuppressWarnings("unchecked") Class<T> t = (Class<T>) c;
+        @SuppressWarnings("unchecked")
+        final Class<T> t = (Class<T>) c;
         return t;
       } else {
         throw new DrillConfigurationException(String.format("The class [%s] listed at location '%s' should be of type [%s].  It isn't.", className, location, clazz.getCanonicalName()));
@@ -188,13 +194,12 @@ public final class DrillConfig extends NestedConfig{
       }
       throw new DrillConfigurationException(String.format("Failure while initializing class [%s] described at configuration value '%s'.", className, location), ex);
     }
-
   }
 
   public <T> T getInstanceOf(String location, Class<T> clazz) throws DrillConfigurationException{
-    Class<T> c = getClassAt(location, clazz);
+    final Class<T> c = getClassAt(location, clazz);
     try {
-      T t = c.newInstance();
+      final T t = c.newInstance();
       return t;
     } catch (Exception ex) {
       throw new DrillConfigurationException(String.format("Failure while instantiating class [%s] located at '%s.", clazz.getCanonicalName(), location), ex);
@@ -221,9 +226,9 @@ public final class DrillConfig extends NestedConfig{
     return this.root().render();
   }
 
-  public static void main(String[] args)  throws Exception {
+  public static void main(String[] args) {
     //"-XX:MaxDirectMemorySize"
-    DrillConfig config = DrillConfig.create();
+    @SuppressWarnings("unused") final DrillConfig config = DrillConfig.create();
   }
 
   public static long getMaxDirectMemory() {

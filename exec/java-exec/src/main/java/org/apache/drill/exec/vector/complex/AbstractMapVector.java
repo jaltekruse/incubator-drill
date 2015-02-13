@@ -36,6 +36,7 @@ import java.util.List;
  * Base class for MapVectors. Currently used by RepeatedMapVector and MapVector
  */
 public abstract class AbstractMapVector extends AbstractContainerVector {
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractContainerVector.class);
 
   // Maintains a map with key as field name and value is the vector itself
   private final MapWithOrdinal<String, ValueVector> vectors =  new MapWithOrdinal<>();
@@ -45,14 +46,23 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
     // create the hierarchy of the child vectors based on the materialized field
     for (MaterializedField child : field.getChildren()) {
       String fieldName = child.getLastName();
-      ValueVector  v = TypeHelper.getNewVector(child, allocator, callBack);
+      final ValueVector<?, ?, ?>  v = TypeHelper.getNewVector(child, allocator, callBack);
       putVector(fieldName, v);
     }
   }
 
   @Override
+  public void close() {
+    for(final ValueVector<?, ?, ?> valueVector : vectors.values()) {
+      valueVector.close();
+    }
+
+    super.close();
+  }
+
+  @Override
   public boolean allocateNewSafe() {
-    for (ValueVector v : vectors.values()) {
+    for (final ValueVector<?, ?, ?> v : vectors.values()) {
       if (!v.allocateNewSafe()) {
         return false;
       }
@@ -88,13 +98,14 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
    *
    * @return resultant {@link org.apache.drill.exec.vector.ValueVector}
    */
+  @Override
   public <T extends ValueVector> T addOrGet(String name, TypeProtos.MajorType type, Class<T> clazz) {
-    final ValueVector existing = getChild(name);
+    final ValueVector<?, ?, ?> existing = getChild(name);
     boolean create = false;
     if (existing == null) {
       create = true;
     } else if (clazz.isAssignableFrom(existing.getClass())) {
-      return (T)existing;
+      return (T) existing;
     } else if (nullFilled(existing)) {
       existing.clear();
       create = true;
@@ -111,8 +122,8 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
     throw new IllegalStateException(String.format(message, existing.getClass().getSimpleName(), clazz.getSimpleName()));
   }
 
-  private boolean nullFilled(ValueVector vector) {
-    for (int r=0; r<vector.getAccessor().getValueCount(); r++) {
+  private boolean nullFilled(ValueVector<?, ?, ?> vector) {
+    for (int r = 0; r < vector.getAccessor().getValueCount(); r++) {
       if (!vector.getAccessor().isNull(r)) {
         return false;
       }
@@ -123,7 +134,7 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
   /**
    * Returns a {@link org.apache.drill.exec.vector.ValueVector} corresponding to the given ordinal identifier.
    */
-  public ValueVector getChildByOrdinal(int id) {
+  public ValueVector<?, ?, ?> getChildByOrdinal(int id) {
     return vectors.getByOrdinal(id);
   }
 
@@ -131,8 +142,9 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
    * Returns a {@link org.apache.drill.exec.vector.ValueVector} instance of subtype of <T> corresponding to the given
    * field name if exists or null.
    */
+  @Override
   public <T extends ValueVector> T getChild(String name, Class<T> clazz) {
-    ValueVector v = vectors.get(name.toLowerCase());
+    final ValueVector<?, ?, ?> v = vectors.get(name.toLowerCase());
     if (v == null) {
       return null;
     }
@@ -144,7 +156,7 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
    *
    * Note that this method does not enforce any vector type check nor throws a schema change exception.
    */
-  protected void putChild(String name, ValueVector vector) {
+  protected void putChild(String name, ValueVector<?, ?, ?> vector) {
     putVector(name, vector);
     field.addChild(vector.getField());
   }
@@ -154,8 +166,8 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
    * @param name  field name
    * @param vector  vector to be inserted
    */
-  protected void putVector(String name, ValueVector vector) {
-    ValueVector old = vectors.put(
+  protected void putVector(String name, ValueVector<?, ?, ?> vector) {
+    final ValueVector<?, ?, ?> old = vectors.put(
         Preconditions.checkNotNull(name, "field name cannot be null").toLowerCase(),
         Preconditions.checkNotNull(vector, "vector cannot be null")
     );
@@ -175,6 +187,7 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
   /**
    * Returns the number of underlying child vectors.
    */
+  @Override
   public int size() {
     return vectors.size();
   }
@@ -188,8 +201,8 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
    * Returns a list of scalar child vectors recursing the entire vector hierarchy.
    */
   public List<ValueVector> getPrimitiveVectors() {
-    List<ValueVector> primitiveVectors = Lists.newArrayList();
-    for (ValueVector v : vectors.values()) {
+    final List<ValueVector> primitiveVectors = Lists.newArrayList();
+    for (final ValueVector<?, ?, ?> v : vectors.values()) {
       if (v instanceof AbstractMapVector) {
         AbstractMapVector mapVector = (AbstractMapVector) v;
         primitiveVectors.addAll(mapVector.getPrimitiveVectors());
@@ -203,24 +216,25 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
   /**
    * Returns a vector with its corresponding ordinal mapping if field exists or null.
    */
+  @Override
   public VectorWithOrdinal getChildVectorWithOrdinal(String name) {
     final int ordinal = vectors.getOrdinal(name.toLowerCase());
     if (ordinal < 0) {
       return null;
     }
-    final ValueVector vector = vectors.getByOrdinal(ordinal);
+    final ValueVector<?, ?, ?> vector = vectors.getByOrdinal(ordinal);
     return new VectorWithOrdinal(vector, ordinal);
   }
 
   @Override
   public DrillBuf[] getBuffers(boolean clear) {
-    List<DrillBuf> buffers = Lists.newArrayList();
+    final List<DrillBuf> buffers = Lists.newArrayList();
 
-    for (ValueVector vector : vectors.values()) {
-      for (DrillBuf buf : vector.getBuffers(false)) {
+    for (final ValueVector<?, ?, ?> vector : vectors.values()) {
+      for (final DrillBuf buf : vector.getBuffers(false)) {
         buffers.add(buf);
         if (clear) {
-          buf.retain();
+          buf.retain(1);
         }
       }
       if (clear) {
@@ -235,8 +249,8 @@ public abstract class AbstractMapVector extends AbstractContainerVector {
   public int getBufferSize() {
     int actualBufSize = 0 ;
 
-    for (ValueVector v : vectors.values()) {
-      for (DrillBuf buf : v.getBuffers(false)) {
+    for (final ValueVector<?, ?, ?> v : vectors.values()) {
+      for (final DrillBuf buf : v.getBuffers(false)) {
         actualBufSize += buf.writerIndex();
       }
     }

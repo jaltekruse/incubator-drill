@@ -26,7 +26,6 @@ import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.testing.ExecutionControls;
 
 public abstract class OperatorContext {
-
   public abstract DrillBuf replace(DrillBuf old, int newSize);
 
   public abstract DrillBuf getManagedBuffer();
@@ -52,5 +51,4 @@ public abstract class OperatorContext {
     }
     return i;
   }
-
 }

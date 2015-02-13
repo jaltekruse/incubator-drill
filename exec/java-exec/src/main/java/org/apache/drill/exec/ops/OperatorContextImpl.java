@@ -19,6 +19,7 @@ package org.apache.drill.exec.ops;
 
 import io.netty.buffer.DrillBuf;
 
+import org.apache.drill.common.DrillAutoCloseables;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
@@ -63,10 +64,12 @@ class OperatorContextImpl extends OperatorContext implements AutoCloseable {
     return getManagedBuffer(newSize);
   }
 
+  @Override
   public DrillBuf getManagedBuffer() {
     return getManagedBuffer(256);
   }
 
+  @Override
   public DrillBuf getManagedBuffer(int size) {
     DrillBuf newBuf = allocator.buffer(size);
     managedBuffers.put(newBuf.memoryAddress(), newBuf);
@@ -78,6 +81,7 @@ class OperatorContextImpl extends OperatorContext implements AutoCloseable {
     return executionControls;
   }
 
+  @Override
   public BufferAllocator getAllocator() {
     if (allocator == null) {
       throw new UnsupportedOperationException("Operator context does not have an allocator");
@@ -106,13 +110,13 @@ class OperatorContextImpl extends OperatorContext implements AutoCloseable {
     }
 
     if (allocator != null) {
-      allocator.close();
+      DrillAutoCloseables.closeNoChecked(allocator);
     }
     closed = true;
   }
 
+  @Override
   public OperatorStats getStats() {
     return stats;
   }
-
 }

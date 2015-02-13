@@ -217,13 +217,13 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
     // processing the next batches
     int j = 0;
     LogicalExpression[] windowExprs = new LogicalExpression[batch.getSchema().getFieldCount()];
-    for (VectorWrapper wrapper : batch) {
+    for (final VectorWrapper<?> wrapper : batch) {
       // read value from saved batch
       final LogicalExpression expr = ExpressionTreeMaterializer.materialize(
         new ValueVectorReadExpression(new TypedFieldId(wrapper.getField().getType(), wrapper.isHyper(), j)),
         batch, collector, context.getFunctionRegistry());
 
-      ValueVector vv = container.addOrGet(wrapper.getField());
+      final ValueVector<?, ?, ?> vv = container.addOrGet(wrapper.getField());
       vv.allocateNew();
 
       // write value into container
@@ -241,7 +241,7 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
 
       // add corresponding ValueVector to container
       final MaterializedField outputField = MaterializedField.create(ne.getRef(), expr.getMajorType());
-      ValueVector vv = container.addOrGet(outputField);
+      final ValueVector<?, ?, ?> vv = container.addOrGet(outputField);
       vv.allocateNew();
 
       // write value into container
@@ -308,10 +308,10 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
       cg.setMappingSet(rightMapping);
       ClassGenerator.HoldingContainer second = cg.addExpr(expr, false);
 
-      LogicalExpression fh =
+      final LogicalExpression fh =
         FunctionGenerationHelper
           .getOrderingComparatorNullsHigh(first, second, context.getFunctionRegistry());
-      ClassGenerator.HoldingContainer out = cg.addExpr(fh, false);
+      final ClassGenerator.HoldingContainer out = cg.addExpr(fh, false);
       cg.getEvalBlock()._if(out.getValue().ne(JExpr.lit(0)))._then()._return(JExpr.FALSE);
     }
     cg.getEvalBlock()._return(JExpr.TRUE);
@@ -326,7 +326,7 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
    */
   private void setupAddRecords(ClassGenerator<WindowFramer> cg, LogicalExpression[] valueExprs) {
     cg.setMappingSet(eval);
-    for (LogicalExpression ex : valueExprs) {
+    for (final LogicalExpression ex : valueExprs) {
       cg.addExpr(ex);
     }
   }
@@ -336,17 +336,18 @@ public class WindowFrameRecordBatch extends AbstractRecordBatch<WindowPOP> {
 
   private void setupOutputWindowValues(ClassGenerator<WindowFramer> cg, LogicalExpression[] valueExprs) {
     cg.setMappingSet(windowValues);
-    for (LogicalExpression valueExpr : valueExprs) {
+    for (final LogicalExpression valueExpr : valueExprs) {
       cg.addExpr(valueExpr);
     }
   }
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     if (framer != null) {
       framer.cleanup();
       framer = null;
     }
+
     super.close();
   }
 

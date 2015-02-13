@@ -68,6 +68,7 @@ public class Accountor {
   // This enables the top level accountor to calculate a new fragment limit whenever necessary.
   private final List<FragmentContext> fragmentContexts;
 
+  // TODO(cwestin) aside from this package, only other use is "FakeAccountor" in io.netty.buffer
   public Accountor(DrillConfig config, boolean errorOnLeak, FragmentContext context, Accountor parent, long max, long preAllocated, boolean applyFragLimit) {
     // TODO: fix preallocation stuff
     this.errorOnLeak = errorOnLeak;
@@ -80,10 +81,11 @@ public class Accountor {
     try {
       enableFragmentLimit = config.getBoolean(ExecConstants.ENABLE_FRAGMENT_MEMORY_LIMIT);
       fragmentMemOvercommitFactor = config.getDouble(ExecConstants.FRAGMENT_MEM_OVERCOMMIT_FACTOR);
-    }catch(Exception e){
+    } catch(Exception e) {
       enableFragmentLimit = DEFAULT_ENABLE_FRAGMENT_LIMIT;
       fragmentMemOvercommitFactor = DEFAULT_FRAGMENT_MEM_OVERCOMMIT_FACTOR;
     }
+
     this.enableFragmentLimit = enableFragmentLimit;
     this.fragmentMemOvercommitFactor = fragmentMemOvercommitFactor;
 
@@ -109,6 +111,7 @@ public class Accountor {
     }
   }
 
+  // TODO(cwestin) only used by DrillBuf - can we avoid exposing?
   public boolean transferTo(Accountor target, DrillBuf buf, long size) {
     return transfer(target, buf, size, true);
   }
@@ -129,6 +132,7 @@ public class Accountor {
     return withinLimit;
   }
 
+  // TODO(cwestin) should not be public
   public long getAvailable() {
     if (parent != null) {
       return Math.min(parent.getAvailable(), getCapacity() - getAllocation());
@@ -136,18 +140,22 @@ public class Accountor {
     return getCapacity() - getAllocation();
   }
 
+  // TODO(cwestin) should not be public
   public long getCapacity() {
     return fragmentLimit;
   }
 
+  // TODO(cwestin) should not be public
   public long getAllocation() {
     return remainder.getUsed();
   }
 
+  // TODO(cwestin) should not be public
   public long getPeakMemoryAllocation() {
     return peakMemoryAllocation;
   }
 
+  // TODO(cwestin) should not be public
   public boolean reserve(long size) {
     logger.trace("Fragment:"+fragmentStr+" Reserved "+size+" bytes. Total Allocated: "+getAllocation());
     boolean status = remainder.get(size, this.applyFragmentLimit);
@@ -155,6 +163,8 @@ public class Accountor {
     return status;
   }
 
+  // TODO(cwestin) should not be public; only called by transferTo(), which should bypass the limits,
+  // since the memory has already been accounted for
   public boolean forceAdditionalReservation(long size) {
     if (size > 0) {
       boolean status = remainder.forceGet(size);
@@ -165,6 +175,7 @@ public class Accountor {
     }
   }
 
+  // TODO(cwestin) should not be public
   public void reserved(long expected, DrillBuf buf) {
     // make sure to take away the additional memory that happened due to rounding.
 
@@ -180,7 +191,7 @@ public class Accountor {
     peakMemoryAllocation = Math.max(peakMemoryAllocation, getAllocation());
   }
 
-
+  // TODO(cwestin) only used by DrillBuf - can we avoid exposing?
   public void releasePartial(DrillBuf buf, long size) {
     remainder.returnAllocation(size);
     if (ENABLE_ACCOUNTING) {
@@ -197,6 +208,7 @@ public class Accountor {
     }
   }
 
+  // TODO(cwestin) only other user is DrillBuf - can we avoid exposing?
   public void release(DrillBuf buf, long size) {
     remainder.returnAllocation(size);
     if (ENABLE_ACCOUNTING) {
@@ -260,7 +272,7 @@ public class Accountor {
     }
   }
 
-  public long resetFragmentLimits(){
+  long resetFragmentLimits(){
     // returns the new capacity
     if(!this.enableFragmentLimit){
       return getCapacity();
@@ -271,6 +283,7 @@ public class Accountor {
     }else {
       //Get remaining memory available per fragment and distribute it EQUALLY among all the fragments.
       //Fragments get the memory limit added to the amount already allocated.
+      // TODO(cwestin) -> but this will let them grow without bound
       //This favours fragments that are already running which will get a limit greater than newly started fragments.
       //If the already running fragments end quickly, their limits will be assigned back to the remaining fragments
       //quickly. If they are long running, then we want to favour them with larger limits anyway.
@@ -331,6 +344,7 @@ public class Accountor {
     return getCapacity();
   }
 
+  // TODO(cwestin) should not be public, once this is inside the allocator
   public void close() {
     // remove the fragment context and reset fragment limits whenever an allocator closes
     if(parent!=null && parent.parent==null) {
@@ -387,7 +401,7 @@ public class Accountor {
 
   }
 
-  public void setFragmentLimit(long add) {
+  void setFragmentLimit(long add) {
     // We ADD the limit to the current allocation. If none has been allocated, this
     // sets a new limit. If memory has already been allocated, the fragment gets its
     // limit based on the allocation, though this might still result in reducing the
@@ -400,7 +414,7 @@ public class Accountor {
     }
   }
 
-  public long getFragmentLimit(){
+  long getFragmentLimit() {
     return this.fragmentLimit;
   }
 

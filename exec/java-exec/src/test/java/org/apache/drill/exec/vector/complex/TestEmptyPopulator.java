@@ -17,9 +17,10 @@
  */
 package org.apache.drill.exec.vector.complex;
 
+import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.memory.RootAllocator;
 import org.apache.drill.exec.vector.UInt4Vector;
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,14 +30,12 @@ import org.mockito.runners.MockitoJUnitRunner;
 
 @RunWith(MockitoJUnitRunner.class)
 public class TestEmptyPopulator extends ExecTest {
-  private static final int BUF_SIZE = 10000;
-
   private UInt4Vector offsets;
   private UInt4Vector.Accessor accessor;
   private UInt4Vector.Mutator mutator;
   private EmptyValuePopulator populator;
-  private BufferAllocator allocator = new TopLevelAllocator();
-
+  private final DrillConfig drillConfig = DrillConfig.create();
+  private final BufferAllocator allocator = new RootAllocator(drillConfig);
 
   @Before
   public void initialize() {

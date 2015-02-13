@@ -48,9 +48,7 @@ import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import com.google.common.base.Preconditions;
 
-
-public class RepeatedListVector extends AbstractContainerVector implements RepeatedFixedWidthVector{
-
+public class RepeatedListVector extends AbstractContainerVector implements RepeatedFixedWidthVector {
   public final static MajorType TYPE = Types.repeated(MinorType.LIST);
 
   private final UInt4Vector offsets;   // offsets to start of each record
@@ -101,10 +99,12 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     ephPair.copyValueSafe(fromIndex, thisIndex);
   }
 
+  @Override
   public Mutator getMutator() {
     return mutator;
   }
 
+  @Override
   public void setInitialCapacity(int numRecords) {
     offsets.setInitialCapacity(numRecords + 1);
     if (vector != null) {
@@ -130,8 +130,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     offsets.reAlloc();
   }
 
-  public class Mutator implements ValueVector.Mutator, RepeatedMutator{
-
+  public class Mutator implements ValueVector.Mutator, RepeatedMutator {
     public void startNewGroup(int index) {
       emptyPopulator.populate(index+1);
       offsets.getMutator().setSafe(index+1, offsets.getAccessor().get(index));
@@ -143,6 +142,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
       return prevEnd;
     }
 
+    @Override
     public void setValueCount(int groupCount) {
       emptyPopulator.populate(groupCount);
       offsets.getMutator().setValueCount(groupCount+1);
@@ -171,29 +171,29 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     }
 
     @Override
-    public BaseDataValueVector getDataVector() {
+    public BaseDataValueVector<?, ?, ?> getDataVector() {
       return null;  //To change body of implemented methods use File | Settings | File Templates.
     }
   }
 
-  public class RepeatedListAccessor implements RepeatedAccessor{
-
+  public class RepeatedListAccessor implements RepeatedAccessor {
     @Override
     public Object getObject(int index) {
-      List<Object> l = new JsonStringArrayList();
-      int end = offsets.getAccessor().get(index+1);
+      final List<Object> l = new JsonStringArrayList<>();
+      final int end = offsets.getAccessor().get(index+1);
       for (int i =  offsets.getAccessor().get(index); i < end; i++) {
         l.add(vector.getAccessor().getObject(i));
       }
       return l;
     }
 
+    @Override
     public int getGroupSizeAtIndex(int index) {
       return offsets.getAccessor().get(index+1) - offsets.getAccessor().get(index);
     }
 
     @Override
-    public ValueVector getAllChildValues() {
+    public ValueVector<?, ?, ?> getAllChildValues() {
       return vector;
     }
 
@@ -293,7 +293,7 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     }
 
     @Override
-    public ValueVector getTo() {
+    public ValueVector<?, ?, ?> getTo() {
       return to;
     }
 
@@ -345,18 +345,18 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
 
   @Override
   public DrillBuf[] getBuffers(boolean clear) {
-    DrillBuf[] buffers = ArrayUtils.addAll(offsets.getBuffers(false), vector.getBuffers(false));
+    final DrillBuf[] buffers = ArrayUtils.addAll(offsets.getBuffers(false), vector.getBuffers(false));
     if (clear) {
       // does not make much sense but we have to retain buffers even when clear is set. refactor this interface.
-      for (DrillBuf buffer:buffers) {
-        buffer.retain();
+      for (final DrillBuf buffer:buffers) {
+        buffer.retain(1);
       }
       clear();
     }
     return buffers;
   }
 
-  protected void setVector(ValueVector newVector) {
+  protected void setVector(ValueVector<?, ?, ?> newVector) {
     vector = Preconditions.checkNotNull(newVector);
     getField().addChild(newVector.getField());
   }
@@ -436,5 +436,4 @@ public class RepeatedListVector extends AbstractContainerVector implements Repea
     }
     return new VectorWithOrdinal(vector, 0);
   }
-
 }

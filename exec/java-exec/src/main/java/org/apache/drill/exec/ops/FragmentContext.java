@@ -33,7 +33,9 @@ import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.memory.AllocatorOwner;
 import org.apache.drill.exec.memory.BufferAllocator;
+import org.apache.drill.exec.memory.ChainedAllocatorOwner;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
@@ -80,7 +82,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
   private final ContextInformation contextInformation;
   private IncomingBuffers buffers;
   private final OptionManager fragmentOptions;
-  private final BufferManager bufferManager;
+  private final BufferManager bufferManager; // TODO eliminate in favor of using BufferAllocator.TRACK_BUFFERS
   private ExecutorState executorState;
   private final ExecutionControls executionControls;
 
@@ -95,13 +97,27 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
   private final RpcOutcomeListener<Ack> statusHandler = new StatusHandler(exceptionConsumer, sendingAccountor);
   private final AccountingUserConnection accountingUserConnection;
 
+  private final AllocatorOwner allocatorOwner = new FCAllocatorOwner();
+
+  private class FCAllocatorOwner implements AllocatorOwner {
+    @Override
+    public String toString() {
+      return fragment.getHandle().toString();
+    }
+  }
+
   /**
    * Create a FragmentContext instance for non-root fragment.
+   *
+   * TODO we need a state that indicates that cancellation has been requested and
+   * is in progress. Early termination (such as from limit queries) could also use
+   * this, as the cleanup steps should be exactly the same.
    *
    * @param dbContext DrillbitContext.
    * @param fragment Fragment implementation.
    * @param funcRegistry FunctionImplementationRegistry.
    * @throws ExecutionSetupException
+   *
    */
   public FragmentContext(final DrillbitContext dbContext, final PlanFragment fragment,
       final FunctionImplementationRegistry funcRegistry) throws ExecutionSetupException {
@@ -149,9 +165,13 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     // Add the fragment context to the root allocator.
     // The QueryManager will call the root allocator to recalculate all the memory limits for all the fragments
     try {
-      allocator = context.getAllocator().getChildAllocator(this, fragment.getMemInitial(), fragment.getMemMax(), true);
-      Preconditions.checkNotNull(allocator, "Unable to acuqire allocator");
-    } catch(final OutOfMemoryException | OutOfMemoryRuntimeException e) {
+//      allocator = context.getAllocator().getChildAllocator(this, fragment.getMemInitial(), fragment.getMemMax(), true);
+// TODO(cwestin)
+      allocator = context.getAllocator().newChildAllocator(
+          allocatorOwner, fragment.getMemInitial(), fragment.getMemMax(), BufferAllocator.F_LIMITING_ROOT);
+      Preconditions.checkNotNull(allocator, "Unable to acquire allocator");
+      logger.debug(String.format("FragmentContext.allocator[%d] created", allocator.getId())); // TODO(cwestin)
+    } catch(final OutOfMemoryRuntimeException e) {
       throw UserException.memoryError(e)
         .addContext("Fragment", getHandle().getMajorFragmentId() + ":" + getHandle().getMinorFragmentId())
         .build();
@@ -267,7 +287,6 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
    * Get this fragment's allocator.
    * @return the allocator
    */
-  @Deprecated
   public BufferAllocator getAllocator() {
     if (allocator == null) {
       logger.debug("Fragment: " + getFragIdString() + " Allocator is NULL");
@@ -275,10 +294,24 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     return allocator;
   }
 
+  // TODO(cwestin) get rid of this
+  @Deprecated
   public BufferAllocator getNewChildAllocator(final long initialReservation,
                                               final long maximumReservation,
-                                              final boolean applyFragmentLimit) throws OutOfMemoryException {
+                                              final boolean applyFragmentLimit) {
     return allocator.getChildAllocator(this, initialReservation, maximumReservation, applyFragmentLimit);
+  }
+
+  public BufferAllocator newChildAllocator(final AllocatorOwner allocatorOwner, final long initialReservation,
+                                              final long maximumReservation,
+                                              final boolean applyFragmentLimit) {
+/* TODO(cwestin) Do we need to handle these?
+    if (!applyFragmentLimit) {
+      throw new IllegalArgumentException("applyFragmentLimit is false");
+    }
+*/
+    return allocator.newChildAllocator(new ChainedAllocatorOwner(allocatorOwner, this.allocatorOwner),
+        initialReservation, maximumReservation, 0);
   }
 
   public <T> T getImplementationClass(final ClassGenerator<T> cg)
@@ -355,6 +388,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     return context.getConfig();
   }
 
+  @Deprecated
   public void setFragmentLimit(final long limit) {
     allocator.setFragmentLimit(limit);
   }
@@ -389,6 +423,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     suppressingClose(bufferManager);
     suppressingClose(buffers);
     suppressingClose(allocator);
+    logger.debug(String.format("FragmentContext.allocator[%d] closed", allocator.getId())); // TODO(cwestin)
   }
 
   private void suppressingClose(final AutoCloseable closeable) {
@@ -451,7 +486,5 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
     @VisibleForTesting
     @Deprecated
     public Throwable getFailureCause();
-
   }
-
 }

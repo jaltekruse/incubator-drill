@@ -176,7 +176,9 @@ public class ParquetResultListener implements UserResultsListener {
       }
     }
 
-    assert valuesChecked.keySet().size() > 0;
+    if (valuesChecked.keySet().size() <= 0) {
+      throw new IllegalStateException();
+    }
     future.set(null);
   }
 

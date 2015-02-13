@@ -18,6 +18,7 @@
 
 package org.apache.drill;
 
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -86,7 +87,7 @@ public class PlanTestBase extends BaseTestQuery {
       for (String s : expectedPatterns) {
         p = Pattern.compile(s);
         m = p.matcher(plan);
-        assert m.find() : EXPECTED_NOT_FOUND + s;
+        assertTrue(EXPECTED_NOT_FOUND + s, m.find());
       }
     }
 
@@ -95,7 +96,7 @@ public class PlanTestBase extends BaseTestQuery {
       for (String s : excludedPatterns) {
         p = Pattern.compile(s);
         m = p.matcher(plan);
-        assert ! m.find() : UNEXPECTED_FOUND + s;
+        assertFalse(UNEXPECTED_FOUND + s, m.find());
       }
     }
   }
@@ -125,14 +126,14 @@ public class PlanTestBase extends BaseTestQuery {
     // Check and make sure all expected patterns are in the plan
     if (expectedPatterns != null) {
       for (String s : expectedPatterns) {
-        assert plan.contains(s) : EXPECTED_NOT_FOUND + s;
+        assertTrue(EXPECTED_NOT_FOUND + s, plan.contains(s));
       }
     }
 
     // Check and make sure all excluded patterns are not in the plan
     if (excludedPatterns != null) {
       for (String s : excludedPatterns) {
-        assert ! plan.contains(s) : UNEXPECTED_FOUND + s;
+        assertFalse(UNEXPECTED_FOUND + s, plan.contains(s));
       }
     }
   }
@@ -311,9 +312,9 @@ public class PlanTestBase extends BaseTestQuery {
       }
 
       System.out.println(vw.getValueVector().getField().toExpr());
-      ValueVector vv = vw.getValueVector();
+      final ValueVector<?, ?, ?> vv = vw.getValueVector();
       for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-        Object o = vv.getAccessor().getObject(i);
+        final Object o = vv.getAccessor().getObject(i);
         builder.append(o);
         System.out.println(vv.getAccessor().getObject(i));
       }

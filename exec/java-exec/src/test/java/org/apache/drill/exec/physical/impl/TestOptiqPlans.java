@@ -30,7 +30,7 @@ import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
-import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.memory.RootAllocator;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.opt.BasicOptimizer;
@@ -66,8 +66,8 @@ import com.google.common.io.Resources;
 
 @Ignore
 public class TestOptiqPlans extends ExecTest {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestOptiqPlans.class);
-  DrillConfig c = DrillConfig.create();
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestOptiqPlans.class);
+  final DrillConfig c = DrillConfig.create();
 
   @Test
   public void orderBy(@Injectable final BootStrapContext ctxt, @Injectable UserClientConnection connection,
@@ -96,13 +96,13 @@ public class TestOptiqPlans extends ExecTest {
       {
         context.getMetrics();
         result = new MetricRegistry();
-        context.getAllocator();
-        result = new TopLevelAllocator();
         context.getConfig();
         result = c;
+        context.getAllocator();
+        result = new RootAllocator(c);
       }
     };
-    RemoteServiceSet lss = RemoteServiceSet.getLocalServiceSet();
+
     DrillbitContext bitContext = new DrillbitContext(DrillbitEndpoint.getDefaultInstance(), context, coord, controller,
         com, workBus, new LocalPStoreProvider(DrillConfig.create()), null);
     QueryContext qc = new QueryContext(UserSession.Builder.newBuilder().setSupportComplexTypes(true).build(),
@@ -137,9 +137,8 @@ public class TestOptiqPlans extends ExecTest {
         loader.load(b.getHeader().getDef(), b.getData());
         for (VectorWrapper<?> vw : loader) {
           System.out.println(vw.getValueVector().getField().toExpr());
-          ValueVector vv = vw.getValueVector();
+          ValueVector<?, ?, ?> vv = vw.getValueVector();
           for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-            Object o = vv.getAccessor().getObject(i);
             System.out.println(vv.getAccessor().getObject(i));
           }
         }
@@ -167,9 +166,8 @@ public class TestOptiqPlans extends ExecTest {
         loader.load(b.getHeader().getDef(), b.getData());
         for (VectorWrapper<?> vw : loader) {
           System.out.println(vw.getValueVector().getField().toExpr());
-          ValueVector vv = vw.getValueVector();
+          ValueVector<?, ?, ?> vv = vw.getValueVector();
           for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-            Object o = vv.getAccessor().getObject(i);
             System.out.println(vv.getAccessor().getObject(i));
           }
         }
@@ -197,9 +195,8 @@ public class TestOptiqPlans extends ExecTest {
         loader.load(b.getHeader().getDef(), b.getData());
         for (VectorWrapper<?> vw : loader) {
           System.out.println(vw.getValueVector().getField().toExpr());
-          ValueVector vv = vw.getValueVector();
+          ValueVector<?, ?, ?> vv = vw.getValueVector();
           for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-            Object o = vv.getAccessor().getObject(i);
             if (vv instanceof VarBinaryVector) {
               VarBinaryVector.Accessor x = ((VarBinaryVector) vv).getAccessor();
               VarBinaryHolder vbh = new VarBinaryHolder();
@@ -237,9 +234,8 @@ public class TestOptiqPlans extends ExecTest {
         loader.load(b.getHeader().getDef(), b.getData());
         for (VectorWrapper vw : loader) {
           System.out.println(vw.getValueVector().getField().toExpr());
-          ValueVector vv = vw.getValueVector();
+          ValueVector<?, ?, ?> vv = vw.getValueVector();
           for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-            Object o = vv.getAccessor().getObject(i);
             if (vv instanceof VarBinaryVector) {
               VarBinaryVector.Accessor x = ((VarBinaryVector) vv).getAccessor();
               VarBinaryHolder vbh = new VarBinaryHolder();
@@ -277,9 +273,8 @@ public class TestOptiqPlans extends ExecTest {
         loader.load(b.getHeader().getDef(), b.getData());
         for (VectorWrapper vw : loader) {
           System.out.println(vw.getValueVector().getField().toExpr());
-          ValueVector vv = vw.getValueVector();
+          ValueVector<?, ?, ?> vv = vw.getValueVector();
           for (int i = 0; i < vv.getAccessor().getValueCount(); i++) {
-            Object o = vv.getAccessor().getObject(i);
             if (vv instanceof VarBinaryVector) {
               VarBinaryVector.Accessor x = ((VarBinaryVector) vv).getAccessor();
               VarBinaryHolder vbh = new VarBinaryHolder();
@@ -307,7 +302,7 @@ public class TestOptiqPlans extends ExecTest {
         bitContext.getMetrics();
         result = new MetricRegistry();
         bitContext.getAllocator();
-        result = new TopLevelAllocator();
+        result = new RootAllocator(c);
         bitContext.getConfig();
         result = c;
       }
@@ -324,5 +319,4 @@ public class TestOptiqPlans extends ExecTest {
         .iterator().next()));
     return exec;
   }
-
 }

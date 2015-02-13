@@ -25,17 +25,31 @@ import org.apache.drill.exec.record.MaterializedField;
 public abstract class BaseDataValueVector<V extends BaseValueVector<V, A, M>, A extends BaseValueVector.BaseAccessor,
     M extends BaseValueVector.BaseMutator> extends BaseValueVector<V, A, M> {
 
+  protected final static byte[] emptyByteArray = new byte[]{}; // Nullable vectors use this
+
   protected DrillBuf data;
 
   public BaseDataValueVector(MaterializedField field, BufferAllocator allocator) {
     super(field, allocator);
-    this.data = allocator.getEmpty();
+    data = allocator.getEmpty();
   }
 
   @Override
   public void clear() {
-    data.release();
+    if (data != null) {
+      data.release();
+    }
     data = allocator.getEmpty();
+  }
+
+  @Override
+  public void close() {
+    clear();
+    if (data != null) {
+      data.release();
+      data = null;
+    }
+    super.close();
   }
 
   @Override
@@ -47,7 +61,7 @@ public abstract class BaseDataValueVector<V extends BaseValueVector<V, A, M>, A 
       out = new DrillBuf[]{data};
       if (clear) {
         data.readerIndex(0);
-        data.retain();
+        data.retain(1);
       }
     }
     if (clear) {
@@ -56,6 +70,7 @@ public abstract class BaseDataValueVector<V extends BaseValueVector<V, A, M>, A 
     return out;
   }
 
+  @Override
   public int getBufferSize() {
     if (getAccessor().getValueCount() == 0) {
       return 0;

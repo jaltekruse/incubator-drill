@@ -33,14 +33,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Queues;
 
-public abstract class MSortTemplate implements MSorter, IndexedSortable{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MSortTemplate.class);
+public abstract class MSortTemplate implements MSorter, IndexedSortable {
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MSortTemplate.class);
 
   private SelectionVector4 vector4;
   private SelectionVector4 aux;
   private long compares;
   private Queue<Integer> runStarts = Queues.newLinkedBlockingQueue();
-  private Queue<Integer> newRunStarts;
   private FragmentContext context;
 
   @Override
@@ -57,16 +56,15 @@ public abstract class MSortTemplate implements MSorter, IndexedSortable{
       final int newBatch = this.vector4.get(i) >>> 16;
       if (newBatch == batch) {
         continue;
-      } else if(newBatch == batch + 1) {
+      } else if (newBatch == batch + 1) {
         runStarts.add(i);
         batch = newBatch;
       } else {
         throw new UnsupportedOperationException("Missing batch");
       }
     }
-    final BufferAllocator.PreAllocator preAlloc = allocator.getNewPreAllocator();
-    preAlloc.preAllocate(4 * this.vector4.getTotalCount());
-    aux = new SelectionVector4(preAlloc.getAllocation(), this.vector4.getTotalCount(), Character.MAX_VALUE);
+    final int totalCount = this.vector4.getTotalCount();
+    aux = new SelectionVector4(allocator.buffer(4 * totalCount), totalCount, Character.MAX_VALUE);
   }
 
   /**
@@ -119,7 +117,7 @@ public abstract class MSortTemplate implements MSorter, IndexedSortable{
       }
 
       int outIndex = 0;
-      newRunStarts = Queues.newLinkedBlockingQueue();
+      final Queue<Integer> newRunStarts = Queues.newLinkedBlockingQueue();
       newRunStarts.add(outIndex);
       final int size = runStarts.size();
       for (int i = 0; i < size / 2; i++) {
@@ -139,9 +137,9 @@ public abstract class MSortTemplate implements MSorter, IndexedSortable{
       }
       final SelectionVector4 tmp = aux.createNewWrapperCurrent();
       aux.clear();
-      aux = this.vector4.createNewWrapperCurrent();
+      aux = vector4.createNewWrapperCurrent();
       vector4.clear();
-      this.vector4 = tmp.createNewWrapperCurrent();
+      vector4 = tmp.createNewWrapperCurrent();
       tmp.clear();
       runStarts = newRunStarts;
     }
@@ -171,5 +169,4 @@ public abstract class MSortTemplate implements MSorter, IndexedSortable{
 
   public abstract void doSetup(@Named("context") FragmentContext context, @Named("incoming") VectorContainer incoming, @Named("outgoing") RecordBatch outgoing);
   public abstract int doEval(@Named("leftIndex") int leftIndex, @Named("rightIndex") int rightIndex);
-
 }

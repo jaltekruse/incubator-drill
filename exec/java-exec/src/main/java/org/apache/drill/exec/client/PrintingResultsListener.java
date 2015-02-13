@@ -23,12 +23,15 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.drill.common.DrillAutoCloseables;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.client.QuerySubmitter.Format;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.memory.OutOfMemoryException;
+import org.apache.drill.exec.memory.RootAllocator;
+import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryData;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
@@ -41,18 +44,19 @@ import org.apache.drill.exec.util.VectorUtil;
 import com.google.common.base.Stopwatch;
 
 public class PrintingResultsListener implements UserResultsListener {
-  AtomicInteger count = new AtomicInteger();
-  private CountDownLatch latch = new CountDownLatch(1);
-  RecordBatchLoader loader;
-  Format format;
-  int    columnWidth;
-  BufferAllocator allocator;
-  volatile UserException exception;
-  QueryId queryId;
-  Stopwatch w = new Stopwatch();
+  private final AtomicInteger count = new AtomicInteger();
+  private final CountDownLatch latch = new CountDownLatch(1);
+  private RecordBatchLoader loader;
+  private Format format;
+  private final int    columnWidth;
+  private final BufferAllocator allocator;
+  private volatile UserException exception;
+  private QueryId queryId;
+  private final Stopwatch w = new Stopwatch();
 
-  public PrintingResultsListener(DrillConfig config, Format format, int columnWidth) {
-    this.allocator = new TopLevelAllocator(config);
+  public PrintingResultsListener(DrillConfig config, Format format, int columnWidth)
+      throws OutOfMemoryException {
+    allocator = new RootAllocator(config); // TODO shouldn't this be a child of the DrillClient?
     loader = new RecordBatchLoader(allocator);
     this.format = format;
     this.columnWidth = columnWidth;
@@ -68,7 +72,7 @@ public class PrintingResultsListener implements UserResultsListener {
 
   @Override
   public void queryCompleted(QueryState state) {
-    allocator.close();
+    DrillAutoCloseables.closeNoChecked(allocator);
     latch.countDown();
     System.out.println("Total rows returned : " + count.get() + ".  Returned in " + w.elapsed(TimeUnit.MILLISECONDS)
         + "ms.");
@@ -123,5 +127,4 @@ public class PrintingResultsListener implements UserResultsListener {
     w.start();
     this.queryId = queryId;
   }
-
 }

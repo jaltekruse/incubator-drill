@@ -26,6 +26,7 @@ import io.netty.util.concurrent.GenericFutureListener;
 import java.io.IOException;
 
 import org.apache.drill.exec.exception.FragmentSetupException;
+import org.apache.drill.exec.memory.AllocatorClosedException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.proto.BitData.BitClientHandshake;
 import org.apache.drill.exec.proto.BitData.BitServerHandshake;
@@ -167,7 +168,7 @@ public class DataServer extends BasicServer<RpcType, BitServerConnection> {
       final boolean shared)
       throws FragmentSetupException, IOException {
 
-    FragmentManager manager = workBus.getFragmentManager(getHandle(fragmentBatch, minor));
+    final FragmentManager manager = workBus.getFragmentManager(getHandle(fragmentBatch, minor));
     if (manager == null) {
       return;
     }
@@ -178,12 +179,30 @@ public class DataServer extends BasicServer<RpcType, BitServerConnection> {
     final boolean withinMemoryEnvelope;
     final DrillBuf submitBody;
 
-    if (shared) {
-      withinMemoryEnvelope = allocator.takeOwnership((DrillBuf) body, out);
-      submitBody = out.value;
-    }else{
-      withinMemoryEnvelope = allocator.takeOwnership((DrillBuf) body.unwrap());
-      submitBody = body;
+    try {
+      if (shared) {
+        withinMemoryEnvelope = allocator.shareOwnership((DrillBuf) body, out);
+        submitBody = out.value;
+      } else {
+        withinMemoryEnvelope = allocator.takeOwnership(body);
+        submitBody = body;
+      }
+    } catch(final AllocatorClosedException e) {
+      /*
+       * It can happen that between the time we get the fragment manager and we
+       * try to transfer this buffer to it, the fragment may have been cancelled
+       * and closed. When that happens, the allocator will be closed when we
+       * attempt this. That just means we can drop this data on the floor, since
+       * the receiver no longer exists (and no longer needs it).
+       *
+       * Note that checking manager.isCancelled() before we attempt this isn't enough,
+       * because of timing: it may still be cancelled between that check and
+       * the attempt to do the memory transfer. To double check ourselves, we
+       * do check manager.isCancelled() here, after the fact; it shouldn't
+       * change again after its allocator has been closed.
+       */
+      assert manager.isCancelled();
+      return;
     }
 
     if (!withinMemoryEnvelope) {
@@ -199,11 +218,9 @@ public class DataServer extends BasicServer<RpcType, BitServerConnection> {
       // dataHandler.handle should have taken any ownership it needed.
       out.value.release();
     }
-
   }
 
   private class ProxyCloseHandler implements GenericFutureListener<ChannelFuture> {
-
     private volatile GenericFutureListener<ChannelFuture> handler;
 
     public ProxyCloseHandler(GenericFutureListener<ChannelFuture> handler) {
@@ -215,7 +232,6 @@ public class DataServer extends BasicServer<RpcType, BitServerConnection> {
     public void operationComplete(ChannelFuture future) throws Exception {
       handler.operationComplete(future);
     }
-
   }
 
   @Override
@@ -232,5 +248,4 @@ public class DataServer extends BasicServer<RpcType, BitServerConnection> {
   public ProtobufLengthDecoder getDecoder(BufferAllocator allocator, OutOfMemoryHandler outOfMemoryHandler) {
     return new DataProtobufLengthDecoder.Server(allocator, outOfMemoryHandler);
   }
-
 }

@@ -27,12 +27,12 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.MetricDef;
-import org.apache.drill.exec.ops.OpProfileDef;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.ops.OperatorStats;
 import org.apache.drill.exec.physical.MinorFragmentEndpoint;
 import org.apache.drill.exec.physical.config.UnorderedReceiver;
 import org.apache.drill.exec.proto.BitControl.FinishedReceiver;
+import org.apache.drill.exec.proto.BitData.FragmentRecordBatch;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.RecordBatchDef;
@@ -75,7 +75,8 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
     }
   }
 
-  public UnorderedReceiverBatch(final FragmentContext context, final RawFragmentBatchProvider fragProvider, final UnorderedReceiver config) throws OutOfMemoryException {
+  public UnorderedReceiverBatch(final FragmentContext context,
+      final RawFragmentBatchProvider fragProvider, final UnorderedReceiver config) throws OutOfMemoryException {
     this.fragProvider = fragProvider;
     this.context = context;
     // In normal case, batchLoader does not require an allocator. However, in case of splitAndTransfer of a value vector,
@@ -83,8 +84,9 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
     oContext = context.newOperatorContext(config, false);
     this.batchLoader = new RecordBatchLoader(oContext.getAllocator());
 
-    this.stats = oContext.getStats();
-    this.stats.setLongStat(Metric.NUM_SENDERS, config.getNumSenders());
+    stats = oContext.getStats();
+    stats.setLongStat(Metric.NUM_SENDERS, config.getNumSenders());
+
     this.config = config;
   }
 
@@ -152,7 +154,7 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   @Override
   public IterOutcome next() {
     stats.startProcessing();
-    try{
+    try {
       RawFragmentBatch batch;
       try {
         stats.startWait();
@@ -179,7 +181,6 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       if (batch.getHeader().getIsOutOfMemory()) {
         return IterOutcome.OUT_OF_MEMORY;
       }
-
 
 //      logger.debug("Next received batch {}", batch);
 
@@ -241,7 +242,6 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
   }
 
   private class OutcomeListener implements RpcOutcomeListener<Ack> {
-
     @Override
     public void failed(final RpcException ex) {
       logger.warn("Failed to inform upstream that receiver is finished");
@@ -252,5 +252,4 @@ public class UnorderedReceiverBatch implements CloseableRecordBatch {
       // Do nothing
     }
   }
-
 }

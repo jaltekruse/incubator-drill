@@ -19,6 +19,7 @@ package org.apache.drill.exec.physical.impl;
 
 import java.util.List;
 
+import org.apache.drill.common.DrillAutoCloseables;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
@@ -42,14 +43,13 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
   }
 
   private static class SingleSenderRootExec extends BaseRootExec {
-    static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SingleSenderRootExec.class);
+//    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SingleSenderRootExec.class);
 
     private final FragmentHandle oppositeHandle;
 
     private RecordBatch incoming;
     private AccountingDataTunnel tunnel;
     private FragmentHandle handle;
-    private SingleSender config;
     private int recMajor;
     private volatile boolean ok = true;
     private volatile boolean done = false;
@@ -66,11 +66,10 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
     public SingleSenderRootExec(FragmentContext context, RecordBatch batch, SingleSender config) throws OutOfMemoryException {
       super(context, context.newOperatorContext(config, null, false), config);
       this.incoming = batch;
-      assert(incoming != null);
-      this.handle = context.getHandle();
-      this.config = config;
-      this.recMajor = config.getOppositeMajorFragmentId();
-      this.tunnel = context.getDataTunnel(config.getDestination());
+      assert incoming != null;
+      handle = context.getHandle();
+      recMajor = config.getOppositeMajorFragmentId();
+      tunnel = context.getDataTunnel(config.getDestination());
       oppositeHandle = handle.toBuilder()
           .setMajorFragmentId(config.getOppositeMajorFragmentId())
           .setMinorFragmentId(config.getOppositeMinorFragmentId())
@@ -100,10 +99,10 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
       case STOP:
       case NONE:
         // if we didn't do anything yet, send an empty schema.
-        final BatchSchema sendSchema = incoming.getSchema() == null ? BatchSchema.newBuilder().build() : incoming
-            .getSchema();
+        final BatchSchema sendSchema = incoming.getSchema() == null ?
+            BatchSchema.newBuilder().build() : incoming.getSchema();
 
-        FragmentWritableBatch b2 = FragmentWritableBatch.getEmptyLastWithSchema(handle.getQueryId(),
+        final FragmentWritableBatch b2 = FragmentWritableBatch.getEmptyLastWithSchema(handle.getQueryId(),
             handle.getMajorFragmentId(), handle.getMinorFragmentId(), recMajor, oppositeHandle.getMinorFragmentId(),
             sendSchema);
         stats.startWait();
@@ -116,8 +115,10 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
 
       case OK_NEW_SCHEMA:
       case OK:
-        FragmentWritableBatch batch = new FragmentWritableBatch(false, handle.getQueryId(), handle.getMajorFragmentId(),
-                handle.getMinorFragmentId(), recMajor, oppositeHandle.getMinorFragmentId(), incoming.getWritableBatch());
+        final FragmentWritableBatch batch = new FragmentWritableBatch(
+            false, handle.getQueryId(), handle.getMajorFragmentId(),
+            handle.getMinorFragmentId(), recMajor, oppositeHandle.getMinorFragmentId(),
+            incoming.getWritableBatch());
         updateStats(batch);
         stats.startWait();
         try {
@@ -142,5 +143,4 @@ public class SingleSenderCreator implements RootCreator<SingleSender>{
       done = true;
     }
   }
-
 }

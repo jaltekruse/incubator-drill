@@ -32,7 +32,7 @@ import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
 
 public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements CloseableRecordBatch {
-  final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(this.getClass());
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(new Object() {}.getClass().getEnclosingClass());
 
   protected final VectorContainer container; //= new VectorContainer();
   protected final T popConfig;
@@ -51,13 +51,12 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   }
 
   protected AbstractRecordBatch(final T popConfig, final FragmentContext context, final boolean buildSchema,
-      final OperatorContext oContext) throws OutOfMemoryException {
-    super();
+      final OperatorContext oContext) {
     this.context = context;
     this.popConfig = popConfig;
     this.oContext = oContext;
-    this.stats = oContext.getStats();
-    this.container = new VectorContainer(this.oContext);
+    stats = oContext.getStats();
+    container = new VectorContainer(this.oContext);
     if (buildSchema) {
       state = BatchState.BUILD_SCHEMA;
     } else {
@@ -119,6 +118,7 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
     return next;
   }
 
+  @Override
   public final IterOutcome next() {
     try {
       stats.startProcessing();
@@ -173,10 +173,10 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
 
   protected abstract void killIncoming(boolean sendUpstream);
 
-  public void close(){
+  @Override
+  public void close() throws Exception {
     container.clear();
   }
-
 
   @Override
   public SelectionVector2 getSelectionVector2() {
@@ -198,7 +198,6 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
     return container.getValueAccessorById(clazz, ids);
   }
 
-
   @Override
   public WritableBatch getWritableBatch() {
 //    logger.debug("Getting writable batch.");
@@ -211,5 +210,4 @@ public abstract class AbstractRecordBatch<T extends PhysicalOperator> implements
   public VectorContainer getOutgoingContainer() {
     throw new UnsupportedOperationException(String.format(" You should not call getOutgoingContainer() for class %s", this.getClass().getCanonicalName()));
   }
-
 }

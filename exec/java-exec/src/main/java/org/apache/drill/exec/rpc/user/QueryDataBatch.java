@@ -32,7 +32,7 @@ public class QueryDataBatch {
     this.header = header;
     this.data = data;
     if (this.data != null) {
-      data.retain();
+      data.retain(1);
     }
   }
 
@@ -50,7 +50,7 @@ public class QueryDataBatch {
 
   public void release() {
     if (data != null) {
-      data.release();
+      data.release(1);
     }
   }
 
@@ -58,5 +58,4 @@ public class QueryDataBatch {
   public String toString() {
     return "QueryResultBatch [header=" + header + ", data=" + data + "]";
   }
-
 }

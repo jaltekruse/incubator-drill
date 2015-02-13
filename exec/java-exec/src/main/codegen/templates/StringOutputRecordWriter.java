@@ -28,7 +28,6 @@ package org.apache.drill.exec.store;
 import com.google.common.collect.Lists;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.holders.*;
-import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.store.EventBasedRecordWriter.FieldConverter;
@@ -47,6 +46,8 @@ import java.util.Map;
  * to output the data in string format instead of implementing addField for each type holder.
  *
  * This is useful for text format writers such as CSV, TSV etc.
+ *
+ * NB: Source code generated using FreeMarker template ${.template_name}
  */
 public abstract class StringOutputRecordWriter implements RecordWriter {
 
@@ -54,7 +55,7 @@ public abstract class StringOutputRecordWriter implements RecordWriter {
   protected StringOutputRecordWriter(BufferAllocator allocator){
     this.allocator = allocator;
   }
-  
+
   public void updateSchema(BatchSchema schema) throws IOException {
     List<String> columnNames = Lists.newArrayList();
     for (int i=0; i < schema.getFieldCount(); i++) {

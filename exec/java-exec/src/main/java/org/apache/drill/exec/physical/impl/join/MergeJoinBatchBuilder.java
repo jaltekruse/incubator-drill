@@ -20,8 +20,8 @@ package org.apache.drill.exec.physical.impl.join;
 import java.util.List;
 
 import org.apache.drill.exec.exception.SchemaChangeException;
+import org.apache.drill.exec.memory.AllocationReservation;
 import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.BufferAllocator.PreAllocator;
 import org.apache.drill.exec.physical.impl.sort.RecordBatchData;
 import org.apache.drill.exec.record.BatchSchema;
 import org.apache.drill.exec.record.MaterializedField;
@@ -33,23 +33,22 @@ import org.apache.drill.exec.vector.ValueVector;
 
 import com.google.common.collect.ArrayListMultimap;
 
-public class MergeJoinBatchBuilder {
-
+public class MergeJoinBatchBuilder implements AutoCloseable {
   private final ArrayListMultimap<BatchSchema, RecordBatchData> queuedRightBatches = ArrayListMultimap.create();
-  private VectorContainer container;
-  private int runningBytes;
-  private int runningBatches;
-  private int recordCount;
-  private PreAllocator svAllocator;
-  private JoinStatus status;
+  private final VectorContainer container;
+  private int runningBytes = 0;
+  private int runningBatches = 0;
+  private int recordCount = 0;
+  private final AllocationReservation allocationReservation;
+  private final JoinStatus status;
 
-  public MergeJoinBatchBuilder(BufferAllocator allocator, JoinStatus status) {
-    this.container = new VectorContainer();
+  public MergeJoinBatchBuilder(final BufferAllocator allocator, final JoinStatus status) {
+    container = new VectorContainer();
     this.status = status;
-    this.svAllocator = allocator.getNewPreAllocator();
+    allocationReservation = allocator.newReservation();
   }
 
-  public boolean add(RecordBatch batch) {
+  public boolean add(final RecordBatch batch) {
     if (batch.getSchema().getSelectionVectorMode() == BatchSchema.SelectionVectorMode.FOUR_BYTE) {
       throw new UnsupportedOperationException("A merge join cannot currently work against a sv4 batch.");
     }
@@ -58,26 +57,27 @@ public class MergeJoinBatchBuilder {
     }
 
     // resource checks
-    long batchBytes = getSize(batch);
+    final long batchBytes = getSize(batch);
     if (batchBytes + runningBytes > Integer.MAX_VALUE) {
       return false;     // TODO: 2GB is arbitrary
     }
-    if (runningBatches++ >= Character.MAX_VALUE) {
+    if (runningBatches + 1 >= Character.MAX_VALUE) {
       return false;     // allowed in batch.
     }
-    if (!svAllocator.preAllocate(batch.getRecordCount()*4)) {
-      return false;     // sv allocation available.
+    if (!allocationReservation.add(batch.getRecordCount() * 4)) {
+      return false;     // requested allocation unavailable.
     }
 
     // transfer VVs to a new RecordBatchData
-    RecordBatchData bd = new RecordBatchData(batch);
+    final RecordBatchData bd = new RecordBatchData(batch);
+    ++runningBatches;
     runningBytes += batchBytes;
     queuedRightBatches.put(batch.getSchema(), bd);
     recordCount += bd.getRecordCount();
     return true;
   }
 
-  private long getSize(RecordBatch batch) {
+  private long getSize(final RecordBatch batch) {
     long bytes = 0;
     for (VectorWrapper<?> v : batch) {
       bytes += v.getValueVector().getBufferSize();
@@ -90,9 +90,9 @@ public class MergeJoinBatchBuilder {
     if (queuedRightBatches.size() > Character.MAX_VALUE) {
       throw new SchemaChangeException("Join cannot work on more than %d batches at a time.", (int) Character.MAX_VALUE);
     }
-    status.sv4 = new SelectionVector4(svAllocator.getAllocation(), recordCount, Character.MAX_VALUE);
-    BatchSchema schema = queuedRightBatches.keySet().iterator().next();
-    List<RecordBatchData> data = queuedRightBatches.get(schema);
+    status.sv4 = new SelectionVector4(allocationReservation.buffer(), recordCount, Character.MAX_VALUE);
+    final BatchSchema schema = queuedRightBatches.keySet().iterator().next();
+    final List<RecordBatchData> data = queuedRightBatches.get(schema);
 
     // now we're going to generate the sv4 pointers
     switch (schema.getSelectionVectorMode()) {
@@ -125,7 +125,7 @@ public class MergeJoinBatchBuilder {
     }
 
     // next, we'll create lists of each of the vector types.
-    ArrayListMultimap<MaterializedField, ValueVector> vectors = ArrayListMultimap.create();
+    final ArrayListMultimap<MaterializedField, ValueVector> vectors = ArrayListMultimap.create();
     for (RecordBatchData rbd : queuedRightBatches.values()) {
       for (ValueVector v : rbd.getVectors()) {
         vectors.put(v.getField(), v);
@@ -133,11 +133,15 @@ public class MergeJoinBatchBuilder {
     }
 
     for (MaterializedField f : vectors.keySet()) {
-      List<ValueVector> v = vectors.get(f);
+      final List<ValueVector> v = vectors.get(f);
       container.addHyperList(v);
     }
 
     container.buildSchema(BatchSchema.SelectionVectorMode.FOUR_BYTE);
   }
 
+  @Override
+  public void close() throws Exception {
+    allocationReservation.close();
+  }
 }

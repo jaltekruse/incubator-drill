@@ -20,12 +20,10 @@ package org.apache.drill.exec.memory;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- *
- *
  * TODO: Fix this so that preallocation can never be released back to general pool until allocator is closed.
  */
-public class AtomicRemainder {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AtomicRemainder.class);
+class AtomicRemainder {
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AtomicRemainder.class);
 
   private static final boolean DEBUG = true;
 
@@ -41,7 +39,7 @@ public class AtomicRemainder {
   private final boolean errorOnLeak;
   private final boolean applyFragmentLimit;
 
-  public AtomicRemainder(boolean errorOnLeak, AtomicRemainder parent, long max, long pre, boolean applyFragLimit) {
+  AtomicRemainder(boolean errorOnLeak, AtomicRemainder parent, long max, long pre, boolean applyFragLimit) {
     this.errorOnLeak = errorOnLeak;
     this.parent = parent;
     this.availableShared = new AtomicLong(max - pre);
@@ -55,11 +53,11 @@ public class AtomicRemainder {
 //    logger.info("new AtomicRemainder. a.s. {} a.p. {} hashcode {}", availableShared, availablePrivate, hashCode(), new Exception());
   }
 
-  public long getRemainder() {
+  private long getRemainder() {
     return availableShared.get() + availablePrivate.get();
   }
 
-  public long getUsed() {
+  long getUsed() {
     return initTotal - getRemainder();
   }
 
@@ -68,7 +66,7 @@ public class AtomicRemainder {
    * If limit is larger than initTotal, then the function will do nothing and the hasLimit flag will not be set.
    * @param limit
    */
-  public void setLimit(long limit) {
+  void setLimit(long limit) {
     if(limit<initTotal){
       this.hasLimit=true;
       this.limit=limit;
@@ -81,7 +79,7 @@ public class AtomicRemainder {
    *
    * @param size
    */
-  public boolean forceGet(long size) {
+  boolean forceGet(long size) {
     if (get(size, this.applyFragmentLimit)) {
       return true;
     } else {
@@ -93,7 +91,7 @@ public class AtomicRemainder {
     }
   }
 
-  public boolean get(long size, boolean applyFragmentLimitForChild) {
+  boolean get(long size, boolean applyFragmentLimitForChild) {
     if (availablePrivate.get() < 1) {
       // if there is no preallocated memory, we can operate normally.
 
@@ -177,7 +175,7 @@ public class AtomicRemainder {
    *
    * @param size
    */
-  public void returnAllocation(long size) {
+  void returnAllocation(long size) {
     long privateSize = availablePrivate.get();
     long privateChange = Math.min(size, initPrivate - privateSize);
     long sharedChange = size - privateChange;
@@ -191,7 +189,7 @@ public class AtomicRemainder {
     assert getUsed() <= initTotal;
   }
 
-  public void close() {
+  void close() {
     if (closed) {
       logger.warn("Tried to close remainder, but it has already been closed", new Exception());
       return;

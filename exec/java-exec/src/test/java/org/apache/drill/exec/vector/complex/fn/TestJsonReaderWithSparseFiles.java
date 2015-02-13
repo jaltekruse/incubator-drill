@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.vector.complex.fn;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.Objects;
@@ -59,7 +61,7 @@ public class TestJsonReaderWithSparseFiles extends BaseTestQuery {
 
     @Override
     public void apply(RecordBatchLoader loader) {
-      assert loader.getRecordCount() == count : "invalid record count returned";
+      assertEquals("invalid record count returned", count, loader.getRecordCount());
 
       Object[] row;
       Object expected;
@@ -70,12 +72,13 @@ public class TestJsonReaderWithSparseFiles extends BaseTestQuery {
           expected = row[c];
           actual = loader.getValueAccessorById(ValueVector.class, c).getValueVector().getAccessor().getObject(r);
           actual = converter.convert(actual);
-          assert Objects.equals(actual, expected) : String.format("row:%d - col:%d - expected:%s[%s] - actual:%s[%s]",
+          final String msg = String.format("row:%d - col:%d - expected:%s[%s] - actual:%s[%s]",
               r, c,
               expected,
               expected==null?"null":expected.getClass().getSimpleName(),
               actual,
               actual==null?"null":actual.getClass().getSimpleName());
+          assertTrue(msg, Objects.equals(actual, expected));
         }
       }
     }

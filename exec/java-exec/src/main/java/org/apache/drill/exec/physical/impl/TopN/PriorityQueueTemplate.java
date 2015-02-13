@@ -36,10 +36,10 @@ import org.apache.drill.exec.record.selection.SelectionVector4;
 import com.google.common.base.Stopwatch;
 
 public abstract class PriorityQueueTemplate implements PriorityQueue {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PriorityQueueTemplate.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PriorityQueueTemplate.class);
 
-  private SelectionVector4 heapSv4;//This holds the heap
-  private SelectionVector4 finalSv4;//This is for final sorted output
+  private SelectionVector4 heapSv4; //This holds the heap
+  private SelectionVector4 finalSv4; //This is for final sorted output
   private ExpandableHyperContainer hyperBatch;
   private FragmentContext context;
   private BufferAllocator allocator;
@@ -53,12 +53,11 @@ public abstract class PriorityQueueTemplate implements PriorityQueue {
     this.limit = limit;
     this.context = context;
     this.allocator = allocator;
-    BufferAllocator.PreAllocator preAlloc = allocator.getNewPreAllocator();
-    preAlloc.preAllocate(4 * (limit + 1));
-    heapSv4 = new SelectionVector4(preAlloc.getAllocation(), limit, Character.MAX_VALUE);
+    heapSv4 = new SelectionVector4(allocator.buffer(4 * (limit + 1)), limit, Character.MAX_VALUE);
     this.hasSv2 = hasSv2;
   }
 
+  @Override
   public void resetQueue(VectorContainer container, SelectionVector4 v4) throws SchemaChangeException {
     assert container.getSchema().getSelectionVectorMode() == BatchSchema.SelectionVectorMode.FOUR_BYTE;
     BatchSchema schema = container.getSchema();
@@ -68,11 +67,9 @@ public abstract class PriorityQueueTemplate implements PriorityQueue {
       newContainer.add(container.getValueAccessorById(field.getValueClass(), ids).getValueVectors());
     }
     newContainer.buildSchema(BatchSchema.SelectionVectorMode.FOUR_BYTE);
-    this.hyperBatch = new ExpandableHyperContainer(newContainer);
-    this.batchCount = hyperBatch.iterator().next().getValueVectors().length;
-    BufferAllocator.PreAllocator preAlloc = allocator.getNewPreAllocator();
-    preAlloc.preAllocate(4 * (limit + 1));
-    this.heapSv4 = new SelectionVector4(preAlloc.getAllocation(), limit, Character.MAX_VALUE);
+    hyperBatch = new ExpandableHyperContainer(newContainer);
+    batchCount = hyperBatch.iterator().next().getValueVectors().length;
+    heapSv4 = new SelectionVector4(allocator.buffer(4 * (limit + 1)), limit, Character.MAX_VALUE);
     for (int i = 0; i < v4.getTotalCount(); i++) {
       heapSv4.set(i, v4.get(i));
     }
@@ -120,9 +117,7 @@ public abstract class PriorityQueueTemplate implements PriorityQueue {
   public void generate() throws SchemaChangeException {
     Stopwatch watch = new Stopwatch();
     watch.start();
-    BufferAllocator.PreAllocator preAlloc = allocator.getNewPreAllocator();
-    preAlloc.preAllocate(4 * queueSize);
-    finalSv4 = new SelectionVector4(preAlloc.getAllocation(), queueSize, 4000);
+    finalSv4 = new SelectionVector4(allocator.buffer(4 * queueSize), queueSize, 4000);
     for (int i = queueSize - 1; i >= 0; i--) {
       finalSv4.set(i, pop());
     }

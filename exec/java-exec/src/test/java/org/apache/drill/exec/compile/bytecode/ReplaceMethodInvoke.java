@@ -74,7 +74,10 @@ public class ReplaceMethodInvoke {
     final PrintWriter pw = new PrintWriter(sw);
     DrillCheckClassAdapter.verify(new ClassReader(cw.toByteArray()), false, pw);
 
-    assert sw.toString().length() == 0 : sw.toString();
+    final String theString = sw.toString();
+    if (!theString.isEmpty()) {
+      throw new IllegalStateException(theString);
+    }
   }
 
   private static ClassWriter writer() {

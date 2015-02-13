@@ -17,16 +17,16 @@
  */
 package io.netty.buffer;
 
+import org.apache.drill.common.StackTrace;
 import org.apache.drill.exec.memory.Accountor;
+import org.apache.drill.exec.memory.AllocationReservation;
+import org.apache.drill.exec.memory.AllocatorOwner;
 import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
 import org.apache.drill.exec.util.Pointer;
 
 class FakeAllocator implements BufferAllocator {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FakeAllocator.class);
-
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FakeAllocator.class);
 
   public static final Accountor FAKE_ACCOUNTOR = new FakeAccountor();
   public static final BufferAllocator FAKE_ALLOCATOR = new FakeAllocator();
@@ -47,9 +47,8 @@ class FakeAllocator implements BufferAllocator {
   }
 
   @Override
-  public BufferAllocator getChildAllocator(FragmentContext context, long initialReservation, long maximumReservation,
-                                           boolean applyFragmentLimit)
-      throws OutOfMemoryException {
+  public BufferAllocator getChildAllocator(FragmentContext fragmentContext,
+      long initialReservation, long maximumReservation, boolean applyFragmentLimit) {
     throw new UnsupportedOperationException();
   }
 
@@ -64,12 +63,7 @@ class FakeAllocator implements BufferAllocator {
   }
 
   @Override
-  public PreAllocator getNewPreAllocator() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public void resetFragmentLimits() {
+  public AllocationReservation newReservation() {
     throw new UnsupportedOperationException();
   }
 
@@ -90,6 +84,11 @@ class FakeAllocator implements BufferAllocator {
   @Override
   public long getAllocatedMemory() {
     return 0;
+  }
+
+  @Override
+  public int getId() {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -150,15 +149,17 @@ class FakeAllocator implements BufferAllocator {
 
     @Override
     public void close() {
-
     }
-
-
   }
 
   @Override
-  public boolean takeOwnership(DrillBuf buf, Pointer<DrillBuf> bufOut) {
+  public boolean shareOwnership(DrillBuf buf, Pointer<DrillBuf> bufOut) {
     throw new UnsupportedOperationException();
   }
 
+  @Override
+  public BufferAllocator newChildAllocator(AllocatorOwner allocatorOwner,
+      long initialReservation, long maxAllocation, int flags) {
+    throw new UnsupportedOperationException("unimplemented");
+  }
 }

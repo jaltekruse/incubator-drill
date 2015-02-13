@@ -38,7 +38,7 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 
 public class TestMergingReceiver extends PopUnitTestBase {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestMergingReceiver.class);
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestMergingReceiver.class);
 
   @Test
   public void twoBitTwoExchange() throws Exception {
@@ -107,10 +107,10 @@ public class TestMergingReceiver extends PopUnitTestBase {
         for (int valueIdx = 0; valueIdx < b.getHeader().getRowCount(); valueIdx++) {
           List<Object> row = Lists.newArrayList();
           batchLoader.load(b.getHeader().getDef(), b.getData());
-          for (VectorWrapper vw : batchLoader) {
+          for (VectorWrapper<?> vw : batchLoader) {
             row.add(vw.getValueVector().getField().toExpr() + ":" + vw.getValueVector().getAccessor().getObject(valueIdx));
             if (vw.getValueVector().getField().getAsSchemaPath().getRootSegment().getPath().equals("blue")) {
-              // assert order is ascending
+              // order should be ascending
               if (((Long)vw.getValueVector().getAccessor().getObject(valueIdx)).longValue() == 0) {
                 continue; // ignore initial 0's from sort
               }
@@ -158,7 +158,7 @@ public class TestMergingReceiver extends PopUnitTestBase {
         for (int valueIdx = 0; valueIdx < b.getHeader().getRowCount(); valueIdx++) {
           List<Object> row = Lists.newArrayList();
           batchLoader.load(b.getHeader().getDef(), b.getData());
-          for (VectorWrapper vw : batchLoader) {
+          for (VectorWrapper<?> vw : batchLoader) {
             row.add(vw.getValueVector().getField().toExpr() + ":" + vw.getValueVector().getAccessor().getObject(valueIdx));
           }
           for (Object cell : row) {

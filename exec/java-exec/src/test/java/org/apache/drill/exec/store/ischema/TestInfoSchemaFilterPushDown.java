@@ -17,6 +17,9 @@
  */
 package org.apache.drill.exec.store.ischema;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
 import org.apache.drill.PlanTestBase;
 import org.junit.Test;
 
@@ -107,13 +110,13 @@ public class TestInfoSchemaFilterPushDown extends PlanTestBase {
 
     if (!filterPrelExpected) {
       // If filter prel is not expected, make sure it is not in plan
-      assert !plan.contains("Filter(");
+      assertFalse(plan.contains("Filter("));
     } else {
-      assert plan.contains("Filter(");
+      assertTrue(plan.contains("Filter("));
     }
 
     // Check for filter pushed into scan.
-    assert plan.contains(filterInScan);
+    assertTrue(plan.contains(filterInScan));
 
     // run the query
     test(query);

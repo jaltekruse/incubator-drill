@@ -28,6 +28,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.apache.drill.common.DrillAutoCloseables;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -131,7 +132,7 @@ public class SpoolingRawBatchBuffer implements RawBatchBuffer {
 
   @Override
   public void kill(FragmentContext context) {
-    allocator.close();
+    DrillAutoCloseables.closeNoChecked(allocator);
   }
 
 
@@ -186,13 +187,14 @@ public class SpoolingRawBatchBuffer implements RawBatchBuffer {
     return batch;
   }
 
+  @Override
   public void cleanup() {
     if (closed) {
       logger.warn("Tried cleanup twice");
       return;
     }
     closed = true;
-    allocator.close();
+    DrillAutoCloseables.closeNoChecked(allocator);
     try {
       if (outputStream != null) {
         outputStream.close();

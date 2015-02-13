@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.drill.common.DrillAutoCloseables;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.ExecConstants;
@@ -32,7 +33,7 @@ import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.memory.RootAllocator;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
@@ -163,7 +164,7 @@ public class BaseTestQuery extends ExecTest {
   }
 
   private static void openClient() throws Exception {
-    allocator = new TopLevelAllocator(config);
+    allocator = new RootAllocator(config);
     if (config.hasPath(ENABLE_FULL_CACHE) && config.getBoolean(ENABLE_FULL_CACHE)) {
       serviceSet = RemoteServiceSet.getServiceSetWithFullCache(config, allocator);
     } else {
@@ -242,7 +243,7 @@ public class BaseTestQuery extends ExecTest {
       serviceSet.close();
     }
     if (allocator != null) {
-      allocator.close();
+      DrillAutoCloseables.closeNoChecked(allocator);
     }
   }
 

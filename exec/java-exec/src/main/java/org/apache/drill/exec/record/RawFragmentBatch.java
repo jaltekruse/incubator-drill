@@ -23,19 +23,18 @@ import org.apache.drill.exec.proto.BitData.FragmentRecordBatch;
 import org.apache.drill.exec.rpc.data.AckSender;
 
 public class RawFragmentBatch {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RawFragmentBatch.class);
+  //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(RawFragmentBatch.class);
 
-  final FragmentRecordBatch header;
-  final DrillBuf body;
-  final AckSender sender;
+  private final FragmentRecordBatch header;
+  private final DrillBuf body;
+  private final AckSender sender;
 
   public RawFragmentBatch(FragmentRecordBatch header, DrillBuf body, AckSender sender) {
-    super();
     this.header = header;
-    this.body = body;
     this.sender = sender;
+    this.body = body;
     if (body != null) {
-      body.retain();
+      body.retain(1);
     }
   }
 
@@ -54,10 +53,9 @@ public class RawFragmentBatch {
 
   public void release() {
     if (body != null) {
-      body.release();
+      body.release(1);
     }
   }
-
 
   public AckSender getSender() {
     return sender;
@@ -70,5 +68,4 @@ public class RawFragmentBatch {
   public long getByteCount() {
     return body == null ? 0 : body.readableBytes();
   }
-
 }
