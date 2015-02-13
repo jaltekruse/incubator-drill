@@ -17,10 +17,12 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import com.google.common.collect.ImmutableList;
 import net.hydromatic.avatica.ByteString;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
 import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.types.MinorType;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
@@ -44,6 +46,15 @@ import java.util.List;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
+
+  public static final List<Object> NON_REDUCIBLE_TYPES =
+      ImmutableList.builder().add(MinorType.INTERVAL, MinorType.INTERVALYEAR, MinorType.INTERVALDAY, MinorType.MAP,
+                                  MinorType.LIST, MinorType.TIMESTAMPTZ, MinorType.TIMETZ, MinorType.LATE,
+                                  MinorType.TINYINT, MinorType.SMALLINT, MinorType.GENERIC_OBJECT, MinorType.NULL,
+                                  MinorType.DECIMAL28DENSE, MinorType.DECIMAL38DENSE, MinorType.MONEY,
+                                  MinorType.FIXEDBINARY, MinorType.FIXEDCHAR, MinorType.FIXED16CHAR,
+                                  MinorType.VAR16CHAR, MinorType.UINT1, MinorType.UINT2, MinorType.UINT4,
+                                  MinorType.UINT8).build();
 
   FunctionImplementationRegistry funcImplReg;
   UdfUtilities udfUtilities;
@@ -111,7 +122,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case VARBINARY:
             reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
             break;
-
           // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
           // will make these non-reducible at planning time for now
           case INTERVAL:
@@ -157,3 +167,5 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     }
   }
 }
+
+
