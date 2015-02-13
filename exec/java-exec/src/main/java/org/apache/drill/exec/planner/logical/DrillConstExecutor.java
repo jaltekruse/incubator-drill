@@ -17,10 +17,12 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import com.google.common.collect.ImmutableList;
 import net.hydromatic.avatica.ByteString;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
 import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
@@ -44,6 +46,18 @@ import java.util.List;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
+
+
+  // This is a list of all types that cannot be folded at planning time for various reasons, most of the types are
+  // currently not supported at all. The reasons for the others can be found in the evaluation code in the reduce method
+  public static final List<Object> NON_REDUCIBLE_TYPES =
+      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.INTERVALYEAR, TypeProtos.MinorType.INTERVALDAY, TypeProtos.MinorType.MAP,
+                                  TypeProtos.MinorType.LIST, TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
+                                  TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
+                                  TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.VARBINARY,
+                                  TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
+                                  TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
+                                  TypeProtos.MinorType.UINT8).build();
 
   FunctionImplementationRegistry funcImplReg;
   UdfUtilities udfUtilities;
@@ -108,9 +122,12 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
             reducedValues.add(rexBuilder.makeTimestampLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
             break;
+
+          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
+          // disabling for now and adding VARBINARY to the list of unfoldable types
           case VARBINARY:
-            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
-            break;
+//            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
+            // fall through for now
 
           // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
           // will make these non-reducible at planning time for now
@@ -157,3 +174,5 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     }
   }
 }
+
+
