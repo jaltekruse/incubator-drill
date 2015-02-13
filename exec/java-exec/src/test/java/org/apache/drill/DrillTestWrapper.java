@@ -213,7 +213,7 @@ public class DrillTestWrapper {
    * @throws SchemaChangeException
    * @throws UnsupportedEncodingException
    */
-   private Map<String, List> addToCombinedVectorResults(List<QueryResultBatch> records, RecordBatchLoader loader,
+   protected Map<String, List> addToCombinedVectorResults(List<QueryResultBatch> records, RecordBatchLoader loader,
                                                          BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
     // TODO - this does not handle schema changes
     Map<String, List> combinedVectors = new HashMap();
@@ -393,7 +393,7 @@ public class DrillTestWrapper {
     }
   }
 
-  protected void addToMaterializedResults(List<Map> materializedRecords,  List<QueryResultBatch> records, RecordBatchLoader loader,
+  public static void addToMaterializedResults(List<Map> materializedRecords,  List<QueryResultBatch> records, RecordBatchLoader loader,
                                           BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
     long totalRecords = 0;
     QueryResultBatch batch;

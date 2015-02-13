@@ -55,6 +55,54 @@ public class TestConstantFolding extends PlanTestBase {
   }
 
   @Test
+  public void testConstantFolding_allTypes() throws Exception {
+
+    test("alter system set `store.json.all_text_mode` = true;");
+
+    String query2 = "SELECT " +
+        "int_col, bigint_col " +
+//        "       Cast( `int_col` AS             INT)             int_col,  " +
+//        "       Cast( `bigint_col` AS          BIGINT)          bigint_col,  " +
+//        "       Cast( `decimal9_col` AS        DECIMAL)         decimal9_col,  " +
+//        "       Cast( `decimal18_col` AS       DECIMAL(18,9))   decimal18_col,  " +
+//        "       Cast( `decimal28sparse_col` AS DECIMAL(28, 14)) decimal28sparse_col,  " +
+//        "       Cast( `decimal38sparse_col` AS DECIMAL(38, 19)) decimal38sparse_col,  " +
+//        "       Cast( `date_col` AS            DATE)            date_col,  " +
+//        "       Cast( `time_col` AS            TIME)            time_col,  " +
+//        "       Cast( `timestamp_col` AS TIMESTAMP)             timestamp_col,  " +
+//        "       Cast( `float4_col` AS FLOAT)                    float4_col,  " +
+//        "       Cast( `float8_col` AS DOUBLE)                   float8_col,  " +
+//        "       Cast( `bit_col` AS       BOOLEAN)                     bit_col,  " +
+//        "       Cast( `varchar_col` AS   VARCHAR(65000))              varchar_col,  " +
+//        "       `varbinary_col`            varbinary_col,  " +
+//        "       cast( `intervalyear_col` as INTERVAL YEAR)            intervalyear_col,  " +
+//        "       cast( `intervalday_col` as INTERVAL DAY )              intervalday_col  " +
+        "FROM   cp.`/parquet/alltypes.json`  " +
+        "WHERE  `int_col` = 1 + 0 " +
+        "AND    `bigint_col` = 1 + 0  "
+        // TODO - execution is broken here, the function is using a utility to convert from varchar to int, not able to
+        // handle decimals
+//        "AND    `decimal9_col` = cast( '1.0' AS                        decimal)  " +
+//        "AND    `decimal18_col` = cast( '123456789.000000000' AS       decimal(18,9))  " +
+//        "AND    `decimal28sparse_col` = cast( '123456789.000000000' AS decimal(28, 14))  " +
+//        "AND    `decimal38sparse_col` = cast( '123456789.000000000' AS decimal(38, 19))  " +
+//        "AND    `date_col` = cast( '1995-01-01' AS                     date)  " +
+//        "AND    `time_col` = cast( '01:00:00' AS                       time)  " +
+//        "AND    `timestamp_col` = cast( '1995-01-01 01:00:10.000' AS timestamp)  " +
+//        "AND    `float4_col` = cast( '1' AS float)  " +
+//        "AND    `float8_col` = cast( '1' AS DOUBLE)  " +
+//        "AND    `bit_col` = cast( 'false' AS        boolean)  " +
+//        "AND    `varchar_col` = cast( 'qwerty' AS   varchar(65000))  " +
+//        "AND    `varbinary_col` = converttonullablevarbinary('qwerty')  " +
+//        "AND    `intervalyear_col` = converttonullableintervalyear( 'P1Y')  " +
+//        "AND    `intervalday_col` = converttonullableintervalday( 'P1D' )"
+        ;
+
+
+    test(query2);
+  }
+
+  @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
     createFiles();
     String path = folder.getRoot().toPath().toString();
