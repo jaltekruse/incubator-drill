@@ -57,7 +57,8 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                                   TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.VARBINARY,
                                   TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
                                   TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
-                                  TypeProtos.MinorType.UINT8).build();
+                                  TypeProtos.MinorType.UINT8, TypeProtos.MinorType.DECIMAL9, TypeProtos.MinorType.DECIMAL18,
+                                  TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE).build();
 
   FunctionImplementationRegistry funcImplReg;
   UdfUtilities udfUtilities;
@@ -105,12 +106,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
             break;
-          case DECIMAL9:
-          case DECIMAL18:
-          case DECIMAL28SPARSE:
-          case DECIMAL38SPARSE:
-            reducedValues.add(rexBuilder.makeExactLiteral((BigDecimal) vector.getAccessor().getObject(0)));
-            break;
           case DATE:
             reducedValues.add(rexBuilder.makeDateLiteral(((DateTime)vector.getAccessor().getObject(0)).toCalendar(null)));
             break;
@@ -126,8 +121,22 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
           // disabling for now and adding VARBINARY to the list of unfoldable types
           case VARBINARY:
-//            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
             // fall through for now
+
+
+          case DECIMAL9:
+          case DECIMAL18:
+          case DECIMAL28SPARSE:
+          case DECIMAL38SPARSE:
+            // fall through for now
+            // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
+            // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
+            // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
+            // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
+            // currently to make this fold it must be put in the filter condition, project expression reduction is
+            // not planning correctly
+//            reducedValues.add(rexBuilder.makeExactLiteral((BigDecimal) vector.getAccessor().getObject(0)));
 
           // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
           // will make these non-reducible at planning time for now

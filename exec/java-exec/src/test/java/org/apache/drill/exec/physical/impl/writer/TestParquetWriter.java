@@ -128,8 +128,11 @@ public class TestParquetWriter extends BaseTestQuery {
       if (toSkip.contains(minorType)) {
         continue;
       }
+
+      // TODO - remove - old strategy - select cast( INT_col as INT) INT_col, ... from inputTable t1 where t1.INT_col = cast('1' as INT) AND ..
+      // select * FROM inputTable where cast(INT_col as INT) = castINT('1') AND ...
       try {
-        String literal = "`" + minorType.name().toUpperCase() + "_col` = " + "convert_from" + minorType.name().toUpperCase() + "(" + "'" + actualRecords.get(0).get("`" + minorType.name().toUpperCase() + "_col`") + "')";
+        String literal =  generateCast("`" + minorType.name().toUpperCase() + "_col`", minorType) + " = " + "cast" + minorType.name().toUpperCase() + "('" + actualRecords.get(0).get("`" + minorType.name().toUpperCase() + "_col`") + "')";
         String castExpr = generateCast("`" + minorType.name().toUpperCase() + "_col`", minorType) + " " + minorType.name().toUpperCase() + "_col";
 
         columnsAndCastsAndComparisons.add(literal);
@@ -190,7 +193,7 @@ public class TestParquetWriter extends BaseTestQuery {
     // casts did not work, they were not being folding, trying convertfrom functions instead
 
     // select cast( INT_col as INT) INT_col, ... from inputTable t1 where t1.INT_col = cast('1' as INT) AND ..
-    query = "SELECT " + Joiner.on(",").join(columns) + " FROM " + inputFile + " WHERE " + Joiner.on(" AND ").join(columnsAndCastsAndComparisons);
+    query = "SELECT * FROM " + inputFile + " WHERE " + Joiner.on(" AND ").join(columnsAndCastsAndComparisons);
     /*
     String query2 = "SELECT Cast( `int_col` AS             INT)             int_col,  " +
         "       Cast( `bigint_col` AS          BIGINT)          bigint_col,  " +
@@ -228,10 +231,10 @@ public class TestParquetWriter extends BaseTestQuery {
         "AND    `intervalyear_col` = converttonullableintervalyear( 'P1Y')  " +
         "AND    `intervalday_col` = converttonullableintervalday( 'P1D' )";
         */
-    System.out.println(query2);
+    System.out.println(query);
 //    System.out.println(query);
     test("alter system set `store.json.all_text_mode` = true;");
-    test(query2);
+    test(query);
 //    test("use dfs.tmp");
 //    deleteIfExists("drilltest/parquet_all_types");
 //    test("create table parquet_all_types as " + query );
