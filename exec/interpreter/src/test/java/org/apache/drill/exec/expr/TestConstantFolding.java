@@ -63,10 +63,10 @@ public class TestConstantFolding extends PlanTestBase {
         "FROM   cp.`/parquet/alltypes.json`  " +
         "WHERE  cast( `int_col` AS             int) = castint('1')  " +
         "AND    cast( `bigint_col` AS          bigint) = castbigint('100000000000')  " +
-        "AND    cast( `decimal9_col` AS        decimal(9, 4)) = 1.0 + 0  " +
-        "AND    cast( `decimal18_col` AS       decimal(18,9)) = 123456789.000000000 + 0  " +
-        "AND    cast( `decimal28sparse_col` AS decimal(28, 14)) = 123456789.000000000 + 0 " +
-        "AND    cast( `decimal38sparse_col` AS decimal(38, 19)) = 123456789.000000000 + 0 " +
+        "AND    cast( `decimal9_col` AS        decimal(9, 4)) = 1.0 + 0.0  " +
+        "AND    cast( `decimal18_col` AS       decimal(18,9)) = 123456789.000000000 + 0.0  " +
+        "AND    cast( `decimal28sparse_col` AS decimal(28, 14)) = 123456789.000000000 + 0.0 " +
+        "AND    cast( `decimal38sparse_col` AS decimal(38, 19)) = 123456789.000000000 + 0.0 " +
         "AND    cast( `date_col` AS            date) = castdate('1995-01-01')  " +
         "AND    cast( `time_col` AS            time) = casttime('01:00:00')  " +
         "AND    cast( `timestamp_col` AS timestamp) = casttimestamp('1995-01-01 01:00:10.000')  " +
