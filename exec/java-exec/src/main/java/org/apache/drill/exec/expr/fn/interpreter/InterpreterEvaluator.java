@@ -22,16 +22,25 @@ import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.BooleanOperator;
+import org.apache.drill.common.expression.CastExpression;
+import org.apache.drill.common.expression.ConvertExpression;
+import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.FunctionHolderExpression;
 import org.apache.drill.common.expression.IfExpression;
 import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.expression.NullExpression;
+import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.expression.TypedNullConstant;
 import org.apache.drill.common.expression.ValueExpressions;
 import org.apache.drill.common.expression.visitors.AbstractExprVisitor;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.DrillFuncHolderExpr;
+import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
+import org.apache.drill.exec.expr.annotations.Output;
+import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.fn.DrillSimpleFuncHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.NullableBitHolder;
@@ -84,7 +93,9 @@ public class InterpreterEvaluator {
       buf.release();
     }
     for (DrillBuf buf : evaluationBuffers) {
-      buf.release();
+      // TODO - review, this was causing a refcount error, I had inserted this because before I had it I was getting
+      // memory leaks. Who is supposed to release managed buffers? Should the above loop be removed as well?
+//      buf.release();
     }
   }
 
@@ -125,7 +136,7 @@ public class InterpreterEvaluator {
       }
 
       try {
-        DrillSimpleFuncInterpreter interpreter = holder.createInterpreter();
+        DrillSimpleFunc interpreter = holder.createInterpreter();
         Field[] fields = interpreter.getClass().getDeclaredFields();
         for (Field f : fields) {
           // the current interpreter strips off annotations, so we just need to assume
@@ -205,6 +216,90 @@ public class InterpreterEvaluator {
     }
 
     @Override
+    public ValueHolder visitFunctionCall(FunctionCall call, Integer value) throws RuntimeException {
+      return visitUnknown(call, value);
+    }
+
+    @Override
+    public ValueHolder visitSchemaPath(SchemaPath path,Integer value) throws RuntimeException {
+      return visitUnknown(path, value);
+    }
+
+    @Override
+    public ValueHolder visitDecimal9Constant(ValueExpressions.Decimal9Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal9Holder(decExpr.getIntFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
+    }
+
+    @Override
+    public ValueHolder visitDecimal18Constant(ValueExpressions.Decimal18Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal18Holder(decExpr.getLongFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
+    }
+
+    @Override
+    public ValueHolder visitDecimal28Constant(ValueExpressions.Decimal28Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
+    }
+
+    @Override
+    public ValueHolder visitDecimal38Constant(ValueExpressions.Decimal38Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
+    }
+
+    @Override
+    public ValueHolder visitDateConstant(ValueExpressions.DateExpression dateExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDateHolder(dateExpr.getDate());
+    }
+
+    @Override
+    public ValueHolder visitTimeConstant(ValueExpressions.TimeExpression timeExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getTimeHolder(timeExpr.getTime());
+    }
+
+    @Override
+    public ValueHolder visitTimeStampConstant(ValueExpressions.TimeStampExpression timestampExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getTimeStampHolder(timestampExpr.getTimeStamp());
+    }
+
+    @Override
+    public ValueHolder visitIntervalYearConstant(ValueExpressions.IntervalYearExpression intExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getIntervalYearHolder(intExpr.getIntervalYear());
+    }
+
+    @Override
+    public ValueHolder visitIntervalDayConstant(ValueExpressions.IntervalDayExpression intExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getIntervalDayHolder(intExpr.getIntervalDay(), intExpr.getIntervalMillis());
+    }
+
+    @Override
+    public ValueHolder visitBooleanConstant(ValueExpressions.BooleanExpression e,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getBitHolder(e.getBoolean() == false ? 0 : 1);
+    }
+
+    // TODO - review what to do with these
+    // **********************************
+    @Override
+    public ValueHolder visitCastExpression(CastExpression e,Integer value) throws RuntimeException {
+      return visitUnknown(e, value);
+    }
+
+    @Override
+    public ValueHolder visitConvertExpression(ConvertExpression e,Integer value) throws RuntimeException {
+      return visitUnknown(e, value);
+    }
+
+    @Override
+    public ValueHolder visitNullConstant(TypedNullConstant e,Integer value) throws RuntimeException {
+      return visitUnknown(e, value);
+    }
+
+    @Override
+    public ValueHolder visitNullExpression(NullExpression e,Integer value) throws RuntimeException {
+      return visitUnknown(e, value);
+    }
+    // TODO - review what to do with these (4 functions above)
+    //********************************************
+
+    @Override
     public ValueHolder visitFunctionHolderExpression(FunctionHolderExpression holderExpr, Integer inIndex) {
       if (! (holderExpr.getHolder() instanceof DrillSimpleFuncHolder)) {
         throw new UnsupportedOperationException("Only Drill simple UDF can be used in interpreter mode!");
@@ -234,12 +329,47 @@ public class InterpreterEvaluator {
       }
 
       try {
-        DrillSimpleFuncInterpreter interpreter =  ((DrillFuncHolderExpr) holderExpr).getInterpreter();
+        DrillSimpleFunc interpreter =  ((DrillFuncHolderExpr) holderExpr).getInterpreter();
 
         Preconditions.checkArgument(interpreter != null, "interpreter could not be null when use interpreted model to evaluate function " + holder.getRegisteredNames()[0]);
 
-        interpreter.doSetup(args);
-        ValueHolder out = interpreter.doEval(args);
+        interpreter.setup();
+
+        // the current input index to assign into the next available parameter, found using the @Param notation
+        // the order parameters are declared in the java class for the DrillFunc is meaningful
+        int currParameterIndex = 0;
+        Field outField = null;
+        try {
+          Field[] fields = interpreter.getClass().getDeclaredFields();
+          for (Field f : fields) {
+            // if this is annotated as a parameter to the function
+            if ( f.getAnnotation(Param.class) != null ) {
+              f.setAccessible(true);
+              if (currParameterIndex < args.length) {
+                f.set(interpreter, args[currParameterIndex]);
+              }
+              currParameterIndex++;
+            } else if ( f.getAnnotation(Output.class) != null ) {
+              f.setAccessible(true);
+              outField = f;
+              // create an instance of the holder for the output to be stored in
+              f.set(interpreter, f.getType().newInstance());
+            }
+          }
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        if (args.length != currParameterIndex ) {
+          throw new DrillRuntimeException(
+              String.format("Wrong number of parameters provided to interpreted expression evaluation " +
+                  "for function %s, expected %d parameters, but received %d.",
+                  holderExpr.getName(), currParameterIndex, args.length));
+        }
+        if (outField == null) {
+          throw new DrillRuntimeException("Malformed DrillFunction without a return type: " + holderExpr.getName());
+        }
+        interpreter.eval();
+        ValueHolder out = (ValueHolder) outField.get(interpreter);
 
         if (TypeHelper.getValueHolderType(out).getMode() == TypeProtos.DataMode.OPTIONAL &&
             holderExpr.getMajorType().getMode() == TypeProtos.DataMode.REQUIRED) {

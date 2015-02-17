@@ -136,6 +136,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
             // a decimal type
             reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+            break;
 
           // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
           // disabling for now and adding VARBINARY to the list of unfoldable types
