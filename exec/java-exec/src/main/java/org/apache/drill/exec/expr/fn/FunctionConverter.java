@@ -103,7 +103,13 @@ public class FunctionConverter {
    * @return - class name of interpreted evaluator
    */
   private String getInterpreterClassName(Class clazz)  {
-    return clazz.getSimpleName() + InterpreterGenerator.INTERPRETER_CLASSNAME_POSTFIX;
+    // Remove postfix, trying to interpret without the special interpreter classes, instead
+    // using reflection to tie together the functions at interpreting time
+    // Will remove the cyclic dependency between exec and interpreter in the build, if exec tests need
+    // to use function interpretation
+
+//    return clazz.getSimpleName() + InterpreterGenerator.INTERPRETER_CLASSNAME_POSTFIX;
+    return clazz.getName();
   }
 
   public <T extends DrillFunc> DrillFuncHolder getHolder(Class<T> clazz) {

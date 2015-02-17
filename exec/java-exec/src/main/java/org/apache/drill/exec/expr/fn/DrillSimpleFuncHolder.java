@@ -26,6 +26,7 @@ import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.ClassGenerator.BlockType;
 import org.apache.drill.exec.expr.ClassGenerator.HoldingContainer;
+import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionCostCategory;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
@@ -73,11 +74,12 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
     return false;
   }
 
-  public DrillSimpleFuncInterpreter createInterpreter() throws Exception {
+  public DrillSimpleFunc createInterpreter() throws Exception {
     Preconditions.checkArgument(this.interpreterClassName != null, "interpreterClassName should not be null!");
 
-    String className = InterpreterGenerator.PACKAGE_NAME + "." + this.interpreterClassName;
-    return (DrillSimpleFuncInterpreter) Class.forName(className).newInstance();
+//    String className = InterpreterGenerator.PACKAGE_NAME + "." + this.interpreterClassName;
+    String className = this.interpreterClassName;
+    return (DrillSimpleFunc) Class.forName(className).newInstance();
   }
 
   public HoldingContainer renderEnd(ClassGenerator<?> g, HoldingContainer[] inputVariables, JVar[]  workspaceJVars){
