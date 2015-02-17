@@ -31,8 +31,8 @@ public class DrillReduceExpressionsRules {
   public static final DrillReduceFilterRule FILTER_INSTANCE_DRILL =
       new DrillReduceFilterRule();
 
-  public static final DrillReduceFilterRule CALC_INSTANCE_DRILL =
-      new DrillReduceFilterRule();
+  public static final DrillReduceCalcRule CALC_INSTANCE_DRILL =
+      new DrillReduceCalcRule();
 
   private static class DrillReduceFilterRule extends ReduceExpressionsRule.ReduceFilterRule {
 
@@ -40,6 +40,12 @@ public class DrillReduceExpressionsRules {
       super("DrillReduceExpressionsRule[Filter]");
     }
 
+    /**
+     * Drills schema flexibility requires us to override the default behavior of calcite
+     * to produce an EmptyRel in the case of a constant false filter. We need to propagate
+     * schema at runtime, so we cannot just produce a simple operator at planning time to
+     * expose the planning time known schema. Instead we have to insert a limit 0.
+     */
     @Override
     protected RelNode createEmptyRelOrEquivalent(FilterRel filter) {
       return new SortRel(filter.getCluster(), filter.getTraitSet(),
@@ -54,9 +60,15 @@ public class DrillReduceExpressionsRules {
   private static class DrillReduceCalcRule extends ReduceExpressionsRule.ReduceCalcRule {
 
     DrillReduceCalcRule() {
-      super("DrillReduceExpressionsRule[Filter]");
+      super("DrillReduceExpressionsRule[Calc]");
     }
 
+    /**
+     * Drills schema flexibility requires us to override the default behavior of calcite
+     * to produce an EmptyRel in the case of a constant false filter. We need to propagate
+     * schema at runtime, so we cannot just produce a simple operator at planning time to
+     * expose the planning time known schema. Instead we have to insert a limit 0.
+     */
     @Override
     protected RelNode createEmptyRelOrEquivalent(CalcRel calc) {
       return new SortRel(calc.getCluster(), calc.getTraitSet(),
