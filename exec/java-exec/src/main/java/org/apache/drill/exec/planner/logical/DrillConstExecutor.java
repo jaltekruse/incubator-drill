@@ -118,25 +118,30 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             reducedValues.add(rexBuilder.makeTimestampLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
             break;
 
-          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
-          // disabling for now and adding VARBINARY to the list of unfoldable types
-          case VARBINARY:
-            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
-            // fall through for now
-
-
           case DECIMAL9:
           case DECIMAL18:
           case DECIMAL28SPARSE:
           case DECIMAL38SPARSE:
-            // fall through for now
             // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
             // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
             // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
             // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
             // currently to make this fold it must be put in the filter condition, project expression reduction is
-            // not planning correctly
-//            reducedValues.add(rexBuilder.makeExactLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+            // not planning correctly.
+            // Could not fix this by adding the decimal types to the list of NON_REDUCIBLE_TYPES, to resolve differences
+            // in scale and precision, calcite appears to be inserting casts, which are always considered constant
+            //    - this could be an issue for all of the NON_REDUCIBLE_TYPES, as any casts may be evaluated anyway and
+            //      then fail here
+
+            // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
+            // a decimal type
+            reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+
+          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
+          // disabling for now and adding VARBINARY to the list of unfoldable types
+          case VARBINARY:
+            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
+            // fall through for now
 
           // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
           // will make these non-reducible at planning time for now
