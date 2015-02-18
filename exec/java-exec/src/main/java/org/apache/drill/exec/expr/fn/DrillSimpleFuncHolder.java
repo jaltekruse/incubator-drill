@@ -38,8 +38,6 @@ import com.sun.codemodel.JExpr;
 import com.sun.codemodel.JExpression;
 import com.sun.codemodel.JMod;
 import com.sun.codemodel.JVar;
-import org.apache.drill.exec.expr.fn.interpreter.DrillSimpleFuncInterpreter;
-import org.apache.drill.exec.expr.fn.interpreter.InterpreterGenerator;
 
 public class DrillSimpleFuncHolder extends DrillFuncHolder{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillSimpleFuncHolder.class);
@@ -151,13 +149,5 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
     g.getEvalBlock().directStatement(String.format("//---- end of eval portion of %s function. ----//", registeredNames[0]));
 
     return out;
-  }
-
-  public String getSetupBody() {
-    return setupBody;
-  }
-
-  public String getEvalBody() {
-    return evalBody;
   }
 }
