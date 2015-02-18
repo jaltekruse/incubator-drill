@@ -69,8 +69,14 @@ public class TestConstantFolding extends PlanTestBase {
 //        "AND    cast( `decimal28sparse_col` AS decimal(28, 14)) = 123456789.000000000 + 0.0 " +
 //        "AND    cast( `decimal38sparse_col` AS decimal(38, 19)) = 123456789.000000000 + 0.0 " +
 
+        // RETURNS 0 ROWS, folds that cast to: cast( 788947200000 as DATE). Interpreting the int as a date
+        // gives some day in 1994
 //        "AND    cast( `date_col` AS            date) = castdate('1995-01-01')  " +
-        "AND    cast( `date_col` AS            date) = DATE '1995-01-01'  " +
+
+        "AND    cast( `date_col` AS            date) = cast('1995-01-01' as date)  " +
+
+        // THIS WORKS, RETURNS ONE RECORD
+//        "AND    cast( `date_col` AS            date) = DATE '1995-01-01'  " +
 
 //        "AND    cast( `time_col` AS            time) = casttime('01:00:00')  " +
 //        "AND    cast( `timestamp_col` AS timestamp) = casttimestamp('1995-01-01 01:00:10.000')  " +

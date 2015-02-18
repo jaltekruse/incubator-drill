@@ -93,7 +93,9 @@ public class InterpreterEvaluator {
       buf.release();
     }
     for (DrillBuf buf : evaluationBuffers) {
-      buf.release();
+      // TODO - review, this was causing a refcount error, I had inserted this because before I had it I was getting
+      // memory leaks. Who is supposed to release managed buffers? Should the above loop be removed as well?
+//      buf.release();
     }
   }
 
