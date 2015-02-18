@@ -254,25 +254,27 @@ public class InterpreterEvaluator {
     }
 
     @Override
-    public ValueHolder visitTimeStampConstant(ValueExpressions.TimeStampExpression intExpr,Integer value) throws RuntimeException {
-      return visitUnknown(intExpr, value);
+    public ValueHolder visitTimeStampConstant(ValueExpressions.TimeStampExpression timestampExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getTimeStampHolder(timestampExpr.getTimeStamp());
     }
 
     @Override
     public ValueHolder visitIntervalYearConstant(ValueExpressions.IntervalYearExpression intExpr,Integer value) throws RuntimeException {
-      return visitUnknown(intExpr, value);
+      return ValueHolderHelper.getIntervalYearHolder(intExpr.getIntervalYear());
     }
 
     @Override
     public ValueHolder visitIntervalDayConstant(ValueExpressions.IntervalDayExpression intExpr,Integer value) throws RuntimeException {
-      return visitUnknown(intExpr, value);
+      return ValueHolderHelper.getIntervalDayHolder(intExpr.getIntervalDay(), intExpr.getIntervalMillis());
     }
 
     @Override
     public ValueHolder visitBooleanConstant(ValueExpressions.BooleanExpression e,Integer value) throws RuntimeException {
-      return visitUnknown(e, value);
+      return ValueHolderHelper.getBitHolder(e.getBoolean() == false ? 0 : 1);
     }
 
+    // TODO - review what to do with these
+    // **********************************
     @Override
     public ValueHolder visitCastExpression(CastExpression e,Integer value) throws RuntimeException {
       return visitUnknown(e, value);
@@ -292,6 +294,8 @@ public class InterpreterEvaluator {
     public ValueHolder visitNullExpression(NullExpression e,Integer value) throws RuntimeException {
       return visitUnknown(e, value);
     }
+    // TODO - review what to do with these (4 functions above)
+    //********************************************
 
     @Override
     public ValueHolder visitFunctionHolderExpression(FunctionHolderExpression holderExpr, Integer inIndex) {
@@ -332,33 +336,38 @@ public class InterpreterEvaluator {
         // the current input index to assign into the next available parameter, found using the @Param notation
         // the order parameters are declared in the java class for the DrillFunc is meaningful
         int currParameterIndex = 0;
-        ValueHolder out = null;
+        Field outField = null;
         try {
           Field[] fields = interpreter.getClass().getDeclaredFields();
           for (Field f : fields) {
+            // if this is annotated as a parameter to the function
             if ( f.getAnnotation(Param.class) != null ) {
               f.setAccessible(true);
-              if (currParameterIndex >= args.length) {
+              if (currParameterIndex < args.length) {
                 f.set(interpreter, args[currParameterIndex]);
               }
               currParameterIndex++;
             } else if ( f.getAnnotation(Output.class) != null ) {
-              out = (ValueHolder) f.get(interpreter);
+              f.setAccessible(true);
+              outField = f;
+              // create an instance of the holder for the output to be stored in
+              f.set(interpreter, f.getType().newInstance());
             }
           }
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
-        if (args.length != currParameterIndex - 1 ) {
+        if (args.length != currParameterIndex ) {
           throw new DrillRuntimeException(
               String.format("Wrong number of parameters provided to interpreted expression evaluation " +
                   "for function %s, expected %d parameters, but received %d.",
-                  holderExpr.getName(), (currParameterIndex - 1), args.length));
+                  holderExpr.getName(), currParameterIndex, args.length));
         }
-        if (out == null) {
+        if (outField == null) {
           throw new DrillRuntimeException("Malformed DrillFunction without a return type: " + holderExpr.getName());
         }
         interpreter.eval();
+        ValueHolder out = (ValueHolder) outField.get(interpreter);
 
         if (TypeHelper.getValueHolderType(out).getMode() == TypeProtos.DataMode.OPTIONAL &&
             holderExpr.getMajorType().getMode() == TypeProtos.DataMode.REQUIRED) {
