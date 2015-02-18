@@ -275,6 +275,12 @@ public class InterpreterEvaluator {
       return ValueHolderHelper.getBitHolder(e.getBoolean() == false ? 0 : 1);
     }
 
+    @Override
+    public ValueHolder visitNullConstant(TypedNullConstant e,Integer value) throws RuntimeException {
+      // create a value holder for the given type, defaults to NULL value if not set
+      return TypeHelper.createValueHolder(e.getMajorType());
+    }
+
     // TODO - review what to do with these
     // **********************************
     @Override
@@ -288,15 +294,10 @@ public class InterpreterEvaluator {
     }
 
     @Override
-    public ValueHolder visitNullConstant(TypedNullConstant e,Integer value) throws RuntimeException {
-      return visitUnknown(e, value);
-    }
-
-    @Override
     public ValueHolder visitNullExpression(NullExpression e,Integer value) throws RuntimeException {
       return visitUnknown(e, value);
     }
-    // TODO - review what to do with these (4 functions above)
+    // TODO - review what to do with these (3 functions above)
     //********************************************
 
     @Override
