@@ -82,13 +82,15 @@ public class TestAggregateFunctions extends BaseTestQuery {
         .sqlQuery(query)
         .ordered()
         .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = true")
+        .optionSettingQueriesForBaseline("alter system set `planner.enable_streamagg` = false")
         .sqlBaselineQuery(baselineQuery)
         .build().run();
 
     testBuilder()
     .sqlQuery(query)
     .ordered()
-    .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false")
+    .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false;")
+    .optionSettingQueriesForBaseline("alter system set `planner.enable_streamagg` = false")
     .sqlBaselineQuery(baselineQuery)
     .build().run();
 

@@ -117,8 +117,9 @@ public class DrillRuleSets {
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
 
-      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
-      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+//      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
+//      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+        // this is causing a planning bug
       ReduceExpressionsRule.PROJECT_INSTANCE,
       DrillReduceAggregatesRule.INSTANCE
       ));
