@@ -104,6 +104,7 @@ public class TestParquetWriter extends BaseTestQuery {
     runTestAndValidate(selection, selection, inputTable, "employee_parquet");
   }
 
+  @Ignore("for debugging")
   @Test
   public void testAllDataTypes() throws Exception {
     String query = "SELECT ";
@@ -274,29 +275,6 @@ public class TestParquetWriter extends BaseTestQuery {
     }
     s += ") ";
     return s;
-  }
-
-  @Test
-  public void generateTestFileWithMockScan() throws Exception {
-
-    Path path = new Path("/tmp/drilltest/parquet/all_types");
-    if (fs.exists(path)) {
-      fs.delete(path, true);
-    }
-
-    List<String> mockDataConfigs = new ArrayList();
-    for (TypeProtos.MinorType minorType : values()) {
-      if (toSkip.contains(minorType)) {
-        continue;
-      }
-      for (DataMode dm : DataMode.values()) {
-        mockDataConfigs.add(String.format("{name: \"%s\", type:\"%s\", mode:\"%s\"}", dm.name() + "_" + minorType.name() + "_col", minorType.name(), dm.name()));
-      }
-    }
-    String plan = getFile("parquet/generate_all_types_physical_plan.json");
-    plan = plan.replace("REPLACED_IN_TEST", Joiner.on(",").join(mockDataConfigs));
-    System.out.println(plan);
-    testPhysical(plan);
   }
 
   @Test
