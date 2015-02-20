@@ -117,10 +117,15 @@ public class DrillRuleSets {
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
 
-//      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
-//      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
-        // this is causing a planning bug
-      ReduceExpressionsRule.PROJECT_INSTANCE,
+      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
+      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+      // TODO - look at this
+      // this is causing a planning bug for the TestAggregateFunctions.testDrill2092
+      // The rules OnMatch is being called, but not modifying the plan
+      // seems like its presence in the optimizer is making another rule fire
+      // that is creating a bad plan, removing all other work, just adding this rule
+      // on top of master causes the same planning issue( even though it still does nothing to the plan itself)
+//      ReduceExpressionsRule.PROJECT_INSTANCE,
       DrillReduceAggregatesRule.INSTANCE
       ));
     }

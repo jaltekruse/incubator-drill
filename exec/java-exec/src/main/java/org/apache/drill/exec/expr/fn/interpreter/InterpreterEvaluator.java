@@ -75,8 +75,6 @@ public class InterpreterEvaluator {
   public static void evaluate(int recordCount, UdfUtilities udfUtilities, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
 
     InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(udfUtilities);
-    initVisitor.reset();
-    List<DrillBuf> injectedBuffers = initVisitor.getManagedBuffers();
     InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, udfUtilities);
 
     expr.accept(initVisitor, incoming);
@@ -88,39 +86,15 @@ public class InterpreterEvaluator {
 
     outVV.getMutator().setValueCount(recordCount);
 
-    List<DrillBuf> evaluationBuffers = evalVisitor.getManagedBuffers();
-    for (DrillBuf buf : injectedBuffers) {
-      buf.release();
-    }
-    for (DrillBuf buf : evaluationBuffers) {
-      // TODO - review, this was causing a refcount error, I had inserted this because before I had it I was getting
-      // memory leaks. Who is supposed to release managed buffers? Should the above loop be removed as well?
-//      buf.release();
-    }
   }
 
   public static class InterpreterInitVisitor extends AbstractExprVisitor<LogicalExpression, RecordBatch, RuntimeException> {
 
     private UdfUtilities udfUtilities;
-    private List<DrillBuf> managedBuffers;
 
     protected InterpreterInitVisitor(UdfUtilities udfUtilities) {
       super();
       this.udfUtilities = udfUtilities;
-      reset();
-    }
-
-    /**
-     * While not currently re-used, this visitor has some state that should not be shared between uses,
-     * if a single instance is used to visit several expression trees, be sure to call this method between
-     * them.
-     */
-    public void reset() {
-      managedBuffers = new ArrayList<>();
-    }
-
-    public List<DrillBuf> getManagedBuffers() {
-      return managedBuffers;
     }
 
     @Override
@@ -145,7 +119,6 @@ public class InterpreterEvaluator {
             f.setAccessible(true);
             if (f.getType().equals(DrillBuf.class)) {
               DrillBuf buf = udfUtilities.getManagedBuffer();
-              managedBuffers.add(buf);
               f.set(interpreter, buf);
             } else if (f.getType().equals(QueryDateTimeInfo.class)) {
               f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
@@ -182,13 +155,11 @@ public class InterpreterEvaluator {
   public static class InterEvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
     private RecordBatch incoming;
     private UdfUtilities udfUtilities;
-    private List<DrillBuf> managedBuffers;
 
     protected InterEvalVisitor(RecordBatch incoming, UdfUtilities udfUtilities) {
       super();
       this.incoming = incoming;
       this.udfUtilities = udfUtilities;
-      reset();
     }
 
     public DrillBuf getManagedBufferIfAvailable() {
@@ -198,21 +169,7 @@ public class InterpreterEvaluator {
       } else {
         ret = udfUtilities.getManagedBuffer();
       }
-      managedBuffers.add(ret);
       return ret;
-    }
-
-    /**
-     * While not currently re-used, this visitor has some state that should not be shared between uses,
-     * if a single instance is used to visit several expression trees, be sure to call this method between
-     * them.
-     */
-    public void reset() {
-      managedBuffers = new ArrayList<>();
-    }
-
-    public List<DrillBuf> getManagedBuffers() {
-      return managedBuffers;
     }
 
     @Override
