@@ -78,9 +78,9 @@ public class TestCastEmptyStrings extends BaseTestQuery {
 
         // Test Required VarChar
         test(String.format("select cast('' as decimal) from dfs_test.`%s` where cast('' as decimal) is null;", root));
-//        test(String.format("select cast('' as decimal(18)) from dfs_test.`%s`;", root));
-//        test(String.format("select cast('' as decimal(28)) from dfs_test.`%s`;", root));
-//        test(String.format("select cast('' as decimal(38)) from dfs_test.`%s`;", root));
+        test(String.format("select cast('' as decimal(18)) from dfs_test.`%s`;", root));
+        test(String.format("select cast('' as decimal(28)) from dfs_test.`%s`;", root));
+        test(String.format("select cast('' as decimal(38)) from dfs_test.`%s`;", root));
 
         test("alter system set `drill.exec.functions.cast_empty_string_to_null` = false;");
     }
