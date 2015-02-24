@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.ops;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -29,7 +31,7 @@ import com.google.common.collect.Lists;
 public class FragmentStats {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentStats.class);
 
-  private List<OperatorStats> operators = Lists.newArrayList();
+  private List<OperatorStats> operators;
   private final long startTime;
   private final DrillbitEndpoint endpoint;
   private final BufferAllocator allocator;
@@ -38,6 +40,7 @@ public class FragmentStats {
     this.startTime = System.currentTimeMillis();
     this.endpoint = endpoint;
     this.allocator = allocator;
+    operators = Collections.synchronizedList(new ArrayList());
   }
 
   public void addMetricsToStatus(MinorFragmentProfile.Builder prfB) {
