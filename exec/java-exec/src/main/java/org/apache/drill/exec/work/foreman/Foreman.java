@@ -158,12 +158,26 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
     stateListener.moveToState(QueryState.CANCELED, null);
   }
 
+  /**
+   * To ensure all failures are reported back to the user, all resource cleanup/closing should happen
+   * in the here before the call to send the final message to the client.
+   *
+   * All resource releasing belong here, not in the close method!
+   *
+   * @param result - the final batch to send back to the client
+   */
   private void cleanup(QueryResult result) {
     logger.info("foreman cleaning up - status: {}", queryManager.getStatus());
 
     bee.retireForeman(this);
     context.getWorkBus().removeFragmentStatusListener(queryId);
     context.getClusterCoordinator().removeDrillbitStatusListener(queryManager);
+    try {
+      context.close();
+    } catch (IOException e) {
+      moveToState(QueryState.FAILED, e);
+    }
+
     if(result != null){
       initiatingClient.sendResult(responseListener, new QueryWritableBatch(result), true);
     }
@@ -559,9 +573,18 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
     return queryId;
   }
 
+  /**
+   * Method called after the final message has been sent to the client. To ensure
+   * all failures are reported back to the user, all resource cleanup/closing should happen
+   * in the cleanup method before the call to send the final message to the client.
+   *
+   * Unless there is a very good reason, put anything that would usually go in a close
+   * method over in cleanup()!
+   *
+   * @throws IOException
+   */
   @Override
   public void close() throws IOException {
-    context.close();
   }
 
   public QueryStatus getQueryStatus() {
