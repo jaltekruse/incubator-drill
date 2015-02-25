@@ -19,9 +19,7 @@ package org.apache.drill.exec.ops;
 
 import io.netty.buffer.DrillBuf;
 
-import java.io.Closeable;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 import net.hydromatic.optiq.SchemaPlus;
@@ -29,7 +27,6 @@ import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.exec.compile.QueryClassLoader;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.CodeGenerator;
@@ -39,7 +36,6 @@ import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
-import org.apache.drill.exec.proto.UserBitShared.UserCredentials;
 import org.apache.drill.exec.rpc.control.ControlTunnel;
 import org.apache.drill.exec.rpc.data.DataTunnel;
 import org.apache.drill.exec.rpc.user.UserServer.UserClientConnection;
@@ -50,54 +46,56 @@ import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.work.batch.IncomingBuffers;
 
 import com.carrotsearch.hppc.LongObjectOpenHashMap;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
  * Contextual objects required for execution of a particular fragment.
  */
-public class FragmentContext implements Closeable {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
+public class FragmentContext implements AutoCloseable {
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
 
-
-  private Map<FragmentHandle, DataTunnel> tunnels = Maps.newHashMap();
+  private final Map<FragmentHandle, DataTunnel> tunnels = Maps.newHashMap();
 
   private final DrillbitContext context;
   private final UserClientConnection connection;
   private final FragmentStats stats;
   private final FunctionImplementationRegistry funcRegistry;
-  private final QueryClassLoader loader;
   private final BufferAllocator allocator;
   private final PlanFragment fragment;
-  private List<Thread> daemonThreads = Lists.newLinkedList();
   private IncomingBuffers buffers;
   private final long queryStartTime;
   private final int rootFragmentTimeZone;
   private final OptionManager fragmentOptions;
-  private final UserCredentials credentials;
-  private LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
+  private final LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
 
   private volatile Throwable failureCause;
   private volatile FragmentContextState state = FragmentContextState.OK;
 
+  /*
+   * TODO we need a state that indicates that cancellation has been requested and
+   * is in progress. Early termination (such as from limit queries) could also use
+   * this, as the cleanup steps should be exactly the same.
+   */
   private static enum FragmentContextState {
     OK,
     FAILED,
     CANCELED
   }
 
-  public FragmentContext(DrillbitContext dbContext, PlanFragment fragment, UserClientConnection connection,
-      FunctionImplementationRegistry funcRegistry) throws OutOfMemoryException, ExecutionSetupException {
-
+  public FragmentContext(final DrillbitContext dbContext, final PlanFragment fragment,
+      final UserClientConnection connection, final FunctionImplementationRegistry funcRegistry)
+    throws ExecutionSetupException {
     this.context = dbContext;
     this.connection = connection;
     this.fragment = fragment;
     this.funcRegistry = funcRegistry;
-    this.queryStartTime = fragment.getQueryStartTime();
-    this.rootFragmentTimeZone = fragment.getTimeZone();
-    this.credentials = fragment.getCredentials();
+
+    queryStartTime = fragment.getQueryStartTime();
+    rootFragmentTimeZone = fragment.getTimeZone();
+
     logger.debug("Getting initial memory allocation of {}", fragment.getMemInitial());
     logger.debug("Fragment max allocation: {}", fragment.getMemMax());
+
     try {
       OptionList list;
       if (!fragment.hasOptionsJson() || fragment.getOptionsJson().isEmpty()) {
@@ -105,7 +103,7 @@ public class FragmentContext implements Closeable {
       } else {
         list = dbContext.getConfig().getMapper().readValue(fragment.getOptionsJson(), OptionList.class);
       }
-      this.fragmentOptions = new FragmentOptionManager(context.getOptionManager(), list);
+      fragmentOptions = new FragmentOptionManager(context.getOptionManager(), list);
     } catch (Exception e) {
       throw new ExecutionSetupException("Failure while reading plan options.", e);
     }
@@ -113,14 +111,14 @@ public class FragmentContext implements Closeable {
     // Add the fragment context to the root allocator.
     // The QueryManager will call the root allocator to recalculate all the memory limits for all the fragments
     try {
-      this.allocator = dbContext.getAllocator().getChildAllocator(this, fragment.getMemInitial(), fragment.getMemMax(), true);
+      allocator = context.getAllocator().getChildAllocator(
+          this, fragment.getMemInitial(), fragment.getMemMax(), true);
       assert (allocator != null);
-    }catch(Throwable e){
+    } catch(Throwable e) {
       throw new ExecutionSetupException("Failure while getting memory allocator for fragment.", e);
     }
-    this.stats = new FragmentStats(allocator, dbContext.getMetrics(), fragment.getAssignment());
 
-    this.loader = new QueryClassLoader(dbContext.getConfig(), fragmentOptions);
+    stats = new FragmentStats(allocator, dbContext.getMetrics(), fragment.getAssignment());
   }
 
   public OptionManager getOptions() {
@@ -163,7 +161,7 @@ public class FragmentContext implements Closeable {
           "This is a non-root fragment."));
       return null;
     } else {
-      SchemaPlus root = SimpleOptiqSchema.createRootSchema(false);
+      final SchemaPlus root = SimpleOptiqSchema.createRootSchema(false);
       context.getStorage().getSchemaFactory().registerSchemas(connection.getSession(), root);
       return root;
     }
@@ -178,18 +176,20 @@ public class FragmentContext implements Closeable {
   }
 
   public FragmentStats getStats() {
-    return this.stats;
+    return stats;
   }
 
   public long getQueryStartTime() {
-    return this.queryStartTime;
+    return queryStartTime;
   }
 
   public int getRootFragmentTimeZone() {
-    return this.rootFragmentTimeZone;
+    return rootFragmentTimeZone;
   }
 
-  public DrillbitEndpoint getForemanEndpoint() {return fragment.getForeman();}
+  public DrillbitEndpoint getForemanEndpoint() {
+    return fragment.getForeman();
+  }
 
   /**
    * The FragmentHandle for this Fragment
@@ -199,31 +199,37 @@ public class FragmentContext implements Closeable {
     return fragment.getHandle();
   }
 
+  private String getFragIdString() {
+    final FragmentHandle handle = getHandle();
+    final String frag = handle != null ? handle.getMajorFragmentId() + ":" + handle.getMinorFragmentId() : "0:0";
+    return frag;
+  }
+
   /**
    * Get this fragment's allocator.
    * @return
    */
   @Deprecated
   public BufferAllocator getAllocator() {
-    if(allocator == null){
-      FragmentHandle handle=getHandle();
-      String frag=handle!=null?handle.getMajorFragmentId()+":"+handle.getMinorFragmentId():"0:0";
-      logger.debug("Fragment:"+frag+" Allocator is NULL");
+    if (allocator == null) {
+      logger.debug("Fragment: " + getFragIdString() + " Allocator is NULL");
     }
     return allocator;
   }
 
-  public BufferAllocator getNewChildAllocator(long initialReservation,
-                                              long maximumReservation,
-                                              boolean applyFragmentLimit) throws OutOfMemoryException {
+  public BufferAllocator getNewChildAllocator(final long initialReservation,
+                                              final long maximumReservation,
+                                              final boolean applyFragmentLimit) throws OutOfMemoryException {
     return allocator.getChildAllocator(this, initialReservation, maximumReservation, applyFragmentLimit);
   }
 
-  public <T> T getImplementationClass(ClassGenerator<T> cg) throws ClassTransformationException, IOException {
+  public <T> T getImplementationClass(final ClassGenerator<T> cg)
+      throws ClassTransformationException, IOException {
     return getImplementationClass(cg.getCodeGenerator());
   }
 
-  public <T> T getImplementationClass(CodeGenerator<T> cg) throws ClassTransformationException, IOException {
+  public <T> T getImplementationClass(final CodeGenerator<T> cg)
+      throws ClassTransformationException, IOException {
     return context.getCompiler().getImplementationClass(cg);
   }
 
@@ -235,29 +241,17 @@ public class FragmentContext implements Closeable {
     return connection;
   }
 
-  public ControlTunnel getControlTunnel(DrillbitEndpoint endpoint) {
+  public ControlTunnel getControlTunnel(final DrillbitEndpoint endpoint) {
     return context.getController().getTunnel(endpoint);
   }
 
-  public DataTunnel getDataTunnel(DrillbitEndpoint endpoint, FragmentHandle remoteHandle) {
+  public DataTunnel getDataTunnel(final DrillbitEndpoint endpoint, final FragmentHandle remoteHandle) {
     DataTunnel tunnel = tunnels.get(remoteHandle);
     if (tunnel == null) {
       tunnel = context.getDataConnectionsPool().getTunnel(endpoint, remoteHandle);
       tunnels.put(remoteHandle, tunnel);
     }
     return tunnel;
-  }
-
-  /**
-   * Add a new thread to this fragment's context. This thread will likely run for the life of the fragment but should be
-   * terminated when the fragment completes. When the fragment completes, the threads will be interrupted.
-   *
-   * @param thread
-   */
-  public void addDaemonThread(Thread thread) {
-    daemonThreads.add(thread);
-    thread.start();
-
   }
 
   public IncomingBuffers getBuffers() {
@@ -280,31 +274,24 @@ public class FragmentContext implements Closeable {
     return funcRegistry;
   }
 
-  public UserCredentials getCredentials() {
-    return credentials;
-  }
-
-  public QueryClassLoader getClassLoader() {
-    return loader;
-  }
-
   public DrillConfig getConfig() {
     return context.getConfig();
   }
 
-  public void setFragmentLimit(long limit) {
-    this.allocator.setFragmentLimit(limit);
+  public void setFragmentLimit(final long limit) {
+    allocator.setFragmentLimit(limit);
   }
 
   @Override
   public void close() {
-    for (Thread thread: daemonThreads) {
-     thread.interrupt();
-    }
-    Object[] mbuffers = ((LongObjectOpenHashMap<Object>)(Object)managedBuffers).values;
-    for (int i =0; i < mbuffers.length; i++) {
+    /*
+     * TODO wait for threads working on this Fragment to terminate (or at least stop working
+     * on this Fragment's query)
+     */
+    final Object[] mbuffers = ((LongObjectOpenHashMap<Object>) (Object) managedBuffers).values;
+    for (int i = 0; i < mbuffers.length; i++) {
       if (managedBuffers.allocated[i]) {
-        ((DrillBuf)mbuffers[i]).release();
+        ((DrillBuf) mbuffers[i]).release();
       }
     }
 
@@ -312,13 +299,12 @@ public class FragmentContext implements Closeable {
       buffers.close();
     }
 
-    FragmentHandle handle=getHandle();
-    String frag=handle!=null?handle.getMajorFragmentId()+":"+handle.getMinorFragmentId():"0:0";
     allocator.close();
-    logger.debug("Fragment:"+frag+" After close allocator is: "+allocator!=null?"OK":"NULL");
+    logger.debug("Fragment: " + getFragIdString()
+        + " After close allocator is: " + allocator != null ? "OK" : "NULL");
   }
 
-  public DrillBuf replace(DrillBuf old, int newSize) {
+  public DrillBuf replace(final DrillBuf old, final int newSize) {
     if (managedBuffers.remove(old.memoryAddress()) == null) {
       throw new IllegalStateException("Tried to remove unmanaged buffer.");
     }
@@ -330,11 +316,10 @@ public class FragmentContext implements Closeable {
     return getManagedBuffer(256);
   }
 
-  public DrillBuf getManagedBuffer(int size) {
-    DrillBuf newBuf = allocator.buffer(size);
+  public DrillBuf getManagedBuffer(final int size) {
+    final DrillBuf newBuf = allocator.buffer(size);
     managedBuffers.put(newBuf.memoryAddress(), newBuf);
     newBuf.setFragmentContext(this);
     return newBuf;
   }
-
 }
