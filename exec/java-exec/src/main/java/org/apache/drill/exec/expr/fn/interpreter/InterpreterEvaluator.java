@@ -52,6 +52,7 @@ import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
 
+import javax.inject.Inject;
 import java.lang.reflect.Field;
 
 
@@ -106,9 +107,7 @@ public class InterpreterEvaluator {
         DrillSimpleFunc interpreter = holder.createInterpreter();
         Field[] fields = interpreter.getClass().getDeclaredFields();
         for (Field f : fields) {
-          // the current interpreter strips off annotations, so we just need to assume
-          // the type available as injectable are only used as injectable
-//          if ( f.getAnnotation(Inject.class) != null ) {
+          if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
             if (f.getType().equals(DrillBuf.class)) {
               DrillBuf buf = udfUtilities.getManagedBuffer();
@@ -120,9 +119,9 @@ public class InterpreterEvaluator {
             } else {
               // do nothing with the field
             }
-//          } else { // do nothing with non-inject fields here
-//            continue;
-//          }
+          } else { // do nothing with non-inject fields here
+            continue;
+          }
         }
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
