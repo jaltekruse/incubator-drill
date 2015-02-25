@@ -20,8 +20,10 @@ package org.apache.drill;
 import org.apache.drill.exec.rpc.RpcException;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.slf4j.Logger;
 
 public class TestBugFixes extends BaseTestQuery {
+  private static final Logger logger = org.slf4j.LoggerFactory.getLogger(TestBugFixes.class);
 
   @Test
   public void leak1() throws Exception {

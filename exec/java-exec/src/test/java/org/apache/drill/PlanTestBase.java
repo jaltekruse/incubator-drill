@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Stack;
 
 import org.apache.drill.common.expression.SchemaPath;
-import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.record.RecordBatchLoader;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.user.QueryResultBatch;
@@ -47,7 +46,7 @@ public class PlanTestBase extends BaseTestQuery {
    */
   public void testPhysicalPlan(String sql, String... expectedSubstrs)
       throws Exception {
-    sql = "EXPLAIN PLAN for " + normalizeQuery(sql);
+    sql = "EXPLAIN PLAN for " + QueryTestUtil.normalizeQuery(sql);
 
     String planStr = getPlanInString(sql, JSON_FORMAT);
 
@@ -184,7 +183,7 @@ public class PlanTestBase extends BaseTestQuery {
     }
 
     sql = "EXPLAIN PLAN " + levelStr + " " + depthStr + "  for "
-        + normalizeQuery(sql);
+        + QueryTestUtil.normalizeQuery(sql);
 
     return getPlanInString(sql, OPTIQ_FORMAT);
   }

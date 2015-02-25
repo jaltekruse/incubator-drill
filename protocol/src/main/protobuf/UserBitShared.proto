@@ -102,7 +102,6 @@ message QueryResult {
 	  COMPLETED = 2;
 	  CANCELED = 3;
 	  FAILED = 4;
-	  UNKNOWN_QUERY = 5;
 	}
 
 	optional QueryState query_state = 1;

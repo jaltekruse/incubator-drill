@@ -197,4 +197,8 @@ public interface ExecConstants {
   public static final String MAX_LOADING_CACHE_SIZE_CONFIG = "drill.exec.compile.cache_max_size";
 
   public static final String DRILL_SYS_FILE_SUFFIX = ".sys.drill";
+
+  public static final String DRILLBIT_EXCEPTION_INJECTIONS = "drill.exec.testing.exception-injections";
+  public static final OptionValidator DRILLBIT_EXCEPTION_INJECTIONS_VALIDATOR =
+      new StringValidator(DRILLBIT_EXCEPTION_INJECTIONS, "");
 }
