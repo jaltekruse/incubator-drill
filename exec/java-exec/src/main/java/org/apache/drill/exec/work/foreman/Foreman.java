@@ -381,6 +381,11 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
         initiatingClient.getSession());
   }
 
+  // TODO - delete me, for debugging
+  public static int failedCount = 0;
+  public static int canceledCount = 0;
+  public static int finishedCount = 0;
+
   /**
    * Tells the foreman to move to a new state.  Note that
    * @param state

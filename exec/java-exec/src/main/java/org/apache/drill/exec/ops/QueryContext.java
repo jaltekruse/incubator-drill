@@ -193,10 +193,17 @@ public class QueryContext implements Closeable, UdfUtilities{
     return drillbitContext.getStorage();
   }
 
+  public static int closedAttemptedCount = 0;
+  public static int closedFinishedCount = 0;
+
   @Override
   public void close() throws IOException {
+    System.out.println("closes attempted: " + closedAttemptedCount + " closed completed: " + closedFinishedCount );
+    closedAttemptedCount++;
     bufferManager.close();
     allocator.close();
+    closedFinishedCount++;
+    System.out.println("closes attempted: " + closedAttemptedCount + " closed completed: " + closedFinishedCount );
   }
 
 }
