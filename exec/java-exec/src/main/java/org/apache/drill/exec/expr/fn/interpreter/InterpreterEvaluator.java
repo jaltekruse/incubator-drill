@@ -18,7 +18,6 @@
 package org.apache.drill.exec.expr.fn.interpreter;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.BooleanOperator;
@@ -45,21 +44,15 @@ import org.apache.drill.exec.expr.fn.DrillSimpleFuncHolder;
 import org.apache.drill.exec.expr.holders.BitHolder;
 import org.apache.drill.exec.expr.holders.NullableBitHolder;
 import org.apache.drill.exec.expr.holders.ValueHolder;
-import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.QueryDateTimeInfo;
 import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.RecordBatch;
+import org.apache.drill.exec.record.VectorAccessible;
 import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.vector.ValueHolderHelper;
 import org.apache.drill.exec.vector.ValueVector;
-import org.reflections.Reflections;
 
-import javax.inject.Inject;
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 
 public class InterpreterEvaluator {
@@ -72,10 +65,10 @@ public class InterpreterEvaluator {
     evaluate(incoming.getRecordCount(), incoming.getContext(), incoming, outVV, expr);
   }
 
-  public static void evaluate(int recordCount, UdfUtilities udfUtilities, RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
+  public static void evaluate(int recordCount, UdfUtilities udfUtilities, VectorAccessible incoming, ValueVector outVV, LogicalExpression expr) {
 
-    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(udfUtilities);
-    InterEvalVisitor evalVisitor = new InterEvalVisitor(incoming, udfUtilities);
+    InitVisitor initVisitor = new InitVisitor(udfUtilities);
+    EvalVisitor evalVisitor = new EvalVisitor(incoming, udfUtilities);
 
     expr.accept(initVisitor, incoming);
 
@@ -88,17 +81,17 @@ public class InterpreterEvaluator {
 
   }
 
-  public static class InterpreterInitVisitor extends AbstractExprVisitor<LogicalExpression, RecordBatch, RuntimeException> {
+  private static class InitVisitor extends AbstractExprVisitor<LogicalExpression, VectorAccessible, RuntimeException> {
 
     private UdfUtilities udfUtilities;
 
-    protected InterpreterInitVisitor(UdfUtilities udfUtilities) {
+    protected InitVisitor(UdfUtilities udfUtilities) {
       super();
       this.udfUtilities = udfUtilities;
     }
 
     @Override
-    public LogicalExpression visitFunctionHolderExpression(FunctionHolderExpression holderExpr, RecordBatch incoming) {
+    public LogicalExpression visitFunctionHolderExpression(FunctionHolderExpression holderExpr, VectorAccessible incoming) {
       if (! (holderExpr.getHolder() instanceof DrillSimpleFuncHolder)) {
         throw new UnsupportedOperationException("Only Drill simple UDF can be used in interpreter mode!");
       }
@@ -142,7 +135,7 @@ public class InterpreterEvaluator {
     }
 
     @Override
-    public LogicalExpression visitUnknown(LogicalExpression e, RecordBatch incoming) throws RuntimeException {
+    public LogicalExpression visitUnknown(LogicalExpression e, VectorAccessible incoming) throws RuntimeException {
       for (LogicalExpression child : e) {
         child.accept(this, incoming);
       }
@@ -152,24 +145,18 @@ public class InterpreterEvaluator {
   }
 
 
-  public static class InterEvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
-    private RecordBatch incoming;
+  public static class EvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
+    private VectorAccessible incoming;
     private UdfUtilities udfUtilities;
 
-    protected InterEvalVisitor(RecordBatch incoming, UdfUtilities udfUtilities) {
+    protected EvalVisitor(VectorAccessible incoming, UdfUtilities udfUtilities) {
       super();
       this.incoming = incoming;
       this.udfUtilities = udfUtilities;
     }
 
     public DrillBuf getManagedBufferIfAvailable() {
-      DrillBuf ret;
-      if (incoming != null) {
-        ret = incoming.getContext().getManagedBuffer();
-      } else {
-        ret = udfUtilities.getManagedBuffer();
-      }
-      return ret;
+      return udfUtilities.getManagedBuffer();
     }
 
     @Override
@@ -479,7 +466,6 @@ public class InterpreterEvaluator {
     private ValueHolder visitBooleanOr(BooleanOperator op, Integer inIndex) {
       ValueHolder [] args = new ValueHolder [op.args.size()];
       boolean hasNull = false;
-      ValueHolder out = null;
       for (int i = 0; i < op.args.size(); i++) {
         args[i] = op.args.get(i).accept(this, inIndex);
 
