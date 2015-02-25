@@ -34,35 +34,37 @@ import org.apache.drill.exec.work.fragment.FragmentManager;
 import java.io.IOException;
 
 public class DataResponseHandlerImpl implements DataResponseHandler{
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DataResponseHandlerImpl.class);
-
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DataResponseHandlerImpl.class);
   private final WorkerBee bee;
 
-  public DataResponseHandlerImpl(WorkerBee bee) {
-    super();
+  public DataResponseHandlerImpl(final WorkerBee bee) {
     this.bee = bee;
   }
-
 
   @Override
   public void informOutOfMemory() {
     logger.error("Out of memory outside any particular fragment.");
   }
 
-
-  public void handle(RemoteConnection connection, FragmentManager manager, FragmentRecordBatch fragmentBatch, DrillBuf data, ResponseSender sender) throws RpcException {
+  @Override
+  public void handle(final RemoteConnection connection, final FragmentManager manager,
+      final FragmentRecordBatch fragmentBatch, final DrillBuf data, final ResponseSender sender)
+          throws RpcException {
 //    logger.debug("Fragment Batch received {}", fragmentBatch);
     try {
-      boolean canRun = manager.handle(new RawFragmentBatch(connection, fragmentBatch, data, sender));
+      final boolean canRun = manager.handle(new RawFragmentBatch(connection, fragmentBatch, data, sender));
       if (canRun) {
 //        logger.debug("Arriving batch means local batch can run, starting local batch.");
-        // if we've reached the canRun threshold, we'll proceed. This expects handler.handle() to only return a single
-        // true.
+        /*
+         * If we've reached the canRun threshold, we'll proceed. This expects handler.handle() to only
+         * return a single true.
+         */
         bee.startFragmentPendingRemote(manager);
       }
+
       if (fragmentBatch.getIsLastBatch() && !manager.isWaiting()) {
-//        logger.debug("Removing handler.  Is Last Batch {}.  Is Waiting for more {}", fragmentBatch.getIsLastBatch(),
-//            manager.isWaiting());
+//        logger.debug("Removing handler.  Is Last Batch {}.  Is Waiting for more {}",
+//            fragmentBatch.getIsLastBatch(), manager.isWaiting());
         bee.getContext().getWorkBus().removeFragmentManager(manager.getHandle());
       }
 

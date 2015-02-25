@@ -38,6 +38,7 @@ public class Fragment implements Iterable<Fragment.ExchangeFragmentPair> {
     if (root == null) {
       root = o;
     }
+    // TODO should complain otherwise
   }
 
   public void addSendExchange(Exchange e) throws ForemanSetupException{
