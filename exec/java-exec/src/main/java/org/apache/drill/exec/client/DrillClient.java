@@ -98,7 +98,7 @@ public class DrillClient implements Closeable, ConnectionThrottle{
   public DrillClient(DrillConfig config, ClusterCoordinator coordinator, BufferAllocator allocator) {
     this.ownsZkConnection = coordinator == null;
     this.ownsAllocator = allocator == null;
-    this.allocator = allocator == null ? new TopLevelAllocator(config) : allocator;
+    this.allocator = ownsAllocator ? new TopLevelAllocator(config) : allocator;
     this.config = config;
     this.clusterCoordinator = coordinator;
     this.reconnectTimes = config.getInt(ExecConstants.BIT_RETRY_TIMES);
@@ -204,12 +204,8 @@ public class DrillClient implements Closeable, ConnectionThrottle{
 
   private void connect(DrillbitEndpoint endpoint) throws RpcException {
     FutureHandler f = new FutureHandler();
-    try {
-      client.connect(f, endpoint, props, getUserCredentials());
-      f.checkedGet();
-    } catch (InterruptedException e) {
-      throw new RpcException(e);
-    }
+    client.connect(f, endpoint, props, getUserCredentials());
+    f.checkedGet();
   }
 
   public BufferAllocator getAllocator() {
