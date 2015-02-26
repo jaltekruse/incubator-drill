@@ -29,6 +29,7 @@ import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import static org.hamcrest.core.Is.isA;
 import static org.junit.Assert.*;
 //import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.CoreMatchers.not;
@@ -247,7 +248,7 @@ public class DriverTest extends DrillTest {
     throws SQLException
   {
     assertThat( DriverManager.getDriver( "jdbc:drill:whatever" ),
-                is( Driver.class ) );
+                isA(java.sql.Driver.class) );
   }
 
 
