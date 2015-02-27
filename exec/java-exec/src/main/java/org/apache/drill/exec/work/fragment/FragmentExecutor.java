@@ -187,12 +187,8 @@ public class FragmentExecutor implements Runnable {
 
   /**
    * Updates the fragment state with the given state
-<<<<<<< HEAD
    *
    * @param to target state
-=======
-   * @param  to  target state
->>>>>>> 5369c51... DRILL-1735:  Have closing of JDBC connection free embedded-server resources.
    */
   private void updateState(final FragmentState to) {
     state.set(to.getNumber());
