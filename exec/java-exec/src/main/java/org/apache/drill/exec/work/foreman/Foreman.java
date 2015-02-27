@@ -556,7 +556,7 @@ public class Foreman implements Runnable {
       count.increment();
     }
     Joiner.MapJoiner mapJoiner = Joiner.on(',').withKeyValueSeparator("=");
-    System.out.println(mapJoiner.join(queryStateTransitions));
+    logger.debug("State transition summary: " + mapJoiner.join(queryStateTransitions));
     switch(state) {
     case PENDING:
       if (newState == QueryState.RUNNING) {
