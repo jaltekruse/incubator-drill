@@ -90,104 +90,104 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       vector.allocateNewSafe();
       InterpreterEvaluator.evaluateConstantExpr(vector, udfUtilities, materializedExpr);
 
-        switch(materializedExpr.getMajorType().getMinorType()) {
-          case INT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
-            break;
-          case BIGINT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Long)vector.getAccessor().getObject(0))));
-            break;
-          case FLOAT4:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Float)vector.getAccessor().getObject(0))));
-            break;
-          case FLOAT8:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
-            break;
-          case VARCHAR:
-            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null)));
-            break;
-          case BIT:
-            reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
-            break;
-          case DATE:
-            reducedValues.add(rexBuilder.makeDateLiteral(new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null)));
-            break;
+      switch(materializedExpr.getMajorType().getMinorType()) {
+        case INT:
+          reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
+          break;
+        case BIGINT:
+          reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Long)vector.getAccessor().getObject(0))));
+          break;
+        case FLOAT4:
+          reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Float)vector.getAccessor().getObject(0))));
+          break;
+        case FLOAT8:
+          reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
+          break;
+        case VARCHAR:
+          reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null)));
+          break;
+        case BIT:
+          reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
+          break;
+        case DATE:
+          reducedValues.add(rexBuilder.makeDateLiteral(new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null)));
+          break;
 
-          case DECIMAL9:
-          case DECIMAL18:
-          case DECIMAL28SPARSE:
-          case DECIMAL38SPARSE:
-            // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
-            // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
-            // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
-            // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
-            // currently to make this fold it must be put in the filter condition, project expression reduction is
-            // not planning correctly.
-            // Could not fix this by adding the decimal types to the list of NON_REDUCIBLE_TYPES, to resolve differences
-            // in scale and precision, calcite appears to be inserting casts, which are always considered constant
-            //    - this could be an issue for all of the NON_REDUCIBLE_TYPES, as any casts may be evaluated anyway and
-            //      then fail here
+        case DECIMAL9:
+        case DECIMAL18:
+        case DECIMAL28SPARSE:
+        case DECIMAL38SPARSE:
+          // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
+          // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
+          // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
+          // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
+          // currently to make this fold it must be put in the filter condition, project expression reduction is
+          // not planning correctly.
+          // Could not fix this by adding the decimal types to the list of NON_REDUCIBLE_TYPES, to resolve differences
+          // in scale and precision, calcite appears to be inserting casts, which are always considered constant
+          //    - this could be an issue for all of the NON_REDUCIBLE_TYPES, as any casts may be evaluated anyway and
+          //      then fail here
 
-            // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
-            // a decimal type
-            reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
-            break;
+          // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
+          // a decimal type
+          reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+          break;
 
-          case TIME:
-            // TODO - review the given precision value, chose the maximum available on SQL server
-            // https://msdn.microsoft.com/en-us/library/bb677243.aspx
-            reducedValues.add(rexBuilder.makeTimeLiteral(new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null), 7));
-            break;
-          case TIMESTAMP:
-            // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
-            reducedValues.add(rexBuilder.makeTimestampLiteral(new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null), 7));
-            break;
+        case TIME:
+          // TODO - review the given precision value, chose the maximum available on SQL server
+          // https://msdn.microsoft.com/en-us/library/bb677243.aspx
+          reducedValues.add(rexBuilder.makeTimeLiteral(new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+          break;
+        case TIMESTAMP:
+          // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
+          reducedValues.add(rexBuilder.makeTimestampLiteral(new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+          break;
 
-          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
-          // disabling for now and adding VARBINARY to the list of unfoldable types
-          case VARBINARY:
-            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
-            // fall through for now
+        // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
+        // disabling for now and adding VARBINARY to the list of unfoldable types
+        case VARBINARY:
+          reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
+          // fall through for now
 
-          // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
-          // will make these non-reducible at planning time for now
-          case INTERVAL:
-          case INTERVALYEAR:
-          case INTERVALDAY:
-            // fall through for now
+        // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
+        // will make these non-reducible at planning time for now
+        case INTERVAL:
+        case INTERVALYEAR:
+        case INTERVALDAY:
+          // fall through for now
 //            reducedValues.add(rexBuilder.makeIntervalLiteral(((Period) vector.getAccessor().getObject(0)));
 
 
-          // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
-          // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
-          // as input), so we need to identify functions with these return types as non-foldable until we have a
-          // literal representation for them
-          case MAP:
-          case LIST:
-            // fall through for now
+        // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
+        // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
+        // as input), so we need to identify functions with these return types as non-foldable until we have a
+        // literal representation for them
+        case MAP:
+        case LIST:
+          // fall through for now
 
-          // currently unsupported types
-          case TIMESTAMPTZ:
-          case TIMETZ:
-          case LATE:
-          case TINYINT:
-          case SMALLINT:
-          case GENERIC_OBJECT:
-          case NULL:
-          case DECIMAL28DENSE:
-          case DECIMAL38DENSE:
-          case MONEY:
-          case FIXEDBINARY:
-          case FIXEDCHAR:
-          case FIXED16CHAR:
-          case VAR16CHAR:
-          case UINT1:
-          case UINT2:
-          case UINT4:
-          case UINT8:
-            throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
-                + materializedExpr.getMajorType().getMinorType() );
-        }
+        // currently unsupported types
+        case TIMESTAMPTZ:
+        case TIMETZ:
+        case LATE:
+        case TINYINT:
+        case SMALLINT:
+        case GENERIC_OBJECT:
+        case NULL:
+        case DECIMAL28DENSE:
+        case DECIMAL38DENSE:
+        case MONEY:
+        case FIXEDBINARY:
+        case FIXEDCHAR:
+        case FIXED16CHAR:
+        case VAR16CHAR:
+        case UINT1:
+        case UINT2:
+        case UINT4:
+        case UINT8:
+          throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
+              + materializedExpr.getMajorType().getMinorType() );
+      }
       vector.clear();
     }
   }
