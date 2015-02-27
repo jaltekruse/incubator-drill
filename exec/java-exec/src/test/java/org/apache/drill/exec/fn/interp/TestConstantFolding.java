@@ -54,6 +54,83 @@ public class TestConstantFolding extends PlanTestBase {
     out.close();
   }
 
+  @Ignore("WIP")
+  @Test
+  public void testConstantFolding_allTypes() throws Exception {
+
+    test("alter system set `store.json.all_text_mode` = true;");
+
+    String query2 = "SELECT *  " +
+        "FROM   cp.`/parquet/alltypes.json`  " +
+        "WHERE  cast( `int_col` AS             int) = castint('1')  " +
+        "AND    cast( `bigint_col` AS          bigint) = castbigint('100000000000')  " +
+        // TODO - fix, currently using approximate literals
+//        "AND    cast( `decimal9_col` AS        decimal(9, 4)) = 1.0 + 0.0  " +
+//        "AND    cast( `decimal18_col` AS       decimal(18,9)) = 123456789.000000000 + 0.0  " +
+//        "AND    cast( `decimal28sparse_col` AS decimal(28, 14)) = 123456789.000000000 + 0.0 " +
+//        "AND    cast( `decimal38sparse_col` AS decimal(38, 19)) = 123456789.000000000 + 0.0 " +
+
+        // RETURNS 0 ROWS, folds that cast to: cast( 788947200000 as DATE). Interpreting the int as a date
+        // gives some day in 1994
+//        "AND    cast( `date_col` AS            date) = castdate('1995-01-01')  " +
+
+        "AND    cast( `date_col` AS            date) = cast('1995-01-01' as date)  " +
+
+        // THIS WORKS, RETURNS ONE RECORD
+//        "AND    cast( `date_col` AS            date) = DATE '1995-01-01'  " +
+
+//        "AND    cast( `time_col` AS            time) = casttime('01:00:00')  " +
+//        "AND    cast( `timestamp_col` AS timestamp) = casttimestamp('1995-01-01 01:00:10.000')  " +
+//        "AND    cast( `float4_col` AS float) = castfloat4('1')  " +
+//        "AND    cast( `float8_col` AS DOUBLE) = castfloat8('1')  " +
+        // TODO - fix, evaluation issues, looks like implicit casts are being added?
+//        "AND    cast( `bit_col` AS       boolean) = castbit('false')  " +
+//        "AND  `varchar_col` = concat('qwe','rty')  " +
+//        "AND    cast( `varbinary_col` AS varbinary(65000)) = castvarbinary('qwerty', 0)  " +
+        "AND    cast( `intervalyear_col` AS interval year) = castintervalyear('P1Y')  " +
+        "AND    cast( `intervalday_col` AS interval day) = castintervalday('P1D')";
+
+//        "SELECT " +
+//        "       Cast( `int_col` AS             INT)             int_col,  " +
+//        "       castBIGINT( `bigint_col`)          bigint_col  " +
+//        "       Cast( `decimal9_col` AS        DECIMAL)         decimal9_col,  " +
+//        "       Cast( `decimal18_col` AS       DECIMAL(18,9))   decimal18_col,  " +
+//        "       Cast( `decimal28sparse_col` AS DECIMAL(28, 14)) decimal28sparse_col,  " +
+//        "       Cast( `decimal38sparse_col` AS DECIMAL(38, 19)) decimal38sparse_col,  " +
+//        "       Cast( `date_col` AS            DATE)            date_col,  " +
+//        "       Cast( `time_col` AS            TIME)            time_col,  " +
+//        "       Cast( `timestamp_col` AS TIMESTAMP)             timestamp_col,  " +
+//        "       Cast( `float4_col` AS FLOAT)                    float4_col,  " +
+//        "       Cast( `float8_col` AS DOUBLE)                   float8_col,  " +
+//        "       Cast( `bit_col` AS       BOOLEAN)                     bit_col,  " +
+//        "       Cast( `varchar_col` AS   VARCHAR(65000))              varchar_col,  " +
+//        "       `varbinary_col`            varbinary_col,  " +
+//        "       cast( `intervalyear_col` as INTERVAL YEAR)            intervalyear_col,  " +
+//        "       cast( `intervalday_col` as INTERVAL DAY )              intervalday_col  " +
+//        "FROM   cp.`/parquet/alltypes.json`  " +
+//        "WHERE  `int_col` = 1 + 0 " +
+//        "AND    cast(`bigint_col` as BIGINT) = 50000000000 + 50000000000  " +
+//        "AND    cast(`decimal9_col` as decimal) = cast( '1.0' AS                        decimal)  " +
+//        "AND     Cast( `decimal18_col` AS       DECIMAL(18,9))   = cast( '123456789.000000000' AS       decimal(18,9))  " +
+//        "AND     Cast( `decimal28sparse_col` AS DECIMAL(28, 14)) = cast( '123456789.000000000' AS decimal(28, 14))  " +
+//        "AND     Cast( `decimal38sparse_col` AS DECIMAL(38, 19)) = cast( '123456789.000000000' AS decimal(38, 19))  " +
+//        "AND     Cast( `date_col` AS            DATE)            = cast( '1995-01-01' AS                     date)  " +
+//        "AND     Cast( `time_col` AS            TIME)            = cast( '01:00:00' AS                       time)  " +
+//        "AND     Cast( `timestamp_col` AS TIMESTAMP)             = cast( '1995-01-01 01:00:10.000' AS timestamp)  " +
+//        "AND     Cast( `float4_col` AS FLOAT)                    = cast( '1' AS float)  " +
+//        "AND     Cast( `float8_col` AS DOUBLE)                   = cast( '1' AS DOUBLE)  " +
+//        "AND     Cast( `bit_col` AS       BOOLEAN)               = cast( 'false' AS        boolean)  " +
+//        "AND     Cast( `varchar_col` AS   VARCHAR(65000))        = cast( 'qwerty' AS   varchar(65000))  " +
+//        // TODO - the normal cast syntax does not work for this
+//        "AND     castVARBINARY(`varbinary_col`, 0)     = castVARBINARY('qwerty', 0)  " +
+//        "AND     cast( `intervalyear_col` as INTERVAL YEAR)      = converttonullableintervalyear( 'P1Y')  " +
+//        "AND     cast( `intervalday_col` as INTERVAL DAY )       = converttonullableintervalday( 'P1D' )"
+//        ;
+
+
+    test(query2);
+  }
+
   @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
     createFiles();
