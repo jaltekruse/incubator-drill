@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import net.hydromatic.avatica.ByteString;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
@@ -26,23 +27,40 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.expr.fn.impl.DateUtility;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterEvaluator;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.BitVector;
+import org.apache.drill.exec.vector.DateVector;
+import org.apache.drill.exec.vector.Decimal18Vector;
+import org.apache.drill.exec.vector.Decimal28SparseVector;
+import org.apache.drill.exec.vector.Decimal38SparseVector;
+import org.apache.drill.exec.vector.Decimal9Vector;
+import org.apache.drill.exec.vector.IntervalDayVector;
+import org.apache.drill.exec.vector.IntervalYearVector;
+import org.apache.drill.exec.vector.TimeStampVector;
+import org.apache.drill.exec.vector.TimeVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.rex.RexBuilder;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.sql.SqlIntervalQualifier;
+import org.eigenbase.sql.parser.SqlParserPos;
+import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.NlsString;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
@@ -51,7 +69,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
   // This is a list of all types that cannot be folded at planning time for various reasons, most of the types are
   // currently not supported at all. The reasons for the others can be found in the evaluation code in the reduce method
   public static final List<Object> NON_REDUCIBLE_TYPES =
-      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.INTERVALYEAR, TypeProtos.MinorType.INTERVALDAY, TypeProtos.MinorType.MAP,
+      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.MAP,
                                   TypeProtos.MinorType.LIST, TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
                                   TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
                                   TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.VARBINARY,
@@ -70,6 +88,30 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     this.allocator = allocator;
   }
 
+  private RelDataType createCalciteTypeWithNullability(RelDataTypeFactory typeFactory, SqlTypeName sqlTypeName, RexNode node) {
+    RelDataType type;
+    if (sqlTypeName == SqlTypeName.INTERVAL_DAY_TIME) {
+      type = typeFactory.createSqlIntervalType(
+          new SqlIntervalQualifier(
+              SqlIntervalQualifier.TimeUnit.DAY,
+              SqlIntervalQualifier.TimeUnit.MINUTE,
+              SqlParserPos.ZERO));
+    } else if (sqlTypeName == SqlTypeName.INTERVAL_YEAR_MONTH) {
+      type = typeFactory.createSqlIntervalType(
+          new SqlIntervalQualifier(
+              SqlIntervalQualifier.TimeUnit.YEAR,
+              SqlIntervalQualifier.TimeUnit.MONTH,
+             SqlParserPos.ZERO));
+    } else if (sqlTypeName == SqlTypeName.VARCHAR) {
+      type = typeFactory.createSqlType(sqlTypeName, 65536);
+    } else {
+      type = typeFactory.createSqlType(sqlTypeName);
+    }
+    return typeFactory.createTypeWithNullability(
+        type,
+        node.getType().isNullable());
+  }
+
   @Override
   public void reduce(RexBuilder rexBuilder, List<RexNode> constExps, List<RexNode> reducedValues) {
     for (RexNode newCall : constExps) {
@@ -85,72 +127,113 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       ValueVector vector = TypeHelper.getNewVector(outputField, allocator);
       vector.allocateNewSafe();
       InterpreterEvaluator.evaluateConstantExpr(vector, udfUtilities, materializedExpr);
+      RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
-      try {
         switch(materializedExpr.getMajorType().getMinorType()) {
           case INT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Integer)vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall),
+                false));
             break;
           case BIGINT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Long)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Long)vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall),
+                false));
             break;
           case FLOAT4:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Float)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Float) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall),
+                false));
             break;
           case FLOAT8:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Double) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
+                false));
             break;
           case VARCHAR:
-            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
+            reducedValues.add(rexBuilder.makeCharLiteral(
+                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0),
+                    Charsets.UTF_8), null, null)));
             break;
           case BIT:
-            reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
+                false));
             break;
           case DATE:
-            reducedValues.add(rexBuilder.makeDateLiteral(((DateTime)vector.getAccessor().getObject(0)).toCalendar(null)));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
+                false));
             break;
-          case TIME:
-            // TODO - review the given precision value, chose the maximum available on SQL server
-            // https://msdn.microsoft.com/en-us/library/bb677243.aspx
-            reducedValues.add(rexBuilder.makeTimeLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
-          case TIMESTAMP:
-            // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
-            reducedValues.add(rexBuilder.makeTimestampLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
-            break;
-
           case DECIMAL9:
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((Decimal9Vector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
+            break;
           case DECIMAL18:
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((Decimal18Vector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
+            break;
           case DECIMAL28SPARSE:
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((Decimal28SparseVector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false
+            ));
+            break;
           case DECIMAL38SPARSE:
-            // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
-            // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
-            // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
-            // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
-            // currently to make this fold it must be put in the filter condition, project expression reduction is
-            // not planning correctly.
-            // Could not fix this by adding the decimal types to the list of NON_REDUCIBLE_TYPES, to resolve differences
-            // in scale and precision, calcite appears to be inserting casts, which are always considered constant
-            //    - this could be an issue for all of the NON_REDUCIBLE_TYPES, as any casts may be evaluated anyway and
-            //      then fail here
-
-            // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
-            // a decimal type
-            reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((Decimal38SparseVector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
             break;
 
-          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
-          // disabling for now and adding VARBINARY to the list of unfoldable types
-          case VARBINARY:
-            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
-            // fall through for now
+          case TIME:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((TimeVector) vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
+                false));
+            break;
+          case TIMESTAMP:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((TimeStampVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
+                false));
+            break;
 
-          // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
-          // will make these non-reducible at planning time for now
-          case INTERVAL:
+          case VARBINARY:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new ByteString((byte[]) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
+                false));
+            break;
+
           case INTERVALYEAR:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal(((IntervalYearVector)vector).getAccessor().get(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
+                false));
+            break;
           case INTERVALDAY:
-            // fall through for now
-//            reducedValues.add(rexBuilder.makeIntervalLiteral(((Period) vector.getAccessor().getObject(0)));
+            Period p = ((IntervalDayVector)vector).getAccessor().getObject(0);
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal(p.getDays() * DateUtility.daysToStandardMillis + p.getMillis()),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
+                false));
+            break;
+          case INTERVAL:
+            // cannot represent this as a literal according to calcite, add the original expression back
+            reducedValues.add(newCall);
+            break;
 
           // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
           // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
@@ -179,12 +262,12 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case UINT2:
           case UINT4:
           case UINT8:
-            throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
-                + materializedExpr.getMajorType().getMinorType() );
+            reducedValues.add(newCall);
+            break;
+          default:
+            reducedValues.add(newCall);
+            break;
         }
-      } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException("Invalid string returned from constant expression evaluation");
-      }
       vector.clear();
     }
   }
