@@ -54,7 +54,7 @@ public class TestConstantFolding extends PlanTestBase {
     out.close();
   }
 
-  @Ignore("WIP")
+//  @Ignore("WIP")
   @Test
   public void testConstantFolding_allTypes() throws Exception {
 
