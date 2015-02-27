@@ -57,8 +57,9 @@ public class QueryContext implements UdfUtilities{
   // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
   // which is used for planning time constant expression evaluation)
   private final BufferAllocator allocator;
-  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024;
-  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024;
+  private final BufferManager bufferManager;
+  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024 * 1024;
+  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024 * 1024;
 
 
   public QueryContext(final UserSession session, final DrillbitContext drllbitContext) {
@@ -74,6 +75,7 @@ public class QueryContext implements UdfUtilities{
     } catch (OutOfMemoryException e) {
       throw new DrillRuntimeException("Error creating off-heap allocator for planning context.",e);
     }
+    this.bufferManager = new BufferManager(this.allocator, null);
   }
 
 
@@ -146,6 +148,6 @@ public class QueryContext implements UdfUtilities{
 
   @Override
   public DrillBuf getManagedBuffer() {
-    return allocator.buffer(100, MAX_OFF_HEAP_ALLOCATION);
+    return bufferManager.getManagedBuffer();
   }
 }
