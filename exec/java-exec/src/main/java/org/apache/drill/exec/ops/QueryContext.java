@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.ops;
 
+import java.io.IOException;
 import java.util.Collection;
 
 import io.netty.buffer.DrillBuf;
@@ -149,5 +150,10 @@ public class QueryContext implements UdfUtilities{
   @Override
   public DrillBuf getManagedBuffer() {
     return bufferManager.getManagedBuffer();
+  }
+
+  public void close() throws IOException {
+    bufferManager.close();
+    allocator.close();
   }
 }
