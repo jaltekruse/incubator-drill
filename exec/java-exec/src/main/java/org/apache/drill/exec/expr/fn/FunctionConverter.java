@@ -41,7 +41,6 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.annotations.Workspace;
 import org.apache.drill.exec.expr.fn.DrillFuncHolder.ValueReference;
 import org.apache.drill.exec.expr.fn.DrillFuncHolder.WorkspaceReference;
-import org.apache.drill.exec.expr.fn.interpreter.InterpreterGenerator;
 import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.ops.QueryDateTimeInfo;
 import org.apache.drill.exec.ops.UdfUtilities;
@@ -97,6 +96,15 @@ public class FunctionConverter {
 
     }
 
+  }
+
+  /**
+   * Get the name of the class used for interpreted expression evaluation.
+   *
+   * @return - class name of interpreted evaluator
+   */
+  private String getInterpreterClassName(Class clazz)  {
+    return clazz.getName();
   }
 
   public <T extends DrillFunc> DrillFuncHolder getHolder(Class<T> clazz) {
@@ -264,38 +272,47 @@ public class FunctionConverter {
                                            template.isBinaryCommutative(),
                                            template.isRandom(), registeredNames,
                                            ps, outputField, works, methods, imports, template.costCategory(),
-                                           clazz.getSimpleName() + InterpreterGenerator.INTERPRETER_CLASSNAME_POSTFIX);
+                                           getInterpreterClassName(clazz)
+                                           );
         }
       case SC_BOOLEAN_OPERATOR:
         return new DrillBooleanOPHolder(template.scope(), template.nulls(),
             template.isBinaryCommutative(),
             template.isRandom(), registeredNames,
-            ps, outputField, works, methods, imports);
+            ps, outputField, works, methods, imports, FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
 
       case DECIMAL_MAX_SCALE:
           return new DrillDecimalMaxScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_MUL_SCALE:
           return new DrillDecimalSumScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_ADD_SCALE:
           return new DrillDecimalAddFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_CAST:
           return new DrillDecimalCastFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_DIV_SCALE:
           return new DrillDecimalDivScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_MOD_SCALE:
           return new DrillDecimalModScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_SET_SCALE:
           return new DrillDecimalSetScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case DECIMAL_ZERO_SCALE:
           return new DrillDecimalZeroScaleFuncHolder(template.scope(), template.nulls(), template.isBinaryCommutative(),
-                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports);
+                  template.isRandom(), registeredNames, ps, outputField, works, methods, imports,
+              FunctionTemplate.FunctionCostCategory.getDefault(), getInterpreterClassName(clazz));
       case HOLISTIC_AGGREGATE:
       case RANGE_AGGREGATE:
       default:
