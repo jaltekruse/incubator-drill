@@ -207,7 +207,7 @@ public class GCompare${leftTypeBase}Vs${rightTypeBase} {
     @Param ${rightType}Holder right;
     @Output IntHolder out;
 
-    public void setup(RecordBatch b) {}
+    public void setup() {}
 
     public void eval() {
       <@compareBlock mode=typeGroup.mode leftType=leftType rightType=rightType
