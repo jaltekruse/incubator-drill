@@ -52,7 +52,6 @@ public class DrillFunctionRegistry {
     FunctionConverter converter = new FunctionConverter();
     Set<Class<? extends DrillFunc>> providerClasses = PathScanner.scanForImplementations(DrillFunc.class, config.getStringList(ExecConstants.FUNCTION_PACKAGES));
     for (Class<? extends DrillFunc> clazz : providerClasses) {
-      if (clazz.getName().contains("DirectoryExplorers")) continue;
       DrillFuncHolder holder = converter.getHolder(clazz);
       if (holder != null) {
         // register handle for each name the function can be referred to
