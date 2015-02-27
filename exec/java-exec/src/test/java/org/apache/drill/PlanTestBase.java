@@ -80,7 +80,7 @@ public class PlanTestBase extends BaseTestQuery {
    *                     planning process throws an exception
    */
   public void testPlanMatchingPatterns(String query, String[] expectedPatterns, String[] excludedPatterns) throws Exception {
-    String plan = getPlanInString("EXPLAIN PLAN for " + normalizeQuery(query), OPTIQ_FORMAT);
+    String plan = getPlanInString("EXPLAIN PLAN for " + QueryTestUtil.normalizeQuery(query), OPTIQ_FORMAT);
 
     Pattern p;
     Matcher m;
