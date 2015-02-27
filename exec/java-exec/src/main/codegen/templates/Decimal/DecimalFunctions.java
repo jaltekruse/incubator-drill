@@ -859,7 +859,7 @@ public class ${type.name}Functions {
     @Param ${rightType}Holder right;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
       <@compareBlock leftType=leftType rightType=rightType absCompare="false" output="out.value" nullCompare=true nullComparesHigh=false />
@@ -1057,7 +1057,7 @@ public class ${type.name}Functions {
     @Param ${rightType}Holder right;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
      outside:
@@ -1602,7 +1602,7 @@ public class ${type.name}Functions {
     @Param ${rightType}Holder right;
     @Output IntHolder out;
 
-    public void setup(RecordBatch incoming) {}
+    public void setup() {}
 
     public void eval() {
      outside:
