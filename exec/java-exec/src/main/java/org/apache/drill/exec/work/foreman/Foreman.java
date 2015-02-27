@@ -188,6 +188,12 @@ public class Foreman implements Runnable {
     drillbitContext.getWorkBus().removeFragmentStatusListener(queryId);
     drillbitContext.getClusterCoordinator().removeDrillbitStatusListener(queryManager);
 
+    try {
+      queryContext.close();
+    } catch (IOException e) {
+      moveToState(QueryState.FAILED, e);
+    }
+
     if (result != null) {
       assert !resultSent;
       initiatingClient.sendResult(responseListener, new QueryWritableBatch(result), true);
