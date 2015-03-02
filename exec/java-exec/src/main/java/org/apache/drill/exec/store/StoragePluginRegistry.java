@@ -43,6 +43,7 @@ import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.common.util.PathScanner;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.DrillbitStartupException;
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.planner.logical.DrillRuleSets;
 import org.apache.drill.exec.planner.logical.StoragePlugins;
@@ -298,17 +299,9 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
   }
 
   @Override
-  public String[] getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-
-    VarCharHolder currentInput = plugin;
-    byte[] temp = new byte[currentInput.end - currentInput.start];
-    currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-    try {
-      return plugins.get(new String(temp, "UTF-8")).getSubPartitions(workspace, partition);
-    } catch (UnsupportedEncodingException e) {
-      // should not happen, UTF- 8 should be available
-      throw new RuntimeException(e);
-    }
+  public Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    String pluginStr = StringFunctionHelpers.getStringFromVarCharHolder(plugin);
+    return plugins.get(pluginStr).getSubPartitions(workspace, partition);
   }
 
   public class DrillSchemaFactory implements SchemaFactory {
