@@ -19,8 +19,6 @@ package org.apache.drill.exec.store;
 
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
-import java.util.List;
-
 public interface PartitionExplorer {
 
   /**
