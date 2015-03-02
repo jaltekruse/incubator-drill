@@ -26,6 +26,7 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
+import java.util.Iterator;
 
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
@@ -46,7 +47,7 @@ public class DirectoryExplorers {
     }
 
     public void eval() {
-      String[] subPartitions = null;
+      Iterable<String> subPartitions = null;
       try {
         subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
@@ -59,8 +60,8 @@ public class DirectoryExplorers {
               )
         );
       }
-
-      if (subPartitions.length == 0) {
+      Iterator<String> partitionIterator = subPartitions.iterator();
+      if (!partitionIterator.hasNext()) {
         throw new RuntimeException(
             String.format("Error in %s function: Partition `%s`.`%s` in storage plugin %s does not contain sub-partitions.",
                 org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
@@ -70,11 +71,13 @@ public class DirectoryExplorers {
             )
         );
       }
-      String subPartitionStr = subPartitions[0];
+      String subPartitionStr = partitionIterator.next();
+      String curr;
       // find the maximum directory in the list using a case-insensitive string comparison
-      for (int i = 1; i < subPartitions.length; i++) {
-        if (subPartitionStr.compareToIgnoreCase(subPartitions[i]) < 0) {
-          subPartitionStr = subPartitions[i];
+      while (partitionIterator.hasNext()){
+        curr = partitionIterator.next();
+        if (subPartitionStr.compareToIgnoreCase(curr) < 0) {
+          subPartitionStr = curr;
         }
       }
       String[] subPartitionParts = subPartitionStr.split(java.io.File.separator);
@@ -86,6 +89,5 @@ public class DirectoryExplorers {
       out.start = 0;
       out.end = result.length;
     }
-
   }
 }
