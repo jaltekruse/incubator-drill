@@ -19,8 +19,6 @@ package org.apache.drill.exec.store;
 
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
-import java.util.List;
-
 public interface StoragePluginPartitionExplorer {
 
   /**
@@ -36,9 +34,6 @@ public interface StoragePluginPartitionExplorer {
    * return value could reasonably be defined as a list of full paths, or just
    * the directory/file names defined in the given directory. An empty list
    * would be returned if the partition provided was a file.
-   * Get a list of sub-partitions under given partition. Individual storage
-   * plugins will assign specific meaning to the parameters and return
-   * values.
    *
    * Note to future devs, keep this doc in sync with {@see PartitionExplorer}.
    *
