@@ -19,8 +19,7 @@ package org.apache.drill.exec.store.dfs;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -32,6 +31,7 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.rpc.user.UserSession;
@@ -114,41 +114,67 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     return config;
   }
 
-  public String[] getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-    String workspaceStr = null;
-    String partitionStr = null;
-    try {
-      VarCharHolder currentInput = workspace;
-      byte[] temp = new byte[currentInput.end - currentInput.start];
-      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-      workspaceStr = new String(temp, "UTF-8");
+  private static class SubDirectoryList implements Iterable<String>{
+    List<FileStatus> fileStatuses;
 
-      currentInput = partition;
-      temp = new byte[currentInput.end - currentInput.start];
-      currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-      partitionStr = new String(temp, "UTF-8");
-    } catch (java.io.UnsupportedEncodingException e) {
-      // should not happen, UTF-8 encoding should be available
-      throw new RuntimeException(e);
+    SubDirectoryList(List<FileStatus> fileStatuses) {
+      this.fileStatuses = fileStatuses;
     }
+
+    @Override
+    public Iterator<String> iterator() {
+      return new SubDirectoryIterator(fileStatuses.iterator());
+    }
+
+    private class SubDirectoryIterator implements Iterator<String> {
+
+      Iterator<FileStatus> fileStatusIterator;
+
+      SubDirectoryIterator(Iterator<FileStatus> fileStatusIterator) {
+        this.fileStatusIterator = fileStatusIterator;
+      }
+
+      @Override
+      public boolean hasNext() {
+        return fileStatusIterator.hasNext();
+      }
+
+      @Override
+      public String next() {
+        return fileStatusIterator.next().getPath().toUri().toString();
+      }
+
+      /**
+       * This class is designed specifically for use in conjunction with the
+       * {@see PartitionExplorer} interface. This is only designed for accessing
+       * partition information, not modifying it. To avoid confusing users of the
+       * interface this method throws UnsupportedOperationException.
+       *
+       * @throws - UnsupportedOperationException - this is not useful here, the
+       *           list being iterated over should not be used in a way that
+       *           removing an element would be meaningful.
+       */
+      @Override
+      public void remove() {
+        throw new UnsupportedOperationException();
+      }
+    }
+  }
+
+  public Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+    String workspaceStr = StringFunctionHelpers.getStringFromVarCharHolder(workspace);
+    String partitionStr = StringFunctionHelpers.getStringFromVarCharHolder(partition);
+
     Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
-    String[] subPartitions;
     List<FileStatus> fileStatuses;
     try {
       fileStatuses = fs.list(false, p);
     } catch (IOException e) {
-      // TODO - figure out if I can separate out the case of a partition not being found, or at least
+      // TODO - figure out if we can separate out the case of a partition not being found, or at least
       // take a look at what the error message comes out looking like to a user.
       throw new RuntimeException("Error trying to read sub-partitions." , e);
     }
-    subPartitions = new String[fileStatuses.size()];
-    int i = 0;
-    for (FileStatus fStatus : fileStatuses) {
-      // TODO - check to make sure this is exactly the right way to serialize the path
-      subPartitions[i] = fStatus.getPath().toUri().toString();
-      i++;
-    }
-    return subPartitions;
+    return new SubDirectoryList(fileStatuses);
   }
 
   @Override
