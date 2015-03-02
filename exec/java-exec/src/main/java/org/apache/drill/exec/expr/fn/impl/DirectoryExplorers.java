@@ -47,45 +47,28 @@ public class DirectoryExplorers {
 
     public void eval() {
       String[] subPartitions = null;
-      String pluginStr = null;
-      String workspaceStr = null;
-      String partitionStr = null;
-      byte[] temp;
-      VarCharHolder currentInput;
-      try {
-        currentInput = plugin;
-        temp = new byte[currentInput.end - currentInput.start];
-        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-        pluginStr = new String(temp, "UTF-8");
-
-        currentInput = workspace;
-        temp = new byte[currentInput.end - currentInput.start];
-        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-        workspaceStr = new String(temp, "UTF-8");
-
-        currentInput = partition;
-        temp = new byte[currentInput.end - currentInput.start];
-        currentInput.buffer.getBytes(0, temp, 0, currentInput.end - currentInput.start);
-        partitionStr = new String(temp, "UTF-8");
-
-      } catch (java.io.UnsupportedEncodingException ex) {
-        // should not happen, UTF-8 encoding should be available
-        throw new RuntimeException(ex);
-      }
       try {
         subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
-            "Error in %s function: " + org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME +
-                "Partition `" +  workspaceStr + "`.`" + pluginStr + "`" +
-                " does not exist in storage plugin " + partitionStr);
+            String.format("Error in %s function: Partition `%s`.`%s` does not exist in storage plugin %s ",
+              org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
+              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(workspace),
+              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(plugin),
+              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(partition)
+              )
+        );
       }
 
       if (subPartitions.length == 0) {
         throw new RuntimeException(
-            "Error in %s function: " + org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME +
-             "Partition `" +  workspaceStr + "`.`" + pluginStr + "`" +
-                " in storage plugin " + partitionStr + "  does not contain sub-partitions.");
+            String.format("Error in %s function: Partition `%s`.`%s` in storage plugin %s does not contain sub-partitions.",
+                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(workspace),
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(plugin),
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(partition)
+            )
+        );
       }
       String subPartitionStr = subPartitions[0];
       // find the maximum directory in the list using a case-insensitive string comparison
