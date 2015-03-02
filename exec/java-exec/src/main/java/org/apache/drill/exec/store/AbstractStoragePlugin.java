@@ -34,7 +34,7 @@ public abstract class AbstractStoragePlugin implements StoragePlugin{
   protected AbstractStoragePlugin(){
   }
 
-  public String[] getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
+  public Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
     throw new UnsupportedOperationException("Storage plugin of type: " + this.getClass().getSimpleName() +
                                             "does not support retrieving sub-partition information.");
   }
