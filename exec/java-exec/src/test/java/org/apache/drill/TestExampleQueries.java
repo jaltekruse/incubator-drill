@@ -129,9 +129,64 @@ public class TestExampleQueries extends BaseTestQuery{
   }
 
   @Test
+  public void testFailingfunctionTests() throws Exception {
+    testBuilder()
+        .sqlQuery("-- tpch12 using 1395599672 as a seed to the RNG\n" +
+            "select\n" +
+            "  l.l_shipmode,\n" +
+            "  sum(case\n" +
+            "    when o.o_orderpriority = '1-URGENT'\n" +
+            "      or o.o_orderpriority = '2-HIGH'\n" +
+            "      then 1\n" +
+            "    else 0\n" +
+            "  end) as high_line_count,\n" +
+            "  sum(case\n" +
+            "    when o.o_orderpriority <> '1-URGENT'\n" +
+            "      and o.o_orderpriority <> '2-HIGH'\n" +
+            "      then 1\n" +
+            "    else 0\n" +
+            "  end) as low_line_count\n" +
+            "from\n" +
+            "  dfs.`/Users/jaltekruse/test_data_drill/qa_test_framework/private-sql-hadoop-test/framework/resources/Datasources/no-extension/parquet/orders` o,\n" +
+            "  dfs.`/Users/jaltekruse/test_data_drill/qa_test_framework/private-sql-hadoop-test/framework/resources/Datasources/no-extension/parquet/lineitem` l\n" +
+            "where\n" +
+            "  o.o_orderkey = l.l_orderkey\n" +
+            "  and l.l_shipmode in ('TRUCK', 'REG AIR')\n" +
+            "  and l.l_commitdate < l.l_receiptdate\n" +
+            "  and l.l_shipdate < l.l_commitdate\n" +
+            "  and l.l_receiptdate >= date '1994-01-01'\n" +
+            "  and l.l_receiptdate < date '1994-01-01' + interval '1' year\n" +
+            "group by\n" +
+            "  l.l_shipmode\n" +
+            "order by\n" +
+            "  l.l_shipmode")
+        .ordered()
+        .baselineColumns("l_shipmode", "high_line_count", "low_line_count")
+        .baselineValues("REG AIR", 65l,  84l)
+        .baselineValues("TRUCK", 67l, 88l)
+        .build().run();
+  }
+
+  @Test
   public void testTextInClasspathStorage() throws Exception {
     test("select * from cp.`/store/text/classpath_storage_csv_test.csv`");
   }
+
+  @Test
+  public void testFailingFunctions() throws Exception {
+    test("select to_char(485, '$') from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
+  @Test
+  public void testNowFunc() throws Exception {
+    test("select now() from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
+  @Test
+  public void testLengthFunc() throws Exception {
+    test("select length('This is a test string.','UTF8') from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
 
   @Test
   public void testParquetComplex() throws Exception {
