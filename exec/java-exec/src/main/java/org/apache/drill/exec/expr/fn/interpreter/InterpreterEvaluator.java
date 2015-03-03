@@ -277,8 +277,6 @@ public class InterpreterEvaluator {
 
         Preconditions.checkArgument(interpreter != null, "interpreter could not be null when use interpreted model to evaluate function " + holder.getRegisteredNames()[0]);
 
-        interpreter.setup();
-
         // the current input index to assign into the next available parameter, found using the @Param notation
         // the order parameters are declared in the java class for the DrillFunc is meaningful
         int currParameterIndex = 0;
@@ -312,6 +310,7 @@ public class InterpreterEvaluator {
         if (outField == null) {
           throw new DrillRuntimeException("Malformed DrillFunction without a return type: " + holderExpr.getName());
         }
+        interpreter.setup();
         interpreter.eval();
         ValueHolder out = (ValueHolder) outField.get(interpreter);
 
