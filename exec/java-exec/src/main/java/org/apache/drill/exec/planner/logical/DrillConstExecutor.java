@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.logical;
 
+import com.google.common.base.Charsets;
 import com.google.common.collect.ImmutableList;
 import net.hydromatic.avatica.ByteString;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
@@ -31,6 +32,9 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.BitVector;
+import org.apache.drill.exec.vector.DateVector;
+import org.apache.drill.exec.vector.TimeStampVector;
+import org.apache.drill.exec.vector.TimeVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.relopt.RelOptPlanner;
@@ -86,7 +90,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       vector.allocateNewSafe();
       InterpreterEvaluator.evaluateConstantExpr(vector, udfUtilities, materializedExpr);
 
-      try {
         switch(materializedExpr.getMajorType().getMinorType()) {
           case INT:
             reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
@@ -101,21 +104,13 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
             break;
           case VARCHAR:
-            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), "UTF-8"), null, null)));
+            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null)));
             break;
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
             break;
           case DATE:
-            reducedValues.add(rexBuilder.makeDateLiteral(((DateTime)vector.getAccessor().getObject(0)).toCalendar(null)));
-            break;
-          case TIME:
-            // TODO - review the given precision value, chose the maximum available on SQL server
-            // https://msdn.microsoft.com/en-us/library/bb677243.aspx
-            reducedValues.add(rexBuilder.makeTimeLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
-          case TIMESTAMP:
-            // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
-            reducedValues.add(rexBuilder.makeTimestampLiteral(((DateTime) vector.getAccessor().getObject(0)).toCalendar(null), 7));
+            reducedValues.add(rexBuilder.makeDateLiteral(new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null)));
             break;
 
           case DECIMAL9:
@@ -138,6 +133,16 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
             break;
 
+          case TIME:
+            // TODO - review the given precision value, chose the maximum available on SQL server
+            // https://msdn.microsoft.com/en-us/library/bb677243.aspx
+            reducedValues.add(rexBuilder.makeTimeLiteral(new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+            break;
+          case TIMESTAMP:
+            // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
+            reducedValues.add(rexBuilder.makeTimestampLiteral(new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+            break;
+
           // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
           // disabling for now and adding VARBINARY to the list of unfoldable types
           case VARBINARY:
@@ -151,6 +156,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case INTERVALDAY:
             // fall through for now
 //            reducedValues.add(rexBuilder.makeIntervalLiteral(((Period) vector.getAccessor().getObject(0)));
+
 
           // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
           // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
@@ -182,9 +188,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
                 + materializedExpr.getMajorType().getMinorType() );
         }
-      } catch (UnsupportedEncodingException e) {
-        throw new RuntimeException("Invalid string returned from constant expression evaluation");
-      }
       vector.clear();
     }
   }
