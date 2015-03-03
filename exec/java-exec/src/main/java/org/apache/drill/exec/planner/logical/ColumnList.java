@@ -196,6 +196,10 @@ public class ColumnList implements List<SchemaPath> {
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder();
-    return sb.append(backend).append("[mode: ").append(mode).append("]").toString();
+    sb.append(backend);
+    if (mode == Mode.SKIP_ALL) {
+      sb.append("[mode: ").append(mode).append("]");
+    }
+    return sb.toString();
   }
 }
