@@ -188,12 +188,14 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
     else {
       for (SchemaPath path : columns) {
         String namePath = path.getRootSegment().getNameSegment().getPath();
-        if (schema.containsField(namePath)) {
-          if (!schema.getType(namePath).isPrimitive()) {
-            return true;
-          }
-          if (schema.getMaxRepetitionLevel(namePath) > 0) {
-            return true;
+        for (Type field : schema.getFields()) {
+          if (field.getName().equalsIgnoreCase(namePath)) {
+            if (!field.isPrimitive()) {
+              return true;
+            }
+            if (schema.getMaxRepetitionLevel(field.getName()) > 0) {
+              return true;
+            }
           }
         }
       }
