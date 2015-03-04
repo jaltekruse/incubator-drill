@@ -130,7 +130,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
           // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
           // a decimal type
-          reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+          reducedValues.add(rexBuilder.makeExactLiteral((BigDecimal) vector.getAccessor().getObject(0)));
           break;
 
         case TIME:
