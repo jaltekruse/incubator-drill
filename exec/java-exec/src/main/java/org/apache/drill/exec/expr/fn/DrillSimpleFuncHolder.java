@@ -46,7 +46,7 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
   private final String evalBody;
   private final String resetBody;
   private final String cleanupBody;
-  private final String interpreterClassName;
+  private final Class<? extends DrillSimpleFunc> drillFuncClass;
 
   public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
@@ -56,7 +56,7 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
 
   public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
-      Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory, String interpreterClassName) {
+      Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory, Class<? extends DrillSimpleFunc> drillFuncClass) {
     super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory);
     setupBody = methods.get("setup");
     evalBody = methods.get("eval");
@@ -64,7 +64,7 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
     cleanupBody = methods.get("cleanup");
     Preconditions.checkNotNull(evalBody);
 
-    this.interpreterClassName = interpreterClassName;
+    this.drillFuncClass = drillFuncClass;
   }
 
   @Override
@@ -73,11 +73,8 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
   }
 
   public DrillSimpleFunc createInterpreter() throws Exception {
-    Preconditions.checkArgument(this.interpreterClassName != null, "interpreterClassName should not be null!");
-
-//    String className = InterpreterGenerator.PACKAGE_NAME + "." + this.interpreterClassName;
-    String className = this.interpreterClassName;
-    return (DrillSimpleFunc) Class.forName(className).newInstance();
+    Preconditions.checkArgument(this.drillFuncClass != null, "drillFuncClass should not be null!");
+    return drillFuncClass.newInstance();
   }
 
   public HoldingContainer renderEnd(ClassGenerator<?> g, HoldingContainer[] inputVariables, JVar[]  workspaceJVars){
