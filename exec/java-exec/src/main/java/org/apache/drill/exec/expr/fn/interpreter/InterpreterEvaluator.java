@@ -84,10 +84,12 @@ public class InterpreterEvaluator {
   private static class InitVisitor extends AbstractExprVisitor<LogicalExpression, VectorAccessible, RuntimeException> {
 
     private UdfUtilities udfUtilities;
+    private LiteralValueMaterializer literalValueMaterializer;
 
     protected InitVisitor(UdfUtilities udfUtilities) {
       super();
       this.udfUtilities = udfUtilities;
+      this.literalValueMaterializer = new LiteralValueMaterializer(udfUtilities);
     }
 
     @Override
@@ -101,6 +103,8 @@ public class InterpreterEvaluator {
       for (int i = 0; i < holderExpr.args.size(); i++) {
         holderExpr.args.get(i).accept(this, incoming);
       }
+
+      ValueHolder[] args = evaluateArguments(holderExpr, literalValueMaterializer);
 
       try {
         DrillSimpleFunc interpreter = holder.createInterpreter();
@@ -120,6 +124,10 @@ public class InterpreterEvaluator {
             continue;
           }
         }
+
+        setParametersAndMaterializeOutput(interpreter, args, holderExpr.getName());
+
+        interpreter.setup();
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
 
@@ -160,19 +168,100 @@ public class InterpreterEvaluator {
     return argument;
   }
 
+  /**
+   * Evaluate the input expressions to a DrillSimpleFunc.
+   *
+   *
+   * @param holderExpr -
+   * @param constantsOnly
+   * @param inIndex
+   * @param evalVisitor
+   * @return
+   */
+  private static ValueHolder[] evaluateArguments(FunctionHolderExpression holderExpr,
+                                                 boolean constantsOnly,
+                                                 int inIndex,
+                                                 AbstractExprVisitor<ValueHolder, Integer, RuntimeException> evalVisitor) {
+
+    DrillSimpleFuncHolder holder = (DrillSimpleFuncHolder) holderExpr.getHolder();
+    ValueHolder [] args = new ValueHolder [holderExpr.args.size()];
+    for (int i = 0; i < holderExpr.args.size(); i++) {
+//      if (!constantsOnly || (constantsOnly && holderExpr.args.get(i) instanceof ValueExpressions)) {
+      ValueHolder result = holderExpr.args.get(i).accept(evalVisitor, inIndex);
+      if (result != null && constantsOnly) {
+        args[i] = result;
+        args[i] = handleNullResolution(holder, i, args[i]);
+      } else if (!constantsOnly) {
+        args[i] = holderExpr.args.get(i).accept(evalVisitor, inIndex);
+        args[i] = handleNullResolution(holder, i, args[i]);
+      }
+    }
+    return args;
+  }
+
+
+  private static ValueHolder[] evaluateArguments(FunctionHolderExpression holderExpr, LiteralValueMaterializer literalValueMaterializer) {
+    return evaluateArguments( holderExpr,
+                              true,
+                              0 /* unused with constant evaluation */,
+                              literalValueMaterializer);
+  }
+
+  /**
+   *
+   * @return - a reference to the output ValueHolder
+   */
+  private static Field setParametersAndMaterializeOutput(DrillSimpleFunc interpreter, ValueHolder[] args, String functionName) throws InstantiationException {
+
+    // the current input index to assign into the next available parameter, found using the @Param notation
+    // the order parameters are declared in the java class for the DrillFunc is meaningful
+    int currParameterIndex = 0;
+    Field outField = null;
+    try {
+      Field[] fields = interpreter.getClass().getDeclaredFields();
+      for (Field f : fields) {
+        // if this is annotated as a parameter to the function
+        if ( f.getAnnotation(Param.class) != null ) {
+          f.setAccessible(true);
+          if (currParameterIndex < args.length) {
+            f.set(interpreter, args[currParameterIndex]);
+          }
+          currParameterIndex++;
+        } else if ( f.getAnnotation(Output.class) != null ) {
+          if (outField != null) {
+            throw new DrillRuntimeException("Malformed DrillFunction with two return values: " + functionName);
+          }
+          f.setAccessible(true);
+          outField = f;
+          // create an instance of the holder for the output to be stored in
+          f.set(interpreter, f.getType().newInstance());
+        }
+      }
+    } catch (IllegalAccessException e) {
+      throw new RuntimeException(e);
+    }
+    if (args.length != currParameterIndex ) {
+      throw new DrillRuntimeException(
+          String.format("Wrong number of parameters provided to interpreted expression evaluation " +
+              "for function %s, expected %d parameters, but received %d.",
+              functionName, currParameterIndex, args.length));
+    }
+    if (outField == null) {
+      throw new DrillRuntimeException("Malformed DrillFunction without a return type: " + functionName);
+    }
+    return outField;
+  }
 
   public static class EvalVisitor extends AbstractExprVisitor<ValueHolder, Integer, RuntimeException> {
     private VectorAccessible incoming;
     private UdfUtilities udfUtilities;
+    private LiteralValueMaterializer literalValueMaterializer;
 
     protected EvalVisitor(VectorAccessible incoming, UdfUtilities udfUtilities) {
       super();
       this.incoming = incoming;
       this.udfUtilities = udfUtilities;
-    }
-
-    public DrillBuf getManagedBufferIfAvailable() {
-      return udfUtilities.getManagedBuffer();
+      this.literalValueMaterializer = new LiteralValueMaterializer(udfUtilities);
     }
 
     @Override
@@ -183,62 +272,6 @@ public class InterpreterEvaluator {
     @Override
     public ValueHolder visitSchemaPath(SchemaPath path,Integer value) throws RuntimeException {
       return visitUnknown(path, value);
-    }
-
-    @Override
-    public ValueHolder visitDecimal9Constant(ValueExpressions.Decimal9Expression decExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getDecimal9Holder(decExpr.getIntFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
-    }
-
-    @Override
-    public ValueHolder visitDecimal18Constant(ValueExpressions.Decimal18Expression decExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getDecimal18Holder(decExpr.getLongFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
-    }
-
-    @Override
-    public ValueHolder visitDecimal28Constant(ValueExpressions.Decimal28Expression decExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
-    }
-
-    @Override
-    public ValueHolder visitDecimal38Constant(ValueExpressions.Decimal38Expression decExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
-    }
-
-    @Override
-    public ValueHolder visitDateConstant(ValueExpressions.DateExpression dateExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getDateHolder(dateExpr.getDate());
-    }
-
-    @Override
-    public ValueHolder visitTimeConstant(ValueExpressions.TimeExpression timeExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getTimeHolder(timeExpr.getTime());
-    }
-
-    @Override
-    public ValueHolder visitTimeStampConstant(ValueExpressions.TimeStampExpression timestampExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getTimeStampHolder(timestampExpr.getTimeStamp());
-    }
-
-    @Override
-    public ValueHolder visitIntervalYearConstant(ValueExpressions.IntervalYearExpression intExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getIntervalYearHolder(intExpr.getIntervalYear());
-    }
-
-    @Override
-    public ValueHolder visitIntervalDayConstant(ValueExpressions.IntervalDayExpression intExpr,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getIntervalDayHolder(intExpr.getIntervalDay(), intExpr.getIntervalMillis());
-    }
-
-    @Override
-    public ValueHolder visitBooleanConstant(ValueExpressions.BooleanExpression e,Integer value) throws RuntimeException {
-      return ValueHolderHelper.getBitHolder(e.getBoolean() == false ? 0 : 1);
-    }
-
-    @Override
-    public ValueHolder visitNullConstant(TypedNullConstant e,Integer value) throws RuntimeException {
-      // create a value holder for the given type, defaults to NULL value if not set
-      return TypeHelper.createValueHolder(e.getMajorType());
     }
 
     // TODO - review what to do with these
@@ -266,56 +299,16 @@ public class InterpreterEvaluator {
         throw new UnsupportedOperationException("Only Drill simple UDF can be used in interpreter mode!");
       }
 
-      DrillSimpleFuncHolder holder = (DrillSimpleFuncHolder) holderExpr.getHolder();
 
-      ValueHolder [] args = new ValueHolder [holderExpr.args.size()];
-      for (int i = 0; i < holderExpr.args.size(); i++) {
-        args[i] = holderExpr.args.get(i).accept(this, inIndex);
-        args[i] = handleNullResolution(holder, i, args[i]);
-      }
+      // add call to new method here
+      ValueHolder[] args = evaluateArguments(holderExpr, false, inIndex, this);
 
       try {
         DrillSimpleFunc interpreter =  ((DrillFuncHolderExpr) holderExpr).getInterpreter();
 
-        Preconditions.checkArgument(interpreter != null, "interpreter could not be null when use interpreted model to evaluate function " + holder.getRegisteredNames()[0]);
+        Preconditions.checkArgument(interpreter != null, "interpreter could not be null when use interpreted model to evaluate function " + holderExpr.getName());
+        Field outField = setParametersAndMaterializeOutput(interpreter, args, holderExpr.getName());
 
-        // the current input index to assign into the next available parameter, found using the @Param notation
-        // the order parameters are declared in the java class for the DrillFunc is meaningful
-        int currParameterIndex = 0;
-        Field outField = null;
-        try {
-          Field[] fields = interpreter.getClass().getDeclaredFields();
-          for (Field f : fields) {
-            // if this is annotated as a parameter to the function
-            if ( f.getAnnotation(Param.class) != null ) {
-              f.setAccessible(true);
-              if (currParameterIndex < args.length) {
-                f.set(interpreter, args[currParameterIndex]);
-              }
-              currParameterIndex++;
-            } else if ( f.getAnnotation(Output.class) != null ) {
-              if (outField != null) {
-                throw new DrillRuntimeException("Malformed DrillFunction with two return values: " + holderExpr.getName());
-              }
-              f.setAccessible(true);
-              outField = f;
-              // create an instance of the holder for the output to be stored in
-              f.set(interpreter, f.getType().newInstance());
-            }
-          }
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-        if (args.length != currParameterIndex ) {
-          throw new DrillRuntimeException(
-              String.format("Wrong number of parameters provided to interpreted expression evaluation " +
-                  "for function %s, expected %d parameters, but received %d.",
-                  holderExpr.getName(), currParameterIndex, args.length));
-        }
-        if (outField == null) {
-          throw new DrillRuntimeException("Malformed DrillFunction without a return type: " + holderExpr.getName());
-        }
-        interpreter.setup();
         interpreter.eval();
         ValueHolder out = (ValueHolder) outField.get(interpreter);
 
@@ -367,36 +360,14 @@ public class InterpreterEvaluator {
     }
 
     @Override
-    public ValueHolder visitIntConstant(ValueExpressions.IntExpression e, Integer inIndex) throws RuntimeException {
-      return ValueHolderHelper.getIntHolder(e.getInt());
-    }
-
-    @Override
-    public ValueHolder visitFloatConstant(ValueExpressions.FloatExpression fExpr, Integer value) throws RuntimeException {
-      return ValueHolderHelper.getFloat4Holder(fExpr.getFloat());
-    }
-
-    @Override
-    public ValueHolder visitLongConstant(ValueExpressions.LongExpression intExpr, Integer value) throws RuntimeException {
-      return ValueHolderHelper.getBigIntHolder(intExpr.getLong());
-    }
-
-    @Override
-    public ValueHolder visitDoubleConstant(ValueExpressions.DoubleExpression dExpr, Integer value) throws RuntimeException {
-      return ValueHolderHelper.getFloat8Holder(dExpr.getDouble());
-    }
-
-    @Override
-    public ValueHolder visitQuotedStringConstant(ValueExpressions.QuotedString e, Integer value) throws RuntimeException {
-      return ValueHolderHelper.getVarCharHolder(getManagedBufferIfAvailable(), e.value);
-    }
-
-
-    @Override
     public ValueHolder visitUnknown(LogicalExpression e, Integer inIndex) throws RuntimeException {
       if (e instanceof ValueVectorReadExpression) {
         return visitValueVectorReadExpression((ValueVectorReadExpression) e, inIndex);
       } else {
+        ValueHolder result = e.accept(literalValueMaterializer, inIndex);
+        if (result != null) {
+          return result;
+        }
         return super.visitUnknown(e, inIndex);
       }
 
@@ -511,5 +482,121 @@ public class InterpreterEvaluator {
     }
   }
 
+  /**
+   * Visitor for Drill logical expressions that returns a value only if the expression being visited is a single
+   * literal value.
+   *
+   * This allows for materialization of constant values before the setup method is called, in some cases
+   * the constants are used once to materialize a static resource like a regex pattern matcher for the 'like' function.
+   *
+   * If the logical expression being visited is not a literal, NULL will be returned.
+   *
+   * Note: Adding new data types will require them to be added to this visitor. Anything that has not been
+   * defined here falls back to the superclass behavior of calling visitUnknown(), which has been overridden here
+   * to return NULL.
+   */
+  private static class LiteralValueMaterializer extends AbstractExprVisitor<ValueHolder, Integer /* unused */ , RuntimeException> {
+
+    private UdfUtilities udfUtilities;
+
+    protected LiteralValueMaterializer(UdfUtilities udfUtilities) {
+      super();
+      this.udfUtilities = udfUtilities;
+    }
+
+    public DrillBuf getManagedBufferIfAvailable() {
+      return udfUtilities.getManagedBuffer();
+    }
+
+    @Override
+    public ValueHolder visitDecimal9Constant(ValueExpressions.Decimal9Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal9Holder(decExpr.getIntFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
+    }
+
+    @Override
+    public ValueHolder visitDecimal18Constant(ValueExpressions.Decimal18Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal18Holder(decExpr.getLongFromDecimal(), decExpr.getScale(), decExpr.getPrecision());
+    }
+
+    @Override
+    public ValueHolder visitDecimal28Constant(ValueExpressions.Decimal28Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
+    }
+
+    @Override
+    public ValueHolder visitDecimal38Constant(ValueExpressions.Decimal38Expression decExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDecimal28Holder(getManagedBufferIfAvailable(), decExpr.getBigDecimal().toString());
+    }
+
+    @Override
+    public ValueHolder visitDateConstant(ValueExpressions.DateExpression dateExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getDateHolder(dateExpr.getDate());
+    }
+
+    @Override
+    public ValueHolder visitTimeConstant(ValueExpressions.TimeExpression timeExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getTimeHolder(timeExpr.getTime());
+    }
+
+    @Override
+    public ValueHolder visitTimeStampConstant(ValueExpressions.TimeStampExpression timestampExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getTimeStampHolder(timestampExpr.getTimeStamp());
+    }
+
+    @Override
+    public ValueHolder visitIntervalYearConstant(ValueExpressions.IntervalYearExpression intExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getIntervalYearHolder(intExpr.getIntervalYear());
+    }
+
+    @Override
+    public ValueHolder visitIntervalDayConstant(ValueExpressions.IntervalDayExpression intExpr,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getIntervalDayHolder(intExpr.getIntervalDay(), intExpr.getIntervalMillis());
+    }
+
+    @Override
+    public ValueHolder visitBooleanConstant(ValueExpressions.BooleanExpression e,Integer value) throws RuntimeException {
+      return ValueHolderHelper.getBitHolder(e.getBoolean() == false ? 0 : 1);
+    }
+
+    @Override
+    public ValueHolder visitNullConstant(TypedNullConstant e,Integer value) throws RuntimeException {
+      // create a value holder for the given type, defaults to NULL value if not set
+      return TypeHelper.createValueHolder(e.getMajorType());
+    }
+
+    @Override
+    public ValueHolder visitIntConstant(ValueExpressions.IntExpression e, Integer inIndex) throws RuntimeException {
+      return ValueHolderHelper.getIntHolder(e.getInt());
+    }
+
+    @Override
+    public ValueHolder visitFloatConstant(ValueExpressions.FloatExpression fExpr, Integer value) throws RuntimeException {
+      return ValueHolderHelper.getFloat4Holder(fExpr.getFloat());
+    }
+
+    @Override
+    public ValueHolder visitLongConstant(ValueExpressions.LongExpression intExpr, Integer value) throws RuntimeException {
+      return ValueHolderHelper.getBigIntHolder(intExpr.getLong());
+    }
+
+    @Override
+    public ValueHolder visitDoubleConstant(ValueExpressions.DoubleExpression dExpr, Integer value) throws RuntimeException {
+      return ValueHolderHelper.getFloat8Holder(dExpr.getDouble());
+    }
+
+    @Override
+    public ValueHolder visitQuotedStringConstant(ValueExpressions.QuotedString e, Integer value) throws RuntimeException {
+      return ValueHolderHelper.getVarCharHolder(getManagedBufferIfAvailable(), e.value);
+    }
+
+    @Override
+    public ValueHolder visitUnknown(LogicalExpression e, Integer value) throws RuntimeException {
+      // This is intentional, an exception is not used here as this visitor is designed to only materialize
+      // literal values, but there is no easy way to identify these expressions before sending them into
+      // a visitor. Users of the visitor must guard against this case for all other types of
+      // expressions appropriately.
+      return null;
+    }
+  }
 }
 

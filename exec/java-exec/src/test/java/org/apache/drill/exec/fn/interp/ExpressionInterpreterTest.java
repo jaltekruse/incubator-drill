@@ -100,6 +100,16 @@ public class ExpressionInterpreterTest  extends PopUnitTestBase {
   }
 
   @Test
+  public void interpreterSetupRequiresLiterals() throws Exception {
+    String[] colNames = {"col1"};
+    TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
+    String expressionStr =  "substr(col1, 1, 3) like 'aa'";
+    String[] expectedFirstTwoValues = {"true", "false"};
+
+    doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
+  }
+
+  @Test
   public void interpreterDateTest() throws Exception {
     String[] colNames = {"col1"};
     TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.INT)};
