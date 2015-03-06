@@ -224,11 +224,6 @@ public class InterpreterEvaluator {
     // TODO - review what to do with these
     // **********************************
     @Override
-    public ValueHolder visitCastExpression(CastExpression e,Integer value) throws RuntimeException {
-      return visitUnknown(e, value);
-    }
-
-    @Override
     public ValueHolder visitConvertExpression(ConvertExpression e,Integer value) throws RuntimeException {
       return visitUnknown(e, value);
     }
@@ -237,7 +232,7 @@ public class InterpreterEvaluator {
     public ValueHolder visitNullExpression(NullExpression e,Integer value) throws RuntimeException {
       return visitUnknown(e, value);
     }
-    // TODO - review what to do with these (3 functions above)
+    // TODO - review what to do with these (2 functions above)
     //********************************************
 
     @Override
