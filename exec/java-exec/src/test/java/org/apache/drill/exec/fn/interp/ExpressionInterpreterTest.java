@@ -90,6 +90,16 @@ public class ExpressionInterpreterTest  extends PopUnitTestBase {
   }
 
   @Test
+  public void interpreterLikeExpr() throws Exception {
+    String[] colNames = {"col1"};
+    TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
+    String expressionStr =  "like(col1, 'aaa%')";
+    String[] expectedFirstTwoValues = {"true", "null"};
+
+    doTest(expressionStr, colNames, colTypes, expectedFirstTwoValues);
+  }
+
+  @Test
   public void interpreterCaseExpr() throws Exception {
     String[] colNames = {"col1"};
     TypeProtos.MajorType[] colTypes = {Types.optional(TypeProtos.MinorType.VARCHAR)};
