@@ -46,6 +46,7 @@ import org.eigenbase.rel.rules.MergeFilterRule;
 import org.eigenbase.rel.rules.MergeProjectRule;
 import org.eigenbase.rel.rules.PushFilterPastJoinRule;
 import org.eigenbase.rel.rules.PushJoinThroughJoinRule;
+import org.eigenbase.rel.rules.ReduceExpressionsRule;
 import org.eigenbase.rel.rules.RemoveDistinctAggregateRule;
 import org.eigenbase.rel.rules.RemoveDistinctRule;
 import org.eigenbase.rel.rules.RemoveSortRule;
@@ -63,7 +64,22 @@ public class DrillRuleSets {
 
   public static RuleSet getDrillBasicRules(QueryContext context) {
     if (DRILL_BASIC_RULES == null) {
-    DRILL_BASIC_RULES = new DrillRuleSet(ImmutableSet.of( //
+
+      PlannerSettings ps = context.getPlannerSettings();
+
+      // This list is used to store rules that can be turned on an off
+      // by user facing planning options
+      List<RelOptRule> userConfigurableRules = new ArrayList<RelOptRule>();
+
+      if (ps.isConstantFoldingEnabled()) {
+        // TODO - DRILL-2218
+        userConfigurableRules.add(ReduceExpressionsRule.PROJECT_INSTANCE);
+
+        userConfigurableRules.add(DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL);
+        userConfigurableRules.add(DrillReduceExpressionsRule.CALC_INSTANCE_DRILL);
+      }
+
+      DRILL_BASIC_RULES = new DrillRuleSet(ImmutableSet.<RelOptRule> builder().add( //
         // Add support for WHERE style joins.
 //      PushFilterPastProjectRule.INSTANCE, // Replaced by DrillPushFilterPastProjectRule
       DrillPushFilterPastProjectRule.INSTANCE,
@@ -117,9 +133,13 @@ public class DrillRuleSets {
       DrillSortRule.INSTANCE,
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
+
       DrillReduceAggregatesRule.INSTANCE
-      ));
+      )
+      .addAll(userConfigurableRules)
+      .build());
     }
+
     return DRILL_BASIC_RULES;
   }
 
@@ -131,6 +151,7 @@ public class DrillRuleSets {
   public static final RuleSet getPhysicalRules(QueryContext qcontext) {
     List<RelOptRule> ruleList = new ArrayList<RelOptRule>();
 
+    PlannerSettings ps = qcontext.getPlannerSettings();
 
     ruleList.add(ConvertCountToDirectScan.AGG_ON_PROJ_ON_SCAN);
     ruleList.add(ConvertCountToDirectScan.AGG_ON_SCAN);
@@ -147,11 +168,7 @@ public class DrillRuleSets {
     ruleList.add(PushLimitToTopN.INSTANCE);
     ruleList.add(UnionAllPrule.INSTANCE);
 
-
-
     // ruleList.add(UnionDistinctPrule.INSTANCE);
-
-    PlannerSettings ps = qcontext.getPlannerSettings();
 
     if (ps.isHashAggEnabled()) {
       ruleList.add(HashAggPrule.INSTANCE);
