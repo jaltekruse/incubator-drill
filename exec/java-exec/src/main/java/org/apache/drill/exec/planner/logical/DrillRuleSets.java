@@ -46,6 +46,7 @@ import org.eigenbase.rel.rules.MergeFilterRule;
 import org.eigenbase.rel.rules.MergeProjectRule;
 import org.eigenbase.rel.rules.PushFilterPastJoinRule;
 import org.eigenbase.rel.rules.PushJoinThroughJoinRule;
+import org.eigenbase.rel.rules.ReduceExpressionsRule;
 import org.eigenbase.rel.rules.RemoveDistinctAggregateRule;
 import org.eigenbase.rel.rules.RemoveDistinctRule;
 import org.eigenbase.rel.rules.RemoveSortRule;
@@ -117,6 +118,13 @@ public class DrillRuleSets {
       DrillSortRule.INSTANCE,
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
+
+      // TODO - DRILL-2218
+//      ReduceExpressionsRule.PROJECT_INSTANCE,
+
+      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
+      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+
       DrillReduceAggregatesRule.INSTANCE
       ));
     }
