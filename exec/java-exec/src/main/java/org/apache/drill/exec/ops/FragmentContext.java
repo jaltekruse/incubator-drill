@@ -296,10 +296,6 @@ public class FragmentContext implements Closeable, UdfUtilities {
     for (Thread thread: daemonThreads) {
       thread.interrupt();
     }
-    /*
-     * TODO wait for threads working on this Fragment to terminate (or at least stop working
-     * on this Fragment's query)
-     */
     bufferManager.close();
 
     if (buffers != null) {
@@ -317,7 +313,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
   }
 
   public DrillBuf getManagedBuffer() {
-    return getManagedBuffer(256);
+    return bufferManager.getManagedBuffer();
   }
 
   public DrillBuf getManagedBuffer(int size) {

@@ -27,6 +27,7 @@ import net.hydromatic.optiq.jdbc.SimpleOptiqSchema;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.expr.fn.impl.DateUtility;
 import org.apache.drill.exec.planner.PhysicalPlanReader;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -46,9 +47,6 @@ import org.apache.drill.exec.store.sys.PStoreProvider;
 
 // TODO - consider re-name to PlanningContext, as the query execution context actually appears
 // in fragment contexts
-
-// TODO except for a couple of tests, this is only created by Foreman
-// TODO the many methods that just return drillbitContext.getXxx() should be replaced with getDrillbitContext()
 public class QueryContext implements AutoCloseable, UdfUtilities{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryContext.class);
 
@@ -60,11 +58,9 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
   private final PlannerSettings plannerSettings;
   private final DrillOperatorTable table;
 
-  // most of the memory consumed by planning is on-heap, as the calcite planning library
-  // represents plans as graphs of POJOs. An allocator is created for the QueryContext (
-  // which is used for planning time constant expression evaluation)
   private final BufferAllocator allocator;
   private final BufferManager bufferManager;
+  private final QueryDateTimeInfo queryDateTimeInfo;
   private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024 * 1024;
   private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024 * 1024;
 
@@ -79,6 +75,11 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
     this.plannerSettings = new PlannerSettings(queryOptions, getFunctionRegistry());
     plannerSettings.setNumEndPoints(drillbitContext.getBits().size());
     this.table = new DrillOperatorTable(getFunctionRegistry());
+
+    long queryStartTime = System.currentTimeMillis();
+    int timeZone = DateUtility.getIndex(System.getProperty("user.timezone"));
+    this.queryDateTimeInfo = new QueryDateTimeInfo(queryStartTime, timeZone);
+
     try {
       this.allocator = drllbitContext.getAllocator().getChildAllocator(null, INITIAL_OFF_HEAP_ALLOCATION, MAX_OFF_HEAP_ALLOCATION, false);
     } catch (OutOfMemoryException e) {
@@ -168,15 +169,9 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
     return drillbitContext.getClusterCoordinator();
   }
 
-  /**
-   * TODO - generate the query start time and record the current timezone
-   * at the start of planning instead of the start of physical plan materialization.
-   *
-   * @return
-   */
   @Override
   public QueryDateTimeInfo getQueryDateTimeInfo() {
-    throw new UnsupportedOperationException("Query start time not currently available during planning.");
+    return queryDateTimeInfo;
   }
 
   @Override
