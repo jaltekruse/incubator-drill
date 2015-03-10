@@ -152,6 +152,11 @@ public class TestConstantFolding extends PlanTestBase {
   }
 
   @Test
+  public void testConstantFolding_toTimestamp() throws Exception {
+    test("select extract(day from (to_timestamp('2014-02-12 03:18:31:07 AM', 'YYYY-MM-dd HH:mm:ss:SS a'))) from cp.`functions/interp/test_input.csv`");
+  }
+
+  @Test
   public void testConstExprFolding_nonDirFilter() throws Exception {
     testPlanOneExpectedPatternOneExcluded(
         "select * from cp.`functions/interp/test_input.csv` where columns[0] = 2+2",
