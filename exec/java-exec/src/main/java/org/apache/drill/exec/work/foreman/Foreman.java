@@ -162,15 +162,19 @@ public class Foreman implements Runnable, Closeable, Comparable<Object> {
     context.getClusterCoordinator().removeDrillbitStatusListener(queryManager);
 
     try {
-      context.close();
-    } catch (IOException e) {
-      moveToState(QueryState.FAILED, e);
-    }
+      try {
+        context.close();
+      } catch (Exception e) {
+        moveToState(QueryState.FAILED, e);
+        return;
+      }
 
-    if (result != null) {
-      initiatingClient.sendResult(responseListener, new QueryWritableBatch(result), true);
+      if (result != null) {
+        initiatingClient.sendResult(responseListener, new QueryWritableBatch(result), true);
+      }
+    } finally {
+      releaseLease();
     }
-    releaseLease();
   }
 
   /**

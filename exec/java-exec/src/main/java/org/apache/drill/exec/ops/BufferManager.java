@@ -37,7 +37,7 @@ import java.io.Closeable;
  * the code depending on them is done executing (currently {@see FragmentContext}
  * and {@see QueryContext}.
  */
-public class BufferManager implements Closeable {
+public class BufferManager implements AutoCloseable {
 
   private LongObjectOpenHashMap<DrillBuf> managedBuffers = new LongObjectOpenHashMap<>();
   private final BufferAllocator allocator;
@@ -51,7 +51,7 @@ public class BufferManager implements Closeable {
     this.fragmentContext = fragmentContext;
   }
 
-  public void close() {
+  public void close() throws Exception {
     Object[] mbuffers = ((LongObjectOpenHashMap<Object>)(Object)managedBuffers).values;
     for (int i =0; i < mbuffers.length; i++) {
       if (managedBuffers.allocated[i]) {

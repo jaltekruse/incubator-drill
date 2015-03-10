@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.ops;
 
-import java.io.IOException;
 import java.util.Collection;
 
 import io.netty.buffer.DrillBuf;
@@ -43,7 +42,6 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.QueryOptionManager;
 import org.apache.drill.exec.store.StoragePluginRegistry;
-import org.apache.drill.exec.store.sys.PStoreProvider;
 
 // TODO - consider re-name to PlanningContext, as the query execution context actually appears
 // in fragment contexts
@@ -61,9 +59,12 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
   private final BufferAllocator allocator;
   private final BufferManager bufferManager;
   private final QueryDateTimeInfo queryDateTimeInfo;
-  private static final int INITIAL_OFF_HEAP_ALLOCATION = 1024 * 1024;
-  private static final int MAX_OFF_HEAP_ALLOCATION = 16 * 1024 * 1024;
+  private static final int INITIAL_OFF_HEAP_ALLOCATION_IN_BYTES = 1024 * 1024;
+  private static final int MAX_OFF_HEAP_ALLOCATION_IN_BYTES = 16 * 1024 * 1024;
 
+  // flag to indicate if close has been called, after calling close the first
+  // time this is set to true and the close method becomes a no-op
+  private boolean closed = false;
 
   public QueryContext(final UserSession session, QueryId queryId, final DrillbitContext drllbitContext) {
     super();
@@ -81,10 +82,11 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
     this.queryDateTimeInfo = new QueryDateTimeInfo(queryStartTime, timeZone);
 
     try {
-      this.allocator = drllbitContext.getAllocator().getChildAllocator(null, INITIAL_OFF_HEAP_ALLOCATION, MAX_OFF_HEAP_ALLOCATION, false);
+      this.allocator = drllbitContext.getAllocator().getChildAllocator(null, INITIAL_OFF_HEAP_ALLOCATION_IN_BYTES, MAX_OFF_HEAP_ALLOCATION_IN_BYTES, false);
     } catch (OutOfMemoryException e) {
       throw new DrillRuntimeException("Error creating off-heap allocator for planning context.",e);
     }
+    // TODO(DRILL-1942) the new allocator has this capability built-in, so this can be removed once that is available
     this.bufferManager = new BufferManager(this.allocator, null);
   }
 
@@ -97,14 +99,14 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
     return session;
   }
 
-  public BufferAllocator getAllocator() {
+  BufferAllocator getAllocator() {
     return allocator;
   }
 
-  public SchemaPlus getNewDefaultSchema() {
-    final SchemaPlus rootSchema = getRootSchema();
-    final SchemaPlus defaultSchema = session.getDefaultSchema(rootSchema);
-    if (defaultSchema == null) {
+  public SchemaPlus getNewDefaultSchema(){
+    SchemaPlus rootSchema = getRootSchema();
+    SchemaPlus defaultSchema = session.getDefaultSchema(rootSchema);
+    if(defaultSchema == null){
       return rootSchema;
     }else{
       return defaultSchema;
@@ -180,8 +182,12 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
   }
 
   @Override
-  public void close() throws IOException {
-    bufferManager.close();
-    allocator.close();
+  public void close() throws Exception {
+    if (!closed) {
+      // TODO(DRILL-1942) the new allocator has this capability built-in, so this can be removed once that is available
+      bufferManager.close();
+      allocator.close();
+      closed = true;
+    }
   }
 }
