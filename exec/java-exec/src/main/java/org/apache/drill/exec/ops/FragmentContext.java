@@ -56,7 +56,7 @@ import com.google.common.collect.Maps;
 /**
  * Contextual objects required for execution of a particular fragment.
  */
-public class FragmentContext implements Closeable, UdfUtilities {
+public class FragmentContext implements AutoCloseable, UdfUtilities {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FragmentContext.class);
 
 
@@ -292,7 +292,7 @@ public class FragmentContext implements Closeable, UdfUtilities {
   }
 
   @Override
-  public void close() {
+  public void close() throws Exception {
     for (Thread thread: daemonThreads) {
       thread.interrupt();
     }
