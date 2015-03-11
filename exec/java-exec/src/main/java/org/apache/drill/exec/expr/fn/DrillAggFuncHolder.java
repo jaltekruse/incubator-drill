@@ -53,16 +53,16 @@ class DrillAggFuncHolder extends DrillFuncHolder{
   private final String output;
   private final String cleanup;
 
-  public DrillAggFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillAggFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports) {
-    this(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports, FunctionCostCategory.getDefault());
+    this(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports, FunctionCostCategory.getDefault());
   }
 
-  public DrillAggFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillAggFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom,
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic,
       registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory);
     Preconditions.checkArgument(nullHandling == NullHandling.INTERNAL, "An aggregation function is required to do its own null handling.");
     setup = methods.get("setup");

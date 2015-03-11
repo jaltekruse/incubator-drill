@@ -25,8 +25,8 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
 
 public class DrillDecimalSumAggFuncHolder extends DrillAggFuncHolder {
-  public DrillDecimalSumAggFuncHolder(FunctionTemplate.FunctionScope scope, FunctionTemplate.NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom, String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars, Map<String, String> methods, List<String> imports) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports);
+  public DrillDecimalSumAggFuncHolder(FunctionTemplate.FunctionScope scope, FunctionTemplate.NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic, String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars, Map<String, String> methods, List<String> imports) {
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports);
   }
 
   @Override

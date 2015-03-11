@@ -64,8 +64,8 @@ public class HiveFuncHolderExpr extends FunctionHolderExpression implements Iter
   }
 
   @Override
-  public boolean isRandom() {
-    return holder.isRandom();
+  public boolean isDeterministic() {
+    return holder.isDeterministic();
   }
 
   @Override

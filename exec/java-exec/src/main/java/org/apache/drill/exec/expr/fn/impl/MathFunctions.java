@@ -65,7 +65,7 @@ public class MathFunctions{
 
   }
 
-  @FunctionTemplate(name = "random", isRandom = true,
+  @FunctionTemplate(name = "random", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
   public static class Random implements DrillSimpleFunc{
     @Output  Float8Holder out;

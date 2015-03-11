@@ -254,7 +254,7 @@ public class DateTypeFunctions {
 
     }
 
-    @FunctionTemplate(name = "clock_timestamp", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isRandom = true)
+    @FunctionTemplate(name = "clock_timestamp", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isDeterministic = false)
     public static class ClockTimeStamp implements DrillSimpleFunc {
         @Workspace int timezoneIndex;
         @Output TimeStampTZHolder out;
@@ -271,7 +271,7 @@ public class DateTypeFunctions {
         }
     }
 
-    @FunctionTemplate(name = "timeofday", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isRandom = true)
+    @FunctionTemplate(name = "timeofday", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isDeterministic = false)
     public static class TimeOfDay implements DrillSimpleFunc {
         @Inject DrillBuf buffer;
         @Output VarCharHolder out;

@@ -60,7 +60,7 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
   protected final FunctionTemplate.NullHandling nullHandling;
   protected final FunctionTemplate.FunctionCostCategory costCategory;
   protected final boolean isBinaryCommutative;
-  protected final boolean isRandom;
+  protected final boolean isDeterministic;
   protected final String[] registeredNames;
   protected final ImmutableList<String> imports;
   protected final WorkspaceReference[] workspaceVars;
@@ -68,7 +68,7 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
   protected final ValueReference returnValue;
   protected final ImmutableMap<String, String> methodMap;
 
-  public DrillFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue,
       WorkspaceReference[] workspaceVars, Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory) {
     super();
@@ -76,7 +76,7 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
     this.nullHandling = nullHandling;
     this.workspaceVars = workspaceVars;
     this.isBinaryCommutative = isBinaryCommutative;
-    this.isRandom = isRandom;
+    this.isDeterministic = isDeterministic;
     this.registeredNames = registeredNames;
     this.methodMap = ImmutableMap.copyOf(methods);
     this.parameters = parameters;
@@ -114,8 +114,8 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
     return false;
   }
 
-  public boolean isRandom() {
-    return isRandom;
+  public boolean isDeterministic() {
+    return isDeterministic;
   }
 
 

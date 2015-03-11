@@ -70,7 +70,7 @@ public abstract class FunctionHolderExpression extends LogicalExpressionBase {
   /**
    * is the function output non-deterministic?
    */
-  public abstract boolean isRandom();
+  public abstract boolean isDeterministic();
 
   /**
    * @ return a copy of FunctionHolderExpression, with passed in argument list.

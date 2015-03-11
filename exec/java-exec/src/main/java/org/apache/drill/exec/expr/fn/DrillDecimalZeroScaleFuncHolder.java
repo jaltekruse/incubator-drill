@@ -31,10 +31,10 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
 public class DrillDecimalZeroScaleFuncHolder extends DrillSimpleFuncHolder{
 
 
-  public DrillDecimalZeroScaleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillDecimalZeroScaleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
                                         String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
                                         Map<String, String> methods, List<String> imports, FunctionTemplate.FunctionCostCategory costCategory, Class<? extends DrillSimpleFunc> drillFuncClass) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory, drillFuncClass);
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory, drillFuncClass);
   }
 
   /* This function scope is used when we need to remove the scale part.

@@ -56,7 +56,7 @@ public class HiveFuncHolder extends AbstractFuncHolder {
   private boolean isGenericUDF = true;
   private Class<? extends UDF> udfClazz = null;
   private String udfName = "";
-  private boolean isRandom;
+  private boolean isDeterministic;
 
 
   /**
@@ -67,12 +67,12 @@ public class HiveFuncHolder extends AbstractFuncHolder {
    * @param returnType
    */
   public HiveFuncHolder(Class<? extends GenericUDF> genericUdfClazz, MajorType[] argTypes,
-                        ObjectInspector returnOI, MajorType returnType, boolean isRandom) {
+                        ObjectInspector returnOI, MajorType returnType, boolean isDeterministic) {
     this.genericUdfClazz = genericUdfClazz;
     this.argTypes = argTypes;
     this.returnOI = returnOI;
     this.returnType = returnType;
-    this.isRandom = isRandom;
+    this.isDeterministic = isDeterministic;
   }
 
   /**
@@ -84,8 +84,8 @@ public class HiveFuncHolder extends AbstractFuncHolder {
    * @param returnType
    */
   public HiveFuncHolder(String udfName, Class< ? extends UDF> udfClazz, MajorType[] argTypes,
-                        ObjectInspector returnOI, MajorType returnType, boolean isRandom) {
-    this(GenericUDFBridge.class, argTypes, returnOI, returnType, isRandom);
+                        ObjectInspector returnOI, MajorType returnType, boolean isDeterministic) {
+    this(GenericUDFBridge.class, argTypes, returnOI, returnType, isDeterministic);
     this.isGenericUDF = false;
     this.udfClazz = udfClazz;
     this.udfName = udfName;
@@ -109,8 +109,8 @@ public class HiveFuncHolder extends AbstractFuncHolder {
   /**
    * is the function non-deterministic?
    */
-  public boolean isRandom() {
-    return isRandom;
+  public boolean isDeterministic() {
+    return isDeterministic;
   }
 
   @Override

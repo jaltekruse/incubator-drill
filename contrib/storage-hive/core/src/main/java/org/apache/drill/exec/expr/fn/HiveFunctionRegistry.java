@@ -173,7 +173,7 @@ public class HiveFunctionRegistry implements PluggableFunctionRegistry{
         argTypes,
         returnOI,
         Types.optional(ObjectInspectorHelper.getDrillType(returnOI)),
-        nonDeterministicUDFs.contains(udfClazz));
+        !nonDeterministicUDFs.contains(udfClazz));
     } catch (IllegalAccessException | InstantiationException e) {
       logger.debug("Failed to instantiate class", e);
     } catch (Exception e) { /*ignore this*/ }
@@ -195,7 +195,7 @@ public class HiveFunctionRegistry implements PluggableFunctionRegistry{
         argTypes,
         returnOI,
         Types.optional(ObjectInspectorHelper.getDrillType(returnOI)),
-        nonDeterministicUDFs.contains(udfClazz));
+        !nonDeterministicUDFs.contains(udfClazz));
     } catch (Exception e) { /*ignore this*/ }
 
     return null;

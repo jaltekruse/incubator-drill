@@ -107,7 +107,7 @@ public class ConstantExpressionIdentifier implements ExprVisitor<Boolean, Identi
 
   @Override
   public Boolean visitFunctionHolderExpression(FunctionHolderExpression holder, IdentityHashMap<LogicalExpression, Object> value) throws RuntimeException {
-    return checkChildren(holder, value, !holder.isAggregating() && !holder.isRandom());
+    return checkChildren(holder, value, !holder.isAggregating() && !holder.isDeterministic());
    }
 
   @Override

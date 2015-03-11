@@ -40,7 +40,7 @@ public class JsonConvertFrom {
 
   private JsonConvertFrom(){}
 
-  @FunctionTemplate(name = "convert_fromJSON", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isRandom = true)
+  @FunctionTemplate(name = "convert_fromJSON", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isDeterministic = false)
   public static class ConvertFromJson implements DrillSimpleFunc{
 
     @Param VarBinaryHolder in;
@@ -66,7 +66,7 @@ public class JsonConvertFrom {
     }
   }
 
-  @FunctionTemplate(name = "convert_fromJSON", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isRandom = true)
+  @FunctionTemplate(name = "convert_fromJSON", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL, isDeterministic = false)
   public static class ConvertFromJsonVarchar implements DrillSimpleFunc{
 
     @Param VarCharHolder in;

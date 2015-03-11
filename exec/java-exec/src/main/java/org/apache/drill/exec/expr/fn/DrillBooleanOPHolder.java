@@ -28,10 +28,10 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
 
 public class DrillBooleanOPHolder extends DrillSimpleFuncHolder{
 
-  public DrillBooleanOPHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillBooleanOPHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory, Class<? extends DrillSimpleFunc> drillFuncClass) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars,
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars,
         methods, imports, costCategory, drillFuncClass);
   }
 

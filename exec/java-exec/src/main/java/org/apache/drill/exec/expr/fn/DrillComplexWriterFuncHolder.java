@@ -42,10 +42,10 @@ public class DrillComplexWriterFuncHolder extends DrillSimpleFuncHolder{
 
   private FieldReference ref;
 
-  public DrillComplexWriterFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillComplexWriterFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports);
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports);
   }
 
   public void setReference(FieldReference ref) {

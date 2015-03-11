@@ -26,7 +26,7 @@ import org.apache.drill.exec.expr.holders.BigIntHolder;
 
 public class Alternator {
 
-  @FunctionTemplate(name = "alternate", isRandom = true, scope = FunctionScope.SIMPLE)
+  @FunctionTemplate(name = "alternate", isDeterministic = false, scope = FunctionScope.SIMPLE)
   public static class Alternate2 implements DrillSimpleFunc{
     @Workspace int val;
     @Output BigIntHolder out;
@@ -46,7 +46,7 @@ public class Alternator {
     }
   }
 
-  @FunctionTemplate(name = "alternate3", isRandom = true, scope = FunctionScope.SIMPLE)
+  @FunctionTemplate(name = "alternate3", isDeterministic = false, scope = FunctionScope.SIMPLE)
   public static class Alternate3 implements DrillSimpleFunc{
     @Workspace int val;
     @Output BigIntHolder out;

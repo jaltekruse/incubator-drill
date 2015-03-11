@@ -56,7 +56,7 @@ public @interface FunctionTemplate {
   FunctionScope scope();
   NullHandling nulls() default NullHandling.INTERNAL;
   boolean isBinaryCommutative() default false;
-  boolean isRandom()  default false;
+  boolean isDeterministic() default true;
 
   FunctionCostCategory costCategory() default FunctionCostCategory.SIMPLE;
 

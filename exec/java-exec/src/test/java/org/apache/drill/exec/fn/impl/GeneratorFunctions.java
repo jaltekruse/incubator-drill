@@ -33,7 +33,7 @@ public class GeneratorFunctions extends ExecTest {
 
   public static final Random random = new Random(1234L);
 
-  @FunctionTemplate(name = "increasingBigInt", isRandom = true,
+  @FunctionTemplate(name = "increasingBigInt", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
   public static class IncreasingBigInt implements DrillSimpleFunc {
 
@@ -50,7 +50,7 @@ public class GeneratorFunctions extends ExecTest {
     }
   }
 
-  @FunctionTemplate(name = "randomBigInt", isRandom = true,
+  @FunctionTemplate(name = "randomBigInt", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
   public static class RandomBigIntGauss implements DrillSimpleFunc {
 
@@ -65,7 +65,7 @@ public class GeneratorFunctions extends ExecTest {
     }
   }
 
-  @FunctionTemplate(name = "randomBigInt", isRandom = true,
+  @FunctionTemplate(name = "randomBigInt", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
   public static class RandomBigInt implements DrillSimpleFunc {
 
@@ -81,7 +81,7 @@ public class GeneratorFunctions extends ExecTest {
     }
   }
 
-  @FunctionTemplate(name = "randomFloat8", isRandom = true,
+  @FunctionTemplate(name = "randomFloat8", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
   public static class RandomFloat8Gauss implements DrillSimpleFunc {
 
@@ -97,7 +97,7 @@ public class GeneratorFunctions extends ExecTest {
     }
   }
 
-  @FunctionTemplate(name = "randomFloat8", isRandom = true,
+  @FunctionTemplate(name = "randomFloat8", isDeterministic = false,
     scope = FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.NULL_IF_NULL)
   public static class RandomFloat8 implements DrillSimpleFunc {
 

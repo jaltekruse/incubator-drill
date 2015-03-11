@@ -48,16 +48,16 @@ public class DrillSimpleFuncHolder extends DrillFuncHolder{
   private final String cleanupBody;
   private final Class<? extends DrillSimpleFunc> drillFuncClass;
 
-  public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports) {
-    this(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports, FunctionCostCategory.getDefault(), null);
+    this(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports, FunctionCostCategory.getDefault(), null);
   }
 
-  public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isRandom,
+  public DrillSimpleFuncHolder(FunctionScope scope, NullHandling nullHandling, boolean isBinaryCommutative, boolean isDeterministic,
       String[] registeredNames, ValueReference[] parameters, ValueReference returnValue, WorkspaceReference[] workspaceVars,
       Map<String, String> methods, List<String> imports, FunctionCostCategory costCategory, Class<? extends DrillSimpleFunc> drillFuncClass) {
-    super(scope, nullHandling, isBinaryCommutative, isRandom, registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory);
+    super(scope, nullHandling, isBinaryCommutative, isDeterministic, registeredNames, parameters, returnValue, workspaceVars, methods, imports, costCategory);
     setupBody = methods.get("setup");
     evalBody = methods.get("eval");
     resetBody = methods.get("reset");
