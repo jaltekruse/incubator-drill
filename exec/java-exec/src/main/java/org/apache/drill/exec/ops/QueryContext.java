@@ -99,7 +99,7 @@ public class QueryContext implements AutoCloseable, UdfUtilities{
     return session;
   }
 
-  BufferAllocator getAllocator() {
+  public BufferAllocator getAllocator() {
     return allocator;
   }
 
