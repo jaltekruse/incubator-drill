@@ -92,25 +92,44 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
         switch(materializedExpr.getMajorType().getMinorType()) {
           case INT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Integer)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Integer)vector.getAccessor().getObject(0)),
+                newCall.getType(),
+                false));
             break;
           case BIGINT:
-            reducedValues.add(rexBuilder.makeExactLiteral(new BigDecimal((Long)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new BigDecimal((Long)vector.getAccessor().getObject(0)),
+                newCall.getType(),
+                false));
             break;
           case FLOAT4:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Float)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                new BigDecimal((Float)vector.getAccessor().getObject(0)),
+                newCall.getType()));
             break;
           case FLOAT8:
-            reducedValues.add(rexBuilder.makeApproxLiteral(new BigDecimal((Double)vector.getAccessor().getObject(0))));
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                new BigDecimal((Double)vector.getAccessor().getObject(0)),
+                newCall.getType()));
             break;
           case VARCHAR:
-            reducedValues.add(rexBuilder.makeCharLiteral(new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null)));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
+                newCall.getType(),
+                false));
             break;
           case BIT:
-            reducedValues.add(rexBuilder.makeLiteral(((BitVector) vector).getAccessor().get(0) == 1 ? true : false));
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
+                newCall.getType(),
+                false));
             break;
           case DATE:
-            reducedValues.add(rexBuilder.makeDateLiteral(new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null)));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null),
+                newCall.getType(),
+                false));
             break;
 
           case DECIMAL9:
