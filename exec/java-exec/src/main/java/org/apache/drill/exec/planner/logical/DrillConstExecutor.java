@@ -149,32 +149,46 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
             // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
             // a decimal type
-            reducedValues.add(rexBuilder.makeApproxLiteral((BigDecimal) vector.getAccessor().getObject(0)));
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                (BigDecimal) vector.getAccessor().getObject(0),
+                newCall.getType()));
             break;
 
           case TIME:
             // TODO - review the given precision value, chose the maximum available on SQL server
             // https://msdn.microsoft.com/en-us/library/bb677243.aspx
-            reducedValues.add(rexBuilder.makeTimeLiteral(new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null),
+                newCall.getType(),
+                false));
             break;
           case TIMESTAMP:
             // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
-            reducedValues.add(rexBuilder.makeTimestampLiteral(new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null), 7));
+            reducedValues.add(rexBuilder.makeLiteral(
+                new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null),
+                newCall.getType(),
+                false));
             break;
 
           // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
           // disabling for now and adding VARBINARY to the list of unfoldable types
           case VARBINARY:
-            reducedValues.add(rexBuilder.makeBinaryLiteral(new ByteString((byte[]) vector.getAccessor().getObject(0))));
-            // fall through for now
+            reducedValues.add(rexBuilder.makeLiteral(
+                new ByteString((byte[]) vector.getAccessor().getObject(0)),
+                newCall.getType(),
+                false));
+            break;
 
           // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
           // will make these non-reducible at planning time for now
           case INTERVAL:
           case INTERVALYEAR:
           case INTERVALDAY:
-            // fall through for now
-//            reducedValues.add(rexBuilder.makeIntervalLiteral(((Period) vector.getAccessor().getObject(0)));
+            reducedValues.add(rexBuilder.makeLiteral(
+                vector.getAccessor().getObject(0),
+                newCall.getType(),
+                false));
+            break;
 
 
           // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
