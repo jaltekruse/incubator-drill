@@ -50,6 +50,7 @@ import org.eigenbase.sql.parser.SqlParserPos;
 import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.NlsString;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
 import java.io.UnsupportedEncodingException;
@@ -163,7 +164,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             break;
           case DATE:
             reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null),
+                new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
                 false));
             break;
@@ -172,19 +173,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case DECIMAL18:
           case DECIMAL28SPARSE:
           case DECIMAL38SPARSE:
-            // TODO - figure out the best thing to do here, had some issues with creating decimal literals, I'm not
-            // sure the calcite code is correct here. Example expression that fails, 123456789.000000000 + 0
-            // The call to bd.unscaledValue().longValue() on the passed BigDecial is returning a value that fails
-            // the assert two lines down: assert BigDecimal.valueOf(l, scale).equals(bd);
-            // currently to make this fold it must be put in the filter condition, project expression reduction is
-            // not planning correctly.
-            // Could not fix this by adding the decimal types to the list of NON_REDUCIBLE_TYPES, to resolve differences
-            // in scale and precision, calcite appears to be inserting casts, which are always considered constant
-            //    - this could be an issue for all of the NON_REDUCIBLE_TYPES, as any casts may be evaluated anyway and
-            //      then fail here
-
-            // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
-            // a decimal type
             reducedValues.add(rexBuilder.makeLiteral(
                 vector.getAccessor().getObject(0),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
@@ -193,19 +181,17 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
           case TIME:
             reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((TimeVector) vector).getAccessor().get(0)).toCalendar(null),
+                new DateTime(((TimeVector) vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
                 false));
             break;
           case TIMESTAMP:
             reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null),
+                new DateTime(((TimeStampVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
                 false));
             break;
 
-          // TODO - tried to test this with a call to convertToNullableVARBINARY, but the interpreter could not be found for it
-          // disabling for now and adding VARBINARY to the list of unfoldable types
           case VARBINARY:
             reducedValues.add(rexBuilder.makeLiteral(
                 new ByteString((byte[]) vector.getAccessor().getObject(0)),
