@@ -62,31 +62,27 @@ public class TestConstantFolding extends PlanTestBase {
 
     String query2 = "SELECT *  " +
         "FROM   cp.`/parquet/alltypes.json`  " +
-        "WHERE  cast( `int_col` AS             int) = castint('1')  " +
+        "WHERE  12 = extract(day from (to_timestamp('2014-02-12 03:18:31:07 AM', 'YYYY-MM-dd HH:mm:ss:SS a'))) " +
+        "AND    cast( `int_col` AS             int) = castint('1')  " +
         "AND    cast( `bigint_col` AS          bigint) = castbigint('100000000000')  " +
-        // TODO - fix, currently using approximate literals
         "AND    cast( `decimal9_col` AS        decimal(9, 4)) = 1.0 + 0.0  " +
         "AND    cast( `decimal18_col` AS       decimal(18,9)) = 123456789.000000000 + 0.0  " +
         "AND    cast( `decimal28sparse_col` AS decimal(28, 14)) = 123456789.000000000 + 0.0 " +
         "AND    cast( `decimal38sparse_col` AS decimal(38, 19)) = 123456789.000000000 + 0.0 " +
-
-        "AND cast( `date_col` AS            date) = castdate('1995-01-01')  "; //+
-
-//        "AND    cast( `date_col` AS            date) = cast('1995-01-01' as date)  " +
-
-        // THIS WORKS, RETURNS ONE RECORD
-//        "AND    cast( `date_col` AS            date) = DATE '1995-01-01'  " +
+        "AND    cast( `date_col` AS            date) = cast('1995-01-01' as date)  " +
+        "AND    cast( `date_col` AS            date) = castdate('1995-01-01')  " +
+        "AND    cast( `date_col` AS            date) = DATE '1995-01-01'  " +
+        "AND    cast( `timestamp_col` AS timestamp) = casttimestamp('1995-01-01 01:00:10.000')  " +
+        "AND    cast( `float4_col` AS float) = castfloat4('1')  " +
+        "AND    cast( `float8_col` AS DOUBLE) = castfloat8('1')  " +
+        "AND    cast( `varbinary_col` AS varbinary(65000)) = castvarbinary('qwerty', 0)  " +
+        "AND    cast( `intervalyear_col` AS interval year) = castintervalyear('P1Y')  " +
+        "AND    cast( `intervalday_col` AS interval day) = castintervalday('P1D')" +
 
 //        "AND    cast( `time_col` AS            time) = casttime('01:00:00')  " +
-//        "AND    cast( `timestamp_col` AS timestamp) = casttimestamp('1995-01-01 01:00:10.000')  " +
-//        "AND    cast( `float4_col` AS float) = castfloat4('1')  " +
-//        "AND    cast( `float8_col` AS DOUBLE) = castfloat8('1')  " +
         // TODO - fix, evaluation issues, looks like implicit casts are being added?
 //        "AND    cast( `bit_col` AS       boolean) = castbit('false')  " +
 //        "AND  `varchar_col` = concat('qwe','rty')  " +
-//        "AND    cast( `varbinary_col` AS varbinary(65000)) = castvarbinary('qwerty', 0)  " +
-//        "AND    cast( `intervalyear_col` AS interval year) = castintervalyear('P1Y')  " +
-//        "AND    cast( `intervalday_col` AS interval day) = castintervalday('P1D')";
 
 //        "SELECT " +
 //        "       Cast( `int_col` AS             INT)             int_col,  " +
@@ -123,10 +119,26 @@ public class TestConstantFolding extends PlanTestBase {
 //        "AND     castVARBINARY(`varbinary_col`, 0)     = castVARBINARY('qwerty', 0)  " +
 //        "AND     cast( `intervalyear_col` as INTERVAL YEAR)      = converttonullableintervalyear( 'P1Y')  " +
 //        "AND     cast( `intervalday_col` as INTERVAL DAY )       = converttonullableintervalday( 'P1D' )"
-//        ;
+        "";
 
 
-    test(query2);
+    testBuilder()
+        .sqlQuery(query2)
+        .ordered()
+        .baselineColumns("TINYINT_col", "SMALLINT_col", "INT_col", "FLOAT4_col",
+            "TIME_col", "DECIMAL9_col", "BIGINT_col", "UINT8_col", "FLOAT8_col",
+            "DATE_col", "TIMESTAMP_col", "DECIMAL18_col", "INTERVALYEAR_col",
+            "INTERVALDAY_col", "INTERVAL_col", "DECIMAL38SPARSE_col",
+            "DECIMAL28SPARSE_col", "VARBINARY_col", "VARCHAR_col",
+            "VAR16CHAR_col", "BIT_col")
+        // the file is being read in all_text_mode to preserve exact values for the expressions to be constant folded,
+        // so the baseline values here are all strings
+        .baselineValues(
+            "1", "1", "1", "1",	"01:00:00",	"1.0", "100000000000",	"1", "1",	"1995-01-01", "1995-01-01 01:00:10.000",
+            "123456789.000000000", "P1Y",	"P1D",	"P1Y1M1DT1H1M", "123456789.000000000",
+            "123456789.000000000", "qwerty", "qwerty","qwerty", "false"
+        )
+        .go();
   }
 
   @Test
@@ -147,11 +159,6 @@ public class TestConstantFolding extends PlanTestBase {
         "select * from dfs.`" + path + "/*/*.csv` where dir0 = concat('small','file')",
         "smallfile",
         "bigfile");
-  }
-
-  @Test
-  public void testConstantFolding_toTimestamp() throws Exception {
-    test("select extract(day from (to_timestamp('2014-02-12 03:18:31:07 AM', 'YYYY-MM-dd HH:mm:ss:SS a'))) from cp.`functions/interp/test_input.csv`");
   }
 
   @Test

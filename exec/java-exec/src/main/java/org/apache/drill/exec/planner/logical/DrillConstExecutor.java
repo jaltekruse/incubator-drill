@@ -33,14 +33,19 @@ import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.BitVector;
 import org.apache.drill.exec.vector.DateVector;
+import org.apache.drill.exec.vector.IntervalDayVector;
+import org.apache.drill.exec.vector.IntervalYearVector;
 import org.apache.drill.exec.vector.TimeStampVector;
 import org.apache.drill.exec.vector.TimeVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.reltype.RelDataType;
+import org.eigenbase.reltype.RelDataTypeFactory;
 import org.eigenbase.rex.RexBuilder;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.sql.SqlIntervalQualifier;
+import org.eigenbase.sql.parser.SqlParserPos;
 import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.NlsString;
 import org.joda.time.DateTime;
@@ -49,6 +54,7 @@ import org.joda.time.Period;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
@@ -76,8 +82,26 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     this.allocator = allocator;
   }
 
-  private RelDataType createCalciteTypeWithNullability(RexBuilder rexBuilder, SqlTypeName sqlTypeName, RexNode node) {
-    return rexBuilder.getTypeFactory().createTypeWithNullability(rexBuilder.getTypeFactory().createSqlType(sqlTypeName), node.getType().isNullable());
+  private RelDataType createCalciteTypeWithNullability(RelDataTypeFactory typeFactory, SqlTypeName sqlTypeName, RexNode node) {
+    RelDataType type;
+    if (sqlTypeName == SqlTypeName.INTERVAL_DAY_TIME) {
+      type = typeFactory.createSqlIntervalType(
+          new SqlIntervalQualifier(
+              SqlIntervalQualifier.TimeUnit.YEAR,
+              SqlIntervalQualifier.TimeUnit.MONTH,
+              SqlParserPos.ZERO));
+    } else if (sqlTypeName == SqlTypeName.INTERVAL_YEAR_MONTH) {
+      type = typeFactory.createSqlIntervalType(
+          new SqlIntervalQualifier(
+              SqlIntervalQualifier.TimeUnit.YEAR,
+              SqlIntervalQualifier.TimeUnit.MONTH,
+             SqlParserPos.ZERO));
+    } else {
+      type = typeFactory.createSqlType(sqlTypeName);
+    }
+    return typeFactory.createTypeWithNullability(
+        type,
+        node.getType().isNullable());
   }
 
   @Override
@@ -95,48 +119,49 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       ValueVector vector = TypeHelper.getNewVector(outputField, allocator);
       vector.allocateNewSafe();
       InterpreterEvaluator.evaluateConstantExpr(vector, udfUtilities, materializedExpr);
+      RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
         switch(materializedExpr.getMajorType().getMinorType()) {
           case INT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Integer)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTEGER, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall),
                 false));
             break;
           case BIGINT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Long)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.BIGINT, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall),
                 false));
             break;
           case FLOAT4:
             reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Float)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.FLOAT, newCall),
+                new BigDecimal((Float) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall),
                 false));
             break;
           case FLOAT8:
             reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Double)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DOUBLE, newCall),
+                new BigDecimal((Double) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
                 false));
             break;
           case VARCHAR:
             reducedValues.add(rexBuilder.makeLiteral(
                 new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.VARCHAR, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
                 false));
             break;
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(
                 ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.BOOLEAN, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
                 false));
             break;
           case DATE:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DATE, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
                 false));
             break;
 
@@ -159,20 +184,20 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             // a decimal type
             reducedValues.add(rexBuilder.makeLiteral(
                 vector.getAccessor().getObject(0),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DECIMAL, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
                 false));
             break;
 
           case TIME:
             reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.TIME, newCall),
+                new DateTime(((TimeVector) vector).getAccessor().get(0)).toCalendar(null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
                 false));
             break;
           case TIMESTAMP:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.TIMESTAMP, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
                 false));
             break;
 
@@ -181,20 +206,20 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case VARBINARY:
             reducedValues.add(rexBuilder.makeLiteral(
                 new ByteString((byte[]) vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.VARBINARY, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
                 false));
             break;
 
           case INTERVALYEAR:
             reducedValues.add(rexBuilder.makeLiteral(
-                vector.getAccessor().getObject(0),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
+                new BigDecimal(((IntervalYearVector)vector).getAccessor().get(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
                 false));
             break;
           case INTERVALDAY:
             reducedValues.add(rexBuilder.makeLiteral(
-                vector.getAccessor().getObject(0),
-                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTERVAL_DAY_TIME, newCall),
+                new BigDecimal(((IntervalDayVector)vector).getAccessor().getObject(0).getMillis()),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
                 false));
             break;
 
