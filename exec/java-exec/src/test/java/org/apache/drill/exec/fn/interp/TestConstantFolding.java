@@ -54,6 +54,21 @@ public class TestConstantFolding extends PlanTestBase {
     out.close();
   }
 
+  @Test
+  public void testFailingFunctions() throws Exception {
+    test("select to_char(485, '$') from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
+  @Test
+  public void testNowFunc() throws Exception {
+    test("select now() from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
+  @Test
+  public void testLengthFunc() throws Exception {
+    test("select length('This is a test string.','UTF8') from cp.`/store/text/classpath_storage_csv_test.csv`");
+  }
+
 //  @Ignore("WIP")
   @Test
   public void testConstantFolding_allTypes() throws Exception {
