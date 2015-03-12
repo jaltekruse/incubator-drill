@@ -128,10 +128,11 @@ public class DrillRuleSets {
       //
       // even when this is firing, the plan with the folded constant expression in the select list is not being chosen,
       // see TestConstantFolding.testConstExprFolding_InSelect() and DRILL-2218
-      ReduceExpressionsRule.PROJECT_INSTANCE,
+//      ReduceExpressionsRule.PROJECT_INSTANCE,
 
       DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
       DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+
       DrillReduceAggregatesRule.INSTANCE
       ));
     }
