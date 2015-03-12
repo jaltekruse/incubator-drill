@@ -113,8 +113,8 @@ public class TestConstantFolding extends PlanTestBase {
         // the file is being read in all_text_mode to preserve exact values (as all numbers with decimal points are read
         // as double in the JsonReader), so the baseline values here are all specified as strings
         .baselineValues(
-            "1", "1", "1", "1",	"01:00:00",	"1.0", "100000000000",	"1", "1",	"1995-01-01", "1995-01-01 01:00:10.000",
-            "123456789.000000000", "P1Y",	"P1D",	"P1Y1M1DT1H1M", "123456789.000000000",
+            "1", "1", "1", "1", "01:00:00", "1.0", "100000000000", "1", "1", "1995-01-01", "1995-01-01 01:00:10.000",
+            "123456789.000000000", "P1Y", "P1D", "P1Y1M1DT1H1M", "123456789.000000000",
             "123456789.000000000", "qwerty", "qwerty","qwerty", "false"
         )
         .go();
