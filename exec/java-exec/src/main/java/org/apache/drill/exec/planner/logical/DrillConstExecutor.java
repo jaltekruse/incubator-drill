@@ -123,122 +123,122 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       InterpreterEvaluator.evaluateConstantExpr(vector, udfUtilities, materializedExpr);
       RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
-        switch(materializedExpr.getMajorType().getMinorType()) {
-          case INT:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Integer)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall),
-                false));
-            break;
-          case BIGINT:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Long)vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall),
-                false));
-            break;
-          case FLOAT4:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Float) vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall),
-                false));
-            break;
-          case FLOAT8:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal((Double) vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
-                false));
-            break;
-          case DECIMAL9:
-          case DECIMAL18:
-          case DECIMAL28SPARSE:
-          case DECIMAL38SPARSE:
-            reducedValues.add(rexBuilder.makeLiteral(
-                vector.getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
-                false));
-            break;
-          case VARCHAR:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
-                false));
-            break;
-          case VARBINARY:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new ByteString((byte[]) vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
-                false));
-            break;
-          case BIT:
-            reducedValues.add(rexBuilder.makeLiteral(
-                ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
-                false));
-            break;
-          case TIME:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((TimeVector) vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
-                false));
-            break;
-          case TIMESTAMP:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((TimeStampVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
-                false));
-            break;
-          case DATE:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
-                false));
-            break;
-          case INTERVALYEAR:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal(((IntervalYearVector)vector).getAccessor().get(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
-                false));
-            break;
-          case INTERVALDAY:
-            Period p = ((IntervalDayVector)vector).getAccessor().getObject(0);
-            reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal(p.getDays() * DateUtility.daysToStandardMillis + p.getMillis()),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
-                false));
-            break;
+      switch(materializedExpr.getMajorType().getMinorType()) {
+        case INT:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal((Integer)vector.getAccessor().getObject(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall),
+              false));
+          break;
+        case BIGINT:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal((Long)vector.getAccessor().getObject(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall),
+              false));
+          break;
+        case FLOAT4:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal((Float) vector.getAccessor().getObject(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall),
+              false));
+          break;
+        case FLOAT8:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal((Double) vector.getAccessor().getObject(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
+              false));
+          break;
+        case DECIMAL9:
+        case DECIMAL18:
+        case DECIMAL28SPARSE:
+        case DECIMAL38SPARSE:
+          reducedValues.add(rexBuilder.makeLiteral(
+              vector.getAccessor().getObject(0),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+              false));
+          break;
+        case VARCHAR:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
+              false));
+          break;
+        case VARBINARY:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new ByteString((byte[]) vector.getAccessor().getObject(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
+              false));
+          break;
+        case BIT:
+          reducedValues.add(rexBuilder.makeLiteral(
+              ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
+              false));
+          break;
+        case TIME:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new DateTime(((TimeVector) vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
+              false));
+          break;
+        case TIMESTAMP:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new DateTime(((TimeStampVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
+              false));
+          break;
+        case DATE:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
+              false));
+          break;
+        case INTERVALYEAR:
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal(((IntervalYearVector)vector).getAccessor().get(0)),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
+              false));
+          break;
+        case INTERVALDAY:
+          Period p = ((IntervalDayVector)vector).getAccessor().getObject(0);
+          reducedValues.add(rexBuilder.makeLiteral(
+              new BigDecimal(p.getDays() * DateUtility.daysToStandardMillis + p.getMillis()),
+              createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
+              false));
+          break;
 
-          // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
-          // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
-          // as input), so we need to identify functions with these return types as non-foldable until we have a
-          // literal representation for them
-          case MAP:
-          case LIST:
-            // fall through for now
+        // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
+        // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
+        // as input), so we need to identify functions with these return types as non-foldable until we have a
+        // literal representation for them
+        case MAP:
+        case LIST:
+          // fall through for now
 
-          // TODO - Is this interval type supported?
-          case INTERVAL:
-          // currently unsupported types
-          case TIMESTAMPTZ:
-          case TIMETZ:
-          case LATE:
-          case TINYINT:
-          case SMALLINT:
-          case GENERIC_OBJECT:
-          case NULL:
-          case DECIMAL28DENSE:
-          case DECIMAL38DENSE:
-          case MONEY:
-          case FIXEDBINARY:
-          case FIXEDCHAR:
-          case FIXED16CHAR:
-          case VAR16CHAR:
-          case UINT1:
-          case UINT2:
-          case UINT4:
-          case UINT8:
-            throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
-                + materializedExpr.getMajorType().getMinorType() );
-        }
+        // TODO - Is this interval type supported?
+        case INTERVAL:
+        // currently unsupported types
+        case TIMESTAMPTZ:
+        case TIMETZ:
+        case LATE:
+        case TINYINT:
+        case SMALLINT:
+        case GENERIC_OBJECT:
+        case NULL:
+        case DECIMAL28DENSE:
+        case DECIMAL38DENSE:
+        case MONEY:
+        case FIXEDBINARY:
+        case FIXEDCHAR:
+        case FIXED16CHAR:
+        case VAR16CHAR:
+        case UINT1:
+        case UINT2:
+        case UINT4:
+        case UINT8:
+          throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
+              + materializedExpr.getMajorType().getMinorType() );
+      }
       vector.clear();
     }
   }
