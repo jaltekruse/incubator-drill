@@ -53,10 +53,8 @@ import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Period;
 
-import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
@@ -150,25 +148,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
                 false));
             break;
-          case VARCHAR:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
-                false));
-            break;
-          case BIT:
-            reducedValues.add(rexBuilder.makeLiteral(
-                ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
-                false));
-            break;
-          case DATE:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
-                false));
-            break;
-
           case DECIMAL9:
           case DECIMAL18:
           case DECIMAL28SPARSE:
@@ -178,7 +157,24 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
                 false));
             break;
-
+          case VARCHAR:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
+                false));
+            break;
+          case VARBINARY:
+            reducedValues.add(rexBuilder.makeLiteral(
+                new ByteString((byte[]) vector.getAccessor().getObject(0)),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
+                false));
+            break;
+          case BIT:
+            reducedValues.add(rexBuilder.makeLiteral(
+                ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
+                false));
+            break;
           case TIME:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeVector) vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
@@ -191,14 +187,12 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
                 false));
             break;
-
-          case VARBINARY:
+          case DATE:
             reducedValues.add(rexBuilder.makeLiteral(
-                new ByteString((byte[]) vector.getAccessor().getObject(0)),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
+                new DateTime(((DateVector)vector).getAccessor().get(0), DateTimeZone.UTC).toCalendar(null),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
                 false));
             break;
-
           case INTERVALYEAR:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((IntervalYearVector)vector).getAccessor().get(0)),
@@ -212,7 +206,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
                 false));
             break;
-
 
           // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
           // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
