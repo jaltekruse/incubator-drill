@@ -27,6 +27,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
+import org.apache.drill.exec.expr.fn.impl.DateUtility;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterEvaluator;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.ops.UdfUtilities;
@@ -87,8 +88,8 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     if (sqlTypeName == SqlTypeName.INTERVAL_DAY_TIME) {
       type = typeFactory.createSqlIntervalType(
           new SqlIntervalQualifier(
-              SqlIntervalQualifier.TimeUnit.YEAR,
-              SqlIntervalQualifier.TimeUnit.MONTH,
+              SqlIntervalQualifier.TimeUnit.DAY,
+              SqlIntervalQualifier.TimeUnit.MINUTE,
               SqlParserPos.ZERO));
     } else if (sqlTypeName == SqlTypeName.INTERVAL_YEAR_MONTH) {
       type = typeFactory.createSqlIntervalType(
@@ -96,6 +97,8 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
               SqlIntervalQualifier.TimeUnit.YEAR,
               SqlIntervalQualifier.TimeUnit.MONTH,
              SqlParserPos.ZERO));
+    } else if (sqlTypeName == SqlTypeName.VARCHAR) {
+      type = typeFactory.createSqlType(sqlTypeName, 65536);
     } else {
       type = typeFactory.createSqlType(sqlTypeName);
     }
@@ -217,8 +220,9 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 false));
             break;
           case INTERVALDAY:
+            Period p = ((IntervalDayVector)vector).getAccessor().getObject(0);
             reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal(((IntervalDayVector)vector).getAccessor().getObject(0).getMillis()),
+                new BigDecimal(p.getDays() * DateUtility.daysToStandardMillis + p.getMillis()),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
                 false));
             break;
