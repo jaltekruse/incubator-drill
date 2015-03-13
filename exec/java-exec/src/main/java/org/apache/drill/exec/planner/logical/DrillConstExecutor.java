@@ -34,6 +34,10 @@ import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.vector.BitVector;
 import org.apache.drill.exec.vector.DateVector;
+import org.apache.drill.exec.vector.Decimal18Vector;
+import org.apache.drill.exec.vector.Decimal28SparseVector;
+import org.apache.drill.exec.vector.Decimal38SparseVector;
+import org.apache.drill.exec.vector.Decimal9Vector;
 import org.apache.drill.exec.vector.IntervalDayVector;
 import org.apache.drill.exec.vector.IntervalYearVector;
 import org.apache.drill.exec.vector.TimeStampVector;
@@ -168,15 +172,26 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
                 false));
             break;
-
+          // TODO - create exact literals once DRILL-2101 is fixed
           case DECIMAL9:
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                ((Decimal9Vector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+            break;
           case DECIMAL18:
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                ((Decimal18Vector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+            break;
           case DECIMAL28SPARSE:
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                ((Decimal28SparseVector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+            break;
           case DECIMAL38SPARSE:
-            reducedValues.add(rexBuilder.makeLiteral(
-                vector.getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
-                false));
+            reducedValues.add(rexBuilder.makeApproxLiteral(
+                ((Decimal38SparseVector)vector).getAccessor().getObject(0),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
             break;
 
           case TIME:
