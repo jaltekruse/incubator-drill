@@ -189,7 +189,7 @@ public class ExpressionStringBuilder extends AbstractExprVisitor<Void, StringBui
 
   @Override
   public Void visitDecimal28Constant(Decimal28Expression decExpr, StringBuilder sb) throws RuntimeException {
-    sb.append(decExpr.toString());
+    sb.append(decExpr.getBigDecimal().toString());
     return null;
   }
 

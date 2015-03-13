@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.util.GregorianCalendar;
 import java.util.List;
 
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.expression.FunctionCallFactory;
@@ -428,8 +429,6 @@ public class DrillOptiq {
         return ValueExpressions.getInt(a);
 
       case DECIMAL:
-        /* TODO: Enable using Decimal literals once we have more functions implemented for Decimal
-         * For now continue using Double instead of decimals
 
         int precision = ((BigDecimal) literal.getValue()).precision();
         if (precision <= 9) {
@@ -440,13 +439,10 @@ public class DrillOptiq {
             return ValueExpressions.getDecimal28((BigDecimal)literal.getValue());
         } else if (precision <= 38) {
             return ValueExpressions.getDecimal38((BigDecimal)literal.getValue());
-        } */
-        if (isLiteralNull(literal)) {
-          return createNullExpr(MinorType.FLOAT8);
+        } else {
+          // this should be caught in the SQL validator before it ever reaches here
+          throw new DrillRuntimeException("Unsupported precision value for decimal literal.");
         }
-        double dbl = ((BigDecimal) literal.getValue()).doubleValue();
-        logger.warn("Converting exact decimal into approximate decimal.  Should be fixed once decimal is implemented.");
-        return ValueExpressions.getFloat8(dbl);
       case VARCHAR:
         if (isLiteralNull(literal)) {
           return createNullExpr(MinorType.VARCHAR);
