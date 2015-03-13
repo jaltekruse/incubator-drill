@@ -174,24 +174,29 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             break;
           // TODO - create exact literals once DRILL-2101 is fixed
           case DECIMAL9:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 ((Decimal9Vector)vector).getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
             break;
           case DECIMAL18:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 ((Decimal18Vector)vector).getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
             break;
           case DECIMAL28SPARSE:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 ((Decimal28SparseVector)vector).getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false
+            ));
             break;
           case DECIMAL38SPARSE:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 ((Decimal38SparseVector)vector).getAccessor().getObject(0),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall)));
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                false));
             break;
 
           case TIME:
