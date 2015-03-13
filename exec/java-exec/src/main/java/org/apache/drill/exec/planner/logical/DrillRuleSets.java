@@ -120,15 +120,7 @@ public class DrillRuleSets {
       DrillUnionRule.INSTANCE,
 
       // TODO - DRILL-2218
-      // this is causing a planning bug for the TestAggregateFunctions.testDrill2092
-      // The rules OnMatch is being called, but not modifying the plan
-      // seems like its presence in the optimizer is making another rule fire
-      // that is creating a bad plan, removing all other work, just adding this rule
-      // on top of master causes the same planning issue( even though it still does nothing to the plan itself)
-      //
-      // even when this is firing, the plan with the folded constant expression in the select list is not being chosen,
-      // see TestConstantFolding.testConstExprFolding_InSelect() and DRILL-2218
-      ReduceExpressionsRule.PROJECT_INSTANCE,
+//      ReduceExpressionsRule.PROJECT_INSTANCE,
 
       DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
       DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
