@@ -27,7 +27,7 @@
  * level, copied into generated code blocks to evaluate an entire expression
  * tree. This generated source is built at run-time as schema is discovered.
  *
- * This package contains the {@see DrillSimpleFunc} and {@see DrillAggFunc}
+ * This package contains the {@link DrillSimpleFunc} and {@link DrillAggFunc}
  * interfaces that can be implemented by users to define their own aggregate
  * and scalar functions.
  */
