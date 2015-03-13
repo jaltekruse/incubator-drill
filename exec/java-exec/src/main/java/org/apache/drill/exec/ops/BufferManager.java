@@ -24,7 +24,7 @@ import org.apache.drill.exec.memory.BufferAllocator;
 import java.io.Closeable;
 
 /**
- * Manages a list of {@see DrillBuf}s that can be reallocated as needed. Upon
+ * Manages a list of {@link DrillBuf}s that can be reallocated as needed. Upon
  * re-allocation the old buffer will be freed. Managing a list of these buffers
  * prevents some parts of the system from needing to define a correct location
  * to place the final call to free them.
@@ -34,8 +34,8 @@ import java.io.Closeable;
  * DrillBufs to give UDF writers general purpose buffers we can account for. To prevent the need
  * for UDFs to contain boilerplate to close all of the buffers they request, this list
  * is tracked at a higher level and all of the buffers are freed once we are sure that
- * the code depending on them is done executing (currently {@see FragmentContext}
- * and {@see QueryContext}.
+ * the code depending on them is done executing (currently {@link FragmentContext}
+ * and {@link QueryContext}.
  */
 public class BufferManager implements AutoCloseable {
 
