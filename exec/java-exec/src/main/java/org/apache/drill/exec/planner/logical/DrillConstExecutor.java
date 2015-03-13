@@ -38,8 +38,10 @@ import org.apache.drill.exec.vector.TimeVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.relopt.RelOptPlanner;
+import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.rex.RexBuilder;
 import org.eigenbase.rex.RexNode;
+import org.eigenbase.sql.type.SqlTypeName;
 import org.eigenbase.util.NlsString;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -55,7 +57,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
   // This is a list of all types that cannot be folded at planning time for various reasons, most of the types are
   // currently not supported at all. The reasons for the others can be found in the evaluation code in the reduce method
   public static final List<Object> NON_REDUCIBLE_TYPES =
-      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.INTERVALYEAR, TypeProtos.MinorType.INTERVALDAY, TypeProtos.MinorType.MAP,
+      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.MAP,
                                   TypeProtos.MinorType.LIST, TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
                                   TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
                                   TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.VARBINARY,
@@ -72,6 +74,10 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     this.funcImplReg = funcImplReg;
     this.udfUtilities = udfUtilities;
     this.allocator = allocator;
+  }
+
+  private RelDataType createCalciteTypeWithNullability(RexBuilder rexBuilder, SqlTypeName sqlTypeName, RexNode node) {
+    return rexBuilder.getTypeFactory().createTypeWithNullability(rexBuilder.getTypeFactory().createSqlType(sqlTypeName), node.getType().isNullable());
   }
 
   @Override
@@ -94,41 +100,43 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case INT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Integer)vector.getAccessor().getObject(0)),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTEGER, newCall),
                 false));
             break;
           case BIGINT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Long)vector.getAccessor().getObject(0)),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.BIGINT, newCall),
                 false));
             break;
           case FLOAT4:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Float)vector.getAccessor().getObject(0)),
-                newCall.getType()));
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.FLOAT, newCall),
+                false));
             break;
           case FLOAT8:
-            reducedValues.add(rexBuilder.makeApproxLiteral(
+            reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal((Double)vector.getAccessor().getObject(0)),
-                newCall.getType()));
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DOUBLE, newCall),
+                false));
             break;
           case VARCHAR:
             reducedValues.add(rexBuilder.makeLiteral(
                 new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.VARCHAR, newCall),
                 false));
             break;
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(
                 ((BitVector) vector).getAccessor().get(0) == 1 ? true : false,
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.BOOLEAN, newCall),
                 false));
             break;
           case DATE:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((DateVector)vector).getAccessor().get(0)).toCalendar(null),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DATE, newCall),
                 false));
             break;
 
@@ -149,24 +157,22 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
             // TODO - fix - workaround for now, just create an approximate literal, this will break an equality check with
             // a decimal type
-            reducedValues.add(rexBuilder.makeApproxLiteral(
-                (BigDecimal) vector.getAccessor().getObject(0),
-                newCall.getType()));
+            reducedValues.add(rexBuilder.makeLiteral(
+                vector.getAccessor().getObject(0),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.DECIMAL, newCall),
+                false));
             break;
 
           case TIME:
-            // TODO - review the given precision value, chose the maximum available on SQL server
-            // https://msdn.microsoft.com/en-us/library/bb677243.aspx
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeVector)vector).getAccessor().get(0)).toCalendar(null),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.TIME, newCall),
                 false));
             break;
           case TIMESTAMP:
-            // TODO - review the given precision value, could not find a good recommendation, reusing value of 7 from time
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeStampVector)vector).getAccessor().get(0)).toCalendar(null),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.TIMESTAMP, newCall),
                 false));
             break;
 
@@ -175,18 +181,20 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case VARBINARY:
             reducedValues.add(rexBuilder.makeLiteral(
                 new ByteString((byte[]) vector.getAccessor().getObject(0)),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.VARBINARY, newCall),
                 false));
             break;
 
-          // TODO - not sure how to populate the SqlIntervalQualifier parameter of the rexBuilder.makeIntervalLiteral method
-          // will make these non-reducible at planning time for now
-          case INTERVAL:
           case INTERVALYEAR:
+            reducedValues.add(rexBuilder.makeLiteral(
+                vector.getAccessor().getObject(0),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
+                false));
+            break;
           case INTERVALDAY:
             reducedValues.add(rexBuilder.makeLiteral(
                 vector.getAccessor().getObject(0),
-                newCall.getType(),
+                createCalciteTypeWithNullability(rexBuilder, SqlTypeName.INTERVAL_DAY_TIME, newCall),
                 false));
             break;
 
@@ -199,6 +207,8 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case LIST:
             // fall through for now
 
+          // TODO - Is this interval type supported?
+          case INTERVAL:
           // currently unsupported types
           case TIMESTAMPTZ:
           case TIMETZ:
