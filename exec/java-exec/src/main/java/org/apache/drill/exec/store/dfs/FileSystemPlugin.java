@@ -146,11 +146,12 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
 
       /**
        * This class is designed specifically for use in conjunction with the
-       * {@see PartitionExplorer} interface. This is only designed for accessing
-       * partition information, not modifying it. To avoid confusing users of the
-       * interface this method throws UnsupportedOperationException.
+       * {@link org.apache.drill.exec.store.PartitionExplorer} interface.
+       * This is only designed for accessing partition information, not
+       * modifying it. To avoid confusing users of the interface this
+       * method throws UnsupportedOperationException.
        *
-       * @throws - UnsupportedOperationException - this is not useful here, the
+       * @throws UnsupportedOperationException - this is not useful here, the
        *           list being iterated over should not be used in a way that
        *           removing an element would be meaningful.
        */
