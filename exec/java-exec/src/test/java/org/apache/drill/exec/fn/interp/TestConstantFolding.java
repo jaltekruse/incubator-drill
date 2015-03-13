@@ -53,28 +53,7 @@ public class TestConstantFolding extends PlanTestBase {
     out.println("1,2,3");
     out.close();
   }
-
-  @Test
-  public void testFailingFunctions() throws Exception {
-    test("select to_char(485, '$') from cp.`/store/text/classpath_storage_csv_test.csv`");
-  }
-
-  @Test
-  public void testNowFunc() throws Exception {
-    test("select now() from cp.`/store/text/classpath_storage_csv_test.csv`");
-  }
-
-  @Test
-  public void testLengthFunc() throws Exception {
-    test("select length('This is a test string.','UTF8') from cp.`/store/text/classpath_storage_csv_test.csv`");
-  }
-
-  @Test
-  public void testDecimalFunc() throws Exception {
-    test("select cast('12345.6789' as decimal(9,4)) + cast('-0.000000000000000000000000001' as decimal(28,28)) from cp.`/store/text/classpath_storage_csv_test.csv` limit 1");
-  }
-
-//  @Ignore("WIP")
+  
   @Test
   public void testConstantFolding_allTypes() throws Exception {
 

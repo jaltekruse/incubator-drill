@@ -155,10 +155,9 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 false));
             break;
           case VARCHAR:
-            reducedValues.add(rexBuilder.makeLiteral(
-                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0), Charsets.UTF_8), null, null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARCHAR, newCall),
-                false));
+            reducedValues.add(rexBuilder.makeCharLiteral(
+                new NlsString(new String(((VarCharVector) vector).getAccessor().get(0),
+                    Charsets.UTF_8), null, null)));
             break;
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(
@@ -172,7 +171,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
                 false));
             break;
-          // TODO - create exact literals once DRILL-2101 is fixed
           case DECIMAL9:
             reducedValues.add(rexBuilder.makeLiteral(
                 ((Decimal9Vector)vector).getAccessor().getObject(0),
@@ -232,7 +230,10 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
                 false));
             break;
-
+          case INTERVAL:
+            // cannot represent this as a literal according to calcite, add the original expression back
+            reducedValues.add(newCall);
+            break;
 
           // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
           // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
@@ -242,8 +243,6 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case LIST:
             // fall through for now
 
-          // TODO - Is this interval type supported?
-          case INTERVAL:
           // currently unsupported types
           case TIMESTAMPTZ:
           case TIMETZ:
@@ -263,8 +262,11 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case UINT2:
           case UINT4:
           case UINT8:
-            throw new DrillRuntimeException("Unsupported type returned during planning time constant expression folding: "
-                + materializedExpr.getMajorType().getMinorType() );
+            reducedValues.add(newCall);
+            break;
+          default:
+            reducedValues.add(newCall);
+            break;
         }
       vector.clear();
     }
