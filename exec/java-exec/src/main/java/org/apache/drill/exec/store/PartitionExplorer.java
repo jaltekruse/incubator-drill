@@ -57,8 +57,9 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
  *    where dir0 = maxdir('dfs', 'my_workspace', 'data_directory');
  * </pre>
  *
- * Look at {@see DirectoryExplorers} for examples of UDFs that use this
- * interface to query against partition information.
+ * Look at {@link org.apache.drill.exec.expr.fn.impl.DirectoryExplorers}
+ * for examples of UDFs that use this interface to query against
+ * partition information.
  */
 public interface PartitionExplorer {
 
@@ -85,7 +86,7 @@ public interface PartitionExplorer {
    * provided was a file, or an empty directory.
    *
    * Note to future devs, keep this doc in sync with
-   * {@see StoragePluginPartitionExplorer}.
+   * {@link StoragePluginPartitionExplorer}.
    *
    * @param plugin - name of a storage plugin instance configuration
    * @param workspace - name of a workspace defined under the storage plugin
