@@ -21,7 +21,7 @@ import io.netty.buffer.DrillBuf;
 
 /**
  * Defines the query state and shared resources available to UDFs through
- * injectables. For use in a function, include a {@see javax.inject.Inject}
+ * injectables. For use in a function, include a {@link javax.inject.Inject}
  * annotation on a UDF class member with any of the types available through
  * this interface.
  */
