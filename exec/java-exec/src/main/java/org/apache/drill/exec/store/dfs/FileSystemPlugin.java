@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.dfs;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -169,11 +170,15 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
     List<FileStatus> fileStatuses;
     try {
+      // if the path passed is a file, return an empty list of sub-partitions
+      if (fs.isFile(p)) {
+        return new SubDirectoryList(new ArrayList<FileStatus>());
+      }
       fileStatuses = fs.list(false, p);
     } catch (IOException e) {
       // TODO - figure out if we can separate out the case of a partition not being found, or at least
       // take a look at what the error message comes out looking like to a user.
-      throw new RuntimeException("Error trying to read sub-partitions." , e);
+      throw new PartitionNotFoundException("Error trying to read sub-partitions." , e);
     }
     return new SubDirectoryList(fileStatuses);
   }

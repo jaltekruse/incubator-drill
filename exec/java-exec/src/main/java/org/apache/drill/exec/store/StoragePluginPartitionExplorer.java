@@ -50,12 +50,12 @@ public interface StoragePluginPartitionExplorer {
    *
    * Note to future devs, keep this doc in sync with {@link PartitionExplorer}.
    *
-   * @param workspace - name of a workspace defined under the storage plugin
-   * @param partition - a partition identifier
-   * @return - list of sub-partitions, will be empty if a there is not another
+   * @param workspace name of a workspace defined under the storage plugin
+   * @param partition a partition identifier
+   * @return list of sub-partitions, will be empty if a there is not another
    *           level of sub-partitions below, i.e. hit a leaf partition
-   * @returns PartitionNotFoundException when the partition does not exist in
-   *          the given workspace
+   * @throws PartitionNotFoundException when the partition does not exist in
+   *         the given workspace
    */
   Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
 }
