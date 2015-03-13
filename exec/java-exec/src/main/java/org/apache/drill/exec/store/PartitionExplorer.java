@@ -62,7 +62,6 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
  * partition information.
  */
 public interface PartitionExplorer {
-
   /**
    * For the storage plugin provided,
    * get a list of sub-partitions under a given partition. Individual storage
@@ -88,12 +87,12 @@ public interface PartitionExplorer {
    * Note to future devs, keep this doc in sync with
    * {@link StoragePluginPartitionExplorer}.
    *
-   * @param plugin - name of a storage plugin instance configuration
-   * @param workspace - name of a workspace defined under the storage plugin
-   * @param partition - a partition identifier
-   * @return - list of sub-partitions, will be empty if a there is not another
-   *           level of sub-partitions below, i.e. hit a leaf partition
-   * @returns PartitionNotFoundException when the partition does not exist in
+   * @param plugin name of a storage plugin instance configuration
+   * @param workspace name of a workspace defined under the storage plugin
+   * @param partition a partition identifier
+   * @return list of sub-partitions, will be empty if a there is not another
+   *         level of sub-partitions below, i.e. hit a leaf partition
+   * @throws PartitionNotFoundException when the partition does not exist in
    *          the given workspace
    */
   Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
