@@ -23,7 +23,7 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
  * Exposes partition information for a particular storage plugin.
  *
  * For a more explanation of the current use of this interface see
- * the documentation on {@see PartitionExplorer}.
+ * the documentation on {@link PartitionExplorer}.
  */
 public interface StoragePluginPartitionExplorer {
 
@@ -48,7 +48,7 @@ public interface StoragePluginPartitionExplorer {
    * partitions further down. An empty list would be returned if the partition
    * provided was a file, or an empty directory.
    *
-   * Note to future devs, keep this doc in sync with {@see PartitionExplorer}.
+   * Note to future devs, keep this doc in sync with {@link PartitionExplorer}.
    *
    * @param workspace - name of a workspace defined under the storage plugin
    * @param partition - a partition identifier
