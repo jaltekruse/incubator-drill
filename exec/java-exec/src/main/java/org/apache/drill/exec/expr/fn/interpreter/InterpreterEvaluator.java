@@ -54,6 +54,7 @@ import org.apache.drill.exec.vector.ValueVector;
 
 import javax.inject.Inject;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 
 
 public class InterpreterEvaluator {
@@ -113,16 +114,12 @@ public class InterpreterEvaluator {
           if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
             Class fieldType = f.getType();
-            // can use equality checks [rather than .equals()] because the class reference will be the same
-            if (fieldType == DrillBuf.class) {
-              DrillBuf buf = udfUtilities.getManagedBuffer();
-              f.set(interpreter, buf);
-            } else if (fieldType == QueryDateTimeInfo.class) {
-              f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
-            } else if (fieldType == PartitionExplorer.class) {
-              f.set(interpreter, udfUtilities.getPartitionExplorer());
+            if (UdfUtilities.INJECTABLE_GETTER_METHODS.get(fieldType) != null) {
+              Method method = udfUtilities.getClass().getMethod(UdfUtilities.INJECTABLE_GETTER_METHODS.get(fieldType));
+              f.set(interpreter, method.invoke(udfUtilities));
             } else {
-              // do nothing with the field
+              // Invalid injectable type provided, this should have been caught in FunctionConverter
+              throw new DrillRuntimeException("Invalid injectable type requested in UDF: " + fieldType.getSimpleName());
             }
           } else { // do nothing with non-inject fields here
             continue;
@@ -130,7 +127,6 @@ public class InterpreterEvaluator {
         }
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
-
         return holderExpr;
 
       } catch (Exception ex) {

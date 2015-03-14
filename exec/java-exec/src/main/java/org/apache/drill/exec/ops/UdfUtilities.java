@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.ops;
 
+import com.google.common.collect.ImmutableMap;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.store.PartitionExplorer;
 
@@ -28,11 +29,13 @@ import org.apache.drill.exec.store.PartitionExplorer;
  */
 public interface UdfUtilities {
 
-  public static final Class[] INJECTABLE_TYPES = {
-      DrillBuf.class,
-      QueryDateTimeInfo.class,
-      PartitionExplorer.class
-  };
+  // Map between injectable classes and their respective getter methods
+  // used for code generation
+  public static final ImmutableMap<Class, String> INJECTABLE_GETTER_METHODS =
+      new ImmutableMap.Builder<Class, String>()
+          .put(DrillBuf.class, "getManagedBuffer")
+          .put(QueryDateTimeInfo.class, "getQueryDateTimeInfo")
+          .build();
 
   /**
    * Get the query start time and timezone recorded by the head node during
