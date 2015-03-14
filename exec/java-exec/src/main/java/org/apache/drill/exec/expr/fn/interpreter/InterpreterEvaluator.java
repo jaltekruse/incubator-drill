@@ -109,12 +109,14 @@ public class InterpreterEvaluator {
         for (Field f : fields) {
           if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
-            if (f.getType().equals(DrillBuf.class)) {
+            Class fieldType = f.getType();
+            // can use equality checks [rather than .equals()] because the class reference will be the same
+            if (fieldType == DrillBuf.class) {
               DrillBuf buf = udfUtilities.getManagedBuffer();
               f.set(interpreter, buf);
-            } else if (f.getType().equals(QueryDateTimeInfo.class)) {
+            } else if (fieldType == QueryDateTimeInfo.class) {
               f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
-            } else if (f.getType().equals(PartitionExplorer.class)) {
+            } else if (fieldType == PartitionExplorer.class) {
               f.set(interpreter, udfUtilities.getPartitionExplorer());
             } else {
               // do nothing with the field
