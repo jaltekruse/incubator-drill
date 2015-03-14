@@ -58,8 +58,11 @@ import java.lang.reflect.Field;
 
 public class InterpreterEvaluator {
 
-  public static void evaluateConstantExpr(ValueVector outVV, UdfUtilities udfUtilities, LogicalExpression expr) {
-    evaluate(1, udfUtilities, null, outVV, expr);
+  public static ValueHolder evaluateConstantExpr(UdfUtilities udfUtilities, LogicalExpression expr) {
+    InitVisitor initVisitor = new InitVisitor(udfUtilities);
+    EvalVisitor evalVisitor = new EvalVisitor(null, udfUtilities);
+    expr.accept(initVisitor, null);
+    return expr.accept(evalVisitor, -1);
   }
 
   public static void evaluate(RecordBatch incoming, ValueVector outVV, LogicalExpression expr) {
