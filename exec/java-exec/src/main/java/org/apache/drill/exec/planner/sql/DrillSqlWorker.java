@@ -90,7 +90,7 @@ public class DrillSqlWorker {
         .context(context.getPlannerSettings()) //
         .ruleSets(getRules(context)) //
         .costFactory(costFactory) //
-        .executor(new DrillConstExecutor(context.getFunctionRegistry(), context.getAllocator(), context))
+        .executor(new DrillConstExecutor(context.getFunctionRegistry(), context))
         .build();
     this.planner = Frameworks.getPlanner(config);
     HepProgramBuilder builder = new HepProgramBuilder();
