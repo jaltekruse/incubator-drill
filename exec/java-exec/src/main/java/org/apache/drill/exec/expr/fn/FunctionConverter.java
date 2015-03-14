@@ -192,9 +192,9 @@ public class FunctionConverter {
       } else {
         // workspace work.
         boolean isInject = inject != null;
-        if (isInject && !Arrays.asList(UdfUtilities.INJECTABLE_TYPES).contains(field.getType())) {
-          return failure(String.format("A %s cannot be injected into a %s, available injectable classes are: .",
-              field.getType(), DrillFunc.class.getSimpleName(), Joiner.on(",").join(UdfUtilities.INJECTABLE_TYPES)), clazz, field);
+        if (isInject && UdfUtilities.INJECTABLE_GETTER_METHODS.get(field.getType()) == null) {
+          return failure(String.format("A %s cannot be injected into a %s, available injectable classes are: %s.",
+              field.getType(), DrillFunc.class.getSimpleName(), Joiner.on(",").join(UdfUtilities.INJECTABLE_GETTER_METHODS.keySet())), clazz, field);
         }
         WorkspaceReference wsReference = new WorkspaceReference(field.getType(), field.getName(), isInject);
 
