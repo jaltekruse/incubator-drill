@@ -116,7 +116,7 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
   }
 
   private static class SubDirectoryList implements Iterable<String>{
-    List<FileStatus> fileStatuses;
+    final List<FileStatus> fileStatuses;
 
     SubDirectoryList(List<FileStatus> fileStatuses) {
       this.fileStatuses = fileStatuses;
@@ -129,7 +129,7 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
 
     private class SubDirectoryIterator implements Iterator<String> {
 
-      Iterator<FileStatus> fileStatusIterator;
+      final Iterator<FileStatus> fileStatusIterator;
 
       SubDirectoryIterator(Iterator<FileStatus> fileStatusIterator) {
         this.fileStatusIterator = fileStatusIterator;
@@ -164,10 +164,10 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
   }
 
   public Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-    String workspaceStr = StringFunctionHelpers.getStringFromVarCharHolder(workspace);
-    String partitionStr = StringFunctionHelpers.getStringFromVarCharHolder(partition);
+    final String workspaceStr = StringFunctionHelpers.getStringFromVarCharHolder(workspace);
+    final String partitionStr = StringFunctionHelpers.getStringFromVarCharHolder(partition);
 
-    Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
+    final Path p = new Path(config.workspaces.get(workspaceStr).getLocation() + File.separator + partitionStr);
     List<FileStatus> fileStatuses;
     try {
       // if the path passed is a file, return an empty list of sub-partitions

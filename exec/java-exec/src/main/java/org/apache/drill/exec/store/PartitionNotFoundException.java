@@ -19,9 +19,7 @@ package org.apache.drill.exec.store;
 
 public class PartitionNotFoundException extends Exception {
 
-  public PartitionNotFoundException() {
-    super();
-  }
+  public PartitionNotFoundException() { }
 
   public PartitionNotFoundException(String s) {
     super(s);
