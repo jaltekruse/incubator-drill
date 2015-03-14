@@ -300,7 +300,7 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
 
   @Override
   public Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-    String pluginStr = StringFunctionHelpers.getStringFromVarCharHolder(plugin);
+    final String pluginStr = StringFunctionHelpers.getStringFromVarCharHolder(plugin);
     return plugins.get(pluginStr).getSubPartitions(workspace, partition);
   }
 

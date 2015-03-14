@@ -196,8 +196,8 @@ public class StringFunctionHelpers {
    * this method when absolutely necessary for interacting with interfaces that must take
    * a String.
    *
-   * @param varCharHolder - a mutable wrapper object that stores a variable length char array, always in UTF-8
-   * @return              - String of the bytes interpreted as UTF-8
+   * @param varCharHolder a mutable wrapper object that stores a variable length char array, always in UTF-8
+   * @return              String of the bytes interpreted as UTF-8
    */
   public static String getStringFromVarCharHolder(VarCharHolder varCharHolder) {
     return toStringFromUTF8(varCharHolder.start, varCharHolder.end, varCharHolder.buffer);
