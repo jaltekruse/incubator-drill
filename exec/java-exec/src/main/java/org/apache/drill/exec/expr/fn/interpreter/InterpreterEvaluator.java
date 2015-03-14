@@ -47,14 +47,13 @@ import org.reflections.Reflections;
 
 import javax.inject.Inject;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-
+import java.lang.reflect.Method;
 
 public class InterpreterEvaluator {
 
   public static ValueHolder evaluateConstantExpr(UdfUtilities udfUtilities, LogicalExpression expr) {
-    InitVisitor initVisitor = new InitVisitor(udfUtilities);
-    EvalVisitor evalVisitor = new EvalVisitor(null, udfUtilities);
+    InterpreterInitVisitor initVisitor = new InterpreterInitVisitor(udfUtilities);
+    InterEvalVisitor evalVisitor = new InterEvalVisitor(null, udfUtilities);
     expr.accept(initVisitor, null);
     return expr.accept(evalVisitor, -1);
   }
@@ -106,12 +105,13 @@ public class InterpreterEvaluator {
           // the type available as injectable are only used as injectable
 //          if ( f.getAnnotation(Inject.class) != null ) {
             f.setAccessible(true);
-            if (f.getType().equals(DrillBuf.class)) {
-              f.set(interpreter, udfUtilities.getManagedBuffer());
-            } else if (f.getType().equals(QueryDateTimeInfo.class)) {
-              f.set(interpreter, udfUtilities.getQueryDateTimeInfo());
+            Class fieldType = f.getType();
+            if (UdfUtilities.INJECTABLE_GETTER_METHODS.get(fieldType) != null) {
+              Method method = udfUtilities.getClass().getMethod(UdfUtilities.INJECTABLE_GETTER_METHODS.get(fieldType));
+              f.set(interpreter, method.invoke(udfUtilities));
             } else {
-              // do nothing with the field
+              // Invalid injectable type provided, this should have been caught in FunctionConverter
+              throw new DrillRuntimeException("Invalid injectable type requested in UDF: " + fieldType.getSimpleName());
             }
 //          } else { // do nothing with non-inject fields here
 //            continue;
@@ -119,7 +119,6 @@ public class InterpreterEvaluator {
         }
 
         ((DrillFuncHolderExpr) holderExpr).setInterpreter(interpreter);
-
         return holderExpr;
 
       } catch (Exception ex) {

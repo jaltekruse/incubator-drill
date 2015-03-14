@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.netty.buffer.DrillBuf;
+import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FunctionHolderExpression;
 import org.apache.drill.common.expression.LogicalExpression;
@@ -41,6 +42,7 @@ import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionCostCateg
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.FunctionScope;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate.NullHandling;
 import org.apache.drill.exec.ops.QueryDateTimeInfo;
+import org.apache.drill.exec.ops.UdfUtilities;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 
 import com.google.common.base.Preconditions;
@@ -134,10 +136,15 @@ public abstract class DrillFuncHolder extends AbstractFuncHolder {
       }
 
       if (ref.isInject()) {
-        if (ref.getType() == DrillBuf.class) {
-          g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], g.getMappingSet().getIncoming().invoke("getContext").invoke("getManagedBuffer"));
-        } else if (ref.getType() == QueryDateTimeInfo.class) {
-          g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], g.getMappingSet().getIncoming().invoke("getContext").invoke("getQueryDateTimeInfo"));
+        if (UdfUtilities.INJECTABLE_GETTER_METHODS.get(ref.getType()) != null) {
+          g.getBlock(BlockType.SETUP).assign(
+              workspaceJVars[i],
+              g.getMappingSet().getIncoming().invoke("getContext").invoke(
+                  UdfUtilities.INJECTABLE_GETTER_METHODS.get(ref.getType())
+              ));
+        } else {
+          // Invalid injectable type provided, this should have been caught in FunctionConverter
+          throw new DrillRuntimeException("Invalid injectable type requested in UDF: " + ref.getType().getSimpleName());
         }
       } else {
         //g.getBlock(BlockType.SETUP).assign(workspaceJVars[i], JExpr._new(jtype));
