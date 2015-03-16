@@ -35,6 +35,7 @@ public interface UdfUtilities {
       new ImmutableMap.Builder<Class, String>()
           .put(DrillBuf.class, "getManagedBuffer")
           .put(QueryDateTimeInfo.class, "getQueryDateTimeInfo")
+          .put(PartitionExplorer.class, "getPartitionExplorer")
           .build();
 
   /**
