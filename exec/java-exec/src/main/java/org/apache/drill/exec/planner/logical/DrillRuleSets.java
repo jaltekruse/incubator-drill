@@ -122,8 +122,8 @@ public class DrillRuleSets {
       // TODO - DRILL-2218
 //      ReduceExpressionsRule.PROJECT_INSTANCE,
 
-      DrillReduceExpressionsRules.FILTER_INSTANCE_DRILL,
-      DrillReduceExpressionsRules.CALC_INSTANCE_DRILL,
+      DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL,
+      DrillReduceExpressionsRule.CALC_INSTANCE_DRILL,
 
       DrillReduceAggregatesRule.INSTANCE
       ));
