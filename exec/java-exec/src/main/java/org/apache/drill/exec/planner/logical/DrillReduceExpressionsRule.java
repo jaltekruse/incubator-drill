@@ -26,7 +26,7 @@ import org.eigenbase.rel.rules.ReduceExpressionsRule;
 
 import java.math.BigDecimal;
 
-public class DrillReduceExpressionsRules {
+public class DrillReduceExpressionsRule {
 
   public static final DrillReduceFilterRule FILTER_INSTANCE_DRILL =
       new DrillReduceFilterRule();
