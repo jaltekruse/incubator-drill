@@ -43,6 +43,7 @@ import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Properties;
@@ -64,6 +65,40 @@ public class TestAllocators {
   Drillbit bit;
   RemoteServiceSet serviceSet;
   DrillbitContext bitContext;
+
+  @Test
+  public void allocatorConcurrencyTest() throws Exception {
+    TopLevelAllocator allocator = new TopLevelAllocator();
+
+    int numberChildAllocators = 1000;
+    int memoryPerChild = (int)(DrillConfig.getMaxDirectMemory() * 0.7) / numberChildAllocators;
+    List<BufferAllocator> childAllocators = new ArrayList<>();
+    for (int i = 0; i < numberChildAllocators / 2; i++) {
+      childAllocators.add(allocator.getChildAllocator(null, memoryPerChild, memoryPerChild, false));
+    }
+    for (BufferAllocator bufAlloc : childAllocators) {
+//      bufAlloc.close();
+    }
+
+    new Thread(new AllocatorCloser(allocator)).start();
+    for (int i = 0; i < numberChildAllocators / 2; i++) {
+      childAllocators.add(allocator.getChildAllocator(null, memoryPerChild, memoryPerChild, false));
+    }
+  }
+
+  private class AllocatorCloser implements Runnable {
+
+    BufferAllocator allocator;
+
+    public AllocatorCloser(BufferAllocator allocator) {
+      this.allocator = allocator;
+    }
+
+    @Override
+    public void run() {
+      allocator.close();
+    }
+  }
 
   @Test
   public void testAllocators() throws Exception {
