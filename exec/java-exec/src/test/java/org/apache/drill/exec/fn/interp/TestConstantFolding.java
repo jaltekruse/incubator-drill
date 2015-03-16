@@ -147,6 +147,14 @@ public class TestConstantFolding extends PlanTestBase {
   }
 
   @Test
+  public void testConstExprFolding_moreComplicatedNonDirFilter() throws Exception {
+    testPlanOneExpectedPatternOneExcluded(
+        "select * from cp.`functions/interp/test_input.csv` where columns[1] = ABS((6-18)/(2*3))",
+        "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 1\\), 2\\)",
+        "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 1\\), ABS\\(/\\(-\\(6, 18\\), \\*\\(2, 3\\)\\)\\)\\)");
+  }
+
+  @Test
   public void testConstExprFolding_dontFoldRandom() throws Exception {
     testPlanOneExpectedPatternOneExcluded(
         "select * from cp.`functions/interp/test_input.csv` where columns[0] = random()",
