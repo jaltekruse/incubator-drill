@@ -120,7 +120,7 @@ public class DrillRuleSets {
       DrillUnionRule.INSTANCE,
 
       // TODO - DRILL-2218
-//      ReduceExpressionsRule.PROJECT_INSTANCE,
+      ReduceExpressionsRule.PROJECT_INSTANCE,
 
       DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL,
       DrillReduceExpressionsRule.CALC_INSTANCE_DRILL,
