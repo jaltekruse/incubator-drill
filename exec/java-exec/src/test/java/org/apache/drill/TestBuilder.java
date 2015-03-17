@@ -77,16 +77,18 @@ public class TestBuilder {
   // that would affect the reading of baseline files (i.e. we need robust test for storage engines, project and casting that
   // use this interface) and then rely on the engine for the rest of the tests that will use the baseline queries.
   private List<Map> baselineRecords;
+  private BaseTestQuery baseTestQueryInstance;
 
-  public TestBuilder(BufferAllocator allocator) {
+  public TestBuilder(BufferAllocator allocator, BaseTestQuery baseTestQueryInstance) {
     this.allocator = allocator;
+    this.baseTestQueryInstance = baseTestQueryInstance;
     reset();
   }
 
-  public TestBuilder(BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
+  private TestBuilder(BufferAllocator allocator, BaseTestQuery baseTestQueryInstance, String query, UserBitShared.QueryType queryType, Boolean ordered,
                      boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
-    this(allocator);
+    this(allocator, baseTestQueryInstance);
     if (ordered == null) {
       throw new RuntimeException("Ordering not set, when using a baseline file or query you must explicitly call the ordered() or unOrdered() method on the " + this.getClass().getSimpleName());
     }
@@ -115,7 +117,7 @@ public class TestBuilder {
     if ( ! ordered && highPerformanceComparison ) {
       throw new Exception("High performance comparison only available for ordered checks, to enforce this restriction, ordered() must be called first.");
     }
-    return new DrillTestWrapper(this, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
+    return new DrillTestWrapper(this, baseTestQueryInstance, allocator, query, queryType, baselineOptionSettingQueries, testOptionSettingQueries,
         getValidationQueryType(), ordered, approximateEquality, highPerformanceComparison, baselineRecords);
   }
 
@@ -370,7 +372,7 @@ public class TestBuilder {
     CSVTestBuilder(String baselineFile, BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
                      boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                      String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
-      super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
+      super(allocator, baseTestQueryInstance, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
       this.baselineFilePath = baselineFile;
     }
@@ -460,7 +462,7 @@ public class TestBuilder {
     JSONTestBuilder(String baselineFile, BufferAllocator allocator, String query, UserBitShared.QueryType queryType, Boolean ordered,
                    boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                    String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
-      super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
+      super(allocator, baseTestQueryInstance, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
       this.baselineFilePath = baselineFile;
       this.baselineColumns = new String[] {"*"};
@@ -485,7 +487,7 @@ public class TestBuilder {
                              String query, UserBitShared.QueryType queryType, Boolean ordered,
                              boolean approximateEquality, Map<SchemaPath, TypeProtos.MajorType> baselineTypeMap,
                              String baselineOptionSettingQueries, String testOptionSettingQueries, boolean highPerformanceComparison) {
-      super(allocator, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
+      super(allocator, baseTestQueryInstance, query, queryType, ordered, approximateEquality, baselineTypeMap, baselineOptionSettingQueries, testOptionSettingQueries,
           highPerformanceComparison);
       this.baselineQuery = baselineQuery;
       this.baselineQueryType = baselineQueryType;

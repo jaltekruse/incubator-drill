@@ -181,7 +181,7 @@ public class TestLocalExchange extends PlanTestBase {
     }
   }
 
-  public static void setupHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
+  public void setupHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
     // set slice count to 1, so that we can have more parallelization for testing
     test("ALTER SESSION SET `planner.slice_target`=1");
     // disable the broadcast join to produce plans with HashToRandomExchanges.
@@ -261,19 +261,19 @@ public class TestLocalExchange extends PlanTestBase {
     testJoinHelper(true, true);
   }
 
-  private static void testGroupByHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
+  private void testGroupByHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
     testHelper(isMuxOn, isDeMuxOn, groupByQuery,
         isMuxOn ? 1 : 0, isDeMuxOn ? 1 : 0,
         groupByQueryBaselineColumns, groupByQueryBaselineValues);
   }
 
-  public static void testJoinHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
+  public void testJoinHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
     testHelper(isMuxOn, isDeMuxOn, joinQuery,
         isMuxOn ? 2 : 0, isDeMuxOn ? 2 : 0,
         joinQueryBaselineColumns, joinQueryBaselineValues);
   }
 
-  private static void testHelper(boolean isMuxOn, boolean isDeMuxOn, String query,
+  private void testHelper(boolean isMuxOn, boolean isDeMuxOn, String query,
       int expectedNumMuxes, int expectedNumDeMuxes, String[] baselineColumns, List<Object[]> baselineValues)
       throws Exception {
     setupHelper(isMuxOn, isDeMuxOn);

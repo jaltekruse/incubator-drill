@@ -157,12 +157,12 @@ public class BaseTestQuery extends ExecTest{
     return allocator;
   }
 
-  public static TestBuilder newTest() {
+  public TestBuilder newTest() {
     return testBuilder();
   }
 
-  public static TestBuilder testBuilder() {
-    return new TestBuilder(allocator);
+  public TestBuilder testBuilder() {
+    return new TestBuilder(allocator, this);
   }
 
   @AfterClass
@@ -237,11 +237,11 @@ public class BaseTestQuery extends ExecTest{
     }
   }
 
-  public static void test(String query, Object... args) throws Exception {
+  public void test(String query, Object... args) throws Exception {
     test(String.format(query, args));
   }
 
-  public static void test(String query) throws Exception{
+  public void test(String query) throws Exception{
     query = normalizeQuery(query);
     String[] queries = query.split(";");
     for (String q : queries) {
@@ -261,15 +261,15 @@ public class BaseTestQuery extends ExecTest{
     return query;
   }
 
-  protected static int testLogical(String query) throws Exception{
+  protected int testLogical(String query) throws Exception{
     return testRunAndPrint(QueryType.LOGICAL, query);
   }
 
-  protected static int testPhysical(String query) throws Exception{
+  protected int testPhysical(String query) throws Exception{
     return testRunAndPrint(QueryType.PHYSICAL, query);
   }
 
-  protected static int testSql(String query) throws Exception{
+  protected int testSql(String query) throws Exception{
     return testRunAndPrint(QueryType.SQL, query);
   }
 

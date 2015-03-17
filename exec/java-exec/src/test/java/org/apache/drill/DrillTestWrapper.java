@@ -93,12 +93,14 @@ public class DrillTestWrapper {
   // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
   // and translated into a map in the builder
   private List<Map> baselineRecords;
+  private BaseTestQuery baseTestQueryInstance;
 
-  public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
+  public DrillTestWrapper(TestBuilder testBuilder, BaseTestQuery baseTestQueryInstance, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
                           boolean highPerformanceComparison, List<Map> baselineRecords) {
     this.testBuilder = testBuilder;
+    this.baseTestQueryInstance = baseTestQueryInstance;
     this.allocator = allocator;
     this.query = query;
     this.queryType = queryType;
@@ -267,7 +269,7 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQueryInstance.test(testOptionSettingQueries);
     List<QueryResultBatch> actual = BaseTestQuery.testRunAndReturn(queryType, query);
 
     addTypeInfoIfMissing(actual.get(0), testBuilder);
@@ -280,7 +282,7 @@ public class DrillTestWrapper {
     // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
     // the cases where the baseline is stored in a file.
     if (baselineRecords == null) {
-      BaseTestQuery.test(baselineOptionSettingQueries);
+      baseTestQueryInstance.test(baselineOptionSettingQueries);
       expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
       addToMaterializedResults(expectedRecords2, expected, loader, schema);
     } else {
@@ -312,7 +314,7 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQueryInstance.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
     // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
@@ -325,7 +327,7 @@ public class DrillTestWrapper {
     // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
     // the cases where the baseline is stored in a file.
     if (baselineRecords == null) {
-      BaseTestQuery.test(baselineOptionSettingQueries);
+      baseTestQueryInstance.test(baselineOptionSettingQueries);
       expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
       expectedSuperVectors = addToCombinedVectorResults(expected, loader, schema);
     } else {
@@ -352,14 +354,14 @@ public class DrillTestWrapper {
     RecordBatchLoader loader = new RecordBatchLoader(getAllocator());
     BatchSchema schema = null;
 
-    BaseTestQuery.test(testOptionSettingQueries);
+    baseTestQueryInstance.test(testOptionSettingQueries);
     List<QueryResultBatch> results = BaseTestQuery.testRunAndReturn(queryType, query);
     // To avoid extra work for test writers, types can optionally be inferred from the test query
     addTypeInfoIfMissing(results.get(0), testBuilder);
 
     Map<String, HyperVectorValueIterator> actualSuperVectors = addToHyperVectorMap(results, loader, schema);
 
-    BaseTestQuery.test(baselineOptionSettingQueries);
+    baseTestQueryInstance.test(baselineOptionSettingQueries);
     List<QueryResultBatch> expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
 
     Map<String, HyperVectorValueIterator> expectedSuperVectors = addToHyperVectorMap(expected, loader, schema);

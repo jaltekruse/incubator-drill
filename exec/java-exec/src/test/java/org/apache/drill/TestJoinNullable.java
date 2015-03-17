@@ -29,7 +29,7 @@ public class TestJoinNullable extends BaseTestQuery{
   static final String WORKING_PATH = TestTools.getWorkingPath();
   static final String TEST_RES_PATH = WORKING_PATH + "/src/test/resources";
 
-  private static void enableJoin(boolean hj, boolean mj) throws Exception {
+  private void enableJoin(boolean hj, boolean mj) throws Exception {
 
     test(String.format("alter session set `planner.enable_hashjoin` = %s", hj ? "true":"false"));
     test(String.format("alter session set `planner.enable_mergejoin` = %s", mj ? "true":"false"));
