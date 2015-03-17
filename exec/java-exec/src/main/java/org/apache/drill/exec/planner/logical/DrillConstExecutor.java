@@ -172,7 +172,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             break;
           case DECIMAL18:
             reducedValues.add(rexBuilder.makeLiteral(
-                new BigDecimal(BigInteger.valueOf(((Decimal9Holder) output).value), ((Decimal18Holder)output).scale),
+                new BigDecimal(BigInteger.valueOf(((Decimal18Holder) output).value), ((Decimal18Holder)output).scale),
                 createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
                 false));
             break;
