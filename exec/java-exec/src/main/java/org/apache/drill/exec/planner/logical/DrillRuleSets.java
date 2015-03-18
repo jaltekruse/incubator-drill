@@ -64,7 +64,22 @@ public class DrillRuleSets {
 
   public static RuleSet getDrillBasicRules(QueryContext context) {
     if (DRILL_BASIC_RULES == null) {
-    DRILL_BASIC_RULES = new DrillRuleSet(ImmutableSet.of( //
+
+      PlannerSettings ps = context.getPlannerSettings();
+
+      // This list is used to store rules that can be turned on an off
+      // by user facing planning options
+      List<RelOptRule> userConfigurableRules = new ArrayList<RelOptRule>();
+
+      if (ps.isConstantFoldingEnabled()) {
+        // TODO - DRILL-2218
+        userConfigurableRules.add(ReduceExpressionsRule.PROJECT_INSTANCE);
+
+        userConfigurableRules.add(DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL);
+        userConfigurableRules.add(DrillReduceExpressionsRule.CALC_INSTANCE_DRILL);
+      }
+
+      DRILL_BASIC_RULES = new DrillRuleSet(ImmutableSet.<RelOptRule> builder().add( //
         // Add support for WHERE style joins.
 //      PushFilterPastProjectRule.INSTANCE, // Replaced by DrillPushFilterPastProjectRule
       DrillPushFilterPastProjectRule.INSTANCE,
@@ -119,15 +134,12 @@ public class DrillRuleSets {
       DrillJoinRule.INSTANCE,
       DrillUnionRule.INSTANCE,
 
-      // TODO - DRILL-2218
-      ReduceExpressionsRule.PROJECT_INSTANCE,
-
-      DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL,
-      DrillReduceExpressionsRule.CALC_INSTANCE_DRILL,
-
       DrillReduceAggregatesRule.INSTANCE
-      ));
+      )
+      .addAll(userConfigurableRules)
+      .build());
     }
+
     return DRILL_BASIC_RULES;
   }
 
@@ -139,6 +151,7 @@ public class DrillRuleSets {
   public static final RuleSet getPhysicalRules(QueryContext qcontext) {
     List<RelOptRule> ruleList = new ArrayList<RelOptRule>();
 
+    PlannerSettings ps = qcontext.getPlannerSettings();
 
     ruleList.add(ConvertCountToDirectScan.AGG_ON_PROJ_ON_SCAN);
     ruleList.add(ConvertCountToDirectScan.AGG_ON_SCAN);
@@ -155,11 +168,7 @@ public class DrillRuleSets {
     ruleList.add(PushLimitToTopN.INSTANCE);
     ruleList.add(UnionAllPrule.INSTANCE);
 
-
-
     // ruleList.add(UnionDistinctPrule.INSTANCE);
-
-    PlannerSettings ps = qcontext.getPlannerSettings();
 
     if (ps.isHashAggEnabled()) {
       ruleList.add(HashAggPrule.INSTANCE);
