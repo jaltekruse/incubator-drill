@@ -107,7 +107,7 @@ public class TestConstantFolding extends PlanTestBase {
   }
 
   @Test
-  public void testConstExprFolding_maxDir0() throws Exception {
+  public void testConstExprlding_maxDir0() throws Exception {
     createFiles();
     String path = folder.getRoot().toPath().toString();
     String query = "select * from dfs.`" + path + "/*/*.csv` where dir0 = maxdir('dfs','root','" + path + "')";

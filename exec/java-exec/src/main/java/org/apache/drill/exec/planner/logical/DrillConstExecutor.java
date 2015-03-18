@@ -23,6 +23,7 @@ import org.apache.drill.common.expression.ErrorCollectorImpl;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
+import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.expr.fn.impl.DateUtility;
 import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
@@ -122,6 +123,11 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
 
       ValueHolder output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
       RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
+
+      if (materializedExpr.getMajorType().getMode() == TypeProtos.DataMode.OPTIONAL && TypeHelper.isNull(output)) {
+        reducedValues.add(createTypedNull(materializedExpr.getMajorType(), rexBuilder, newCall));
+        continue;
+      }
 
         switch(materializedExpr.getMajorType().getMinorType()) {
           case INT:
@@ -276,6 +282,79 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             break;
         }
     }
+  }
+
+  private RexNode createTypedNull(TypeProtos.MajorType majorType, RexBuilder rexBuilder, RexNode originalExpr) {
+    switch(majorType.getMinorType()) {
+
+      case INT:
+          return rexBuilder.makeNullLiteral(SqlTypeName.INTEGER);
+      case BIGINT:
+        return rexBuilder.makeNullLiteral(SqlTypeName.BIGINT);
+      case FLOAT4:
+        return rexBuilder.makeNullLiteral(SqlTypeName.FLOAT);
+      case FLOAT8:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DOUBLE);
+      case VARCHAR:
+        return rexBuilder.makeNullLiteral(SqlTypeName.VARCHAR);
+      case BIT:
+        return rexBuilder.makeNullLiteral(SqlTypeName.BOOLEAN);
+      case DATE:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DATE);
+      case DECIMAL9:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
+      case DECIMAL18:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
+      case DECIMAL28SPARSE:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
+      case DECIMAL38SPARSE:
+        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
+      case TIME:
+        return rexBuilder.makeNullLiteral(SqlTypeName.TIME);
+      case TIMESTAMP:
+        return rexBuilder.makeNullLiteral(SqlTypeName.TIMESTAMP);
+      case VARBINARY:
+        return rexBuilder.makeNullLiteral(SqlTypeName.VARBINARY);
+      case INTERVALYEAR:
+        return rexBuilder.makeNullLiteral(SqlTypeName.INTERVAL_YEAR_MONTH);
+      case INTERVALDAY:
+        return rexBuilder.makeNullLiteral(SqlTypeName.INTERVAL_DAY_TIME);
+      case INTERVAL:
+        // cannot represent this as a literal according to calcite, add the original expression back
+        return originalExpr;
+
+      // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
+      // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
+      // as input), so we need to identify functions with these return types as non-foldable until we have a
+      // literal representation for them
+      case MAP:
+      case LIST:
+        // fall through for now
+
+        // currently unsupported types
+      case TIMESTAMPTZ:
+      case TIMETZ:
+      case LATE:
+      case TINYINT:
+      case SMALLINT:
+      case GENERIC_OBJECT:
+      case NULL:
+      case DECIMAL28DENSE:
+      case DECIMAL38DENSE:
+      case MONEY:
+      case FIXEDBINARY:
+      case FIXEDCHAR:
+      case FIXED16CHAR:
+      case VAR16CHAR:
+      case UINT1:
+      case UINT2:
+      case UINT4:
+      case UINT8:
+        return originalExpr;
+      default:
+        return originalExpr;
+    }
+
   }
 }
 

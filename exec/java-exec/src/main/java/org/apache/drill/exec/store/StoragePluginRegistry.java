@@ -68,7 +68,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.io.Resources;
 
-public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>>, PartitionExplorer {
+public class StoragePluginRegistry implements Iterable<Map.Entry<String, StoragePlugin>> {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StoragePluginRegistry.class);
 
   public static final String SYS_PLUGIN = "sys";
@@ -296,12 +296,6 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
 
   public DrillSchemaFactory getSchemaFactory() {
     return schemaFactory;
-  }
-
-  @Override
-  public Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException {
-    final String pluginStr = StringFunctionHelpers.getStringFromVarCharHolder(plugin);
-    return plugins.get(pluginStr).getSubPartitions(workspace, partition);
   }
 
   public class DrillSchemaFactory implements SchemaFactory {

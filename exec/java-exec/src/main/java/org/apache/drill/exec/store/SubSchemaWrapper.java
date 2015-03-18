@@ -43,6 +43,13 @@ public class SubSchemaWrapper extends AbstractSchema {
   }
 
   @Override
+  public Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+                                           Collection<String> partitionValues
+  ) throws PartitionNotFoundException {
+    return getSubSchemaNames();
+  }
+
+  @Override
   public AbstractSchema getDefaultSchema() {
     return innerSchema.getDefaultSchema();
   }
@@ -63,7 +70,7 @@ public class SubSchemaWrapper extends AbstractSchema {
   }
 
   @Override
-  public Schema getSubSchema(String name) {
+  public AbstractSchema getSubSchema(String name) {
     return innerSchema.getSubSchema(name);
   }
 

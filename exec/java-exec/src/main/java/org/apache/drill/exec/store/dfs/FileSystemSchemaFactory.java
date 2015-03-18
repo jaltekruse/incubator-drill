@@ -17,7 +17,9 @@
  */
 package org.apache.drill.exec.store.dfs;
 
+import java.io.File;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -30,11 +32,14 @@ import net.hydromatic.optiq.Table;
 import org.apache.drill.exec.planner.logical.CreateTableEntry;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.store.AbstractSchema;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.SchemaFactory;
 import org.apache.drill.exec.store.dfs.WorkspaceSchemaFactory.WorkspaceSchema;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 
 
 /**
@@ -83,6 +88,13 @@ public class FileSystemSchemaFactory implements SchemaFactory{
     }
 
     @Override
+    public Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+        Collection<String> partitionValues
+    ) throws PartitionNotFoundException {
+      return getSubSchemaNames();
+    }
+
+    @Override
     public boolean showInInformationSchema() {
       return false;
     }
@@ -108,7 +120,7 @@ public class FileSystemSchemaFactory implements SchemaFactory{
     }
 
     @Override
-    public Schema getSubSchema(String name) {
+    public AbstractSchema getSubSchema(String name) {
       return schemaMap.get(name);
     }
 

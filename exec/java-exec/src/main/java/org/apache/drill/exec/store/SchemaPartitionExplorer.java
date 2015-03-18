@@ -19,13 +19,15 @@ package org.apache.drill.exec.store;
 
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
+import java.util.Collection;
+
 /**
  * Exposes partition information for a particular storage plugin.
  *
  * For a more explanation of the current use of this interface see
  * the documentation on {@link PartitionExplorer}.
  */
-public interface StoragePluginPartitionExplorer {
+public interface SchemaPartitionExplorer {
 
   /**
    * Get a list of sub-partitions under a given partition. Individual storage
@@ -57,5 +59,6 @@ public interface StoragePluginPartitionExplorer {
    * @throws PartitionNotFoundException when the partition does not exist in
    *         the given workspace
    */
-  Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
+  Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+                                    Collection<String> partitionValues) throws PartitionNotFoundException;
 }

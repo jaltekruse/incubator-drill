@@ -18,6 +18,7 @@
 package org.apache.drill.exec.expr.fn.impl;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -26,6 +27,8 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 public class DirectoryExplorers {
@@ -49,7 +52,12 @@ public class DirectoryExplorers {
     public void eval() {
       Iterable<String> subPartitions = null;
       try {
-        subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
+        subPartitions = partitionExplorer.getSubPartitions(
+            StringFunctionHelpers.getStringFromVarCharHolder(plugin) + "." +
+                StringFunctionHelpers.getStringFromVarCharHolder(workspace),
+            StringFunctionHelpers.getStringFromVarCharHolder(partition),
+            new ArrayList<String>(),
+            new ArrayList<String>());
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
             String.format("Error in %s function: Partition `%s`.`%s` does not exist in storage plugin %s ",
