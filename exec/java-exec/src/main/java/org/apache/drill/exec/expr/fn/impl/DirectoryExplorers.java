@@ -18,6 +18,7 @@
 package org.apache.drill.exec.expr.fn.impl;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -26,6 +27,8 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 public class DirectoryExplorers {
@@ -36,9 +39,8 @@ public class DirectoryExplorers {
   @FunctionTemplate(name = MAXDIR_NAME, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.INTERNAL)
   public static class MaxDir implements DrillSimpleFunc {
 
-    @Param VarCharHolder plugin;
-    @Param  VarCharHolder workspace;
-    @Param  VarCharHolder partition;
+    @Param VarCharHolder schema;
+    @Param  VarCharHolder table;
     @Output VarCharHolder out;
     @Inject DrillBuf buffer;
     @Inject org.apache.drill.exec.store.PartitionExplorer partitionExplorer;
@@ -49,25 +51,26 @@ public class DirectoryExplorers {
     public void eval() {
       Iterable<String> subPartitions = null;
       try {
-        subPartitions = partitionExplorer.getSubPartitions(plugin, workspace, partition);
+        subPartitions = partitionExplorer.getSubPartitions(
+            StringFunctionHelpers.getStringFromVarCharHolder(schema),
+            StringFunctionHelpers.getStringFromVarCharHolder(table),
+            new ArrayList<String>(),
+            new ArrayList<String>());
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
-            String.format("Error in %s function: Partition `%s`.`%s` does not exist in storage plugin %s ",
-              org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
-              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(workspace),
-              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(plugin),
-              org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(partition)
-              )
+            String.format("Error in %s function: Table %s does not exist in schema %s ",
+                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(table),
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema))
         );
       }
       Iterator<String> partitionIterator = subPartitions.iterator();
       if (!partitionIterator.hasNext()) {
         throw new RuntimeException(
-            String.format("Error in %s function: Partition `%s`.`%s` in storage plugin %s does not contain sub-partitions.",
+            String.format("Error in %s function: Table %s in schema %s does not contain sub-partitions.",
                 org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
-                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(workspace),
-                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(plugin),
-                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(partition)
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(table),
+                org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema)
             )
         );
       }

@@ -26,7 +26,7 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 
-public interface StoragePlugin extends SchemaFactory, StoragePluginPartitionExplorer {
+public interface StoragePlugin extends SchemaFactory {
   public boolean supportsRead();
 
   public boolean supportsWrite();
