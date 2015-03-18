@@ -19,6 +19,8 @@ package org.apache.drill.exec.store;
 
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
+import java.util.Collection;
+
 /**
  * Exposes partition information to UDFs to allow queries to limit reading
  * partitions dynamically.
@@ -87,13 +89,17 @@ public interface PartitionExplorer {
    * Note to future devs, keep this doc in sync with
    * {@link StoragePluginPartitionExplorer}.
    *
-   * @param plugin name of a storage plugin instance configuration
-   * @param workspace name of a workspace defined under the storage plugin
-   * @param partition a partition identifier
+   * @param schema schema path, can be complete or relative to the default schema
+   * @param partitionColumns a list of partitions to match
+   * @param partitionValues list of values of each partition (corresponding
+   *                        to the partition column list)
    * @return list of sub-partitions, will be empty if a there is not another
    *         level of sub-partitions below, i.e. hit a leaf partition
    * @throws PartitionNotFoundException when the partition does not exist in
    *          the given workspace
    */
-  Iterable<String> getSubPartitions(VarCharHolder plugin, VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
+  Iterable<String> getSubPartitions(VarCharHolder schema,
+                                    Collection<VarCharHolder> partitionColumns,
+                                    Collection<VarCharHolder> partitionValues)
+      throws PartitionNotFoundException;
 }
