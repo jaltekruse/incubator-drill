@@ -43,7 +43,7 @@ import java.util.Collection;
  * latest month of data, without having to be updated periodically.
  * While it is possible to write a query like the one below, it will be very
  * expensive, as this currently is materialized as a full table scan followed
- * by a filter.
+ * by an aggregation on the partition dir0 column and finally a filter.
  *
  * <pre>
  * select * from dfs.my_workspace.data_directory where dir0 in

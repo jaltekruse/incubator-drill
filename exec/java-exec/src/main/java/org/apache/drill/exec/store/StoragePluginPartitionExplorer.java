@@ -19,6 +19,8 @@ package org.apache.drill.exec.store;
 
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
+import java.util.Collection;
+
 /**
  * Exposes partition information for a particular storage plugin.
  *
@@ -57,5 +59,6 @@ public interface StoragePluginPartitionExplorer {
    * @throws PartitionNotFoundException when the partition does not exist in
    *         the given workspace
    */
-  Iterable<String> getSubPartitions(VarCharHolder workspace, VarCharHolder partition) throws PartitionNotFoundException;
+  Iterable<String> getSubPartitions(Collection<VarCharHolder> partitionColumns,
+                                    Collection<VarCharHolder> partitionValues) throws PartitionNotFoundException;
 }
