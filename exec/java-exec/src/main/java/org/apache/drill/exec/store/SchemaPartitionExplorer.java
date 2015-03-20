@@ -27,7 +27,7 @@ import java.util.Collection;
  * For a more explanation of the current use of this interface see
  * the documentation on {@link PartitionExplorer}.
  */
-public interface StoragePluginPartitionExplorer {
+public interface SchemaPartitionExplorer {
 
   /**
    * Get a list of sub-partitions under a given partition. Individual storage

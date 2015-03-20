@@ -29,12 +29,13 @@ import net.hydromatic.optiq.Schema;
 import net.hydromatic.optiq.SchemaPlus;
 import net.hydromatic.optiq.Table;
 
+import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.planner.logical.CreateTableEntry;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
-public abstract class AbstractSchema implements Schema{
+public abstract class AbstractSchema implements Schema, SchemaPartitionExplorer {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractSchema.class);
 
   protected final List<String> schemaPath;
@@ -46,6 +47,12 @@ public abstract class AbstractSchema implements Schema{
     schemaPath.addAll(parentSchemaPath);
     schemaPath.add(name);
     this.name = name;
+  }
+
+  @Override
+  public Iterable<String> getSubPartitions(Collection<VarCharHolder> partitionColumns, Collection<VarCharHolder> partitionValues) throws PartitionNotFoundException {
+    throw new UnsupportedOperationException("Storage plugin of type: " + this.getClass().getSimpleName() +
+        "does not support retrieving sub-partition information.");
   }
 
   public String getName() {
@@ -96,7 +103,7 @@ public abstract class AbstractSchema implements Schema{
   }
 
   @Override
-  public Schema getSubSchema(String name) {
+  public AbstractSchema getSubSchema(String name) {
     return null;
   }
 

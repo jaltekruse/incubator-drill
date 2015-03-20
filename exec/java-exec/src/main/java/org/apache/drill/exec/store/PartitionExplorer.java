@@ -87,7 +87,7 @@ public interface PartitionExplorer {
    * provided was a file, or an empty directory.
    *
    * Note to future devs, keep this doc in sync with
-   * {@link StoragePluginPartitionExplorer}.
+   * {@link SchemaPartitionExplorer}.
    *
    * @param schema schema path, can be complete or relative to the default schema
    * @param partitionColumns a list of partitions to match
