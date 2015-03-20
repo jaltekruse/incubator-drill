@@ -44,6 +44,12 @@ public class TestFlatten extends BaseTestQuery {
   }
 
   @Test
+  public void testFlatten_Drill2162() throws Exception {
+    // TODO - produce file programmatically
+    test("select uid, flatten(d.lst_lst[1]) lst1, flatten(d.lst_lst[0]) lst0, flatten(d.lst_lst) lst from cp.`/flatten/drill-2162.json` d");
+  };
+
+  @Test
   public void drill1671() throws Exception{
     int rowCount = testSql("select * from (select count(*) as cnt from (select id, flatten(evnts1), flatten(evnts2), flatten(evnts3), flatten(evnts4), flatten(evnts5), flatten(evnts6), flatten(evnts7), flatten(evnts8), flatten(evnts9), flatten(evnts10), flatten(evnts11) from cp.`/flatten/many-arrays-50.json`)x )y where cnt = 2048");
     assertEquals(rowCount, 1);

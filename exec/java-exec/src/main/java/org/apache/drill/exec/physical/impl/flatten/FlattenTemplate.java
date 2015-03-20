@@ -44,6 +44,7 @@ public abstract class FlattenTemplate implements Flattener {
   RepeatedVector fieldToFlatten;
   RepeatedAccessor accessor;
   private int groupIndex;
+  private static final int OUTPUT_BATCH_SIZE = 4*1024;
 
   // this allows for groups to be written between batches if we run out of space, for cases where we have finished
   // a batch on the boundary it will be set to 0
@@ -86,7 +87,7 @@ public abstract class FlattenTemplate implements Flattener {
           for ( ; groupIndex < groupCount; groupIndex++) {
             currGroupSize = accessor.getGroupSizeAtIndex(groupIndex);
             for ( ; childIndexWithinCurrGroup < currGroupSize; childIndexWithinCurrGroup++) {
-              if (!doEval(groupIndex, firstOutputIndex)) {
+              if (firstOutputIndex == OUTPUT_BATCH_SIZE || !doEval(groupIndex, firstOutputIndex)) {
                 break outer;
               }
               firstOutputIndex++;
