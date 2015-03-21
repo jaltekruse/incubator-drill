@@ -63,7 +63,7 @@ public class SubSchemaWrapper extends AbstractSchema {
   }
 
   @Override
-  public Schema getSubSchema(String name) {
+  public AbstractSchema getSubSchema(String name) {
     return innerSchema.getSubSchema(name);
   }
 

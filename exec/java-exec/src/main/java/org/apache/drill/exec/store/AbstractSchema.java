@@ -50,9 +50,13 @@ public abstract class AbstractSchema implements Schema, SchemaPartitionExplorer 
   }
 
   @Override
-  public Iterable<String> getSubPartitions(Collection<VarCharHolder> partitionColumns, Collection<VarCharHolder> partitionValues) throws PartitionNotFoundException {
-    throw new UnsupportedOperationException("Storage plugin of type: " + this.getClass().getSimpleName() +
-        "does not support retrieving sub-partition information.");
+  public Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+                                           Collection<String> partitionValues
+                                          ) throws PartitionNotFoundException {
+    throw new UnsupportedOperationException(
+        String.format("Storage plugin of type: %s " +
+                      " does not support retrieving sub-partition information.",
+                      this.getClass().getSimpleName()));
   }
 
   public String getName() {

@@ -59,6 +59,6 @@ public interface SchemaPartitionExplorer {
    * @throws PartitionNotFoundException when the partition does not exist in
    *         the given workspace
    */
-  Iterable<String> getSubPartitions(Collection<VarCharHolder> partitionColumns,
-                                    Collection<VarCharHolder> partitionValues) throws PartitionNotFoundException;
+  Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+                                    Collection<String> partitionValues) throws PartitionNotFoundException;
 }
