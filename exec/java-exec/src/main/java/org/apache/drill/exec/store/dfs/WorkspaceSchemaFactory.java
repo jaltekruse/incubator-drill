@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.dfs;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +44,7 @@ import org.apache.drill.exec.planner.logical.FileSystemCreateTableEntry;
 import org.apache.drill.exec.planner.sql.ExpandingConcurrentMap;
 import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.store.AbstractSchema;
+import org.apache.drill.exec.store.PartitionNotFoundException;
 import org.apache.drill.exec.store.sys.PStore;
 import org.apache.drill.exec.store.sys.PStoreConfig;
 import org.apache.drill.exec.store.sys.PStoreProvider;
@@ -178,6 +180,13 @@ public class WorkspaceSchemaFactory implements ExpandingConcurrentMap.MapValueFa
         knownViews.put(view.getName(), viewPath.toString());
       }
       return replaced;
+    }
+
+    @Override
+    public Iterable<String> getSubPartitions(Collection<String> partitionColumns,
+                                             Collection<String> partitionValues
+    ) throws PartitionNotFoundException {
+      return getSubSchemaNames();
     }
 
     public boolean viewExists(String viewName) throws Exception {
