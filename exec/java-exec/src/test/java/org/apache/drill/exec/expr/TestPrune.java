@@ -18,10 +18,42 @@
 package org.apache.drill.exec.expr;
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.PlanTestBase;
 import org.apache.drill.common.util.TestTools;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
-public class TestPrune extends BaseTestQuery {
+import java.io.File;
+import java.io.PrintWriter;
+
+public class TestPrune extends PlanTestBase {
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
+  // This should run as a @BeforeClass, but these methods must be defined static.
+  // Unfortunately, the temporary folder with an @Rule annotation cannot be static, this issue
+  // has been fixed in a newer version of JUnit
+  // http://stackoverflow.com/questions/2722358/junit-rule-temporaryfolder
+  public void createFiles() throws Exception{
+    File bigFolder = folder.newFolder("bigfile");
+    File bigFile = new File (bigFolder, "bigfile.csv");
+    PrintWriter out = new PrintWriter(bigFile);
+    out.println("1,2,3");
+    out.println("1,2,3");
+    out.println("1,2,3");
+    out.println("1,2,3");
+    out.println("1,2,3");
+    out.println("1,2,3");
+    out.close();
+
+    File smallFolder = folder.newFolder("smallfile");
+    File smallFile = new File (smallFolder, "smallfile.csv");
+    out = new PrintWriter(smallFile);
+    out.println("1,2,3");
+    out.close();
+  }
 
   String MULTILEVEL = TestTools.getWorkingPath() + "/../java-exec/src/test/resources/multilevel";
 
@@ -34,6 +66,17 @@ public class TestPrune extends BaseTestQuery {
   public void pruneSimple1() throws Exception {
     test(String.format("select * from dfs.`%s/csv` where dir1 in ('Q1', 'Q2')", MULTILEVEL));
   }
+
+  @Test
+  public void testConstExprFolding_withPartitionPrune() throws Exception {
+    createFiles();
+    String path = folder.getRoot().toPath().toString();
+    testPlanOneExpectedPatternOneExcluded(
+      "select * from dfs.`" + path + "/*/*.csv` where dir0 = 'smallfile'",
+      "smallfile",
+      "bigfile");
+  }
+
 
   @Test
   public void pruneCompound2() throws Exception {
