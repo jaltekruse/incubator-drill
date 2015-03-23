@@ -85,7 +85,7 @@ public class DrillRuleSets {
 
     if (ps.isConstantFoldingEnabled()) {
       // TODO - DRILL-2218
-      userConfigurableRules.add(ReduceExpressionsRule.PROJECT_INSTANCE);
+//      userConfigurableRules.add(ReduceExpressionsRule.PROJECT_INSTANCE);
 
       userConfigurableRules.add(DrillReduceExpressionsRule.FILTER_INSTANCE_DRILL);
       userConfigurableRules.add(DrillReduceExpressionsRule.CALC_INSTANCE_DRILL);
