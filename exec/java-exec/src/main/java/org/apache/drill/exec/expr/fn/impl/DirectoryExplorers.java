@@ -27,6 +27,8 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 
 public class DirectoryExplorers {
@@ -52,9 +54,10 @@ public class DirectoryExplorers {
       try {
         subPartitions = partitionExplorer.getSubPartitions(
             StringFunctionHelpers.getStringFromVarCharHolder(plugin) + "." +
-            StringFunctionHelpers.getStringFromVarCharHolder(workspace),
-            Lists.newArrayList("dir0"),
-            Lists.newArrayList(StringFunctionHelpers.getStringFromVarCharHolder(partition)));
+                StringFunctionHelpers.getStringFromVarCharHolder(workspace),
+            StringFunctionHelpers.getStringFromVarCharHolder(partition),
+            new ArrayList<String>(),
+            new ArrayList<String>());
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
             String.format("Error in %s function: Partition `%s`.`%s` does not exist in storage plugin %s ",

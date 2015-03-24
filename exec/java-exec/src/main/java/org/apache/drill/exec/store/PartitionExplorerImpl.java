@@ -25,18 +25,19 @@ import java.util.Collection;
 
 public class PartitionExplorerImpl implements PartitionExplorer {
 
-  private final SchemaPlus rootSchema;
+  private final AbstractSchema rootSchema;
 
-  public PartitionExplorerImpl(SchemaPlus rootSchema) {
+  public PartitionExplorerImpl(AbstractSchema rootSchema) {
     this.rootSchema = rootSchema;
   }
 
   @Override
   public Iterable<String> getSubPartitions(String schema,
+                                           String table,
                                            Collection<String> partitionColumns,
                                            Collection<String> partitionValues
                                            ) throws PartitionNotFoundException {
-    return ((AbstractSchema)this.rootSchema.getSubSchema(schema).unwrap(AbstractSchema.class))
+    return ((AbstractSchema)this.rootSchema).getSubSchema(schema).getTable(table).unwrap(AbstractSchema.class))
         .getSubPartitions(partitionColumns, partitionValues);
   }
 }

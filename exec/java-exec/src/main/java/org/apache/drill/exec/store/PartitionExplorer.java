@@ -99,6 +99,7 @@ public interface PartitionExplorer {
    *          the given workspace
    */
   Iterable<String> getSubPartitions(String schema,
+                                    String table,
                                     Collection<String> partitionColumns,
                                     Collection<String> partitionValues)
       throws PartitionNotFoundException;
