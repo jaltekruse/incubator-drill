@@ -124,7 +124,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       ValueHolder output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
       RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
-      if (materializedExpr.getMajorType().getMode() == TypeProtos.DataMode.OPTIONAL) {
+      if (materializedExpr.getMajorType().getMode() == TypeProtos.DataMode.OPTIONAL && TypeHelper.isNull(output)) {
         reducedValues.add(createTypedNull(materializedExpr.getMajorType(), rexBuilder, newCall));
         continue;
       }
