@@ -118,11 +118,120 @@ public abstract class PruneScanRule extends RelOptRule {
     this.context = context;
   }
 
+  protected List<String> filterPartitions(RexNode condition, List<String> fieldNames) {
+
+    Map<Integer, String> dirNames = Maps.newHashMap();
+    List<String> fieldNames = scanRel.getRowType().getFieldNames();
+    BitSet columnBitset = new BitSet();
+    BitSet dirBitset = new BitSet();
+    {
+      int colIndex = 0;
+      for(String field : fieldNames){
+        final Integer dirIndex = descriptor.getIdIfValid(field);
+        if(dirIndex != null){
+          dirNames.put(dirIndex, field);
+          dirBitset.set(dirIndex);
+          columnBitset.set(colIndex);
+        }
+        colIndex++;
+      }
+    }
+
+    if(dirBitset.isEmpty()){
+      return;
+    }
+
+    FindPartitionConditions c = new FindPartitionConditions(columnBitset, filterRel.getCluster().getRexBuilder());
+    c.analyze(condition);
+    RexNode pruneCondition = c.getFinalCondition();
+
+    if(pruneCondition == null){
+      return;
+    }
+
+    // set up the partitions
+    final FormatSelection origSelection = (FormatSelection)scanRel.getDrillTable().getSelection();
+    final List<String> files = origSelection.getAsFiles();
+    final String selectionRoot = origSelection.getSelection().selectionRoot;
+    List<PathPartition> partitions = Lists.newLinkedList();
+
+    // let's only deal with one batch of files for now.
+    if(files.size() > Character.MAX_VALUE){
+      return;
+    }
+
+    for(String f : files){
+      partitions.add(new PathPartition(descriptor.getMaxHierarchyLevel(), selectionRoot, f));
+    }
+
+    final NullableBitVector output = new NullableBitVector(MaterializedField.create("", Types.optional(MinorType.BIT)), allocator);
+    final VectorContainer container = new VectorContainer();
+
+    final NullableVarCharVector[] vectors = new NullableVarCharVector[descriptor.getMaxHierarchyLevel()];
+    for(int dirIndex : BitSets.toIter(dirBitset)){
+      NullableVarCharVector vector = new NullableVarCharVector(MaterializedField.create(dirNames.get(dirIndex), Types.optional(MinorType.VARCHAR)), allocator);
+      vector.allocateNew(5000, partitions.size());
+      vectors[dirIndex] = vector;
+      container.add(vector);
+    }
+
+    // populate partition vectors.
+    int record = 0;
+    for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
+      final PathPartition partition = iter.next();
+      for(int dirIndex : BitSets.toIter(dirBitset)){
+        if(partition.dirs[dirIndex] == null){
+          vectors[dirIndex].getMutator().setNull(record);
+        }else{
+          byte[] bytes = partition.dirs[dirIndex].getBytes(Charsets.UTF_8);
+          vectors[dirIndex].getMutator().setSafe(record, bytes, 0, bytes.length);
+        }
+      }
+    }
+
+    for(NullableVarCharVector v : vectors){
+      if(v == null){
+        continue;
+      }
+      v.getMutator().setValueCount(partitions.size());
+    }
+
+
+    // materialize the expression
+    logger.debug("Attempting to prune {}", pruneCondition);
+    LogicalExpression expr = DrillOptiq.toDrill(new DrillParseContext(), scanRel, pruneCondition);
+    ErrorCollectorImpl errors = new ErrorCollectorImpl();
+    LogicalExpression materializedExpr = ExpressionTreeMaterializer.materialize(expr, container, errors, context.getFunctionRegistry());
+    if (errors.getErrorCount() != 0) {
+      logger.warn("Failure while materializing expression [{}].  Errors: {}", expr, errors);
+    }
+
+    output.allocateNew(partitions.size());
+    InterpreterEvaluator.evaluate(partitions.size(), context, container, output, materializedExpr);
+    record = 0;
+
+    List<String> newFiles = Lists.newArrayList();
+    for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
+      PathPartition part = iter.next();
+      if(!output.getAccessor().isNull(record) && output.getAccessor().get(record) == 1){
+        newFiles.add(part.file);
+      }
+    }
+
+    if(newFiles.isEmpty()){
+      newFiles.add(files.get(0));
+    }
+
+    if(newFiles.size() == files.size()){
+      return;
+    }
+    return null;
+  }
+
   protected void doOnMatch(RelOptRuleCall call, DrillFilterRel filterRel, DrillProjectRel projectRel, DrillScanRel scanRel) {
     PlannerSettings settings = context.getPlannerSettings();
     FileSystemPartitionDescriptor descriptor = new FileSystemPartitionDescriptor(settings.getFsPartitionColumnLabel());
     final BufferAllocator allocator = context.getAllocator();
-
 
     RexNode condition = null;
     if(projectRel == null){
@@ -179,69 +288,69 @@ public abstract class PruneScanRule extends RelOptRule {
     final NullableBitVector output = new NullableBitVector(MaterializedField.create("", Types.optional(MinorType.BIT)), allocator);
     final VectorContainer container = new VectorContainer();
 
-    try{
-      final NullableVarCharVector[] vectors = new NullableVarCharVector[descriptor.getMaxHierarchyLevel()];
+    final NullableVarCharVector[] vectors = new NullableVarCharVector[descriptor.getMaxHierarchyLevel()];
+    for(int dirIndex : BitSets.toIter(dirBitset)){
+      NullableVarCharVector vector = new NullableVarCharVector(MaterializedField.create(dirNames.get(dirIndex), Types.optional(MinorType.VARCHAR)), allocator);
+      vector.allocateNew(5000, partitions.size());
+      vectors[dirIndex] = vector;
+      container.add(vector);
+    }
+
+    // populate partition vectors.
+    int record = 0;
+    for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
+      final PathPartition partition = iter.next();
       for(int dirIndex : BitSets.toIter(dirBitset)){
-        NullableVarCharVector vector = new NullableVarCharVector(MaterializedField.create(dirNames.get(dirIndex), Types.optional(MinorType.VARCHAR)), allocator);
-        vector.allocateNew(5000, partitions.size());
-        vectors[dirIndex] = vector;
-        container.add(vector);
-      }
-
-      // populate partition vectors.
-      int record = 0;
-      for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
-        final PathPartition partition = iter.next();
-        for(int dirIndex : BitSets.toIter(dirBitset)){
-          if(partition.dirs[dirIndex] == null){
-            vectors[dirIndex].getMutator().setNull(record);
-          }else{
-            byte[] bytes = partition.dirs[dirIndex].getBytes(Charsets.UTF_8);
-            vectors[dirIndex].getMutator().setSafe(record, bytes, 0, bytes.length);
-          }
+        if(partition.dirs[dirIndex] == null){
+          vectors[dirIndex].getMutator().setNull(record);
+        }else{
+          byte[] bytes = partition.dirs[dirIndex].getBytes(Charsets.UTF_8);
+          vectors[dirIndex].getMutator().setSafe(record, bytes, 0, bytes.length);
         }
       }
+    }
 
-      for(NullableVarCharVector v : vectors){
-        if(v == null){
-          continue;
-        }
-        v.getMutator().setValueCount(partitions.size());
+    for(NullableVarCharVector v : vectors){
+      if(v == null){
+        continue;
       }
+      v.getMutator().setValueCount(partitions.size());
+    }
 
 
-      // materialize the expression
-      logger.debug("Attempting to prune {}", pruneCondition);
-      LogicalExpression expr = DrillOptiq.toDrill(new DrillParseContext(), scanRel, pruneCondition);
-      ErrorCollectorImpl errors = new ErrorCollectorImpl();
-      LogicalExpression materializedExpr = ExpressionTreeMaterializer.materialize(expr, container, errors, context.getFunctionRegistry());
-      if (errors.getErrorCount() != 0) {
-        logger.warn("Failure while materializing expression [{}].  Errors: {}", expr, errors);
+    // materialize the expression
+    logger.debug("Attempting to prune {}", pruneCondition);
+    LogicalExpression expr = DrillOptiq.toDrill(new DrillParseContext(), scanRel, pruneCondition);
+    ErrorCollectorImpl errors = new ErrorCollectorImpl();
+    LogicalExpression materializedExpr = ExpressionTreeMaterializer.materialize(expr, container, errors, context.getFunctionRegistry());
+    if (errors.getErrorCount() != 0) {
+      logger.warn("Failure while materializing expression [{}].  Errors: {}", expr, errors);
+    }
+
+    output.allocateNew(partitions.size());
+    InterpreterEvaluator.evaluate(partitions.size(), context, container, output, materializedExpr);
+    record = 0;
+
+    List<String> newFiles = Lists.newArrayList();
+    for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
+      PathPartition part = iter.next();
+      if(!output.getAccessor().isNull(record) && output.getAccessor().get(record) == 1){
+        newFiles.add(part.file);
       }
+    }
 
-      output.allocateNew(partitions.size());
-      InterpreterEvaluator.evaluate(partitions.size(), context, container, output, materializedExpr);
-      record = 0;
+    if(newFiles.isEmpty()){
+      newFiles.add(files.get(0));
+    }
 
-      List<String> newFiles = Lists.newArrayList();
-      for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
-        PathPartition part = iter.next();
-        if(!output.getAccessor().isNull(record) && output.getAccessor().get(record) == 1){
-          newFiles.add(part.file);
-        }
-      }
+    if(newFiles.size() == files.size()){
+      return;
+    }
 
-      if(newFiles.isEmpty()){
-        newFiles.add(files.get(0));
-      }
-
-      if(newFiles.size() == files.size()){
-        return;
-      }
-
-      logger.debug("Pruned {} => {}", files, newFiles);
+    logger.debug("Pruned {} => {}", files, newFiles);
 
 
+    try{
       final FileSelection newFileSelection = new FileSelection(newFiles, origSelection.getSelection().selectionRoot, true);
       final FileGroupScan newScan = ((FileGroupScan)scanRel.getGroupScan()).clone(newFileSelection);
       final DrillScanRel newScanRel =
