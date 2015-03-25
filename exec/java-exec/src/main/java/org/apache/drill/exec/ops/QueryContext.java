@@ -157,7 +157,6 @@ public class QueryContext implements AutoCloseable, UdfUtilities {
 
   @Override
   public PartitionExplorer getPartitionExplorer() {
-    // TODO - try to get rid of this cast
     return new PartitionExplorerImpl(getRootSchema());
   }
 

@@ -61,9 +61,21 @@ public interface UdfUtilities {
    * A partition explorer allows UDFs to view the sub-partitions below a
    * particular partition. This allows for the implementation of UDFs to
    * query against the partition information, without having to read
-   * the actual data contained in the partition.
-   * @return - an object for exploring partitions of all available storage
-   *           plugins
+   * the actual data contained in the partition. This interface is designed
+   * for UDFs that take only constant inputs, as this interface will only
+   * be useful if we can evaluate the constant UDF at planning time.
+   *
+   * Any function defined to use this interface that is not evaluated
+   * at planning time by the constant folding rule will be querying
+   * the storage plugin for meta-data for each record processed.
+   *
+   * Be sure to check the query plans to see that this expression has already
+   * been evaluated during planning if you write UDFs against this interface.
+   *
+   * See {@link org.apache.drill.exec.expr.fn.impl.DirectoryExplorers} for
+   * example usages of this interface.
+   *
+   * @return - an object for exploring partitions of all available schemas
    */
   PartitionExplorer getPartitionExplorer();
 }
