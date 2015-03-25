@@ -18,8 +18,6 @@
 package org.apache.drill.exec.store;
 
 import net.hydromatic.optiq.SchemaPlus;
-import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
-import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import java.util.Collection;
 
@@ -39,12 +37,15 @@ public class PartitionExplorerImpl implements PartitionExplorer {
                                            ) throws PartitionNotFoundException {
 
 
-    AbstractSchema subSchema;
-    if (rootSchema instanceof SchemaPlus) {
-      subSchema = rootSchema.getSubSchema(schema).unwrap(AbstractSchema.class);
+    SchemaPlus subSchema = rootSchema.getSubSchema(schema);
+    AbstractSchema typedSchema;
+    if (subSchema instanceof AbstractSchema) {
+      typedSchema = subSchema.unwrap(AbstractSchema.class);
     } else {
-      throw new PartitionNotFoundException();
+      throw new PartitionNotFoundException(String.format(
+          "Unexpected schema type, was expecting a instance of %s",
+          AbstractSchema.class.getSimpleName()));
     }
-    return subSchema.getSubPartitions(table, partitionColumns, partitionValues);
+    return typedSchema.getSubPartitions(table, partitionColumns, partitionValues);
   }
 }
