@@ -104,6 +104,7 @@ public class TestConstantFolding extends PlanTestBase {
         .go();
   }
 
+  @Ignore()
   @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
     createFiles();

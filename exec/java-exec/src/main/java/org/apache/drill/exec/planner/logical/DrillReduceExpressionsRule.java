@@ -21,6 +21,7 @@ import org.eigenbase.rel.CalcRel;
 import org.eigenbase.rel.FilterRel;
 import org.eigenbase.rel.RelCollationImpl;
 import org.eigenbase.rel.RelNode;
+import org.eigenbase.rel.SingleRel;
 import org.eigenbase.rel.SortRel;
 import org.eigenbase.rel.rules.ReduceExpressionsRule;
 
@@ -37,7 +38,7 @@ public class DrillReduceExpressionsRule {
   private static class DrillReduceFilterRule extends ReduceExpressionsRule.ReduceFilterRule {
 
     DrillReduceFilterRule() {
-      super("DrillReduceExpressionsRule[Filter]");
+      super("DrillReduceExpressionsRule(Filter)");
     }
 
     /**
@@ -48,11 +49,7 @@ public class DrillReduceExpressionsRule {
      */
     @Override
     protected RelNode createEmptyRelOrEquivalent(FilterRel filter) {
-      return new SortRel(filter.getCluster(), filter.getTraitSet(),
-          filter.getChild(),
-          RelCollationImpl.EMPTY,
-          filter.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)),
-          filter.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)));
+      return createEmptyEmptyRelHelper(filter);
     }
 
   }
@@ -60,7 +57,7 @@ public class DrillReduceExpressionsRule {
   private static class DrillReduceCalcRule extends ReduceExpressionsRule.ReduceCalcRule {
 
     DrillReduceCalcRule() {
-      super("DrillReduceExpressionsRule[Calc]");
+      super("DrillReduceExpressionsRule(Calc)");
     }
 
     /**
@@ -71,12 +68,16 @@ public class DrillReduceExpressionsRule {
      */
     @Override
     protected RelNode createEmptyRelOrEquivalent(CalcRel calc) {
-      return new SortRel(calc.getCluster(), calc.getTraitSet(),
-          calc.getChild(),
-          RelCollationImpl.EMPTY,
-          calc.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)),
-          calc.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)));
+      return createEmptyEmptyRelHelper(calc);
     }
 
+  }
+
+  private static RelNode createEmptyEmptyRelHelper(SingleRel input) {
+    return new SortRel(input.getCluster(), input.getTraitSet(),
+        input.getChild(),
+        RelCollationImpl.EMPTY,
+        input.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)),
+        input.getCluster().getRexBuilder().makeExactLiteral(BigDecimal.valueOf(0)));
   }
 }
