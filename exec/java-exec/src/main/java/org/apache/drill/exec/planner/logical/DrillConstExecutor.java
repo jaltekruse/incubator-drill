@@ -171,6 +171,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
             materializedExpr.getMajorType(),
             ExpressionStringBuilder.toString(materializedExpr));
         reducedValues.add(newCall);
+        continue;
       }
 
       ValueHolder output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
