@@ -56,7 +56,7 @@ import java.util.Collection;
  *
  * <pre>
  * select * from dfs.my_workspace.data_directory
- *    where dir0 = maxdir('dfs', 'my_workspace', 'data_directory');
+ *    where dir0 = maxdir('dfs.my_workspace', 'data_directory');
  * </pre>
  *
  * Look at {@link org.apache.drill.exec.expr.fn.impl.DirectoryExplorers}
@@ -65,13 +65,11 @@ import java.util.Collection;
  */
 public interface PartitionExplorer {
   /**
-   * For the storage plugin provided,
-   * get a list of sub-partitions under a given partition. Individual storage
+   * For the schema provided,
+   * get a list of sub-partitions of a particular table and the partitions
+   * specified by partition columns and values. Individual storage
    * plugins will assign specific meaning to the parameters and return
-   * values. If possible, storage plugins that implement this interface
-   * should return partition descriptions that are fully qualified and suitable
-   * for being passed back into this interface, to view the partitions below
-   * the next level of nesting.
+   * values.
    *
    * A return value of an empty list should be given if the partition has
    * no sub-partitions.
@@ -93,8 +91,8 @@ public interface PartitionExplorer {
    * @param partitionColumns a list of partitions to match
    * @param partitionValues list of values of each partition (corresponding
    *                        to the partition column list)
-   * @return list of sub-partitions, will be empty if a there is not another
-   *         level of sub-partitions below, i.e. hit a leaf partition
+   * @return list of sub-partitions, will be empty if a there is no further
+   *         level of sub-partitioning below, i.e. hit a leaf partition
    * @throws PartitionNotFoundException when the partition does not exist in
    *          the given workspace
    */

@@ -36,7 +36,6 @@ import org.apache.drill.exec.rpc.user.UserSession;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.QueryOptionManager;
-import org.apache.drill.exec.store.AbstractSchema;
 import org.apache.drill.exec.store.PartitionExplorer;
 import org.apache.drill.exec.store.PartitionExplorerImpl;
 import org.apache.drill.exec.store.StoragePluginRegistry;
