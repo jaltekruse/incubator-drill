@@ -18,8 +18,10 @@
 package org.apache.drill.exec.planner.logical;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import net.hydromatic.avatica.ByteString;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
+import org.apache.drill.common.expression.ExpressionStringBuilder;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
@@ -46,6 +48,7 @@ import org.apache.drill.exec.expr.holders.ValueHolder;
 import org.apache.drill.exec.expr.holders.VarBinaryHolder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.ops.UdfUtilities;
+import org.apache.drill.exec.vector.VarCharVector;
 import org.eigenbase.relopt.RelOptPlanner;
 import org.eigenbase.reltype.RelDataType;
 import org.eigenbase.reltype.RelDataTypeFactory;
@@ -63,20 +66,60 @@ import java.math.BigInteger;
 import java.util.List;
 
 public class DrillConstExecutor implements RelOptPlanner.Executor {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
 
+  public static ImmutableMap<TypeProtos.MinorType, SqlTypeName> DRILL_TO_CALCITE_TYPE_MAPPING =
+      ImmutableMap.<TypeProtos.MinorType, SqlTypeName> builder()
+      .put(TypeProtos.MinorType.INT, SqlTypeName.INTEGER)
+      .put(TypeProtos.MinorType.BIGINT, SqlTypeName.BIGINT)
+      .put(TypeProtos.MinorType.FLOAT4, SqlTypeName.FLOAT)
+      .put(TypeProtos.MinorType.FLOAT8, SqlTypeName.DOUBLE)
+      .put(TypeProtos.MinorType.VARCHAR, SqlTypeName.VARCHAR)
+      .put(TypeProtos.MinorType.BIT, SqlTypeName.BOOLEAN)
+      .put(TypeProtos.MinorType.DATE, SqlTypeName.DATE)
+      .put(TypeProtos.MinorType.DECIMAL9, SqlTypeName.DECIMAL)
+      .put(TypeProtos.MinorType.DECIMAL18, SqlTypeName.DECIMAL)
+      .put(TypeProtos.MinorType.DECIMAL28SPARSE, SqlTypeName.DECIMAL)
+      .put(TypeProtos.MinorType.DECIMAL38SPARSE, SqlTypeName.DECIMAL)
+      .put(TypeProtos.MinorType.TIME, SqlTypeName.TIME)
+      .put(TypeProtos.MinorType.TIMESTAMP, SqlTypeName.TIMESTAMP)
+      .put(TypeProtos.MinorType.VARBINARY, SqlTypeName.VARBINARY)
+      .put(TypeProtos.MinorType.INTERVALYEAR, SqlTypeName.INTERVAL_YEAR_MONTH)
+      .put(TypeProtos.MinorType.INTERVALDAY, SqlTypeName.INTERVAL_DAY_TIME)
+      .put(TypeProtos.MinorType.MAP, SqlTypeName.MAP)
+      .put(TypeProtos.MinorType.LIST, SqlTypeName.ARRAY)
+      .put(TypeProtos.MinorType.LATE, SqlTypeName.ANY)
+      // These are defined in the Drill type system but have been turned off for now
+      .put(TypeProtos.MinorType.TINYINT, SqlTypeName.TINYINT)
+      .put(TypeProtos.MinorType.SMALLINT, SqlTypeName.SMALLINT)
+      // Calcite types currently not supported by Drill, nor defined in the Drill type list:
+      //      - CHAR, SYMBOL, MULTISET, DISTINCT, STRUCTURED, ROW, OTHER, CURSOR, COLUMN_LIST
+      .build();
 
   // This is a list of all types that cannot be folded at planning time for various reasons, most of the types are
   // currently not supported at all. The reasons for the others can be found in the evaluation code in the reduce method
-  public static final List<Object> NON_REDUCIBLE_TYPES =
-      ImmutableList.builder().add(TypeProtos.MinorType.INTERVAL, TypeProtos.MinorType.MAP,
-                                  TypeProtos.MinorType.LIST, TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
-                                  TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
-                                  TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY, TypeProtos.MinorType.VARBINARY,
-                                  TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
-                                  TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
-                                  TypeProtos.MinorType.UINT8, TypeProtos.MinorType.DECIMAL9, TypeProtos.MinorType.DECIMAL18,
-                                  TypeProtos.MinorType.DECIMAL28SPARSE, TypeProtos.MinorType.DECIMAL38SPARSE).build();
+  public static final List<Object> NON_REDUCIBLE_TYPES = ImmutableList.builder().add(
+      // cannot represent this as a literal according to calcite
+      TypeProtos.MinorType.INTERVAL,
+
+      // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
+      // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
+      // as input), so we need to identify functions with these return types as non-foldable until we have a
+      // literal representation for them
+      TypeProtos.MinorType.MAP, TypeProtos.MinorType.LIST,
+
+      // TODO - DRILL-2551 - Varbinary is used in execution, but it is missing a literal definition
+      // in the logical expression representation and subsequently is not supported in
+      // RexToDrill and the logical expression visitors
+      TypeProtos.MinorType.VARBINARY,
+
+      TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
+      TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
+      TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY,
+      TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
+      TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
+      TypeProtos.MinorType.UINT8)
+      .build();
 
   FunctionImplementationRegistry funcImplReg;
   UdfUtilities udfUtilities;
@@ -86,7 +129,9 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
     this.udfUtilities = udfUtilities;
   }
 
-  private RelDataType createCalciteTypeWithNullability(RelDataTypeFactory typeFactory, SqlTypeName sqlTypeName, RexNode node) {
+  private RelDataType createCalciteTypeWithNullability(RelDataTypeFactory typeFactory,
+                                                       SqlTypeName sqlTypeName,
+                                                       boolean isNullable) {
     RelDataType type;
     if (sqlTypeName == SqlTypeName.INTERVAL_DAY_TIME) {
       type = typeFactory.createSqlIntervalType(
@@ -101,13 +146,11 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
               SqlIntervalQualifier.TimeUnit.MONTH,
              SqlParserPos.ZERO));
     } else if (sqlTypeName == SqlTypeName.VARCHAR) {
-      type = typeFactory.createSqlType(sqlTypeName, 65536);
+      type = typeFactory.createSqlType(sqlTypeName, TypeHelper.VARCHAR_DEFAULT_CAST_LEN);
     } else {
       type = typeFactory.createSqlType(sqlTypeName);
     }
-    return typeFactory.createTypeWithNullability(
-        type,
-        node.getType().isNullable());
+    return typeFactory.createTypeWithNullability(type, isNullable);
   }
 
   @Override
@@ -118,14 +161,24 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       ErrorCollectorImpl errors = new ErrorCollectorImpl();
       LogicalExpression materializedExpr = ExpressionTreeMaterializer.materialize(logEx, null, errors, funcImplReg);
       if (errors.getErrorCount() != 0) {
-        logger.error("Failure while materializing expression [{}].  Errors: {}", newCall, errors);
+        logger.error("Failure while materializing expression in constant expression evaluator [{}].  Errors: {}", newCall, errors);
+        constExps.add(newCall);
+        continue;
+      }
+
+      if (NON_REDUCIBLE_TYPES.contains(materializedExpr.getMajorType().getMinorType())) {
+        logger.debug("Constant expression not folded due to return type {}, complete expression: {}",
+            materializedExpr.getMajorType(),
+            ExpressionStringBuilder.toString(materializedExpr));
+        reducedValues.add(newCall);
       }
 
       ValueHolder output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
       RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
       if (materializedExpr.getMajorType().getMode() == TypeProtos.DataMode.OPTIONAL && TypeHelper.isNull(output)) {
-        reducedValues.add(createTypedNull(materializedExpr.getMajorType(), rexBuilder, newCall));
+        reducedValues.add(rexBuilder.makeNullLiteral(
+            DRILL_TO_CALCITE_TYPE_MAPPING.get(materializedExpr.getMajorType())));
         continue;
       }
 
@@ -133,25 +186,25 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case INT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((IntHolder)output).value),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTEGER, newCall.getType().isNullable()),
                 false));
             break;
           case BIGINT:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((BigIntHolder)output).value),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BIGINT, newCall.getType().isNullable()),
                 false));
             break;
           case FLOAT4:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((Float4Holder)output).value),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.FLOAT, newCall.getType().isNullable()),
                 false));
             break;
           case FLOAT8:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((Float8Holder)output).value),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DOUBLE, newCall.getType().isNullable()),
                 false));
             break;
           case VARCHAR:
@@ -161,25 +214,25 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
           case BIT:
             reducedValues.add(rexBuilder.makeLiteral(
                 ((BitHolder)output).value == 1 ? true : false,
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.BOOLEAN, newCall.getType().isNullable()),
                 false));
             break;
           case DATE:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((DateHolder) output).value, DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DATE, newCall.getType().isNullable()),
                 false));
             break;
           case DECIMAL9:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(BigInteger.valueOf(((Decimal9Holder) output).value), ((Decimal9Holder)output).scale),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall.getType().isNullable()),
                 false));
             break;
           case DECIMAL18:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(BigInteger.valueOf(((Decimal18Holder) output).value), ((Decimal18Holder)output).scale),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall.getType().isNullable()),
                 false));
             break;
           case DECIMAL28SPARSE:
@@ -190,7 +243,7 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                     decimal28Out.start * 20,
                     5,
                     decimal28Out.scale),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall.getType().isNullable()),
                 false
             ));
             break;
@@ -202,159 +255,46 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
                     decimal38Out.start * 24,
                     6,
                     decimal38Out.scale),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.DECIMAL, newCall.getType().isNullable()),
                 false));
             break;
 
           case TIME:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeHolder)output).value, DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIME, newCall.getType().isNullable()),
                 false));
             break;
           case TIMESTAMP:
             reducedValues.add(rexBuilder.makeLiteral(
                 new DateTime(((TimeStampHolder)output).value, DateTimeZone.UTC).toCalendar(null),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.TIMESTAMP, newCall.getType().isNullable()),
                 false));
             break;
-
-          case VARBINARY:
-            VarBinaryHolder varBinOut = (VarBinaryHolder)output;
-            final byte[] temp = new byte[varBinOut.end - varBinOut.start];
-            varBinOut.buffer.readerIndex(varBinOut.start);
-            varBinOut.buffer.readBytes(temp, 0, varBinOut.end - varBinOut.start);
-            reducedValues.add(rexBuilder.makeLiteral(
-                new ByteString(temp),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.VARBINARY, newCall),
-                false));
-            break;
-
           case INTERVALYEAR:
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(((IntervalYearHolder)output).value),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_YEAR_MONTH, newCall.getType().isNullable()),
                 false));
             break;
           case INTERVALDAY:
             IntervalDayHolder intervalDayOut = (IntervalDayHolder) output;
             reducedValues.add(rexBuilder.makeLiteral(
                 new BigDecimal(intervalDayOut.days * DateUtility.daysToStandardMillis + intervalDayOut.milliseconds),
-                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall),
+                createCalciteTypeWithNullability(typeFactory, SqlTypeName.INTERVAL_DAY_TIME, newCall.getType().isNullable()),
                 false));
             break;
-          case INTERVAL:
-            // cannot represent this as a literal according to calcite, add the original expression back
-            reducedValues.add(newCall);
-            break;
-
-          // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
-          // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
-          // as input), so we need to identify functions with these return types as non-foldable until we have a
-          // literal representation for them
-          case MAP:
-          case LIST:
-            // fall through for now
-
-          // currently unsupported types
-          case TIMESTAMPTZ:
-          case TIMETZ:
-          case LATE:
-          case TINYINT:
-          case SMALLINT:
-          case GENERIC_OBJECT:
-          case NULL:
-          case DECIMAL28DENSE:
-          case DECIMAL38DENSE:
-          case MONEY:
-          case FIXEDBINARY:
-          case FIXEDCHAR:
-          case FIXED16CHAR:
-          case VAR16CHAR:
-          case UINT1:
-          case UINT2:
-          case UINT4:
-          case UINT8:
-            reducedValues.add(newCall);
-            break;
+          // The list of known unsupported types is used abotrigger this behavior of re-using the input expression
+          //result before the expr    // is even attempted to be eva. Tted, this is just here as a last precaution a
+          // s new types may be    // in the .future
           default:
+            logger.debug("Constant expression not folded due to return type {}, complete expression: {}",
+                materializedExpr.getMajorType(),
+                ExpressionStringBuilder.toString(materializedExpr));
             reducedValues.add(newCall);
             break;
         }
     }
-  }
-
-  private RexNode createTypedNull(TypeProtos.MajorType majorType, RexBuilder rexBuilder, RexNode originalExpr) {
-    switch(majorType.getMinorType()) {
-
-      case INT:
-          return rexBuilder.makeNullLiteral(SqlTypeName.INTEGER);
-      case BIGINT:
-        return rexBuilder.makeNullLiteral(SqlTypeName.BIGINT);
-      case FLOAT4:
-        return rexBuilder.makeNullLiteral(SqlTypeName.FLOAT);
-      case FLOAT8:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DOUBLE);
-      case VARCHAR:
-        return rexBuilder.makeNullLiteral(SqlTypeName.VARCHAR);
-      case BIT:
-        return rexBuilder.makeNullLiteral(SqlTypeName.BOOLEAN);
-      case DATE:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DATE);
-      case DECIMAL9:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
-      case DECIMAL18:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
-      case DECIMAL28SPARSE:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
-      case DECIMAL38SPARSE:
-        return rexBuilder.makeNullLiteral(SqlTypeName.DECIMAL);
-      case TIME:
-        return rexBuilder.makeNullLiteral(SqlTypeName.TIME);
-      case TIMESTAMP:
-        return rexBuilder.makeNullLiteral(SqlTypeName.TIMESTAMP);
-      case VARBINARY:
-        return rexBuilder.makeNullLiteral(SqlTypeName.VARBINARY);
-      case INTERVALYEAR:
-        return rexBuilder.makeNullLiteral(SqlTypeName.INTERVAL_YEAR_MONTH);
-      case INTERVALDAY:
-        return rexBuilder.makeNullLiteral(SqlTypeName.INTERVAL_DAY_TIME);
-      case INTERVAL:
-        // cannot represent this as a literal according to calcite, add the original expression back
-        return originalExpr;
-
-      // TODO - map and list are used in Drill but currently not expressible as literals, these can however be
-      // outputs of functions that take literals as inputs (such as a convert_fromJSON with a literal string
-      // as input), so we need to identify functions with these return types as non-foldable until we have a
-      // literal representation for them
-      case MAP:
-      case LIST:
-        // fall through for now
-
-        // currently unsupported types
-      case TIMESTAMPTZ:
-      case TIMETZ:
-      case LATE:
-      case TINYINT:
-      case SMALLINT:
-      case GENERIC_OBJECT:
-      case NULL:
-      case DECIMAL28DENSE:
-      case DECIMAL38DENSE:
-      case MONEY:
-      case FIXEDBINARY:
-      case FIXEDCHAR:
-      case FIXED16CHAR:
-      case VAR16CHAR:
-      case UINT1:
-      case UINT2:
-      case UINT4:
-      case UINT8:
-        return originalExpr;
-      default:
-        return originalExpr;
-    }
-
   }
 }
 
