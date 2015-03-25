@@ -134,11 +134,6 @@ public class EasyGroupScan extends AbstractFileGroupScan{
     }
 
     long estRowCount = data/1024;
-    // if all of the files report a very small size, set a cost based on the
-    // number of files
-    if (estRowCount == 0) {
-      estRowCount = chunks.size();
-    }
     return new ScanStats(GroupScanProperty.NO_EXACT_ROW_COUNT, estRowCount, 1, data);
   }
 

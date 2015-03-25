@@ -104,7 +104,7 @@ public class TestConstantFolding extends PlanTestBase {
         .go();
   }
 
-  @Ignore()
+  @Ignore("DRILL-2553")
   @Test
   public void testConstExprFolding_withPartitionPrune() throws Exception {
     createFiles();
