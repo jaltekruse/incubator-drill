@@ -17,8 +17,6 @@
  ******************************************************************************/
 package org.apache.drill.exec.expr.fn.impl;
 
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.expr.DrillSimpleFunc;
 import org.apache.drill.exec.expr.annotations.FunctionTemplate;
@@ -28,8 +26,6 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
 
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
@@ -49,13 +45,13 @@ public class DirectoryExplorers {
     }
 
     public void eval() {
-      Iterable<String> subPartitions = null;
+      Iterable<String> subPartitions;
       try {
         subPartitions = partitionExplorer.getSubPartitions(
-            StringFunctionHelpers.getStringFromVarCharHolder(schema),
-            StringFunctionHelpers.getStringFromVarCharHolder(table),
-            new ArrayList<String>(),
-            new ArrayList<String>());
+            org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema),
+            org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(table),
+            new java.util.ArrayList<String>(),
+            new java.util.ArrayList<String>());
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
             String.format("Error in %s function: Table %s does not exist in schema %s ",
@@ -64,7 +60,7 @@ public class DirectoryExplorers {
                 org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema))
         );
       }
-      Iterator<String> partitionIterator = subPartitions.iterator();
+      java.util.Iterator partitionIterator = subPartitions.iterator();
       if (!partitionIterator.hasNext()) {
         throw new RuntimeException(
             String.format("Error in %s function: Table %s in schema %s does not contain sub-partitions.",
@@ -74,11 +70,11 @@ public class DirectoryExplorers {
             )
         );
       }
-      String subPartitionStr = partitionIterator.next();
+      String subPartitionStr = (String) partitionIterator.next();
       String curr;
       // find the maximum directory in the list using a case-insensitive string comparison
       while (partitionIterator.hasNext()){
-        curr = partitionIterator.next();
+        curr = (String) partitionIterator.next();
         if (subPartitionStr.compareToIgnoreCase(curr) < 0) {
           subPartitionStr = curr;
         }
