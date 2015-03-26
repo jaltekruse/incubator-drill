@@ -71,6 +71,11 @@ public class TestJsonReader extends BaseTestQuery {
       .run();
   }
 
+  @Test
+  public void testLongArray() throws Exception {
+    test("select * from cp.`/store/json/scalar-array-2000.json`");
+  }
+
   public void runTestsOnFile(String filename, UserBitShared.QueryType queryType, String[] queries, long[] rowCounts) throws Exception {
     if (VERBOSE_DEBUG) {
       System.out.println("===================");
