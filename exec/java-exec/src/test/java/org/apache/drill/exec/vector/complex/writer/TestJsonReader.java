@@ -61,6 +61,13 @@ public class TestJsonReader extends BaseTestQuery {
   }
 
   @Test
+  public void testCreateYelpTable() throws Exception {
+    test("use dfs.tmp");
+    test("create table yelp_academic_dataset_review as select * from dfs.`/Users/jaltekruse/test_data_drill/yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_review.json`;");
+    test("select * from yelp_academic_dataset_review");
+  }
+
+  @Test
   @Ignore("DRILL-1824")
   public void schemaChangeValidate() throws Exception {
     testBuilder() //

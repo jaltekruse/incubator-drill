@@ -43,7 +43,12 @@ public class ParquetDirectByteBufferAllocator implements ByteBufferAllocator {
   @Override
   public ByteBuffer allocate(int sz) {
     ByteBuf bb = oContext.getAllocator().buffer(sz);
-    ByteBuffer b = bb.nioBuffer(0, sz);
+    ByteBuffer b;
+    try {
+      b = bb.nioBuffer(0, sz);
+    } catch (Exception ex) {
+      throw ex;
+    }
     allocatedBuffers.put(System.identityHashCode(b), bb);
     logger.debug("ParquetDirectByteBufferAllocator: Allocated "+sz+" bytes. Allocated ByteBuffer id: "+System.identityHashCode(b));
     return b;
