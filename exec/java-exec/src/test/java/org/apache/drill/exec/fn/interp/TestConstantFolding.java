@@ -48,7 +48,7 @@ public class TestConstantFolding extends PlanTestBase {
 
     public void createFiles(int smallFileLines, int bigFileLines) throws Exception{
       PrintWriter out;
-      for (String fileAndFolderName : new String[]{"bigfile", "BIGFILE"}) {
+      for (String fileAndFolderName : new String[]{"bigfile", "BIGFILE_2"}) {
         File bigFolder = folder.newFolder(fileAndFolderName);
         File bigFile = new File (bigFolder, fileAndFolderName + ".csv");
         out = new PrintWriter(bigFile);
@@ -58,7 +58,7 @@ public class TestConstantFolding extends PlanTestBase {
         out.close();
       }
 
-      for (String fileAndFolderName : new String[]{"smallfile", "SMALLFILE"}) {
+      for (String fileAndFolderName : new String[]{"smallfile", "SMALLFILE_2"}) {
         File smallFolder = folder.newFolder(fileAndFolderName);
         File smallFile = new File (smallFolder, fileAndFolderName + ".csv");
         out = new PrintWriter(smallFile);

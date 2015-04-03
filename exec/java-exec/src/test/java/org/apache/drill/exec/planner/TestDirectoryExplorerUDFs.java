@@ -47,47 +47,59 @@ public class TestDirectoryExplorerUDFs extends PlanTestBase {
   public void testConstExprFolding_maxDir0() throws Exception {
 
     new TestConstantFolding.SmallFileCreator(folder).createFiles(1, 1000);
-
     String path = folder.getRoot().toPath().toString();
+
+    test("use dfs.root");
+
+    // Need the suffixes to make the names unique in the directory.
+    // The capitalized name is on the opposite function (imaxdir and mindir)
+    // because they are looking on opposite ends of the list.
+    //
+    // BIGFILE_2 with the capital letter at the start of the name comes
+    // first in the case-sensitive ordering.
+    // SMALLFILE_2 comes last in a case-insensitive ordering because it has
+    // a suffix not found on smallfile.
+    List<ConstantFoldingTestConfig> tests = ImmutableList.<ConstantFoldingTestConfig>builder()
+        .add(new ConstantFoldingTestConfig("maxdir", "smallfile"))
+        .add(new ConstantFoldingTestConfig("imaxdir", "SMALLFILE_2"))
+        .add(new ConstantFoldingTestConfig("mindir", "BIGFILE_2"))
+        .add(new ConstantFoldingTestConfig("imindir", "bigfile"))
+        .build();
+
+    List<String> allFiles = ImmutableList.<String>builder()
+        .add("smallfile")
+        .add("SMALLFILE_2")
+        .add("bigfile")
+        .add("BIGFILE_2")
+        .build();
+
+    String query = "select * from dfs.`" + path + "/*/*.csv` where dir0 = %s('dfs.root','" + path + "')";
+    for (ConstantFoldingTestConfig config : tests) {
+      // make all of the other folders unexpected patterns, except for the one expected in this case
+      List<String> excludedPatterns = Lists.newArrayList();
+      excludedPatterns.addAll(allFiles);
+      excludedPatterns.remove(config.expectedFolderName);
+      // The list is easier to construct programmatically, but the API below takes an array to make it easier
+      // to write a list as a literal array in a typical test definition
+      String[] excludedArray = new String[excludedPatterns.size()];
+
+      testPlanMatchingPatterns(
+          String.format(query, config.funcName),
+          new String[] {config.expectedFolderName},
+          excludedPatterns.toArray(excludedArray));
+    }
+
     JsonStringArrayList list = new JsonStringArrayList();
 
     list.add(new Text("1"));
     list.add(new Text("2"));
     list.add(new Text("3"));
 
-    test("use dfs.root");
-
-    List<ConstantFoldingTestConfig> tests = ImmutableList.<ConstantFoldingTestConfig>builder()
-        .add(new ConstantFoldingTestConfig("maxdir", "smallfile"))
-        .add(new ConstantFoldingTestConfig("imaxdir", "SMALLFILE"))
-        .add(new ConstantFoldingTestConfig("mindir", "bigfile"))
-        .add(new ConstantFoldingTestConfig("imindir", "BIGFILE"))
-        .build();
-
-    List<String> allFiles = ImmutableList.<String>builder()
-        .add("smallfile")
-        .add("SMALLFILE")
-        .add("bigfile")
-        .add("BIGFILE")
-        .build();
-
-    String query = "select * from dfs.`" + path + "/*/*.csv` where dir0 = %s('dfs.root','" + path + "')";
-    for (ConstantFoldingTestConfig config : tests) {
-      List excludedPatterns = Lists.newArrayList();
-      excludedPatterns.addAll(allFiles);
-      excludedPatterns.remove(config.expectedFolderName);
-
-      testPlanMatchingPatterns(
-          String.format(query, config.funcName),
-          new String[] {config.expectedFolderName},
-          (String[]) excludedPatterns.toArray());
-    }
-
     testBuilder()
         .sqlQuery(String.format(query, tests.get(0).funcName))
         .unOrdered()
         .baselineColumns("columns", "dir0")
-        .baselineValues(list, "smallfile")
+        .baselineValues(list, tests.get(0).expectedFolderName)
         .go();
   }
 
