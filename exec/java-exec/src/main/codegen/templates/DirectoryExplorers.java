@@ -38,10 +38,10 @@ import java.util.ArrayList;
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
 
-  <#list [ { "name" : "\"maxdir\"", "functionClassName" : "MaxDir", "comparison" : "compareTo(curr) < 0"},
-           { "name" : "\"imaxdir\"", "functionClassName" : "IMaxDir", "comparison" : "compareToIgnoreCase(curr) < 0"},
-           { "name" : "\"mindir\"", "functionClassName" : "MinDir", "comparison" : "compareTo(curr) > 0"},
-           { "name" : "\"imindir\"", "functionClassName" : "IMinDir", "comparison" : "compareToIgnoreCase(curr) > 0"}
+  <#list [ { "name" : "\"maxdir\"", "functionClassName" : "MaxDir", "comparison" : "compareTo(curr) < 0", "goal" : "maximum", "comparisonType" : "case-sensitive"},
+           { "name" : "\"imaxdir\"", "functionClassName" : "IMaxDir", "comparison" : "compareToIgnoreCase(curr) < 0", "goal" : "maximum", "comparisonType" : "case-insensitive"},
+           { "name" : "\"mindir\"", "functionClassName" : "MinDir", "comparison" : "compareTo(curr) > 0", "goal" : "minimum", "comparisonType" : "case-sensitive"},
+           { "name" : "\"imindir\"", "functionClassName" : "IMinDir", "comparison" : "compareToIgnoreCase(curr) > 0", "goal" : "minimum", "comparisonType" : "case-insensitive"}
   ] as dirAggrProps>
 
 
@@ -85,7 +85,7 @@ public class DirectoryExplorers {
       }
       String subPartitionStr = (String) partitionIterator.next();
       String curr;
-      // find the maximum directory in the list using a case-insensitive string comparison
+      // find the ${dirAggrProps.goal} directory in the list using a ${dirAggrProps.comparisonType} string comparison
       while (partitionIterator.hasNext()){
         curr = (String) partitionIterator.next();
         if (subPartitionStr.${dirAggrProps.comparison}) {
