@@ -174,7 +174,7 @@ public class WorkspaceSchemaFactory implements ExpandingConcurrentMap.MapValueFa
       } catch (IOException e) {
         throw new PartitionNotFoundException("Error finding partitions for table " + table, e);
       }
-      return new FileSystemSchemaFactory.SubDirectoryList(fileStatuses);
+      return new SubDirectoryList(fileStatuses);
     }
 
     public boolean viewExists(String viewName) throws Exception {
