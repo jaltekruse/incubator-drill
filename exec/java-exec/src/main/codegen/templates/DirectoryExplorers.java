@@ -15,6 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
+
+<@pp.changeOutputFile name="/org/apache/drill/exec/expr/fn/impl/DirectoryExplorers.java" />
+
+<#include "/@includes/license.ftl" />
+
 package org.apache.drill.exec.expr.fn.impl;
 
 import io.netty.buffer.DrillBuf;
@@ -27,17 +32,21 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
 import javax.inject.Inject;
 import java.util.ArrayList;
 
+/**
+ * This file is gerenated with freemarker using the template exec/java-exec/src/main/codegen/templates/DirectoryExplorers.java
+ */
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
 
-  public static final String MAXDIR_NAME = "maxdir";
+  <#list [ { "name" : "\"maxdir\"", "functionClassName" : "MaxDir", "comparison" : "compareTo(curr) < 0"},
+           { "name" : "\"imaxdir\"", "functionClassName" : "IMaxDir", "comparison" : "compareToIgnoreCase(curr) < 0"},
+           { "name" : "\"mindir\"", "functionClassName" : "MinDir", "comparison" : "compareTo(curr) > 0"},
+           { "name" : "\"imindir\"", "functionClassName" : "IMinDir", "comparison" : "compareToIgnoreCase(curr) > 0"}
+  ] as dirAggrProps>
 
-  public static final String MAXDIR_NAME = "maxdir";
 
-  public static final String MAXDIR_NAME = "maxdir";
-
-  @FunctionTemplate(name = MAXDIR_NAME, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.INTERNAL)
-  public static class MaxDir implements DrillSimpleFunc {
+  @FunctionTemplate(name = ${dirAggrProps.name}, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.INTERNAL)
+  public static class ${dirAggrProps.functionClassName} implements DrillSimpleFunc {
 
     @Param VarCharHolder schema;
     @Param  VarCharHolder table;
@@ -59,7 +68,7 @@ public class DirectoryExplorers {
       } catch (org.apache.drill.exec.store.PartitionNotFoundException e) {
         throw new RuntimeException(
             String.format("Error in %s function: Table %s does not exist in schema %s ",
-                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
+                ${dirAggrProps.name},
                 org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(table),
                 org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema))
         );
@@ -68,7 +77,7 @@ public class DirectoryExplorers {
       if (!partitionIterator.hasNext()) {
         throw new RuntimeException(
             String.format("Error in %s function: Table %s in schema %s does not contain sub-partitions.",
-                org.apache.drill.exec.expr.fn.impl.DirectoryExplorers.MAXDIR_NAME,
+                ${dirAggrProps.name},
                 org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(table),
                 org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers.getStringFromVarCharHolder(schema)
             )
@@ -79,7 +88,7 @@ public class DirectoryExplorers {
       // find the maximum directory in the list using a case-insensitive string comparison
       while (partitionIterator.hasNext()){
         curr = (String) partitionIterator.next();
-        if (subPartitionStr.compareToIgnoreCase(curr) < 0) {
+        if (subPartitionStr.${dirAggrProps.comparison}) {
           subPartitionStr = curr;
         }
       }
@@ -93,4 +102,5 @@ public class DirectoryExplorers {
       out.end = result.length;
     }
   }
+  </#list>
 }
