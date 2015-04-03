@@ -17,9 +17,8 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner;
 
-import com.beust.jcommander.internal.Lists;
 import com.google.common.collect.ImmutableList;
-import org.apache.drill.BaseTestQuery;
+import com.google.common.collect.Lists;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.exec.fn.interp.TestConstantFolding;
 import org.apache.drill.exec.util.JsonStringArrayList;
@@ -30,7 +29,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.util.List;
 
-public class TestDirectoryExploererUDFs extends PlanTestBase {
+public class TestDirectoryExplorerUDFs extends PlanTestBase {
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
