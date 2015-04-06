@@ -49,6 +49,56 @@ public class TestFlatten extends BaseTestQuery {
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
+  public void testFlattenFailure2161() throws Exception {
+
+    // TODO - take the two original records and put them in the source, programmtically generate the large file with the
+    // records copied over and over, write tests to at least verify the value count
+    // can generate the output datasets as well and pass them into testBuilder.baselineValues in a loop
+    // to avoid materializing a large dataset into on-heap memory I could change the test builder to accept some kind
+    // of result iterator (would be useful for cases like this where the results can be easily programmatically generated
+    // without holding much in memory, this would only be useful for ordered comparisons
+
+    // seems to be working now, stack trace from JIRA was in populate empties, I think I remember seeing a bug fix merged related to this
+    test("select uid, flatten(d.lst_lst) lst from dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d;");
+
+    // also seems to be fixed, stack trace for JIRA looks like an error while accessing the offset within a repeated map during setChildrenPosition
+    test("select s.rptds from (select d.type type, flatten(d.map.rm[1].rptd) rptds, flatten(d.features) feats from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d) s;");
+
+    // also seems fixed, same stack trace as the query immediately above this one
+    test("select flatten(s2.l1_list), s2.l1_list from (select s1.uid, s1.l1_list l1_list from (select uid, flatten(d.lst_lst) l1_list from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d) s1) s2;");
+
+    // this works as well, (had to bump up the timeout with test() method that prints results,
+    // but I this was due to console print time, not query time)
+    // previous error had the same stack trace as the two above
+    testNoResult("select flatten(d.events), flatten(d.map.rm[0].rptd), flatten(d.features) from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d where features[0].type='Feature' and d.events[0].type='cmpgn1'");
+
+    // this works too
+    testNoResult("select s.rptds from (select d.type type, flatten(d.map.rm[1].rptd) rptds, flatten(d.features) feats from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d) s where s.rptds.c < s.feats.properties.mag and s.type='web'");
+
+    // this one is also working now
+    testNoResult("select d.uid, flatten(d.map.rm), flatten(d.events) from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d where d.map.rm[0].rptd[0].a = 'foo'");
+
+    // this one is also working
+    testNoResult("select d.uid, flatten(d.map.rm) from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d where d.map.rm[0].rptd[0].a = 'foo' or d.sub[1].z2=10");
+
+    testNoResult("select d.uid, flatten(d.map.rm) from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d where d.map.rm[0].rptd[0].a = 'foo'");
+
+    testNoResult("select * from `data.json` where 2 in (select flatten(lst_lst[0]) from " +
+        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json`)");
+
+    // TODO - THIS IS FAILING
+//    testNoResult("select uid, lst_lst, d.lst_lst[1], flatten(d.lst_lst) lst from " +
+//        "dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json`d order by d.lst_lst[1][2]");
+  }
+
+  @Test
   public void testFlattenFailure() throws Exception {
     test("select flatten(complex), rownum from cp.`/store/json/test_flatten_mappify2.json`");
 //    test("select complex, rownum from cp.`/store/json/test_flatten_mappify2.json`");
