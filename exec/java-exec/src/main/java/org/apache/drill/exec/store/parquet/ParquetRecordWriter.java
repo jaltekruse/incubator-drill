@@ -318,6 +318,20 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
     boolean hasRecords = recordCount > 0;
     if (hasRecords) {
       parquetFileWriter.startBlock(recordCount);
+      // this is causing the following error, so far it seems to only be in the case
+      // that there was an earlier error, so the writer might just be in a bad state,
+      // we might want to try to separate out the case where we are cleaning up early
+      // because of an error and avoid this call to prevent an exception that could mask
+      // the real issue
+      // java.lang.IllegalArgumentException
+      // You cannot call toBytes() more than once without calling reset()
+      // at parquet.Preconditions.checkArgument(Preconditions.java:47) ~[parquet-common-1.5.1-drill-r7.jar:na]
+      // at parquet.column.values.rle.RunLengthBitPackingHybridEncoder.toBytes(RunLengthBitPackingHybridEncoder.java:258) ~[parquet-column-1.5.1-drill-r7.jar:na]
+      // at parquet.column.values.rle.RunLengthBitPackingHybridValuesWriter.getBytes(RunLengthBitPackingHybridValuesWriter.java:72) ~[parquet-column-1.5.1-drill-r7.jar:na]
+      // at parquet.column.impl.ColumnWriterImpl.writePage(ColumnWriterImpl.java:154) ~[parquet-column-1.5.1-drill-r7.jar:na]
+      // at parquet.column.impl.ColumnWriterImpl.flush(ColumnWriterImpl.java:243) ~[parquet-column-1.5.1-drill-r7.jar:na]
+      // at parquet.column.impl.ColumnWriteStoreImpl.flush(ColumnWriteStoreImpl.java:113) ~[parquet-column-1.5.1-drill-r7.jar:na]
+      // at org.apache.drill.exec.store.parquet.ParquetRecordWriter.cleanup(ParquetRecordWriter.java:321) ~[classes/:na]
       store.flush();
       ColumnChunkPageWriteStoreExposer.flushPageStore(pageStore, parquetFileWriter);
       recordCount = 0;
