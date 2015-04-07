@@ -51,6 +51,13 @@ public class TestPartitionFilter extends PlanTestBase {
     testExcludeFilter(query, 1, "Filter", 10);
   }
 
+  @Test
+  public void testFailingPrune() throws Exception {
+    test("alter session set `planner.enable_constant_folding` = false");
+    test("explain plan for select * from (" + String.format("select dir0, dir1, o_custkey, o_orderdate from dfs_test.`%s/multilevel/parquet` where dir0=1994 and dir1='Q1'", TEST_RES_PATH)
+        + ") t where 1=0;");
+  }
+
   @Test  //Json: basic test with dir0 and dir1 filters
   public void testPartitionFilter1_Json() throws Exception {
     String query = String.format("select dir0, dir1, o_custkey, o_orderdate from dfs_test.`%s/multilevel/json` where dir0=1994 and dir1='Q1'", TEST_RES_PATH);
