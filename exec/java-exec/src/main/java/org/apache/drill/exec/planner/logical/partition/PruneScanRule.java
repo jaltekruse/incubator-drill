@@ -30,6 +30,7 @@ import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
+import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.interpreter.InterpreterEvaluator;
 import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.memory.BufferAllocator;
@@ -52,6 +53,7 @@ import org.apache.drill.exec.store.dfs.FileSelection;
 import org.apache.drill.exec.store.dfs.FormatSelection;
 import org.apache.drill.exec.vector.NullableBitVector;
 import org.apache.drill.exec.vector.NullableVarCharVector;
+import org.apache.drill.exec.vector.ValueVector;
 import org.eigenbase.rel.RelNode;
 import org.eigenbase.relopt.RelOptRule;
 import org.eigenbase.relopt.RelOptRuleCall;
@@ -178,7 +180,8 @@ public abstract class PruneScanRule extends RelOptRule {
       partitions.add(new PathPartition(descriptor.getMaxHierarchyLevel(), selectionRoot, f));
     }
 
-    final NullableBitVector output = new NullableBitVector(MaterializedField.create("", Types.optional(MinorType.BIT)), allocator);
+    // This will hold either a NullableBitVector or BitVector after the expression to be evaluated is materialized
+    ValueVector output = null;
     final VectorContainer container = new VectorContainer();
 
     try{
@@ -221,14 +224,16 @@ public abstract class PruneScanRule extends RelOptRule {
         logger.warn("Failure while materializing expression [{}].  Errors: {}", expr, errors);
       }
 
-      output.allocateNew(partitions.size());
+      final MaterializedField outputField = MaterializedField.create("", materializedExpr.getMajorType());
+      output = TypeHelper.getNewVector(outputField, allocator);
+      output.allocateNew();
       InterpreterEvaluator.evaluate(partitions.size(), context, container, output, materializedExpr);
       record = 0;
 
       List<String> newFiles = Lists.newArrayList();
       for(Iterator<PathPartition> iter = partitions.iterator(); iter.hasNext(); record++){
         PathPartition part = iter.next();
-        if(!output.getAccessor().isNull(record) && output.getAccessor().get(record) == 1){
+        if(!output.getAccessor().isNull(record) && (Boolean) output.getAccessor().getObject(record)){
           newFiles.add(part.file);
         }
       }
