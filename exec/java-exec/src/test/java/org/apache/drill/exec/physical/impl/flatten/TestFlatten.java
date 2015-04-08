@@ -53,7 +53,7 @@ public class TestFlatten extends BaseTestQuery {
     String path = folder.getRoot().toPath().toString();
 
     String jsonRecords = BaseTestQuery.getFile("flatten/complex_transaction_example_data.json");
-    int numCopies = 300;
+    int numCopies = 700;
     new TestConstantFolding.SmallFileCreator(folder).
         setRecord(jsonRecords)
         .createFiles(1, numCopies, "json");
