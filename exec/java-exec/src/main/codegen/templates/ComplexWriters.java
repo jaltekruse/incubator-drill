@@ -57,6 +57,10 @@ public class ${eName}WriterImpl extends AbstractFieldWriter {
     return vector.getField();
   }
 
+  public String getTypeName() {
+    return "${mode}${minor.class}";
+  }
+
   public int getValueCapacity() {
     return vector.getValueCapacity();
   }

@@ -39,6 +39,12 @@ public class ComplexWriterImpl extends AbstractFieldWriter implements ComplexWri
   Mode mode = Mode.INIT;
   private final String name;
 
+  @Override
+  public String getTypeName() {
+    // TODO - review this
+    return "Unknown";
+  }
+
   private enum Mode { INIT, MAP, LIST };
 
   public ComplexWriterImpl(String name, MapVector container){

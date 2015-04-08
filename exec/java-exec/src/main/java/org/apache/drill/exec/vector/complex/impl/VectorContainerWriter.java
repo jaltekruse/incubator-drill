@@ -84,6 +84,11 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
     mapRoot.allocate();
   }
 
+  @Override
+  public String getTypeName() {
+    return "Map";
+  }
+
   private class SpecialMapVector extends MapVector {
 
     public SpecialMapVector() {

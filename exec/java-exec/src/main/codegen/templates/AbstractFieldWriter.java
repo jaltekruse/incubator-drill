@@ -29,13 +29,17 @@ package org.apache.drill.exec.vector.complex.impl;
 /* This class is generated using freemarker and the AbstractFieldWriter.java template */
 @SuppressWarnings("unused")
 abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWriter{
-  
+
+  protected static final String TYPE_CHANGE_ERROR = "Unsupported type change from %s to %s";
+
   AbstractFieldWriter(FieldWriter parent){
     super(parent);
   }
-  
+
+  public abstract String getTypeName();
+
   public void start(){
-    throw new IllegalStateException(String.format("You tried to start when you are using a ValueWriter of type %s.", this.getClass().getSimpleName()));
+    throw new IllegalStateException(String.format(TYPE_CHANGE_ERROR, getTypeName(), "Map"));
   }
   
   public void end(){
@@ -110,7 +114,7 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
   
   private void fail(String name){
-    throw new IllegalArgumentException(String.format("You tried to write a %s type when you are using a ValueWriter of type %s.", name, this.getClass().getSimpleName()));
+    throw new IllegalArgumentException(String.format(, this.getTypeName(), name));
   }
   
   
