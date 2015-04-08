@@ -47,21 +47,29 @@ public class TestConstantFolding extends PlanTestBase {
     private final TemporaryFolder folder;
     private static final List<String> values = Lists.newArrayList("1","2","3");
     private static final String jsonRecord =  "{\"col1\" : 1} {\"col2\" : 2} {\"col3\" : 3}";
+    private String record;
 
     public SmallFileCreator(TemporaryFolder folder) {
       this.folder = folder;
+      this.record = null;
+    }
+
+    public SmallFileCreator setRecord(String record) {
+      this.record = record;
+      return this;
     }
 
     public void createFiles(int smallFileLines, int bigFileLines, String extension, String delimiter) throws Exception{
-      String record;
-      if (extension.equals("csv") || extension.equals("tsv")) {
-        record = Joiner.on(delimiter).join(values);
-      } else if (extension.equals("json") ){
-        record = jsonRecord;
-      } else {
-        throw new UnsupportedOperationException(
-            String.format("Extension %s not supported by %s",
-            extension, SmallFileCreator.class.getSimpleName()));
+      if (record == null) {
+        if (extension.equals("csv") || extension.equals("tsv")) {
+          record = Joiner.on(delimiter).join(values);
+        } else if (extension.equals("json") ){
+          record = jsonRecord;
+        } else {
+          throw new UnsupportedOperationException(
+              String.format("Extension %s not supported by %s",
+              extension, SmallFileCreator.class.getSimpleName()));
+        }
       }
       PrintWriter out;
       for (String fileAndFolderName : new String[]{"bigfile", "BIGFILE_2"}) {

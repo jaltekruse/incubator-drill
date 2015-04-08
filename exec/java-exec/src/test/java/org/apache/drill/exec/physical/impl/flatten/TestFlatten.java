@@ -21,9 +21,12 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.exec.fn.interp.TestConstantFolding;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestFlatten extends BaseTestQuery {
 
@@ -36,6 +39,8 @@ public class TestFlatten extends BaseTestQuery {
    */
   public static boolean RUN_ADVANCED_TESTS = false;
 
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
   public void testFlattenFailure() throws Exception {
@@ -44,9 +49,48 @@ public class TestFlatten extends BaseTestQuery {
   }
 
   @Test
-  public void testFlatten_Drill2162() throws Exception {
-    // TODO - produce file programmatically
-    test("select uid, flatten(d.lst_lst[1]) lst1, flatten(d.lst_lst[0]) lst0, flatten(d.lst_lst) lst from cp.`/flatten/drill-2162.json` d");
+  public void testFlatten_Drill2162_complex() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    String jsonRecords = BaseTestQuery.getFile("flatten/complex_transaction_example_data.json");
+    int numCopies = 300;
+    new TestConstantFolding.SmallFileCreator(folder).
+        setRecord(jsonRecords)
+        .createFiles(1, numCopies, "json");
+
+    // The file that is being read to generate the large file contains two records
+    final int numRecords = 2;
+    final int listSize = 5;
+    final int repeatedListSize = 2;
+
+    // Each of the lists inside of the repeated lists is flattened individually
+    // so the listSize is multiplied in twice to get the total record count produced
+    //    from the query: flatten(d.lst_lst[1]) lst1, flatten(d.lst_lst[0]) lst0
+    assertEquals("Wrong record count returned from flatten.", listSize * listSize * repeatedListSize * numRecords * numCopies,
+        testRunAndPrint(UserBitShared.QueryType.SQL,
+            "select uid, flatten(d.lst_lst[1]) lst1, flatten(d.lst_lst[0]) lst0, flatten(d.lst_lst) lst from " +
+                "dfs.`" + path + "/bigfile/bigfile.json` d"));
+  };
+
+
+  @Test
+  public void testFlatten_Drill2162_simple() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    String jsonRecord = "{ \"int_list\" : [";
+    final int listSize = 30;
+    for (int i = 1; i < listSize; i++ ) {
+      jsonRecord += i + ", ";
+    }
+    jsonRecord += listSize + "] }";
+    int numRecords = 3000;
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecord)
+        .createFiles(1, numRecords, "json");
+
+    assertEquals("Wrong record count returned from flatten.", listSize * numRecords,
+        testRunAndPrint(UserBitShared.QueryType.SQL,
+            "select flatten(int_list) from dfs.`" + path + "/bigfile/bigfile.json`"));
   };
 
   @Test
