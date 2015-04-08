@@ -63,6 +63,10 @@ public class ${mode}MapWriter extends AbstractFieldWriter{
       return container.getField();
   }
 
+  public String getTypeName() {
+      return "<#if mode == "Repeated">Repeated</#if>Map";
+  }
+
   public void checkValueCapacity(){
     <#if mode == "Repeated">
     if (container.getValueCapacity() <= idx()) {

@@ -86,7 +86,8 @@ public class VectorContainerWriter extends AbstractFieldWriter implements Comple
 
   @Override
   public String getTypeName() {
-    return "Map";
+    // TODO - review this
+    return "VectorContainer";
   }
 
   private class SpecialMapVector extends MapVector {

@@ -114,7 +114,7 @@ abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWr
   }
   
   private void fail(String name){
-    throw new IllegalArgumentException(String.format(, this.getTypeName(), name));
+    throw new IllegalArgumentException(String.format(TYPE_CHANGE_ERROR, this.getTypeName(), name));
   }
   
   
