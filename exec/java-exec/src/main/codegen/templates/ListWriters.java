@@ -61,6 +61,10 @@ public class ${mode}ListWriter extends AbstractFieldWriter{
     this.container = container;
   }
 
+  public String getTypeName() {
+      return "<#if mode == "Repeated">Repeated</#if>List";
+  }
+
   public void allocate(){
     if(writer != null) writer.allocate();
     <#if mode == "Repeated">
