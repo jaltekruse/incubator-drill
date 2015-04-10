@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.TreeTraversingParser;
 import com.google.common.base.Preconditions;
+import org.apache.drill.common.exceptions.UserException;
 
 public abstract class BaseJsonProcessor implements JsonProcessor {
 
@@ -53,4 +54,21 @@ public abstract class BaseJsonProcessor implements JsonProcessor {
     this.parser = new TreeTraversingParser(node);
   }
 
+  public StringBuilder getExceptionContext(String field) {
+    StringBuilder sb = new StringBuilder();
+    sb.append("At line ").append(parser.getCurrentLocation().getLineNr()+1)
+      .append(", column ").append(parser.getCurrentLocation().getColumnNr()+1);
+    if(field!=null) {
+      sb.append(", field ").append(field);
+    }
+    return sb;
+  }
+
+  @Override
+  public void handleAndRaise(String field, Throwable e) {
+    StringBuilder sb = getExceptionContext(field);
+      UserException.Builder builder = UserException.dataReadError(e);
+      builder.pushContext(sb.toString());
+      throw builder.build();
+  }
 }

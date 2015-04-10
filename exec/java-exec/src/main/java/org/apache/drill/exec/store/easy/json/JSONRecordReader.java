@@ -79,7 +79,6 @@ public class JSONRecordReader extends AbstractRecordReader {
   /**
    * Create a new JSON Record Reader that uses a in memory materialized JSON stream.
    * @param fragmentContext
-   * @param inputPath
    * @param fileSystem
    * @param columns
    * @throws OutOfMemoryException
@@ -159,12 +158,19 @@ public class JSONRecordReader extends AbstractRecordReader {
       columnNr = ex.getLocation().getColumnNr();
     }
 
-    throw UserException.dataReadError(e)
-      .message("%s - %s", suffix, message)
-      .addContext("Filename", hadoopPath.toUri().getPath())
-      .addContext("Record", recordCount + 1)
-      .addContext("Column", columnNr)
-      .build();
+    StringBuilder sb = new StringBuilder()
+      .append("File ").append(hadoopPath.toUri().getPath())
+      .append(", record ").append(recordCount+1);
+
+    UserException.Builder exceptionBuilder =
+      UserException.dataReadError(e)
+        .message("%s - %s", suffix, message)
+        .pushContext(sb.toString());
+    if (columnNr > 0) {
+      exceptionBuilder.addContext("Column", columnNr);
+    }
+
+      throw exceptionBuilder.build();
   }
 
 
@@ -208,9 +214,7 @@ public class JSONRecordReader extends AbstractRecordReader {
 
       return recordCount;
 
-    } catch (final JsonParseException e) {
-      handleAndRaise("Error parsing JSON.", e);
-    } catch (final IOException e) {
+    } catch (Exception e) {
       handleAndRaise("Error reading JSON.", e);
     }
     // this is never reached
