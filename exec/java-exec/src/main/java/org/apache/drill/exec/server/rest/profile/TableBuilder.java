@@ -98,7 +98,7 @@ class TableBuilder {
   }
 
   public void appendNanos(long p, String link) {
-    appendMillis((long) (p / 1000.0 / 1000.0), link);
+    appendMillis(Math.round(p / 1000.0 / 1000.0), link);
   }
 
   public void appendFormattedNumber(Number n, String link) {
