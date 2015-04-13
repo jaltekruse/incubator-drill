@@ -19,13 +19,16 @@ package org.apache.drill;
 
 import static org.junit.Assert.assertEquals;
 
+import com.google.common.collect.Lists;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.hadoop.fs.Path;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import java.io.File;
 import java.math.BigDecimal;
 
 public class TestExampleQueries extends BaseTestQuery{
@@ -701,6 +704,23 @@ public class TestExampleQueries extends BaseTestQuery{
 
     test("USE dfs_test.tmp");
     test(creatTable);
+
+    // Wait for table to be created, the statement to create a table returns asynchronously
+    // see DRILL-2560
+    boolean fileCreated = false;
+    // wait a total of 5 seconds in half-second intervals
+    int timeoutCounter = 10;
+    File tableDir = new File (getDfsTestTmpSchemaLocation(), "CaseInsensitiveColumnNames");
+    while ( ! fileCreated && timeoutCounter > 0 ) {
+      Thread.sleep(500);
+      if (tableDir.isDirectory()) {
+        if (Lists.newArrayList(tableDir.list()).contains("0_0_0.parquet")) {
+          fileCreated = true;
+        }
+      } else if (tableDir.isFile()) {
+        throw new Exception("Table was created as file, should have been a directory instead");
+      }
+    }
 
     testBuilder()
         .sqlQuery("select * from `CaseInsensitiveColumnNames`")
