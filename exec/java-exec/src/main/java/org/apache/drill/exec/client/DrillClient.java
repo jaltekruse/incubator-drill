@@ -193,11 +193,12 @@ public class DrillClient implements Closeable, ConnectionThrottle {
       retry--;
       try {
         Thread.sleep(this.reconnectDelay);
-        Collection<DrillbitEndpoint> endpoints = clusterCoordinator.getAvailableEndpoints();
+        ArrayList<DrillbitEndpoint> endpoints = new ArrayList<>(clusterCoordinator.getAvailableEndpoints());
         if (endpoints.isEmpty()) {
           continue;
         }
         client.close();
+        Collections.shuffle(endpoints);
         connect(endpoints.iterator().next());
         return true;
       } catch (Exception e) {
