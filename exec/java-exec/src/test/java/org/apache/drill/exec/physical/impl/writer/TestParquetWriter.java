@@ -60,6 +60,13 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testYelpAcademicConversion() throws Exception {
+    String selection = "*";
+    String inputTable = "dfs.`/Users/jaltekruse/test_data_drill/yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_review.json`";
+    runTestAndValidate(selection, selection, inputTable, "yelp_json");
+  }
+
+  @Test
   public void testComplexRepeated() throws Exception {
     String selection = "*";
     String inputTable = "cp.`testRepeatedWrite.json`";
