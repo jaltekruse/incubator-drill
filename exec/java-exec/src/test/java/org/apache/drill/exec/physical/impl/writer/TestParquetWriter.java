@@ -53,6 +53,12 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testParquetReadError_2616() throws Exception {
+    test("select * from dfs_test.`/Users/jaltekruse/Downloads/indicators.parquet` limit 5");
+    compareParquetReadersColumnar("*", "dfs_test.`/Users/jaltekruse/Downloads/indicators.parquet`");
+  }
+
+  @Test
   public void testComplex() throws Exception {
     String selection = "*";
     String inputTable = "cp.`donuts.json`";
