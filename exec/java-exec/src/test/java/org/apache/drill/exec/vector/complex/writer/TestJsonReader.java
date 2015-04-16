@@ -78,6 +78,7 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void readFoodmartTestCases() throws Exception {
+    test("alter session set `store.json.all_text_mode` = true");
     test("select * from dfs.`/Users/jaltekruse/test_data_drill/json_test_files/queries.json`");
   }
 
