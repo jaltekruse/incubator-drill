@@ -76,6 +76,11 @@ public class TestJsonReader extends BaseTestQuery {
     test("select * from cp.`/store/json/scalar-array-2000.json`");
   }
 
+  @Test
+  public void readFoodmartTestCases() throws Exception {
+    test("select * from dfs.`/Users/jaltekruse/test_data_drill/json_test_files/queries.json`");
+  }
+
   public void runTestsOnFile(String filename, UserBitShared.QueryType queryType, String[] queries, long[] rowCounts) throws Exception {
     if (VERBOSE_DEBUG) {
       System.out.println("===================");
