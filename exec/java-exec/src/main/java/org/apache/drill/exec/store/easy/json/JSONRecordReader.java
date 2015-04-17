@@ -26,6 +26,7 @@ import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.ops.OperatorContext;
@@ -210,18 +211,21 @@ public class JSONRecordReader extends AbstractRecordReader {
 
       // TODO - delete me, debugging memory waste
 
-      int filled = 0;
+      double totalAllocatedBytes = 0;
+      double totalUsedBytes = 0;
       for (ValueVector v : writer.getMapVector().getPrimitiveVectors()) {
-        filled = Math.max(filled, v.getAccessor().getValueCount() * 100 / v.getValueCapacity());
+        totalAllocatedBytes += v.getValueCapacity();
         if (v instanceof VariableWidthVector) {
-          filled = Math.max(filled, ((VariableWidthVector) v).getCurrentSizeInBytes() * 100 / ((VariableWidthVector) v).getByteCapacity());
+          totalUsedBytes += ((VariableWidthVector) v).getCurrentSizeInBytes();
+        } else {
+          totalAllocatedBytes += TypeHelper.getSize(v.getField().getType());
         }
         // TODO - need to re-enable this
 //      if (v instanceof RepeatedFixedWidthVector) {
 //        filled = Math.max(filled, ((RepeatedFixedWidthVector) v).getAccessor().getGroupCount() * 100)
 //      }
       }
-      logger.debug(String.format("percent filled: %d", filled));
+      logger.debug(String.format("percent filled: %f", totalUsedBytes / totalAllocatedBytes));
       return recordCount;
 
     } catch (final JsonParseException e) {

@@ -539,7 +539,10 @@ public class TestParquetWriter extends BaseTestQuery {
   public void runTestAndValidate(String selection, String validationSelection, String inputTable, String outputFile) throws Exception {
     try {
       // TODO - revert to dfs_test
-      test("use dfs.tmp");
+//      test("use dfs_test.tmp");
+      test("alter session set `planner.width.max_per_node` = 1");
+//      test("alter session set `store.parquet.block-size` = 608174080");
+
   //    test("ALTER SESSION SET `planner.add_producer_consumer` = false");
       String query = String.format("SELECT %s FROM %s", selection, inputTable);
       String create = "CREATE TABLE " + outputFile + " AS " + query;
@@ -549,7 +552,8 @@ public class TestParquetWriter extends BaseTestQuery {
 //      test(create);
 
       testBuilder()
-          .unOrdered()
+          .ordered()
+          .highPerformanceComparison()
           .sqlQuery(query)
           .sqlBaselineQuery(validateQuery)
           .go();
