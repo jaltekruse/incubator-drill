@@ -35,6 +35,8 @@ import org.apache.drill.exec.store.dfs.DrillFileSystem;
 import org.apache.drill.exec.store.easy.json.JsonProcessor.ReadState;
 import org.apache.drill.exec.store.easy.json.reader.CountingJsonReader;
 import org.apache.drill.exec.vector.BaseValueVector;
+import org.apache.drill.exec.vector.ValueVector;
+import org.apache.drill.exec.vector.VariableWidthVector;
 import org.apache.drill.exec.vector.complex.fn.JsonReader;
 import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
 import org.apache.hadoop.conf.Configuration;
@@ -206,6 +208,20 @@ public class JSONRecordReader extends AbstractRecordReader {
 //      System.out.println(String.format("Wrote %d records in %dms.", recordCount, p.elapsed(TimeUnit.MILLISECONDS)));
 
 
+      // TODO - delete me, debugging memory waste
+
+      int filled = 0;
+      for (ValueVector v : writer.getMapVector().getPrimitiveVectors()) {
+        filled = Math.max(filled, v.getAccessor().getValueCount() * 100 / v.getValueCapacity());
+        if (v instanceof VariableWidthVector) {
+          filled = Math.max(filled, ((VariableWidthVector) v).getCurrentSizeInBytes() * 100 / ((VariableWidthVector) v).getByteCapacity());
+        }
+        // TODO - need to re-enable this
+//      if (v instanceof RepeatedFixedWidthVector) {
+//        filled = Math.max(filled, ((RepeatedFixedWidthVector) v).getAccessor().getGroupCount() * 100)
+//      }
+      }
+      logger.debug(String.format("percent filled: %d", filled));
       return recordCount;
 
     } catch (final JsonParseException e) {
