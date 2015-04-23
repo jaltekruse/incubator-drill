@@ -374,7 +374,12 @@ public class TestParquetWriter extends BaseTestQuery {
   @Ignore
   @Test
   public void testReadSf_1_supplier() throws Exception {
+    try {
+      test("alter session set `planner.width.max_per_node` = 1");
     compareParquetReadersHyperVector("*", "dfs.`/tmp/orders_part-m-00001.parquet`");
+    } finally {
+      test("alter session set `planner.width.max_per_node` = " + (long) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.70));
+    }
   }
 
   @Ignore
