@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -94,6 +95,7 @@ public class
     public List<String> extensions;
     private static final List<String> DEFAULT_EXTS = ImmutableList.of("json");
 
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     public List<String> getExtensions() {
       if (extensions == null) {
         // when loading an old JSONFormatConfig that doesn't contain an "extensions" attribute
