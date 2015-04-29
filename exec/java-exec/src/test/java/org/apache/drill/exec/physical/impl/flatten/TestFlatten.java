@@ -48,11 +48,25 @@ public class TestFlatten extends BaseTestQuery {
 //    test("select complex, rownum from cp.`/store/json/test_flatten_mappify2.json`");
   }
 
+  @Test
+  public void testFlattenWithJoinNested() throws Exception {
+    test("select v1.uid, flatten(v1.event_map.events), flatten(v2.transaction_map.transactions) from \n" +
+        "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2\n" +
+        "on v1.uid = v2.uid;");
+
+//   test("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from \n" +
+//       "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1\n" +
+//       "inner join\n" +
+//       "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2\n" +
+//       "on v1.uid = v2.uid)");
+  }
+
  @Test
  public void testFlattenWithJoin() throws Exception {
    test("alter session set `planner.width.max_per_node` = 1");
    test("select v1.uid, flatten(events), flatten(transactions) from \n" +
-//   test("select * from \n" +
        "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
        "inner join\n" +
        "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
@@ -60,7 +74,6 @@ public class TestFlatten extends BaseTestQuery {
 
 
 //   test("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
-////   test("select * from \n" +
 //       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
 //       "inner join\n" +
 //       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
