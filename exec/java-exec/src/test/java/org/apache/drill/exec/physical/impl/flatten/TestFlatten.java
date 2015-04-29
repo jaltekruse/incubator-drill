@@ -48,6 +48,20 @@ public class TestFlatten extends BaseTestQuery {
 //    test("select complex, rownum from cp.`/store/json/test_flatten_mappify2.json`");
   }
 
+ @Test
+ public void testFlattenWithJoin() throws Exception {
+   test("alter session set `planner.width.max_per_node` = 1");
+   test("select v1.uid, flatten(events), flatten(transactions) from \n" +
+//   test("select * from \n" +
+       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+       "inner join\n" +
+       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+       "on v1.uid = v2.uid;");
+
+//   test("select uid, transactions from (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) as t");
+//   testPhysicalFromFile("flatten/test_project_complex_twice_plan.json");
+ }
+
   @Test
   public void testFlatten_Drill2162_complex() throws Exception {
     String path = folder.getRoot().toPath().toString();
