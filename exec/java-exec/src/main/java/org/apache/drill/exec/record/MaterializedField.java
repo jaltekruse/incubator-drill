@@ -84,7 +84,11 @@ public class MaterializedField {
   }
 
   public MaterializedField clone(FieldReference ref){
-    return create(ref, key.type);
+    MaterializedField mf = create(ref, key.type);
+    for (MaterializedField childMf : getChildren()) {
+      mf.addChild(childMf);
+    }
+    return mf;
   }
 
   public String getLastName(){

@@ -36,6 +36,7 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.expression.ValueExpressions;
 import org.apache.drill.common.expression.fn.CastFunctions;
 import org.apache.drill.common.logical.data.NamedExpression;
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.ClassTransformationException;
@@ -427,7 +428,11 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         if (expr instanceof ValueVectorReadExpression) {
           final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
           final FieldReference ref = getRef(namedExpression);
-          vector = container.addOrGet(MaterializedField.create(ref, vectorRead.getMajorType()));
+          final TypeProtos.MajorType type = vectorRead.getMajorType();
+//          vector = incoming.getValueAccessorById(TypeHelper.getValueVectorClass(type.getMinorType(),type.getMode()),
+//              vectorRead.getTypedFieldId().getFieldIds()).getField();
+          vector = container.addOrGet(incoming.getValueAccessorById(TypeHelper.getValueVectorClass(type.getMinorType(),type.getMode()),
+              vectorRead.getTypedFieldId().getFieldIds()).getField().clone(ref));
         } else {
           vector = container.addOrGet(outputField, callBack);
         }
