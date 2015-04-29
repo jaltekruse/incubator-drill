@@ -58,6 +58,8 @@ public class TestFlatten extends BaseTestQuery {
        "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
        "on v1.uid = v2.uid;");
 
+//    test("select e as events, events as e2 from (select uid as u, events as e, events from cp.`flatten/complex_transaction_example_data.json`)");
+
 //   test("select uid, transactions from (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) as t");
 //   testPhysicalFromFile("flatten/test_project_complex_twice_plan.json");
  }

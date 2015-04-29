@@ -264,6 +264,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
    */
   private TransferPair getFlattenFieldTransferPair(FieldReference reference) {
     final TypedFieldId fieldId = incoming.getValueVectorId(popConfig.getColumn());
+    final MaterializedField mf = incoming.getSchema().getColumn(fieldId.getFieldIds()[0]);
     final Class vectorClass = incoming.getSchema().getColumn(fieldId.getFieldIds()[0]).getValueClass();
     final ValueVector flattenField = incoming.getValueAccessorById(vectorClass, fieldId.getFieldIds()).getValueVector();
 

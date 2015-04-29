@@ -422,8 +422,16 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         ((DrillComplexWriterFuncHolder) ((DrillFuncHolderExpr) expr).getHolder()).setReference(namedExpression.getRef());
         cg.addExpr(expr);
       } else{
+        final ValueVector vector;
         // need to do evaluation.
-        final ValueVector vector = container.addOrGet(outputField, callBack);
+        if (expr instanceof ValueVectorReadExpression) {
+          final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
+          final FieldReference ref = getRef(namedExpression);
+          vector = container.addOrGet(MaterializedField.create(ref, vectorRead.getMajorType()));
+        } else {
+          vector = container.addOrGet(outputField, callBack);
+        }
+
         allocationVectors.add(vector);
         final TypedFieldId fid = container.getValueVectorId(outputField.getPath());
         final boolean useSetSafe = !(vector instanceof FixedWidthVector);
