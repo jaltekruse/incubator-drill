@@ -31,8 +31,7 @@ import org.apache.drill.exec.record.selection.SelectionVector4;
 
 import com.google.common.collect.ImmutableList;
 
-import org.apache.drill.exec.vector.RepeatedFixedWidthVector.RepeatedAccessor;
-import org.apache.drill.exec.vector.RepeatedVector;
+import org.apache.drill.exec.vector.RepeatedValueVector;
 
 public abstract class FlattenTemplate implements Flattener {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FlattenTemplate.class);
@@ -43,8 +42,8 @@ public abstract class FlattenTemplate implements Flattener {
   private SelectionVector2 vector2;
   private SelectionVector4 vector4;
   private SelectionVectorMode svMode;
-  RepeatedVector fieldToFlatten;
-  RepeatedAccessor accessor;
+  private RepeatedValueVector fieldToFlatten;
+  private RepeatedValueVector.RepeatedAccessor accessor;
   private int groupIndex;
 
   // this allows for groups to be written between batches if we run out of space, for cases where we have finished
@@ -60,12 +59,12 @@ public abstract class FlattenTemplate implements Flattener {
   }
 
   @Override
-  public void setFlattenField(RepeatedVector flattenField) {
+  public void setFlattenField(RepeatedValueVector flattenField) {
     this.fieldToFlatten = flattenField;
-    this.accessor = flattenField.getAccessor();
+    this.accessor = RepeatedValueVector.RepeatedAccessor.class.cast(flattenField.getAccessor());
   }
 
-  public RepeatedVector getFlattenField() {
+  public RepeatedValueVector getFlattenField() {
     return fieldToFlatten;
   }
 
@@ -84,9 +83,9 @@ public abstract class FlattenTemplate implements Flattener {
           childIndexWithinCurrGroup = 0;
         }
         outer: {
-          final int groupCount = accessor.getGroupCount();
+          final int groupCount = accessor.getValueCount();
           for ( ; groupIndex < groupCount; groupIndex++) {
-            currGroupSize = accessor.getGroupSizeAtIndex(groupIndex);
+            currGroupSize = accessor.getInnerValueCountAt(groupIndex);
             for ( ; childIndexWithinCurrGroup < currGroupSize; childIndexWithinCurrGroup++) {
               if (firstOutputIndex == OUTPUT_BATCH_SIZE) {
                 break outer;
