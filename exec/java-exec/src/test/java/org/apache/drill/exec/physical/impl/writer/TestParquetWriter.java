@@ -58,6 +58,14 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testParquetReadFailure() throws Exception {
+    // TODO - read several timestamp columns and verify the results
+//    test("alter session set `store.parquet.use_new_reader` = true");
+    compareParquetReadersHyperVector("rptng_ts", "dfs.`/Users/jaltekruse/test_data_drill/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`");
+//    runSQL("select convert_from(rptng_ts, 'IMPALA_TIMESTAMP') from dfs.`/Users/jaltekruse/test_data_drill/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`");
+  }
+
+  @Test
   public void testLargeFooter() throws Exception {
     StringBuffer sb = new StringBuffer();
     // create a JSON document with a lot of columns
