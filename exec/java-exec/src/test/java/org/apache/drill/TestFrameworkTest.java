@@ -21,6 +21,7 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.MinorType;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.hadoop.io.Text;
@@ -71,6 +72,8 @@ public class TestFrameworkTest extends BaseTestQuery{
 
   @Test
   public void testDecimalBaseline() throws  Exception {
+    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+
     // type information can be provided explicitly
     testBuilder()
         .sqlQuery("select cast(dec_col as decimal(38,2)) dec_col from cp.`testframework/decimal_test.json`")
@@ -98,6 +101,7 @@ public class TestFrameworkTest extends BaseTestQuery{
         .baselineValues(new BigDecimal("3.70"))
         .build().run();
 
+    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
 
   @Test

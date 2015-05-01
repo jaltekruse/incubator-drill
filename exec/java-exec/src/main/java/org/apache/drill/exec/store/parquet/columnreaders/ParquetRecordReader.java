@@ -106,6 +106,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
   private final CodecFactoryExposer codecFactoryExposer;
   int rowGroupIndex;
   long totalRecordsRead;
+  private final FragmentContext fragmentContext;
 
   public ParquetRecordReader(FragmentContext fragmentContext, //
                              String path, //
@@ -128,6 +129,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
     this.rowGroupIndex = rowGroupIndex;
     this.batchSize = batchSize;
     this.footer = footer;
+    this.fragmentContext = fragmentContext;
     setColumns(columns);
   }
 
@@ -202,26 +204,27 @@ public class ParquetRecordReader extends AbstractRecordReader {
 
   @Override
   public void setup(OutputMutator output) throws ExecutionSetupException {
-    if (!isStarQuery()) {
-      columnsFound = new boolean[getColumns().size()];
-      nullFilledVectors = new ArrayList();
-    }
-    columnStatuses = new ArrayList<>();
-//    totalRecords = footer.getBlocks().get(rowGroupIndex).getRowCount();
-    List<ColumnDescriptor> columns = footer.getFileMetaData().getSchema().getColumns();
-    allFieldsFixedLength = true;
-    ColumnDescriptor column;
-    ColumnChunkMetaData columnChunkMetaData;
-    int columnsToScan = 0;
-    mockRecordsRead = 0;
+    try {
+      if (!isStarQuery()) {
+        columnsFound = new boolean[getColumns().size()];
+        nullFilledVectors = new ArrayList();
+      }
+      columnStatuses = new ArrayList<>();
+  //    totalRecords = footer.getBlocks().get(rowGroupIndex).getRowCount();
+      List<ColumnDescriptor> columns = footer.getFileMetaData().getSchema().getColumns();
+      allFieldsFixedLength = true;
+      ColumnDescriptor column;
+      ColumnChunkMetaData columnChunkMetaData;
+      int columnsToScan = 0;
+      mockRecordsRead = 0;
 
-    MaterializedField field;
-//    ParquetMetadataConverter metaConverter = new ParquetMetadataConverter();
-    FileMetaData fileMetaData;
+      MaterializedField field;
+  //    ParquetMetadataConverter metaConverter = new ParquetMetadataConverter();
+      FileMetaData fileMetaData;
 
-    logger.debug("Reading row group({}) with {} records in file {}.", rowGroupIndex, footer.getBlocks().get(rowGroupIndex).getRowCount(),
-        hadoopPath.toUri().getPath());
-    totalRecordsRead = 0;
+      logger.debug("Reading row group({}) with {} records in file {}.", rowGroupIndex, footer.getBlocks().get(rowGroupIndex).getRowCount(),
+          hadoopPath.toUri().getPath());
+      totalRecordsRead = 0;
 
     // TODO - figure out how to deal with this better once we add nested reading, note also look where this map is used below
     // store a map from column name to converted types if they are non-null
@@ -236,7 +239,8 @@ public class ParquetRecordReader extends AbstractRecordReader {
       column = columns.get(i);
       logger.debug("name: " + fileMetaData.getSchema().get(i).name);
       SchemaElement se = schemaElements.get(column.getPath()[0]);
-      MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(), getDataMode(column), se);
+      MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(), getDataMode(column),
+          se, fragmentContext.getOptions());
       field = MaterializedField.create(toFieldName(column.getPath()),mt);
       if ( ! fieldSelected(field)) {
         continue;
@@ -266,7 +270,6 @@ public class ParquetRecordReader extends AbstractRecordReader {
       recordsPerBatch = DEFAULT_RECORDS_TO_READ_IF_NOT_FIXED_WIDTH;
     }
 
-    try {
       ValueVector v;
       SchemaElement schemaElement;
       ArrayList<VarLengthColumn> varLengthColumns = new ArrayList<>();
@@ -276,7 +279,8 @@ public class ParquetRecordReader extends AbstractRecordReader {
         column = columns.get(i);
         columnChunkMetaData = footer.getBlocks().get(rowGroupIndex).getColumns().get(i);
         schemaElement = schemaElements.get(column.getPath()[0]);
-        MajorType type = ParquetToDrillTypeConverter.toMajorType(column.getType(), schemaElement.getType_length(), getDataMode(column), schemaElement);
+        MajorType type = ParquetToDrillTypeConverter.toMajorType(column.getType(), schemaElement.getType_length(),
+            getDataMode(column), schemaElement, fragmentContext.getOptions());
         field = MaterializedField.create(toFieldName(column.getPath()), type);
         // the field was not requested to be read
         if ( ! fieldSelected(field)) {
@@ -325,6 +329,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
   }
 
   protected void handleAndRaise(String s, Exception e) {
+    cleanup();
     String message = "Error in parquet record reader.\nMessage: " + s +
       "\nParquet Metadata: " + footer;
     throw new DrillRuntimeException(message, e);
@@ -360,8 +365,10 @@ public class ParquetRecordReader extends AbstractRecordReader {
     for (ColumnReader column : columnStatuses) {
       column.valuesReadInCurrentPass = 0;
     }
-    for (VarLengthColumn r : varLengthReader.columns) {
-      r.valuesReadInCurrentPass = 0;
+    if (varLengthReader != null) {
+      for (VarLengthColumn r : varLengthReader.columns) {
+        r.valuesReadInCurrentPass = 0;
+      }
     }
   }
 
@@ -452,10 +459,12 @@ public class ParquetRecordReader extends AbstractRecordReader {
     }
     columnStatuses.clear();
 
-    for (VarLengthColumn r : varLengthReader.columns) {
-      r.clear();
+    if (varLengthReader != null) {
+      for (VarLengthColumn r : varLengthReader.columns) {
+        r.clear();
+      }
+      varLengthReader.columns.clear();
     }
-    varLengthReader.columns.clear();
   }
 
 }
