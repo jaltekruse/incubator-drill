@@ -33,6 +33,7 @@ import org.apache.drill.exec.expr.holders.ComplexHolder;
 import org.apache.drill.exec.expr.holders.RepeatedListHolder;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.SerializedField;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.TransferPair;
@@ -113,9 +114,15 @@ public class RepeatedListVector extends AbstractContainerVector
       }
 
       @Override
+      public void startNewValue(int index) {
+        emptyPopulator.populate(index+1);
+        super.startNewValue(index);
+      }
+
+      @Override
       public void setValueCount(int valueCount) {
-        super.setValueCount(valueCount);
         emptyPopulator.populate(valueCount);
+        super.setValueCount(valueCount);
       }
     }
 
@@ -182,6 +189,11 @@ public class RepeatedListVector extends AbstractContainerVector
       if (!allocateNewSafe()) {
         throw new OutOfMemoryRuntimeException();
       }
+    }
+
+    @Override
+    protected SerializedField.Builder getMetadataBuilder() {
+      return super.getMetadataBuilder();
     }
 
     @Override

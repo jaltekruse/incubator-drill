@@ -44,7 +44,7 @@ public abstract class FlattenTemplate implements Flattener {
   private SelectionVectorMode svMode;
   private RepeatedValueVector fieldToFlatten;
   private RepeatedValueVector.RepeatedAccessor accessor;
-  private int groupIndex;
+  private int valueIndex;
 
   // this allows for groups to be written between batches if we run out of space, for cases where we have finished
   // a batch on the boundary it will be set to 0
@@ -83,14 +83,14 @@ public abstract class FlattenTemplate implements Flattener {
           childIndexWithinCurrGroup = 0;
         }
         outer: {
-          final int groupCount = accessor.getValueCount();
-          for ( ; groupIndex < groupCount; groupIndex++) {
-            currGroupSize = accessor.getInnerValueCountAt(groupIndex);
+          final int valueCount = accessor.getValueCount();
+          for ( ; valueIndex < valueCount; valueIndex++) {
+            currGroupSize = accessor.getInnerValueCountAt(valueIndex);
             for ( ; childIndexWithinCurrGroup < currGroupSize; childIndexWithinCurrGroup++) {
               if (firstOutputIndex == OUTPUT_BATCH_SIZE) {
                 break outer;
               }
-              doEval(groupIndex, firstOutputIndex);
+              doEval(valueIndex, firstOutputIndex);
               firstOutputIndex++;
               childIndex++;
             }
@@ -132,7 +132,7 @@ public abstract class FlattenTemplate implements Flattener {
 
   @Override
   public void resetGroupIndex() {
-    this.groupIndex = 0;
+    this.valueIndex = 0;
     this.currGroupSize = 0;
     this.childIndex = 0;
   }

@@ -81,7 +81,11 @@ public abstract class BaseRepeatedValueVector<A extends RepeatedValueVector.Repe
 
   @Override
   public int getValueCapacity() {
-    return Math.min(vector.getValueCapacity(), offsets.getValueCapacity() - 1);
+    final int offsetValueCapacity = offsets.getValueCapacity() - 1;
+    if (vector == DEFAULT_DATA_VECTOR) {
+      return offsetValueCapacity;
+    }
+    return Math.min(vector.getValueCapacity(), offsetValueCapacity);
   }
 
   @Override
@@ -181,6 +185,7 @@ public abstract class BaseRepeatedValueVector<A extends RepeatedValueVector.Repe
     @Override
     public void startNewValue(int index) {
       offsets.getMutator().setSafe(index+1, offsets.getAccessor().get(index));
+      setValueCount(index+1);
     }
 
     @Override
