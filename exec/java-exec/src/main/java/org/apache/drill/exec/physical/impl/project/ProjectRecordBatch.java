@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.commons.collections.map.CaseInsensitiveMap;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.ConvertExpression;
 import org.apache.drill.common.expression.ErrorCollector;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
@@ -49,6 +50,7 @@ import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.ValueVectorWriteExpression;
 import org.apache.drill.exec.expr.fn.DrillComplexWriterFuncHolder;
+import org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.config.Project;
@@ -84,6 +86,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
 
   private static final String EMPTY_STRING = "";
   private boolean first = true;
+  public static final String EVALUATION_FAILED_MSG = "One of these expressions failed during evaluation: ";
 
   private class ClassifierResult {
     public boolean isStar = false;
@@ -133,6 +136,16 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
   @Override
   public VectorContainer getOutgoingContainer() {
     return this.container;
+  }
+
+  private UserException addContextToUserException(UserException ex) {
+    StringBuilder sb = new StringBuilder();
+    for (NamedExpression expr : popConfig.getExprs()) {
+      sb.append(expr.getExpr().serialize()).append(";");
+    }
+    return UserException.functionError(ex)
+        .addContext(EVALUATION_FAILED_MSG + sb.toString())
+        .build();
   }
 
   @Override
@@ -195,7 +208,23 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       outOfMemory = true;
       return;
     }
-    final int projRecords = projector.projectRecords(remainderIndex, remainingRecordCount, 0);
+    final int projRecords;
+    try {
+       projRecords = projector.projectRecords(remainderIndex, remainingRecordCount, 0);
+    } catch (UserException ex) {
+      throw addContextToUserException(ex);
+    } catch (NumberFormatException ex) {
+      throw addContextToUserException(
+          UserException.functionError(ex)
+              .message(StringFunctionHelpers.NUMBER_FORMAT_ERROR_MSG, "number", ex.getMessage())
+              .build());
+    } catch (RuntimeException ex) {
+      ex.printStackTrace();
+      throw ex;
+    } catch (Throwable t) {
+      t.printStackTrace();
+      throw t;
+    }
     if (projRecords < remainingRecordCount) {
       setValueCount(projRecords);
       this.recordCount = projRecords;
@@ -439,6 +468,22 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       projector.setup(context, incoming, this, transfers);
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
+    } catch (UserException e) {
+      // constant expressions are evaluated in the setup method, so invalid inputs can cause
+      // user exceptions to be throw from here, add the context information that we can
+      // TODO - limit this list to the expressions with constant inputs if possible
+      throw addContextToUserException(e);
+    } catch (NumberFormatException ex) {
+      throw addContextToUserException(
+          UserException.functionError(ex)
+              .message(StringFunctionHelpers.NUMBER_FORMAT_ERROR_MSG, "number", ex.getMessage())
+              .build());
+    } catch (RuntimeException ex) {
+      ex.printStackTrace();
+      throw ex;
+    } catch (Throwable t) {
+      t.printStackTrace();
+      throw t;
     }
     if (container.isSchemaChanged()) {
       container.buildSchema(SelectionVectorMode.NONE);

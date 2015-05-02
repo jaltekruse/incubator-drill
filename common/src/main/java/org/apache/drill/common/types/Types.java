@@ -19,12 +19,15 @@ package org.apache.drill.common.types;
 
 import static org.apache.drill.common.types.TypeProtos.DataMode.REPEATED;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.TypeProtos.MinorType;
 
 import com.google.protobuf.TextFormat;
+
+import java.util.List;
 
 public class Types {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Types.class);
@@ -33,6 +36,15 @@ public class Types {
   public static final MajorType LATE_BIND_TYPE = optional(MinorType.LATE);
   public static final MajorType REQUIRED_BIT = required(MinorType.BIT);
   public static final MajorType OPTIONAL_BIT = optional(MinorType.BIT);
+
+  public static final List<Object> UNUSED_TYPES = ImmutableList.builder().add(
+      TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
+      TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
+      TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY,
+      TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
+      TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
+      TypeProtos.MinorType.UINT8)
+      .build();
 
   public static enum Comparability {
     UNKNOWN, NONE, EQUAL, ORDERED;
@@ -392,7 +404,7 @@ public class Types {
   public static String getNameOfMinorType(final MinorType type) {
     switch (type) {
       case BIT:
-        return "bool";
+        return "boolean";
       case TINYINT:
         return "tinyint";
       case UINT1:
@@ -433,6 +445,10 @@ public class Types {
         return "timestamp";
       case VARBINARY:
         return "binary";
+      case INTERVALYEAR:
+        return "interval year";
+      case INTERVALDAY:
+        return "interval day";
       case LATE:
         throw new DrillRuntimeException("The late type should never appear in execution or an SQL query, so it does not have a name to refer to it.");
       default:

@@ -21,10 +21,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import org.apache.calcite.avatica.util.TimeUnit;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
 import org.apache.drill.common.expression.ExpressionStringBuilder;
 import org.apache.drill.common.expression.LogicalExpression;
+import org.apache.drill.common.logical.data.NamedExpression;
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
@@ -67,7 +70,7 @@ import java.util.List;
 public class DrillConstExecutor implements RelOptPlanner.Executor {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillConstExecutor.class);
 
-  public static ImmutableMap<TypeProtos.MinorType, SqlTypeName> DRILL_TO_CALCITE_TYPE_MAPPING =
+  public static final ImmutableMap<TypeProtos.MinorType, SqlTypeName> DRILL_TO_CALCITE_TYPE_MAPPING =
       ImmutableMap.<TypeProtos.MinorType, SqlTypeName> builder()
       .put(TypeProtos.MinorType.INT, SqlTypeName.INTEGER)
       .put(TypeProtos.MinorType.BIGINT, SqlTypeName.BIGINT)
@@ -110,14 +113,9 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
       // TODO - DRILL-2551 - Varbinary is used in execution, but it is missing a literal definition
       // in the logical expression representation and subsequently is not supported in
       // RexToDrill and the logical expression visitors
-      TypeProtos.MinorType.VARBINARY,
-
-      TypeProtos.MinorType.TIMESTAMPTZ, TypeProtos.MinorType.TIMETZ, TypeProtos.MinorType.LATE,
-      TypeProtos.MinorType.TINYINT, TypeProtos.MinorType.SMALLINT, TypeProtos.MinorType.GENERIC_OBJECT, TypeProtos.MinorType.NULL,
-      TypeProtos.MinorType.DECIMAL28DENSE, TypeProtos.MinorType.DECIMAL38DENSE, TypeProtos.MinorType.MONEY,
-      TypeProtos.MinorType.FIXEDBINARY, TypeProtos.MinorType.FIXEDCHAR, TypeProtos.MinorType.FIXED16CHAR,
-      TypeProtos.MinorType.VAR16CHAR, TypeProtos.MinorType.UINT1, TypeProtos.MinorType.UINT2, TypeProtos.MinorType.UINT4,
-      TypeProtos.MinorType.UINT8)
+      TypeProtos.MinorType.VARBINARY)
+      // add a list of all types currently unsupported in Drill
+      .addAll(Types.UNUSED_TYPES)
       .build();
 
   FunctionImplementationRegistry funcImplReg;
@@ -175,7 +173,17 @@ public class DrillConstExecutor implements RelOptPlanner.Executor {
         continue;
       }
 
-      ValueHolder output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
+      final ValueHolder output;
+      try {
+        output = InterpreterEvaluator.evaluateConstantExpr(udfUtilities, materializedExpr);
+      } catch (UserException ex) {
+        throw UserException.functionError(ex)
+            .addContext("Function evaluation failed: " + logEx.serialize())
+            .build();
+      } catch (Throwable t) {
+        t.printStackTrace();
+        throw t;
+      }
       RelDataTypeFactory typeFactory = rexBuilder.getTypeFactory();
 
       if (materializedExpr.getMajorType().getMode() == TypeProtos.DataMode.OPTIONAL && TypeHelper.isNull(output)) {

@@ -54,6 +54,7 @@ public interface LogicalExpression extends Iterable<LogicalExpression>{
 
   public int getSelfCost();
   public int getCumulativeCost();
+  public String serialize();
 
   public static class De extends StdDeserializer<LogicalExpression> {
     DrillConfig config;
@@ -99,10 +100,7 @@ public interface LogicalExpression extends Iterable<LogicalExpression>{
     @Override
     public void serialize(LogicalExpression value, JsonGenerator jgen, SerializerProvider provider) throws IOException,
         JsonGenerationException {
-      StringBuilder sb = new StringBuilder();
-      ExpressionStringBuilder esb = new ExpressionStringBuilder();
-      value.accept(esb, sb);
-      jgen.writeString(sb.toString());
+      jgen.writeString(value.serialize());
     }
 
   }

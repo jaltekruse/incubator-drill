@@ -71,4 +71,11 @@ public abstract class LogicalExpressionBase implements LogicalExpression {
     return cost;
   }
 
+  public String serialize() {
+    StringBuilder sb = new StringBuilder();
+    ExpressionStringBuilder esb = new ExpressionStringBuilder();
+    this.accept(esb, sb);
+    return sb.toString();
+  }
+
 }

@@ -21,6 +21,9 @@ package org.apache.drill.exec.expr.fn.impl;
 import io.netty.buffer.DrillBuf;
 import io.netty.util.internal.PlatformDependent;
 
+import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.util.AssertionUtil;
 import org.joda.time.chrono.ISOChronology;
@@ -31,6 +34,11 @@ public class StringFunctionHelpers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(StringFunctionHelpers.class);
 
   private static final boolean BOUNDS_CHECKING_ENABLED = AssertionUtil.BOUNDS_CHECKING_ENABLED;
+  // error message for incorrectly formatted numbers, first string format specifier should be
+  // used for the minor type name (int, float, decimal, etc.)
+  // The second should be used for the value that failed to parse.
+  public static final String NUMBER_FORMAT_ERROR_MSG =
+      "Invalid %s format '%s'.";
 
   static final int RADIX = 10;
   static final long MAX_LONG = -Long.MAX_VALUE / RADIX;
@@ -39,7 +47,7 @@ public class StringFunctionHelpers {
   public static long varCharToLong(final int start, final int end, DrillBuf buffer){
     if ((end - start) ==0) {
       //empty, not a valid number
-      return nfeL(start, end, buffer);
+      return numberFormatExceptionBigInt(start, end, buffer);
     }
 
     int readIndex = start;
@@ -48,7 +56,7 @@ public class StringFunctionHelpers {
 
     if (negative && ++readIndex == end) {
       //only one single '-'
-      return nfeL(start, end, buffer);
+      return numberFormatExceptionBigInt(start, end, buffer);
     }
 
 
@@ -59,18 +67,18 @@ public class StringFunctionHelpers {
       digit = Character.digit(buffer.getByte(readIndex++),RADIX);
       //not valid digit.
       if (digit == -1) {
-        return nfeL(start, end, buffer);
+        return numberFormatExceptionBigInt(start, end, buffer);
       }
       //overflow
       if (MAX_LONG > result) {
-        return nfeL(start, end, buffer);
+        return numberFormatExceptionBigInt(start, end, buffer);
       }
 
       long next = result * RADIX - digit;
 
       //overflow
       if (next > result) {
-        return nfeL(start, end, buffer);
+        return numberFormatExceptionBigInt(start, end, buffer);
       }
       result = next;
     }
@@ -78,29 +86,46 @@ public class StringFunctionHelpers {
       result = -result;
       //overflow
       if (result < 0) {
-        return nfeL(start, end, buffer);
+        return numberFormatExceptionBigInt(start, end, buffer);
       }
     }
 
     return result;
   }
 
-  private static int nfeL(int start, int end, DrillBuf buffer){
-    byte[] buf = new byte[end - start];
-    buffer.getBytes(start, buf, 0, end - start);
-    throw new NumberFormatException(new String(buf, com.google.common.base.Charsets.UTF_8));
+  private static long numberFormatExceptionBigInt(int start, int end, DrillBuf buffer){
+    numberFormatException(start, end, buffer, TypeProtos.MinorType.BIGINT);
+    // never reached
+    return 0;
   }
 
-  private static int nfeI(int start, int end, DrillBuf buffer){
+  public static int numberFormatExceptionInteger(int start, int end, DrillBuf buffer){
+    numberFormatException(start, end, buffer, TypeProtos.MinorType.INT);
+    // never reached
+    return 0;
+  }
+
+  public static int numberFormatExceptionDecimal(int start, int end, DrillBuf buffer){
+    numberFormatException(start, end, buffer, TypeProtos.MinorType.DECIMAL18);
+    // never reached
+    return 0;
+  }
+
+  public static int numberFormatException(int start, int end, DrillBuf buffer, TypeProtos.MinorType type){
     byte[] buf = new byte[end - start];
     buffer.getBytes(start, buf, 0, end - start);
-    throw new NumberFormatException(new String(buf, com.google.common.base.Charsets.UTF_8));
+    throw UserException.functionError()
+        .message(NUMBER_FORMAT_ERROR_MSG,
+            Types.getNameOfMinorType(type),
+            new String(buf, com.google.common.base.Charsets.UTF_8))
+        .build();
+
   }
 
   public static int varCharToInt(final int start, final int end, DrillBuf buffer){
     if ((end - start) ==0) {
       //empty, not a valid number
-      return nfeI(start, end, buffer);
+      return numberFormatExceptionInteger(start, end, buffer);
     }
 
     int readIndex = start;
@@ -109,7 +134,7 @@ public class StringFunctionHelpers {
 
     if (negative && ++readIndex == end) {
       //only one single '-'
-      return nfeI(start, end, buffer);
+      return numberFormatExceptionInteger(start, end, buffer);
     }
 
     int result = 0;
@@ -119,18 +144,18 @@ public class StringFunctionHelpers {
       digit = Character.digit(buffer.getByte(readIndex++), RADIX);
       //not valid digit.
       if (digit == -1) {
-        return nfeI(start, end, buffer);
+        return numberFormatExceptionInteger(start, end, buffer);
       }
       //overflow
       if (MAX_INT > result) {
-        return nfeI(start, end, buffer);
+        return numberFormatExceptionInteger(start, end, buffer);
       }
 
       int next = result * RADIX - digit;
 
       //overflow
       if (next > result) {
-        return nfeI(start, end, buffer);
+        return numberFormatExceptionInteger(start, end, buffer);
       }
       result = next;
     }
@@ -138,7 +163,7 @@ public class StringFunctionHelpers {
       result = -result;
       //overflow
       if (result < 0) {
-        return nfeI(start, end, buffer);
+        return numberFormatExceptionInteger(start, end, buffer);
       }
     }
 
