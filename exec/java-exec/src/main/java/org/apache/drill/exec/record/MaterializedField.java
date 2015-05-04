@@ -88,7 +88,7 @@ public class MaterializedField {
     for (MaterializedField childMf : getChildren()) {
       // TODO - make sure this also works with a parent that itself is nested
       SchemaPath sp = SchemaPath.create(ref.getAsNamePart());
-      mf.addChild(new MaterializedField(sp.getChild(childMf.getLastName()), childMf.getType()));
+      mf.addChild(new MaterializedField(new SchemaPath(sp.getRootSegment().cloneWithNewChild(childMf.getPath().getLastSegment())), childMf.getType()));
     }
     return mf;
   }
