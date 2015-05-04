@@ -1,0 +1,829 @@
+{
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e1",
+    "campaign_id" : "c1",
+    "event_name" : "e1_name",
+    "event_time" : {
+      "$numberLong" : 1000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e1",
+    "campaign_id" : "c1",
+    "event_name" : "e1_name",
+    "event_time" : {
+      "$numberLong" : 1000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e2",
+    "campaign_id" : "c1",
+    "event_name" : "e2_name",
+    "event_time" : {
+      "$numberLong" : 2000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e2",
+    "campaign_id" : "c1",
+    "event_name" : "e2_name",
+    "event_time" : {
+      "$numberLong" : 2000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e3",
+    "campaign_id" : "c1",
+    "event_name" : "e3_name",
+    "event_time" : {
+      "$numberLong" : 3000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e3",
+    "campaign_id" : "c1",
+    "event_name" : "e3_name",
+    "event_time" : {
+      "$numberLong" : 3000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e4",
+    "campaign_id" : "c1",
+    "event_name" : "e4_name",
+    "event_time" : {
+      "$numberLong" : 4000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e4",
+    "campaign_id" : "c1",
+    "event_name" : "e4_name",
+    "event_time" : {
+      "$numberLong" : 4000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e5",
+    "campaign_id" : "c2",
+    "event_name" : "e5_name",
+    "event_time" : {
+      "$numberLong" : 5000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e5",
+    "campaign_id" : "c2",
+    "event_name" : "e5_name",
+    "event_time" : {
+      "$numberLong" : 5000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e6",
+    "campaign_id" : "c1",
+    "event_name" : "e6_name",
+    "event_time" : {
+      "$numberLong" : 6000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e6",
+    "campaign_id" : "c1",
+    "event_name" : "e6_name",
+    "event_time" : {
+      "$numberLong" : 6000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e7",
+    "campaign_id" : "c1",
+    "event_name" : "e7_name",
+    "event_time" : {
+      "$numberLong" : 7000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e7",
+    "campaign_id" : "c1",
+    "event_name" : "e7_name",
+    "event_time" : {
+      "$numberLong" : 7000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e8",
+    "campaign_id" : "c2",
+    "event_name" : "e8_name",
+    "event_time" : {
+      "$numberLong" : 8000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e8",
+    "campaign_id" : "c2",
+    "event_name" : "e8_name",
+    "event_time" : {
+      "$numberLong" : 8000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e9",
+    "campaign_id" : "c2",
+    "event_name" : "e9_name",
+    "event_time" : {
+      "$numberLong" : 9000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 1
+  },
+  "flat_events" : {
+    "evnt_id" : "e9",
+    "campaign_id" : "c2",
+    "event_name" : "e9_name",
+    "event_time" : {
+      "$numberLong" : 9000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e1",
+    "campaign_id" : "c1",
+    "event_name" : "e1_name",
+    "event_time" : {
+      "$numberLong" : 1000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e1",
+    "campaign_id" : "c1",
+    "event_name" : "e1_name",
+    "event_time" : {
+      "$numberLong" : 1000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e2",
+    "campaign_id" : "c1",
+    "event_name" : "e2_name",
+    "event_time" : {
+      "$numberLong" : 2000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e2",
+    "campaign_id" : "c1",
+    "event_name" : "e2_name",
+    "event_time" : {
+      "$numberLong" : 2000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e3",
+    "campaign_id" : "c1",
+    "event_name" : "e3_name",
+    "event_time" : {
+      "$numberLong" : 3000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e3",
+    "campaign_id" : "c1",
+    "event_name" : "e3_name",
+    "event_time" : {
+      "$numberLong" : 3000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e4",
+    "campaign_id" : "c1",
+    "event_name" : "e4_name",
+    "event_time" : {
+      "$numberLong" : 4000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e4",
+    "campaign_id" : "c1",
+    "event_name" : "e4_name",
+    "event_time" : {
+      "$numberLong" : 4000000
+    },
+    "type" : "cmpgn1"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e5",
+    "campaign_id" : "c2",
+    "event_name" : "e5_name",
+    "event_time" : {
+      "$numberLong" : 5000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e5",
+    "campaign_id" : "c2",
+    "event_name" : "e5_name",
+    "event_time" : {
+      "$numberLong" : 5000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e6",
+    "campaign_id" : "c1",
+    "event_name" : "e6_name",
+    "event_time" : {
+      "$numberLong" : 6000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e6",
+    "campaign_id" : "c1",
+    "event_name" : "e6_name",
+    "event_time" : {
+      "$numberLong" : 6000000
+    },
+    "type" : "cmpgn9"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e7",
+    "campaign_id" : "c1",
+    "event_name" : "e7_name",
+    "event_time" : {
+      "$numberLong" : 7000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e7",
+    "campaign_id" : "c1",
+    "event_name" : "e7_name",
+    "event_time" : {
+      "$numberLong" : 7000000
+    },
+    "type" : "cmpgn3"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e8",
+    "campaign_id" : "c2",
+    "event_name" : "e8_name",
+    "event_time" : {
+      "$numberLong" : 8000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e8",
+    "campaign_id" : "c2",
+    "event_name" : "e8_name",
+    "event_time" : {
+      "$numberLong" : 8000000
+    },
+    "type" : "cmpgn2"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e9",
+    "campaign_id" : "c2",
+    "event_name" : "e9_name",
+    "event_time" : {
+      "$numberLong" : 9000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t1",
+    "amount" : {
+      "$numberLong" : 100
+    },
+    "trans_time" : {
+      "$numberLong" : 7777777
+    },
+    "type" : "sports"
+  }
+} {
+  "uid" : {
+    "$numberLong" : 2
+  },
+  "flat_events" : {
+    "evnt_id" : "e9",
+    "campaign_id" : "c2",
+    "event_name" : "e9_name",
+    "event_time" : {
+      "$numberLong" : 9000000
+    },
+    "type" : "cmpgn4"
+  },
+  "flat_transactions" : {
+    "trans_id" : "t2",
+    "amount" : {
+      "$numberLong" : 1000
+    },
+    "trans_time" : {
+      "$numberLong" : 8888888
+    },
+    "type" : "groceries"
+  }
+}
