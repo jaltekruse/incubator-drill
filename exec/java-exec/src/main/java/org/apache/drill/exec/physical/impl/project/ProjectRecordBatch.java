@@ -427,12 +427,20 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         // need to do evaluation.
         if (expr instanceof ValueVectorReadExpression) {
           final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
-          final FieldReference ref = getRef(namedExpression);
+          final FieldReference ref = new FieldReference(outputField.getPath());
           final TypeProtos.MajorType type = vectorRead.getMajorType();
-//          vector = incoming.getValueAccessorById(TypeHelper.getValueVectorClass(type.getMinorType(),type.getMode()),
-//              vectorRead.getTypedFieldId().getFieldIds()).getField();
+          final TypedFieldId fieldID = vectorRead.getTypedFieldId();
+
+//          vector = container.addOrGet(MaterializedField.create(new SchemaPath(ref.getRootSegment().cloneWithNewChild(vectorRead.getReadPath())), vectorRead.getMajorType()));
+//          this made the complex case work, failed the afterJoin and afterSort tests
+//          vector = container.addOrGet(MaterializedField.create(new SchemaPath(ref), vectorRead.getMajorType()));
+//          vector = container.addOrGet(MaterializedField.create(new SchemaPath(vectorRead.getReadPath().getNameSegment()),vectorRead.getMajorType()));
+
           vector = container.addOrGet(incoming.getValueAccessorById(TypeHelper.getValueVectorClass(type.getMinorType(),type.getMode()),
               vectorRead.getTypedFieldId().getFieldIds()).getField().clone(ref));
+
+//              incoming.getValueAccessorById(TypeHelper.getValueVectorClass(type.getMinorType(),type.getMode()),
+//              vectorRead.getTypedFieldId().getFieldIds()).getField().clone(ref));
         } else {
           vector = container.addOrGet(outputField, callBack);
         }
