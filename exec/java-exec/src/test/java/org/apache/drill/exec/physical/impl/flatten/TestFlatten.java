@@ -115,12 +115,23 @@ public class TestFlatten extends BaseTestQuery {
 
  @Test
  public void testFlattenWithJoin() throws Exception {
-   test("alter session set `planner.width.max_per_node` = 1");
-   test("select v1.uid, flatten(events), flatten(transactions) from \n" +
-       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
-       "inner join\n" +
-       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
-       "on v1.uid = v2.uid;");
+//   test("select " +
+//       "v1.uid, " +
+//       "flatten(events) as flat_events, " +
+//       "flatten(transactions) as flat_transactions " +
+//       "from ( select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+//       "inner join\n" +
+//       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+//       "on v1.uid = v2.uid");
+   testBuilder()
+       .unOrdered()
+       .sqlQuery("select v1.uid, flatten(events) as flat_events, flatten(transactions) flat_transactions from \n" +
+           "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+           "inner join\n" +
+           "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+           "on v1.uid = v2.uid")
+       .jsonBaselineFile("flatten/testFlattenWithJoin_result.json")
+       .go();
 
 
 //   test("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
