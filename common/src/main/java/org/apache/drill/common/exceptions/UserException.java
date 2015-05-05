@@ -462,13 +462,20 @@ public class UserException extends DrillRuntimeException {
         return uex;
       }
 
+      boolean isSystemError = errorType == DrillPBError.ErrorType.SYSTEM;
+
+      // make sure system errors use the root error message and display the root cause class name
+      if (isSystemError) {
+        message = ErrorHelper.getRootMessage(cause);
+      }
+
       final UserException newException = new UserException(this);
 
       // since we just created a new exception, we should log it for later reference. If this is a system error, this is
       // an issue that the Drill admin should pay attention to and we should log as ERROR. However, if this is a user
       // mistake or data read issue, the system admin should not be concerned about these and thus we'll log this
       // as an INFO message.
-      if (errorType == DrillPBError.ErrorType.SYSTEM) {
+      if (isSystemError) {
         logger.error(newException.getMessage(), newException);
       } else {
         logger.info("User Error Occurred", newException);
