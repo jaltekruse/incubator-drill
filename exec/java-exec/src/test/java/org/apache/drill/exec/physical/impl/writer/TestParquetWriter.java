@@ -350,37 +350,37 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testReadVoter() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/voter.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testReadSf_100_supplier() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/sf100_supplier.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testParquetRead_checkNulls_NullsFirst() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000_nulls_first.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testParquetRead_checkNulls() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/parquet_with_nulls_should_sum_100000.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void test958_sql() throws Exception {
     compareParquetReadersHyperVector("ss_ext_sales_price", "dfs.`/tmp/store_sales`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testReadSf_1_supplier() throws Exception {
     try {
@@ -391,7 +391,7 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void test958_sql_all_columns() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/store_sales`");
@@ -402,13 +402,13 @@ public class TestParquetWriter extends BaseTestQuery {
 //        "dfs.`/tmp/store_sales`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testDrill_1314() throws Exception {
     compareParquetReadersColumnar("l_partkey ", "dfs.`/tmp/drill_1314.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testDrill_1314_all_columns() throws Exception {
     compareParquetReadersHyperVector("*", "dfs.`/tmp/drill_1314.parquet`");
@@ -416,19 +416,19 @@ public class TestParquetWriter extends BaseTestQuery {
         "dfs.`/tmp/drill_1314.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testParquetRead_checkShortNullLists() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/short_null_lists.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testParquetRead_checkStartWithNull() throws Exception {
     compareParquetReadersColumnar("*", "dfs.`/tmp/start_with_null.parquet`");
   }
 
-  @Ignore
+//  @Ignore
   @Test
   public void testParquetReadWebReturns() throws Exception {
     compareParquetReadersColumnar("wr_returning_customer_sk", "dfs.`/tmp/web_returns`");
