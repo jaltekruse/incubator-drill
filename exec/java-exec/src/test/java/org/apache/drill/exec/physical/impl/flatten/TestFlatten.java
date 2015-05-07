@@ -101,7 +101,11 @@ public class TestFlatten extends BaseTestQuery {
   @Test
   @Ignore("not yet fixed")
   public void drill1660() throws Exception {
-    test("select * from cp.`/flatten/empty-rm.json`");
+    // TODO - invalid batch appears to be getting back to client in this case
+    testBuilder()
+        .sqlQuery("select flatten(evnts) from cp.`/flatten/empty-rm.json`")
+        .expectsEmptyResultSet()
+        .go();
   }
 
   @Test
