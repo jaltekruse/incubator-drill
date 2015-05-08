@@ -157,7 +157,9 @@ public class RepeatedListVector extends AbstractContainerVector
 
       @Override
       public void splitAndTransfer(int startIndex, int length) {
-        throw new UnsupportedOperationException();
+        for (int i = 0; i < length; i++) {
+          copyValueSafe(startIndex + i, i);
+        }
       }
 
       @Override

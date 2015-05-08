@@ -112,7 +112,7 @@ public class TestFlatten extends BaseTestQuery {
     String path = folder.getRoot().toPath().toString();
 
     String jsonRecords = BaseTestQuery.getFile("store/json/1673.json");
-    int numCopies = 10000;
+    int numCopies = 25000;
 //    int numCopies = 3000;
     new TestConstantFolding.SmallFileCreator(folder)
         .setRecord(jsonRecords)
@@ -124,14 +124,15 @@ public class TestFlatten extends BaseTestQuery {
                   "from dfs.`" + path + "/bigfile/bigfile.json` as t")
         .baselineColumns("fixed_column", "list_col")
         .unOrdered();
-
+    Object map1 = map("id1", "1",
+                      "name", "zhu",
+                      "num", list(list(1l, 2l, 3l)));
+    Object map2 = map("id1", "2",
+                      "name", "hao",
+                      "num", list(list(4l, 5l, 6l)));
     for (int i = 0; i < numCopies; i++) {
-      builder.baselineValues("abc", map("id1", "1",
-                                        "name", "zhu",
-                                        "num", list(list(1l, 2l, 3l))));
-      builder.baselineValues("abc", map("id1", "2",
-                                        "name", "hao",
-                                        "num", list(list(4l, 5l, 6l))));
+      builder.baselineValues("abc", map1);
+      builder.baselineValues("abc", map2);
     }
 
     builder.go();
