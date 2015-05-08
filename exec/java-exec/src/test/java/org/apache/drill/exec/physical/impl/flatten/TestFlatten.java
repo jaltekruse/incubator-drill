@@ -55,6 +55,11 @@ public class TestFlatten extends BaseTestQuery {
     test("select * from cp.`/flatten/empty-rm.json`");
   }
 
+  @Test // repeated list within a repeated map
+  public void drill1673() throws Exception {
+    test("select t.`fixed_column` as fixed_column, flatten(t.`list_column`)  from cp.`/store/json/1673.json` as t");
+  }
+
   @Test
   public void drill1653() throws Exception{
     int rowCount = testSql("select * from (select sum(t.flat.`value`) as sm from (select id, flatten(kvgen(m)) as flat from cp.`/flatten/missing-map.json`)t) where sm = 10 ");
