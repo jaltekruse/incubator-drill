@@ -20,9 +20,11 @@ package org.apache.drill.exec.physical.impl.flatten;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.TestBuilder;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.fn.interp.TestConstantFolding;
 import org.apache.drill.exec.proto.UserBitShared;
+import org.apache.hadoop.io.Text;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
@@ -54,8 +56,8 @@ public class TestFlatten extends BaseTestQuery {
 
     String jsonRecords = BaseTestQuery.getFile("flatten/complex_transaction_example_data.json");
     int numCopies = 700;
-    new TestConstantFolding.SmallFileCreator(folder).
-        setRecord(jsonRecords)
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecords)
         .createFiles(1, numCopies, "json");
 
     // The file that is being read to generate the large file contains two records
@@ -107,7 +109,32 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test // repeated list within a repeated map
   public void drill1673() throws Exception {
-    test("select t.`fixed_column` as fixed_column, flatten(t.`list_column`)  from cp.`/store/json/1673.json` as t");
+    String path = folder.getRoot().toPath().toString();
+
+    String jsonRecords = BaseTestQuery.getFile("store/json/1673.json");
+    int numCopies = 10000;
+//    int numCopies = 3000;
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecords)
+        .createFiles(1, numCopies, "json");
+
+    TestBuilder builder = testBuilder()
+        .sqlQuery("select t.fixed_column as fixed_column, " +
+                  "flatten(t.list_column) as list_col " +
+                  "from dfs.`" + path + "/bigfile/bigfile.json` as t")
+        .baselineColumns("fixed_column", "list_col")
+        .unOrdered();
+
+    for (int i = 0; i < numCopies; i++) {
+      builder.baselineValues("abc", map("id1", "1",
+                                        "name", "zhu",
+                                        "num", list(list(1l, 2l, 3l))));
+      builder.baselineValues("abc", map("id1", "2",
+                                        "name", "hao",
+                                        "num", list(list(4l, 5l, 6l))));
+    }
+
+    builder.go();
   }
 
   @Test
