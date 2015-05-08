@@ -308,7 +308,14 @@ public final class Repeated${minor.class}Vector extends BaseRepeatedValueVector 
     private Mutator() { }
 
     public void startNewGroup(int index) {
-      offsets.getMutator().setSafe(index+1, offsets.getAccessor().get(index));
+      int offset = 0;
+      if (index > 0) {
+        offset = offsets.getAccessor().get(index);
+      } else {
+        // initialize the first start index to be 0
+        offsets.getMutator().setSafe(0, offset);
+      }
+      offsets.getMutator().setSafe(index+1, offset);
     }
 
     /**
