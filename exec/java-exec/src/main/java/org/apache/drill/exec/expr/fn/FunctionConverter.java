@@ -48,12 +48,12 @@ import org.codehaus.commons.compiler.CompileException;
 import org.codehaus.janino.Java.CompilationUnit;
 import org.codehaus.janino.Parser;
 import org.codehaus.janino.Scanner;
-import org.mortbay.util.IO;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.Resources;
+import org.eclipse.jetty.util.IO;
 
 /**
  * Converts FunctionCalls to Java Expressions.

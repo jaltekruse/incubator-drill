@@ -58,6 +58,12 @@
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-client</artifactId>
+      <exclusions>
+        <exclusion>
+          <artifactId>jetty-util</artifactId>
+          <groupId>org.mortbay.jetty</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <dependency>
