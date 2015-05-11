@@ -21,6 +21,8 @@ package org.apache.drill.exec.physical.impl.join;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.work.foreman.UnsupportedRelOperatorException;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -136,13 +138,12 @@ public class TestNestedLoopJoin extends PlanTestBase {
   public void testNlJoinEqualityNonScalar_1_planning() throws Exception {
     String query = "select r.r_regionkey from cp.`tpch/region.parquet` r inner join cp.`tpch/nation.parquet` n"
         + " on r.r_regionkey = n.n_regionkey where n.n_nationkey < 10";
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
-    test(ENABLE_NLJ_SCALAR);
+    try {
+      setAllFalse(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
+    } finally {
+      setAllTrue(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+    }
   }
 
   @Test // equality join and non-scalar right input, hj and mj disabled, enforce exchanges
@@ -150,15 +151,14 @@ public class TestNestedLoopJoin extends PlanTestBase {
     String query = String.format("select n.n_nationkey from cp.`tpch/nation.parquet` n, "
         + " dfs_test.`%s/multilevel/parquet` o "
         + " where n.n_regionkey = o.o_orderkey and o.o_custkey < 5", TEST_RES_PATH);
-    test("alter session set `planner.slice_target` = 1");
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
-    test(ENABLE_NLJ_SCALAR);
-    test("alter session set `planner.slice_target` = 100000");
+    try {
+      setAllFalse(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      forceExchanges();
+      testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
+    } finally {
+      setAllTrue(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      resetToDefaultExchanges();
+    }
   }
 
   // EXECUTION TESTS

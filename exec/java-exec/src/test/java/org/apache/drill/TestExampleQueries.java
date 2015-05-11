@@ -25,6 +25,7 @@ import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -158,15 +159,18 @@ public class TestExampleQueries extends BaseTestQuery{
 
   @Test
   public void testJoinMerge() throws Exception{
-    test("alter session set `planner.enable_hashjoin` = false");
-    test("select count(*) \n" +
-        "  from (select l.l_orderkey as x, c.c_custkey as y \n" +
-        "  from cp.`tpch/lineitem.parquet` l \n" +
-        "    left outer join cp.`tpch/customer.parquet` c \n" +
-        "      on l.l_orderkey = c.c_custkey) as foo\n" +
-        "  where x < 10000\n" +
-        "");
-    test("alter session set `planner.enable_hashjoin` = true");
+    try {
+      setOption(PlannerSettings.HASHJOIN, false);
+      test("select count(*) \n" +
+          "  from (select l.l_orderkey as x, c.c_custkey as y \n" +
+          "  from cp.`tpch/lineitem.parquet` l \n" +
+          "    left outer join cp.`tpch/customer.parquet` c \n" +
+          "      on l.l_orderkey = c.c_custkey) as foo\n" +
+          "  where x < 10000\n" +
+          "");
+    } finally {
+      resetOption(PlannerSettings.HASHJOIN);
+    }
   }
 
   @Test
@@ -286,15 +290,19 @@ public class TestExampleQueries extends BaseTestQuery{
   @Test
   @Ignore("DRILL-3004")
   public void testJoin() throws Exception{
-    test("alter session set `planner.enable_hashjoin` = false");
-    test("SELECT\n" +
-        "  nations.N_NAME,\n" +
-        "  regions.R_NAME\n" +
-        "FROM\n" +
-        "  cp.`tpch/nation.parquet` nations\n" +
-        "JOIN\n" +
-        "  cp.`tpch/region.parquet` regions\n" +
-        "  on nations.N_REGIONKEY = regions.R_REGIONKEY where 1 = 0");
+    try {
+      setOption(PlannerSettings.HASHJOIN, false);
+      test("SELECT\n" +
+          "  nations.N_NAME,\n" +
+          "  regions.R_NAME\n" +
+          "FROM\n" +
+          "  cp.`tpch/nation.parquet` nations\n" +
+          "JOIN\n" +
+          "  cp.`tpch/region.parquet` regions\n" +
+          "  on nations.N_REGIONKEY = regions.R_REGIONKEY where 1 = 0");
+    } finally {
+      resetOption(PlannerSettings.HASHJOIN);
+    }
   }
 
 
@@ -503,7 +511,12 @@ public class TestExampleQueries extends BaseTestQuery{
   public void testOrderByDiffColumnsInSubqAndOuter() throws Exception {
     String query = "select n.n_nationkey from  (select n_nationkey, n_regionkey from cp.`tpch/nation.parquet` order by n_regionkey) n  order by n.n_nationkey";
     // set slice_target = 1 to force exchanges
-    test("alter session set `planner.slice_target` = 1; " + query);
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test // DRILL-1846  (this tests issue with UnionExchange)
@@ -511,7 +524,12 @@ public class TestExampleQueries extends BaseTestQuery{
   public void testLimitInSubqAndOrderByOuter() throws Exception {
     String query = "select t2.n_nationkey from (select n_nationkey, n_regionkey from cp.`tpch/nation.parquet` t1 group by n_nationkey, n_regionkey limit 10) t2 order by t2.n_nationkey";
     // set slice_target = 1 to force exchanges
-    test("alter session set `planner.slice_target` = 1; " + query);
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test // DRILL-1788
@@ -524,7 +542,12 @@ public class TestExampleQueries extends BaseTestQuery{
   public void test2PhaseAggAfterOrderBy() throws Exception {
     String query = "select count(*) from (select o_custkey from cp.`tpch/orders.parquet` order by o_custkey)";
     // set slice_target = 1 to force exchanges and 2-phase aggregation
-    test("alter session set `planner.slice_target` = 1; " + query);
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test // DRILL-1867
@@ -568,21 +591,44 @@ public class TestExampleQueries extends BaseTestQuery{
 
   }
 
+  private void hashAggOnly() throws Exception {
+    setSingleAgg(true);
+  }
+
+  private void streamAggOnly() throws Exception {
+    setSingleAgg(false);
+  }
+
+  private void setSingleAgg(boolean hashEnabled) throws Exception {
+    setOption(PlannerSettings.HASHAGG, hashEnabled);
+    setOption(PlannerSettings.STREAMAGG, !hashEnabled);
+  }
+
   @Test
   public void testMultipleCountDistinctWithGroupBy() throws Exception {
     String query = "select n_regionkey, count(distinct n_nationkey), count(distinct n_name) from cp.`tpch/nation.parquet` group by n_regionkey;";
-    String hashagg_only = "alter session set `planner.enable_hashagg` = true; " +
-                          "alter session set `planner.enable_streamagg` = false;";
-    String streamagg_only = "alter session set `planner.enable_hashagg` = false; " +
-                            "alter session set `planner.enable_streamagg` = true;";
 
-    // hash agg and streaming agg with default slice target (single phase aggregate)
-    test(hashagg_only + query);
-    test(streamagg_only + query);
+    try {
+      // hash agg and streaming agg with default slice target (single phase aggregate)
+      hashAggOnly();
+      test(query);
 
-    // hash agg and streaming agg with lower slice target (multiphase aggregate)
-    test("alter session set `planner.slice_target` = 1; " + hashagg_only + query);
-    test("alter session set `planner.slice_target` = 1; " + streamagg_only + query);
+      streamAggOnly();
+      test(query);
+
+      // hash agg and streaming agg with lower slice target (multiphase aggregate)
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+
+      hashAggOnly();
+      test(query);
+
+      streamAggOnly();
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+      resetOption(PlannerSettings.HASHAGG);
+      resetOption(PlannerSettings.STREAMAGG);
+    }
   }
 
   @Test // DRILL-2019
@@ -652,11 +698,17 @@ public class TestExampleQueries extends BaseTestQuery{
 
     String sql = String.format("select t2.n_nationkey from dfs_test.`%s/tpchmulti/region` t1 join dfs_test.`%s/tpchmulti/nation` t2 on t2.n_regionkey = t1.r_regionkey", TEST_RES_PATH, TEST_RES_PATH);
 
+    // TODO - improve tests builder to add interfaces for setting options in a type safe manner
     testBuilder()
         .unOrdered()
-        .optionSettingQueriesForTestQuery("alter session set `planner.slice_target` = 10; alter session set `planner.join.row_count_estimate_factor` = 0.1")  // Enforce exchange will be inserted.
+        .optionSettingQueriesForTestQuery(String.format("alter session set `%s` = 10; alter session set `%s` = 0.1",
+            ExecConstants.PLANNER_SLICE_TARGET.name(), PlannerSettings.JOIN_ROW_COUNT_ESTIMATE_FACTOR.name()))  // Enforce exchange will be inserted.
         .sqlQuery(sql)
-        .optionSettingQueriesForBaseline("alter session set `planner.slice_target` = 100000; alter session set `planner.join.row_count_estimate_factor` = 1.0") // Use default option setting.
+        .optionSettingQueriesForBaseline(String.format("alter session set `%s` = %s; alter session set `%s` = %s",
+            ExecConstants.PLANNER_SLICE_TARGET.name(),
+            ExecConstants.PLANNER_SLICE_TARGET.getDefaultString(),
+            PlannerSettings.JOIN_ROW_COUNT_ESTIMATE_FACTOR.name(),
+            PlannerSettings.JOIN_ROW_COUNT_ESTIMATE_FACTOR.getDefaultString())) // Use default option setting.
         .sqlBaselineQuery(sql)
         .build().run();
 
@@ -683,15 +735,18 @@ public class TestExampleQueries extends BaseTestQuery{
         "where n_name similar to 'CHINA' " +
         "order by n_regionkey";
 
-    testBuilder()
-        .sqlQuery(query)
-        .unOrdered()
-        .optionSettingQueriesForTestQuery("alter session set `planner.slice_target` = 1")
-        .baselineColumns("n_nationkey")
-        .baselineValues(18)
-        .go();
-
-    resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      testBuilder()
+          .sqlQuery(query)
+          .unOrdered()
+          .baselineColumns("n_nationkey")
+          .baselineValues(18)
+          .go();
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test // DRILL-2311
@@ -838,10 +893,13 @@ public class TestExampleQueries extends BaseTestQuery{
     final String file = FileUtils.getResourceAsFile("/store/json/record_with_empty_list.json").toURI().toString();
     final String tableName = "jsonWithEmptyList";
     test("USE dfs_test.tmp");
-    test("ALTER SESSION SET `store.format`='json'");
-    test(String.format("CREATE TABLE %s AS SELECT * FROM `%s`", tableName, file));
-    test(String.format("SELECT COUNT(*) FROM %s", tableName));
-    test("ALTER SESSION SET `store.format`='parquet'");
+    try {
+      setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "json");
+      test(String.format("CREATE TABLE %s AS SELECT * FROM `%s`", tableName, file));
+      test(String.format("SELECT COUNT(*) FROM %s", tableName));
+    } finally {
+      resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
+    }
   }
 
   @Test // DRILL-2914

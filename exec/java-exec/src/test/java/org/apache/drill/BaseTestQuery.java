@@ -33,6 +33,7 @@ import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
@@ -345,6 +346,57 @@ public class BaseTestQuery extends ExecTest {
     QueryTestUtil.test(client, query);
   }
 
+  /**
+   * Should be placed at the start of a test that requires disabling exchanges.
+   *
+   * Keep this in sync with the resetToDefaultExchanges() method.
+   * @throws Exception
+   */
+  public static void forceExchanges() throws Exception {
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    // TODO - evaluate the benefits of disabling the ExcessiveExchangeIdentifier.removeExcessiveEchanges()
+    // call in DefaulSqlHandler.convertToPrel (for tests only) to force exchanges without disabling broadcast
+    setOption(PlannerSettings.BROADCAST, false);
+  }
+
+  /**
+   * After a test that requires disabling exchanges has been run, this should be placed
+   * in a finally block to ensure that the session options set do not affect other tests.
+   *
+   * Keep this in sync with the forceExchanges() method.
+   * @throws Exception
+   */
+  public static void resetToDefaultExchanges() throws Exception {
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    resetOption(PlannerSettings.BROADCAST);
+  }
+
+  /**
+   * Convenience method for setting a list of session values to true, useful for
+   * enabling a series of options that default to 'false' to test uncommon configurations.
+   *
+   * @param validators - the validators for all of the options to turn on
+   * @throws Exception
+   */
+  public static void setAllTrue(BooleanValidator... validators) throws Exception{
+    for (BooleanValidator validator : validators) {
+      setOption(validator, true);
+    }
+  }
+
+  /**
+   * Convenience method for setting a list of session values to false, useful for
+   * enabling a series of options that default to 'true' to test uncommon configurations.
+   *
+   * @param validators - the validators for all of the options to turn off
+   * @throws Exception
+   */
+  public static void setAllFalse(BooleanValidator... validators) throws Exception{
+    for (BooleanValidator validator : validators) {
+      setOption(validator, false);
+    }
+  }
+
   public static void setOption(BooleanValidator validator, boolean value) throws Exception {
     QueryTestUtil
         .test(client, String.format("ALTER SESSION SET `%s` = %s", validator.name(), (Boolean) value));
@@ -354,6 +406,12 @@ public class BaseTestQuery extends ExecTest {
     QueryTestUtil
         .test(client,
             String.format("ALTER SESSION SET `%s` = %s", validator.name(), validator.getDefaultString()));
+  }
+
+  public static void resetOptions(OptionValidator... validators) throws Exception{
+    for (OptionValidator validator : validators) {
+      resetOption(validator);
+    }
   }
 
   public static void setOption(DoubleValidator validator, double value) throws Exception {

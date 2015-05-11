@@ -18,6 +18,7 @@
 package org.apache.drill;
 
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
@@ -30,10 +31,7 @@ import org.junit.Test;
  */
 public class TestOutOfMemoryOutcome extends BaseTestQuery{
 
-  private static final String SINGLE_MODE = "ALTER SESSION SET `planner.disable_exchanges` = true";
-
   private void testSingleMode(String fileName) throws Exception{
-    test(SINGLE_MODE);
 
     CoordinationProtos.DrillbitEndpoint endpoint = bits[0].getContext().getEndpoint();
     String controlsString = "{\"injections\":[{"
@@ -51,12 +49,15 @@ public class TestOutOfMemoryOutcome extends BaseTestQuery{
     String query = getFile(fileName);
 
     try {
+      setOption(PlannerSettings.DISABLE_EXCHANGE, true);
       test(query);
     } catch(UserException uex) {
       DrillPBError error = uex.getOrCreatePBError(false);
       Assert.assertEquals(DrillPBError.ErrorType.RESOURCE, error.getErrorType());
       Assert.assertTrue("Error message isn't related to memory error",
         uex.getMessage().contains(UserException.MEMORY_ERROR_MSG));
+    } finally {
+      resetOption(PlannerSettings.DISABLE_EXCHANGE);
     }
   }
 

@@ -43,13 +43,13 @@ public class JdbcNullOrderingAndGroupingTest extends JdbcTestQueryBase {
   // status(?) server so unit tests run (without Maven setup).
   @BeforeClass
   public static void setUpClass() throws Exception {
-    testQuery(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    testQuery(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
     System.setProperty( "drill.exec.http.enabled", "false" );
   }
 
   @AfterClass
   public static void resetDefaults() throws Exception {
-    testQuery(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    testQuery(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
   }
 
 

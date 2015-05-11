@@ -18,6 +18,7 @@
 package org.apache.drill.exec.physical.impl.join;
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -26,13 +27,13 @@ public class TestMergeJoinAdvanced extends BaseTestQuery {
 
   // Have to disable hash join to test merge join in this class
   @BeforeClass
-  public static void disableMergeJoin() throws Exception {
-    test("alter session set `planner.enable_hashjoin` = false");
+  public static void disableHashJoin() throws Exception {
+    setOption(PlannerSettings.HASHJOIN, false);
   }
 
   @AfterClass
-  public static void enableMergeJoin() throws Exception {
-    test("alter session set `planner.enable_hashjoin` = true");
+  public static void reenableHashJoin() throws Exception {
+    resetOption(PlannerSettings.HASHJOIN);
   }
 
   @Test
@@ -42,7 +43,6 @@ public class TestMergeJoinAdvanced extends BaseTestQuery {
 
     testBuilder()
         .sqlQuery(query)
-        .optionSettingQueriesForTestQuery("alter session set `planner.enable_hashjoin` = true")
         .unOrdered()
         .baselineColumns("full_name")
         .baselineValues("Sheri Nowmer")
@@ -56,7 +56,6 @@ public class TestMergeJoinAdvanced extends BaseTestQuery {
 
     testBuilder()
         .sqlQuery(query)
-        .optionSettingQueriesForTestQuery("alter session set `planner.enable_hashjoin` = true")
         .unOrdered()
         .baselineColumns("bigint_col")
         .baselineValues(1l)

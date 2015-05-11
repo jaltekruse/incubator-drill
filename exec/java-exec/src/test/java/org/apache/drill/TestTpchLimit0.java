@@ -17,6 +17,7 @@
  */
 package org.apache.drill;
 
+import org.apache.drill.exec.ExecConstants;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -25,8 +26,13 @@ public class TestTpchLimit0 extends BaseTestQuery{
 
   private void testLimitZero(String fileName) throws Exception {
     String query = getFile(fileName);
-    query = "ALTER SESSION SET `planner.slice_target` = 1; select * from \n(" + query.replace(";", ")xyz limit 0;");
-    test(query);
+    query = "select * from \n(" + query.replace(";", ")xyz limit 0;");
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test

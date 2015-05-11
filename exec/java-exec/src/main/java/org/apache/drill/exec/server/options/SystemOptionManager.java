@@ -41,7 +41,7 @@ public class SystemOptionManager extends BaseOptionManager {
 
   private static final OptionValidator[] VALIDATORS = {
       PlannerSettings.CONSTANT_FOLDING,
-      PlannerSettings.EXCHANGE,
+      PlannerSettings.DISABLE_EXCHANGE,
       PlannerSettings.HASHAGG,
       PlannerSettings.STREAMAGG,
       PlannerSettings.HASHJOIN,

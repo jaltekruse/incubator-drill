@@ -21,7 +21,6 @@ import org.apache.calcite.plan.Context;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.server.options.OptionManager;
-import org.apache.drill.exec.server.options.OptionValidator;
 import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
 import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
 import org.apache.drill.exec.server.options.TypeValidators.LongValidator;
@@ -40,7 +39,7 @@ public class PlannerSettings implements Context{
   public static final int DEFAULT_IDENTIFIER_MAX_LENGTH = 1024;
 
   public static final BooleanValidator CONSTANT_FOLDING = new BooleanValidator("planner.enable_constant_folding", true);
-  public static final BooleanValidator EXCHANGE = new BooleanValidator("planner.disable_exchanges", false);
+  public static final BooleanValidator DISABLE_EXCHANGE = new BooleanValidator("planner.disable_exchanges", false);
   public static final BooleanValidator HASHAGG = new BooleanValidator("planner.enable_hashagg", true);
   public static final BooleanValidator STREAMAGG = new BooleanValidator("planner.enable_streamagg", true);
   public static final BooleanValidator HASHJOIN = new BooleanValidator("planner.enable_hashjoin", true);
@@ -93,7 +92,7 @@ public class PlannerSettings implements Context{
   }
 
   public boolean isSingleMode() {
-    return forceSingleMode || options.getOption(EXCHANGE);
+    return forceSingleMode || options.getOption(DISABLE_EXCHANGE);
   }
 
   public void forceSingleMode() {

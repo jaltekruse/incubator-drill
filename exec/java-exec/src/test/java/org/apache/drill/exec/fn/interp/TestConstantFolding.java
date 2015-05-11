@@ -204,13 +204,13 @@ public class TestConstantFolding extends PlanTestBase {
   @Test
   public void testConstantFoldingDisableOption() throws Exception {
     try {
-      test("alter session set `planner.enable_constant_folding` = false");
+      setOption(PlannerSettings.CONSTANT_FOLDING, false);
       testPlanOneExpectedPatternOneExcluded(
           "select * from cp.`functions/interp/test_input.csv` where columns[0] = 2+2",
           "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 0\\), \\+\\(2, 2\\)\\)",
           "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 0\\), 4\\)");
     } finally {
-      test("alter session set `planner.enable_constant_folding` = true");
+      resetOption(PlannerSettings.CONSTANT_FOLDING);
     }
   }
 

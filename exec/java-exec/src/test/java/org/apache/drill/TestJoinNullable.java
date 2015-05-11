@@ -20,6 +20,8 @@ package org.apache.drill;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -30,10 +32,9 @@ public class TestJoinNullable extends BaseTestQuery{
   static final String TEST_RES_PATH = WORKING_PATH + "/src/test/resources";
 
   private static void enableJoin(boolean hj, boolean mj) throws Exception {
-
-    test(String.format("alter session set `planner.enable_hashjoin` = %s", hj ? "true":"false"));
-    test(String.format("alter session set `planner.enable_mergejoin` = %s", mj ? "true":"false"));
-    test("alter session set `planner.slice_target` = 1");
+    setOption(PlannerSettings.HASHJOIN, hj);
+    setOption(PlannerSettings.MERGEJOIN, mj);
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
   }
 
   /** InnerJoin on nullable cols, HashJoin */
