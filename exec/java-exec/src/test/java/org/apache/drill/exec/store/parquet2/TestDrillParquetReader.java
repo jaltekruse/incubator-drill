@@ -29,12 +29,12 @@ public class TestDrillParquetReader extends BaseTestQuery {
   // enable decimal data type
   @BeforeClass
   public static void enableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
   }
 
   private void testColumn(String columnName) throws Exception {

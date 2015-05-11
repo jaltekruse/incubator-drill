@@ -143,12 +143,12 @@ public class TestWriter extends BaseTestQuery {
           "decimal(30,2)) * -1 as salary FROM cp.`employee.json`", tableName);
 
       // enable decimal
-      test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
       testCTASQueryHelper(tableName, testQuery, 1155);
 
       // disable decimal
     } finally {
-      test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
     }
   }
 

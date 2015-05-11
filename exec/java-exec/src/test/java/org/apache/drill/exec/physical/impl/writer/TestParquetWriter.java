@@ -49,12 +49,12 @@ public class TestParquetWriter extends BaseTestQuery {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "local");
 
     fs = FileSystem.get(conf);
-    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
   }
 
 

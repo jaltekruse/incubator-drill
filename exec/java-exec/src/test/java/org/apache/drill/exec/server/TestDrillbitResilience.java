@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.server;
 
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET;
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET_DEFAULT;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.HASHAGG;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.PARTITION_SENDER_SET_THREADS;
 import static org.junit.Assert.assertEquals;
@@ -734,14 +732,15 @@ public class TestDrillbitResilience {
 
   private static void testInterruptingBlockedFragmentsWaitingForData(final String control) {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "false");
+      // TODO - make this share code with BaseTestQuery and use the types validators directly
+      setSessionOption(ExecConstants.PLANNER_SLICE_TARGET.name(), "1");
+      setSessionOption(HASHAGG.name(), "false");
 
       final String query = "SELECT sales_city, COUNT(*) cnt FROM cp.`region.json` GROUP BY sales_city";
       assertCancelled(control, query, new ListenerThatCancelsQueryAfterFirstBatchOfData());
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
+      setSessionOption(ExecConstants.PLANNER_SLICE_TARGET.name(), Long.toString(ExecConstants.PLANNER_SLICE_TARGET.getDefaultValue()));
+      setSessionOption(HASHAGG.name(), HASHAGG.getDefault().toString());
     }
   }
 
@@ -753,9 +752,9 @@ public class TestDrillbitResilience {
   @Test
   public void testInterruptingPartitionerThreadFragment() {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "true");
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(), "6");
+      setSessionOption(ExecConstants.PLANNER_SLICE_TARGET.name(), "1");
+      setSessionOption(HASHAGG.name(), "true");
+      setSessionOption(PARTITION_SENDER_SET_THREADS.name(), "6");
 
       final String controls = "{\"injections\" : ["
           + "{"
@@ -774,10 +773,10 @@ public class TestDrillbitResilience {
       final String query = "SELECT sales_city, COUNT(*) cnt FROM cp.`region.json` GROUP BY sales_city";
       assertCancelled(controls, query, new ListenerThatCancelsQueryAfterFirstBatchOfData());
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(),
-          Long.toString(PARTITION_SENDER_SET_THREADS.getDefault().num_val));
+      setSessionOption(ExecConstants.PLANNER_SLICE_TARGET.name(), Long.toString(ExecConstants.PLANNER_SLICE_TARGET.getDefaultValue()));
+      setSessionOption(HASHAGG.name(), HASHAGG.getDefault().toString());
+      setSessionOption(PARTITION_SENDER_SET_THREADS.name(),
+          Long.toString(PARTITION_SENDER_SET_THREADS.getDefaultValue()));
     }
   }
 }

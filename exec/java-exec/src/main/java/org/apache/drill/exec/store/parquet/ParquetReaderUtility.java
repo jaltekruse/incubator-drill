@@ -27,7 +27,7 @@ import org.apache.drill.exec.work.ExecErrorConstants;
  */
 public class ParquetReaderUtility {
   public static void checkDecimalTypeEnabled(OptionManager options) {
-    if (options.getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY).bool_val == false) {
+    if (options.getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE) == false) {
       throw UserException
           .unsupportedError()
           .message(ExecErrorConstants.DECIMAL_DISABLE_ERR_MSG)

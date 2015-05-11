@@ -73,7 +73,7 @@ public class TestFrameworkTest extends BaseTestQuery{
   @Test
   public void testDecimalBaseline() throws  Exception {
     try {
-      test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
 
       // type information can be provided explicitly
       testBuilder()
@@ -102,7 +102,7 @@ public class TestFrameworkTest extends BaseTestQuery{
           .baselineValues(new BigDecimal("3.70"))
           .build().run();
     } finally {
-      test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
     }
   }
 

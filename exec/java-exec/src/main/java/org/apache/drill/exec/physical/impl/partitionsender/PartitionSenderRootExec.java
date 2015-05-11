@@ -114,7 +114,7 @@ public class PartitionSenderRootExec extends BaseRootExec {
     // numberOfRows/sliceTarget/numReceivers/threadfactor
     this.cost = operator.getChild().getCost();
     final OptionManager optMgr = context.getOptions();
-    long sliceTarget = optMgr.getOption(ExecConstants.SLICE_TARGET);
+    long sliceTarget = optMgr.getOption(ExecConstants.PLANNER_SLICE_TARGET);
     int threadFactor = (int) optMgr.getOption(PlannerSettings.PARTITION_SENDER_THREADS_FACTOR);
 
     int tmpParts = 1;
