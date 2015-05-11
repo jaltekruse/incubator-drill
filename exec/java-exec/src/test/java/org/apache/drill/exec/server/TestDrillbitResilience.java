@@ -544,6 +544,7 @@ public class TestDrillbitResilience {
     assertCompleteState(result, QueryState.CANCELED);
   }
 
+  // TODO - figure out a way to share this code with BaseTestQuery, also make the option value type safe
   private static void setSessionOption(final String option, final String value) {
     try {
       final List<QueryDataBatch> results = drillClient.runQuery(QueryType.SQL,
