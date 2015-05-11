@@ -71,7 +71,7 @@ public class TestParquetWriterEmptyFiles extends BaseTestQuery {
         .sqlBaselineQuery(query)
         .go();
     } finally {
-      runSQL("alter session set `planner.slice_target` = " + ExecConstants.SLICE_TARGET_DEFAULT);
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
       deleteTableIfExists(outputFile);
     }
   }

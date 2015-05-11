@@ -33,12 +33,12 @@ public class TestAggregateFunctionsQuery extends JdbcTestQueryBase {
   // enable decimal data type
   @BeforeClass
   public static void enableDecimalDataType() throws Exception {
-    testQuery(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    testQuery(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    testQuery(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    testQuery(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
   }
 
   public static final String WORKING_PATH;

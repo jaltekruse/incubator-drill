@@ -26,16 +26,15 @@ import java.util.concurrent.TimeUnit;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.expression.FunctionCall;
 import org.apache.drill.common.expression.fn.CastFunctions;
-import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.util.PathScanner;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.sql.DrillOperatorTable;
 import org.apache.drill.exec.resolver.FunctionResolver;
+import org.apache.drill.exec.server.options.OptionManager;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
-import org.apache.drill.exec.server.options.OptionManager;
 
 public class FunctionImplementationRegistry {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(FunctionImplementationRegistry.class);
@@ -109,7 +108,7 @@ public class FunctionImplementationRegistry {
   private String functionReplacement(FunctionCall functionCall) {
     String funcName = functionCall.getName();
     if (optionManager != null
-        && optionManager.getOption(ExecConstants.CAST_TO_NULLABLE_NUMERIC).bool_val
+        && optionManager.getOption(ExecConstants.CAST_TO_NULLABLE_NUMERIC_OPTION)
         && CastFunctions.isReplacementNeeded(functionCall.args.get(0).getMajorType().getMinorType(),
                                              funcName)) {
       org.apache.drill.common.types.TypeProtos.DataMode dataMode =

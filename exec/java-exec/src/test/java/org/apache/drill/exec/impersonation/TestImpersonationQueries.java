@@ -21,6 +21,13 @@ import com.google.common.collect.Maps;
 import org.apache.drill.common.exceptions.UserRemoteException;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.dotdrill.DotDrillType;
+import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+
+import java.util.Map;
+
 import org.apache.drill.exec.store.dfs.WorkspaceConfig;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -30,12 +37,8 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import java.util.Map;
-
-import static org.hamcrest.core.StringContains.containsString;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 
 /**
  * Test queries involving direct impersonation and multilevel impersonation including join queries where each side is
@@ -167,7 +170,7 @@ public class TestImpersonationQueries extends BaseTestImpersonation {
   private static void createView(final String viewOwner, final String viewGroup, final short viewPerms,
       final String newViewName, final String fromSourceSchema, final String fromSourceTableName) throws Exception {
     updateClient(viewOwner);
-    test(String.format("ALTER SESSION SET `%s`='%o';", ExecConstants.NEW_VIEW_DEFAULT_PERMS_KEY, viewPerms));
+    setOption(ExecConstants.NEW_VIEW_DEFAULT_PERMS_VALIDATOR, Long.toString(viewPerms));
     test(String.format("CREATE VIEW %s.%s AS SELECT * FROM %s.%s;",
         getWSSchema(viewOwner), newViewName, fromSourceSchema, fromSourceTableName));
 

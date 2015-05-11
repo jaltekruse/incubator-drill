@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.TestBuilder;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.physical.base.Exchange;
 import org.apache.drill.exec.physical.config.UnorderedDeMuxExchange;
 import org.apache.drill.exec.physical.config.HashToRandomExchange;
@@ -32,6 +33,7 @@ import org.apache.drill.exec.planner.fragment.Fragment;
 import org.apache.drill.exec.planner.fragment.Fragment.ExchangeFragmentPair;
 import org.apache.drill.exec.planner.fragment.PlanningSet;
 import org.apache.drill.exec.planner.fragment.SimpleParallelizer;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.pop.PopUnitTestBase;
 import org.apache.drill.exec.proto.BitControl.PlanFragment;
 import org.apache.drill.exec.proto.BitControl.QueryContextInformation;
@@ -184,21 +186,28 @@ public class TestLocalExchange extends PlanTestBase {
   }
 
   public static void setupHelper(boolean isMuxOn, boolean isDeMuxOn) throws Exception {
-    // set slice count to 1, so that we can have more parallelization for testing
-    test("ALTER SESSION SET `planner.slice_target`=1");
     // disable the broadcast join to produce plans with HashToRandomExchanges.
-    test("ALTER SESSION SET `planner.enable_broadcast_join`=false");
-    test("ALTER SESSION SET `planner.enable_mux_exchange`=" + isMuxOn);
-    test("ALTER SESSION SET `planner.enable_demux_exchange`=" + isDeMuxOn);
+    setOption(PlannerSettings.BROADCAST, false);
+    setOption(PlannerSettings.MUX_EXCHANGE, isMuxOn);
+    setOption(PlannerSettings.DEMUX_EXCHANGE, isDeMuxOn);
+    // set slice count to 1, so that we can have more parallelization for testing
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+  }
+
+  public static void resetHelper() throws Exception {
+    resetOption(PlannerSettings.BROADCAST);
+    resetOption(PlannerSettings.MUX_EXCHANGE);
+    resetOption(PlannerSettings.DEMUX_EXCHANGE);
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 
   @Test
   public void testGroupByMultiFields() throws Exception {
     // Test multifield hash generation
 
-    test("ALTER SESSION SET `planner.slice_target`=1");
-    test("ALTER SESSION SET `planner.enable_mux_exchange`=" + true);
-    test("ALTER SESSION SET `planner.enable_demux_exchange`=" + false);
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    setOption(PlannerSettings.MUX_EXCHANGE, true);
+    setOption(PlannerSettings.DEMUX_EXCHANGE, false);
 
     final String groupByMultipleQuery = String.format("SELECT dept_id, mng_id, some_id, count(*) as numEmployees FROM dfs.`%s` e GROUP BY dept_id, mng_id, some_id", empTableLocation);
     final String[] groupByMultipleQueryBaselineColumns = new String[] { "dept_id", "mng_id", "some_id", "numEmployees" };
@@ -278,40 +287,44 @@ public class TestLocalExchange extends PlanTestBase {
   private static void testHelper(boolean isMuxOn, boolean isDeMuxOn, String query,
       int expectedNumMuxes, int expectedNumDeMuxes, String[] baselineColumns, List<Object[]> baselineValues)
       throws Exception {
-    setupHelper(isMuxOn, isDeMuxOn);
+    try {
+      setupHelper(isMuxOn, isDeMuxOn);
 
-    String plan = getPlanInString("EXPLAIN PLAN FOR " + query, JSON_FORMAT);
-    System.out.println("Plan: " + plan);
+      String plan = getPlanInString("EXPLAIN PLAN FOR " + query, JSON_FORMAT);
+      System.out.println("Plan: " + plan);
 
-    if ( isMuxOn ) {
-      // # of hash exchanges should be = # of mux exchanges + # of demux exchanges
-      assertEquals("HashExpr on the hash column should not happen", 2*expectedNumMuxes+expectedNumDeMuxes, StringUtils.countMatches(plan, HASH_EXPR_NAME));
-      jsonExchangeOrderChecker(plan, isDeMuxOn, expectedNumMuxes, "castint\\(hash64asdouble\\(.*\\) \\) ");
-    } else {
-      assertEquals("HashExpr on the hash column should not happen", 0, StringUtils.countMatches(plan, HASH_EXPR_NAME));
+      if ( isMuxOn ) {
+        // # of hash exchanges should be = # of mux exchanges + # of demux exchanges
+        assertEquals("HashExpr on the hash column should not happen", 2*expectedNumMuxes+expectedNumDeMuxes, StringUtils.countMatches(plan, HASH_EXPR_NAME));
+        jsonExchangeOrderChecker(plan, isDeMuxOn, expectedNumMuxes, "castint\\(hash64asdouble\\(.*\\) \\) ");
+      } else {
+        assertEquals("HashExpr on the hash column should not happen", 0, StringUtils.countMatches(plan, HASH_EXPR_NAME));
+      }
+
+      // Make sure the plan has mux and demux exchanges (TODO: currently testing is rudimentary,
+      // need to move it to sophisticated testing once we have better planning test tools are available)
+      assertEquals("Wrong number of MuxExchanges are present in the plan",
+          expectedNumMuxes, StringUtils.countMatches(plan, MUX_EXCHANGE));
+
+      assertEquals("Wrong number of DeMuxExchanges are present in the plan",
+          expectedNumDeMuxes, StringUtils.countMatches(plan, DEMUX_EXCHANGE));
+
+      // Run the query and verify the output
+      TestBuilder testBuilder = testBuilder()
+          .sqlQuery(query)
+          .unOrdered()
+          .baselineColumns(baselineColumns);
+
+      for(Object[] baselineRecord : baselineValues) {
+        testBuilder.baselineValues(baselineRecord);
+      }
+
+      testBuilder.go();
+
+      testHelperVerifyPartitionSenderParallelization(plan, isMuxOn, isDeMuxOn);
+    } finally {
+      resetHelper();
     }
-
-    // Make sure the plan has mux and demux exchanges (TODO: currently testing is rudimentary,
-    // need to move it to sophisticated testing once we have better planning test tools are available)
-    assertEquals("Wrong number of MuxExchanges are present in the plan",
-        expectedNumMuxes, StringUtils.countMatches(plan, MUX_EXCHANGE));
-
-    assertEquals("Wrong number of DeMuxExchanges are present in the plan",
-        expectedNumDeMuxes, StringUtils.countMatches(plan, DEMUX_EXCHANGE));
-
-    // Run the query and verify the output
-    TestBuilder testBuilder = testBuilder()
-        .sqlQuery(query)
-        .unOrdered()
-        .baselineColumns(baselineColumns);
-
-    for(Object[] baselineRecord : baselineValues) {
-      testBuilder.baselineValues(baselineRecord);
-    }
-
-    testBuilder.go();
-
-    testHelperVerifyPartitionSenderParallelization(plan, isMuxOn, isDeMuxOn);
   }
 
   private static void jsonExchangeOrderChecker(String plan, boolean isDemuxEnabled, int expectedNumMuxes, String hashExprPattern) throws Exception {

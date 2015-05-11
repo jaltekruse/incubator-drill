@@ -179,9 +179,9 @@ public abstract class DrillJoinRelBase extends Join implements DrillRelNode {
     double joinConditionCost = DrillCostBase.COMPARE_CPU_COST * keySize;
 
     double factor = PrelUtil.getPlannerSettings(planner).getOptions()
-        .getOption(ExecConstants.HASH_JOIN_TABLE_FACTOR_KEY).float_val;
+        .getOption(ExecConstants.HASH_JOIN_TABLE_FACTOR);
     long fieldWidth = PrelUtil.getPlannerSettings(planner).getOptions()
-        .getOption(ExecConstants.AVERAGE_FIELD_WIDTH_KEY).num_val;
+        .getOption(ExecConstants.AVERAGE_FIELD_WIDTH);
 
     // table + hashValues + links
     double memCost =

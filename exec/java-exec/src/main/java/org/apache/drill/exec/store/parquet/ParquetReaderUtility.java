@@ -29,7 +29,7 @@ public class ParquetReaderUtility {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetReaderUtility.class);
 
   public static void checkDecimalTypeEnabled(OptionManager options) {
-    if (options.getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY).bool_val == false) {
+    if (!options.getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE)) {
       throw UserException.unsupportedError()
         .message(ExecErrorConstants.DECIMAL_DISABLE_ERR_MSG)
         .build(logger);

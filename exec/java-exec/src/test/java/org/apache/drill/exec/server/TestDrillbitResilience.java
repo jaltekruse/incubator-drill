@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.server;
 
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET;
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET_DEFAULT;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.HASHAGG;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.PARTITION_SENDER_SET_THREADS;
 import static org.junit.Assert.assertEquals;
@@ -32,6 +30,7 @@ import java.util.Map;
 
 import org.apache.commons.math3.util.Pair;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.OptionTestUtils;
 import org.apache.drill.QueryTestUtil;
 import org.apache.drill.SingleRowListener;
 import org.apache.drill.common.AutoCloseables;
@@ -792,14 +791,14 @@ public class TestDrillbitResilience extends DrillTest {
 
   private static void interruptingBlockedFragmentsWaitingForData(final String control) {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "false");
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 1);
+      OptionTestUtils.setOption(drillClient, HASHAGG, false);
 
       final String query = "SELECT sales_city, COUNT(*) cnt FROM cp.`region.json` GROUP BY sales_city";
       assertCancelledWithoutException(control, new ListenerThatCancelsQueryAfterFirstBatchOfData(), query);
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
+      OptionTestUtils.resetOption(drillClient, HASHAGG);
     }
   }
 
@@ -812,9 +811,9 @@ public class TestDrillbitResilience extends DrillTest {
   @Repeat(count = NUM_RUNS)
   public void interruptingPartitionerThreadFragment() {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "true");
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(), "6");
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 1);
+      OptionTestUtils.setOption(drillClient, HASHAGG, true);
+      OptionTestUtils.setOption(drillClient, PARTITION_SENDER_SET_THREADS,  6l);
 
       final long before = countAllocatedMemory();
 
@@ -829,10 +828,9 @@ public class TestDrillbitResilience extends DrillTest {
       final long after = countAllocatedMemory();
       assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(),
-          Long.toString(PARTITION_SENDER_SET_THREADS.getDefault().num_val));
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
+      OptionTestUtils.resetOption(drillClient, HASHAGG);
+      OptionTestUtils.resetOption(drillClient, PARTITION_SENDER_SET_THREADS);
     }
   }
 
@@ -854,7 +852,7 @@ public class TestDrillbitResilience extends DrillTest {
   @Test
   @Repeat(count = NUM_RUNS)
   public void memoryLeaksWhenCancelled() {
-    setSessionOption(SLICE_TARGET, "10");
+    OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 10);
 
     final long before = countAllocatedMemory();
 
@@ -889,7 +887,7 @@ public class TestDrillbitResilience extends DrillTest {
       final long after = countAllocatedMemory();
       assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
     }
   }
 
@@ -897,7 +895,7 @@ public class TestDrillbitResilience extends DrillTest {
   @Ignore // TODO(DRILL-3194)
   //@Repeat(count = NUM_RUNS)
   public void memoryLeaksWhenFailed() {
-    setSessionOption(SLICE_TARGET, "10");
+    OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 10);
 
     final long before = countAllocatedMemory();
 
@@ -922,7 +920,7 @@ public class TestDrillbitResilience extends DrillTest {
       assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
 
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
     }
   }
 

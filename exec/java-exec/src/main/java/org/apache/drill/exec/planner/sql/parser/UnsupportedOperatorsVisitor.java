@@ -98,7 +98,7 @@ public class UnsupportedOperatorsVisitor extends SqlShuttle {
 
         if(nodeInSelectList.getKind() == SqlKind.OVER) {
           // Throw exceptions if window functions are disabled
-          if(!context.getOptions().getOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS).bool_val) {
+          if(!context.getOptions().getOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS)) {
             unsupportedOperatorCollector.setException(SqlUnsupportedException.ExceptionType.FUNCTION,
                 "Window functions are disabled\n" +
                 "See Apache Drill JIRA: DRILL-2559");

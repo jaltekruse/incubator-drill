@@ -61,7 +61,7 @@ public class TestHiveStorage extends HiveTestBase {
   public void readAllSupportedHiveDataTypes() throws Exception {
       try {
           // enable decimal type
-          test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+          test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
 
           testBuilder().sqlQuery("SELECT * FROM hive.readtest")
               .unOrdered()
@@ -156,7 +156,7 @@ public class TestHiveStorage extends HiveTestBase {
                   new DateTime(Date.valueOf("2013-07-05").getTime()))
               .go();
       } finally {
-          test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+          test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
       }
   }
 

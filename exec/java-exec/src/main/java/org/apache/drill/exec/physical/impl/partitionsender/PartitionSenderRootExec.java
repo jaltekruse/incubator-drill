@@ -114,8 +114,9 @@ public class PartitionSenderRootExec extends BaseRootExec {
     // numberOfRows/sliceTarget/numReceivers/threadfactor
     this.cost = operator.getChild().getCost();
     final OptionManager optMgr = context.getOptions();
-    long sliceTarget = optMgr.getOption(ExecConstants.SLICE_TARGET).num_val;
-    int threadFactor = optMgr.getOption(PlannerSettings.PARTITION_SENDER_THREADS_FACTOR.getOptionName()).num_val.intValue();
+    long sliceTarget = optMgr.getOption(ExecConstants.PLANNER_SLICE_TARGET);
+    int threadFactor = (int) optMgr.getOption(PlannerSettings.PARTITION_SENDER_THREADS_FACTOR);
+
     int tmpParts = 1;
     if ( sliceTarget != 0 && outGoingBatchCount != 0 ) {
       tmpParts = (int) Math.round((((cost / (sliceTarget*1.0)) / (outGoingBatchCount*1.0)) / (threadFactor*1.0)));
@@ -123,11 +124,11 @@ public class PartitionSenderRootExec extends BaseRootExec {
         tmpParts = 1;
       }
     }
-    final int imposedThreads = optMgr.getOption(PlannerSettings.PARTITION_SENDER_SET_THREADS.getOptionName()).num_val.intValue();
+    final int imposedThreads = (int) optMgr.getOption(PlannerSettings.PARTITION_SENDER_SET_THREADS);
     if (imposedThreads > 0 ) {
       this.numberPartitions = imposedThreads;
     } else {
-      this.numberPartitions = Math.min(tmpParts, optMgr.getOption(PlannerSettings.PARTITION_SENDER_MAX_THREADS.getOptionName()).num_val.intValue());
+      this.numberPartitions = Math.min(tmpParts, (int) optMgr.getOption(PlannerSettings.PARTITION_SENDER_MAX_THREADS));
     }
     logger.info("Preliminary number of sending threads is: " + numberPartitions);
     this.actualPartitions = outGoingBatchCount > numberPartitions ? numberPartitions : outGoingBatchCount;

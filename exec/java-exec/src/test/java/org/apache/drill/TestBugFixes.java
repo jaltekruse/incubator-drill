@@ -70,11 +70,11 @@ public class TestBugFixes extends BaseTestQuery {
   @Test
   public void DRILL1126() throws Exception {
     try {
-      test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
       String query = "select sum(cast(employee_id as decimal(38, 18))), avg(cast(employee_id as decimal(38, 18))) from cp.`employee.json` group by (department_id)";
       test(query);
     } finally {
-      test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
     }
   }
 

@@ -94,8 +94,6 @@ public class OptionIterator implements Iterator<Object> {
    */
   public static class OptionValueWrapper {
 
-
-
     public final String name;
     public final Kind kind;
     public final OptionType type;

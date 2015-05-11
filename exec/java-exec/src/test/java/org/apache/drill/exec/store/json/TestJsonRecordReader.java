@@ -19,6 +19,7 @@ package org.apache.drill.exec.store.json;
 
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.junit.Test;
 import org.junit.Assert;
@@ -70,9 +71,12 @@ public class TestJsonRecordReader extends BaseTestQuery{
 
   @Test
   public void testEnableAllTextMode() throws Exception {
-    testNoResult("alter session set `store.json.all_text_mode`= true");
-    test("select * from cp.`jsoninput/big_numeric.json`");
-    testNoResult("alter session set `store.json.all_text_mode`= false");
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      test("select * from cp.`jsoninput/big_numeric.json`");
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test
@@ -129,14 +133,18 @@ public class TestJsonRecordReader extends BaseTestQuery{
 
   @Test
   public void testMixedNumberTypesInAllTextMode() throws Exception {
-    testNoResult("alter session set `store.json.all_text_mode`= true");
-    testBuilder()
-        .sqlQuery("select * from cp.`jsoninput/mixed_number_types.json`")
-        .unOrdered()
-        .baselineColumns("a")
-        .baselineValues("5.2")
-        .baselineValues("6")
-        .build().run();
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      testBuilder()
+          .sqlQuery("select * from cp.`jsoninput/mixed_number_types.json`")
+          .unOrdered()
+          .baselineColumns("a")
+          .baselineValues("5.2")
+          .baselineValues("6")
+          .build().run();
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test

@@ -56,6 +56,8 @@ import static org.junit.Assert.assertNotNull;
 public class DrillTestWrapper {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(BaseTestQuery.class);
 
+  public static final String INCORRECT_ROW_COUNT = "Incorrect number of rows returned by query.";
+
   // TODO - when in JSON, read baseline in all text mode to avoid precision loss for decimal values
 
   // This flag will enable all of the values that are validated to be logged. For large validations this is time consuming
@@ -153,7 +155,7 @@ public class DrillTestWrapper {
 
     for (String s : actualRecords.keySet()) {
       assertNotNull("Unexpected extra column " + s + " returned by query.", expectedRecords.get(s));
-      assertEquals("Incorrect number of rows returned by query.", expectedRecords.get(s).size(), actualRecords.get(s).size());
+      assertEquals(INCORRECT_ROW_COUNT, expectedRecords.get(s).size(), actualRecords.get(s).size());
       List expectedValues = expectedRecords.get(s);
       List actualValues = actualRecords.get(s);
       assertEquals("Different number of records returned", expectedValues.size(), actualValues.size());

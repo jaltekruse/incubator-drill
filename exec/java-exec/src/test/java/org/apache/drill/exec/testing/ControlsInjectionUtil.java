@@ -17,6 +17,12 @@
  */
 package org.apache.drill.exec.testing;
 
+import static org.junit.Assert.fail;
+
+import java.util.List;
+
+import org.apache.drill.OptionTestUtils;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.proto.UserBitShared;
@@ -27,10 +33,7 @@ import org.apache.drill.exec.rpc.user.UserSession.QueryCountIncrementer;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.OptionValue;
 
-import java.util.List;
-
-import static org.apache.drill.exec.ExecConstants.DRILLBIT_CONTROL_INJECTIONS;
-import static org.junit.Assert.fail;
+import static org.apache.drill.exec.ExecConstants.DRILLBIT_CONTROLS_VALIDATOR;
 
 /**
  * Static methods for constructing exception and pause injections for testing purposes.
@@ -64,13 +67,13 @@ public class ControlsInjectionUtil {
 
   public static void setControls(final DrillClient drillClient, final String controls) {
     validateControlsString(controls);
-    setSessionOption(drillClient, DRILLBIT_CONTROL_INJECTIONS, "'" + controls + "'");
+    OptionTestUtils.setOption(drillClient, DRILLBIT_CONTROLS_VALIDATOR, "'" + controls + "'");
   }
 
   public static void setControls(final UserSession session, final String controls) {
     validateControlsString(controls);
     final OptionValue opValue = OptionValue.createString(OptionValue.OptionType.SESSION,
-      DRILLBIT_CONTROL_INJECTIONS, controls);
+        ExecConstants.DRILLBIT_CONTROLS_VALIDATOR.name(), controls);
 
     final OptionManager options = session.getOptions();
     try {

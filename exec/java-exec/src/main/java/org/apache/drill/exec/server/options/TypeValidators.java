@@ -18,18 +18,14 @@
 package org.apache.drill.exec.server.options;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.server.options.OptionValue.Kind;
 import org.apache.drill.exec.server.options.OptionValue.OptionType;
 
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.util.NlsString;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class TypeValidators {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeValidators.class);
@@ -46,7 +42,7 @@ public class TypeValidators {
     public void validate(OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (v.num_val > max || v.num_val < 0) {
-        throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.", getOptionName(), 0,
+        throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.", name(), 0,
             max));
       }
     }
@@ -62,7 +58,7 @@ public class TypeValidators {
     public void validate(OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (!isPowerOfTwo(v.num_val)) {
-        throw new ExpressionParsingException(String.format("Option %s must be a power of two.", getOptionName()));
+        throw new ExpressionParsingException(String.format("Option %s must be a power of two.", name()));
       }
     }
 
@@ -86,31 +82,59 @@ public class TypeValidators {
       super.validate(v);
       if (v.float_val > max || v.float_val < min) {
         throw new ExpressionParsingException(String.format("Option %s must be between %f and %f.",
-            getOptionName(), min, max));
+            name(), min, max));
       }
     }
 
   }
 
-  public static class BooleanValidator extends TypeValidator {
+  public static class BooleanValidator extends OptionValidator{
     public BooleanValidator(String name, boolean def) {
       super(name, Kind.BOOLEAN, OptionValue.createBoolean(OptionType.SYSTEM, name, def));
     }
   }
 
-  public static class StringValidator extends TypeValidator {
+  public static class StringValidator extends OptionValidator {
     public StringValidator(String name, String def) {
       super(name, Kind.STRING, OptionValue.createString(OptionType.SYSTEM, name, def));
     }
-  }
 
-  public static class LongValidator extends TypeValidator {
-    public LongValidator(String name, long def) {
-      super(name, Kind.LONG, OptionValue.createLong(OptionType.SYSTEM, name, def));
+    /**
+     * Used by a sublcass {@link org.apache.drill.exec.testing.ExecutionControls.ControlsOptionValidator},
+     * the one option that is currently constrained to only being set exclusively at the session level.
+     * By passing a complete OptionValue the OptionType.SESSION can be recorded and checked in its validator.
+     *
+     * @param name
+     * @param defValue
+     */
+    protected StringValidator(final String name, final OptionValue defValue) {
+      super(name, Kind.STRING, defValue);
+    }
+
+    /**
+     * Need to wrap the value in quotes so that it is a proper SQL string literal suitable for
+     * insertion into a SQL query.
+     *
+     * @return - string default value wrapped in quotes
+     */
+    @Override
+    public String getDefaultString() {
+      return "'" + super.getDefaultString() + "'";
     }
   }
 
-  public static class DoubleValidator extends TypeValidator {
+
+  public static class LongValidator extends OptionValidator {
+    public LongValidator(String name, long def) {
+      super(name, Kind.LONG, OptionValue.createLong(OptionType.SYSTEM, name, def));
+    }
+
+    public long getDefaultValue() {
+      return getDefault().num_val;
+    }
+  }
+
+  public static class DoubleValidator extends OptionValidator {
     public DoubleValidator(String name, double def) {
       super(name, Kind.DOUBLE, OptionValue.createDouble(OptionType.SYSTEM, name, def));
     }
@@ -131,7 +155,7 @@ public class TypeValidators {
       super.validate(v);
       if (v.num_val > max || v.num_val < min) {
         throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.",
-            getOptionName(), min, max));
+            name(), min, max));
       }
     }
   }
@@ -153,7 +177,7 @@ public class TypeValidators {
     public void validate(final OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (!valuesSet.contains(v.string_val.toLowerCase())) {
-        throw new ExpressionParsingException(String.format("Option %s must be one of: %s", getOptionName(), valuesSet));
+        throw new ExpressionParsingException(String.format("Option %s must be one of: %s", name(), valuesSet));
       }
     }
   }
@@ -184,76 +208,6 @@ public class TypeValidators {
       } catch (IOException e) {
         throw new ExpressionParsingException("Invalid JSON string (" + jsonString + ") for class " + clazz.getName(), e);
       }
-    }
-  }
-
-  public static abstract class TypeValidator extends OptionValidator {
-    private final Kind kind;
-    private final OptionValue defaultValue;
-
-    public TypeValidator(final String name, final Kind kind, final OptionValue defValue) {
-      super(name);
-      this.kind = kind;
-      this.defaultValue = defValue;
-    }
-
-    @Override
-    public OptionValue getDefault() {
-      return defaultValue;
-    }
-
-    @Override
-    public OptionValue validate(final SqlLiteral value, final OptionType optionType)
-        throws ExpressionParsingException {
-      final OptionValue op = getPartialValue(getOptionName(), optionType, value);
-      validate(op);
-      return op;
-    }
-
-    @Override
-    public void validate(final OptionValue v) throws ExpressionParsingException {
-      if (v.kind != kind) {
-        throw new ExpressionParsingException(String.format(
-            "Option %s must be of type %s but you tried to set to %s.",
-            getOptionName(), kind.name(), v.kind.name()));
-      }
-    }
-  }
-
-  private static OptionValue getPartialValue(final String name, final OptionType type, final SqlLiteral literal) {
-    final Object object = literal.getValue();
-    final SqlTypeName typeName = literal.getTypeName();
-    switch (typeName) {
-    case DECIMAL: {
-      final BigDecimal bigDecimal = (BigDecimal) object;
-      if (bigDecimal.scale() == 0) {
-        return OptionValue.createLong(type, name, bigDecimal.longValue());
-      } else {
-        return OptionValue.createDouble(type, name, bigDecimal.doubleValue());
-      }
-    }
-
-    case DOUBLE:
-    case FLOAT:
-      return OptionValue.createDouble(type, name, ((BigDecimal) object).doubleValue());
-
-    case SMALLINT:
-    case TINYINT:
-    case BIGINT:
-    case INTEGER:
-      return OptionValue.createLong(type, name, ((BigDecimal) object).longValue());
-
-    case VARBINARY:
-    case VARCHAR:
-    case CHAR:
-      return OptionValue.createString(type, name, ((NlsString) object).getValue());
-
-    case BOOLEAN:
-      return OptionValue.createBoolean(type, name, (Boolean) object);
-
-    default:
-      throw new ExpressionParsingException(String.format(
-          "Drill doesn't support set option expressions with literals of type %s.", typeName));
     }
   }
 }

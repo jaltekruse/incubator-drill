@@ -19,9 +19,9 @@
 package org.apache.drill.exec.physical.impl.join;
 
 import org.apache.drill.PlanTestBase;
-import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.util.TestTools;
-import org.apache.drill.exec.work.foreman.UnsupportedRelOperatorException;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -30,17 +30,6 @@ public class TestNestedLoopJoin extends PlanTestBase {
   private static String nlpattern = "NestedLoopJoin";
   private static final String WORKING_PATH = TestTools.getWorkingPath();
   private static final String TEST_RES_PATH = WORKING_PATH + "/src/test/resources";
-
-  private static final String NLJ = "Alter session set `planner.enable_hashjoin` = false; " +
-      "alter session set `planner.enable_mergejoin` = false; " +
-      "alter session set `planner.enable_nljoin_for_scalar_only` = false; ";
-  private static final String SINGLE_NLJ = "alter session set `planner.disable_exchanges` = true; " + NLJ;
-  private static final String DISABLE_HJ = "alter session set `planner.enable_hashjoin` = false";
-  private static final String ENABLE_HJ = "alter session set `planner.enable_hashjoin` = true";
-  private static final String DISABLE_MJ = "alter session set `planner.enable_mergejoin` = false";
-  private static final String ENABLE_MJ = "alter session set `planner.enable_mergejoin` = true";
-  private static final String DISABLE_NLJ_SCALAR = "alter session set `planner.enable_nljoin_for_scalar_only` = false";
-  private static final String ENABLE_NLJ_SCALAR = "alter session set `planner.enable_nljoin_for_scalar_only` = true";
 
   // Test queries used by planning and execution tests
   private static final String testNlJoinExists_1 = "select r_regionkey from cp.`tpch/region.parquet` "
@@ -85,17 +74,23 @@ public class TestNestedLoopJoin extends PlanTestBase {
 
   @Test
   public void testNlJoinInequality_2() throws Exception {
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(testNlJoinInequality_2, new String[]{nlpattern}, new String[]{});
-    test(ENABLE_NLJ_SCALAR);
+    try {
+      setOption(PlannerSettings.NLJOIN_FOR_SCALAR, false);
+      testPlanMatchingPatterns(testNlJoinInequality_2, new String[]{nlpattern}, new String[]{});
+    } finally {
+      resetOption(PlannerSettings.NLJOIN_FOR_SCALAR);
+    }
   }
 
   @Test
   @Ignore // Re-test after CALCITE-695 is resolved
   public void testNlJoinInequality_3() throws Exception {
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(testNlJoinInequality_3, new String[]{nlpattern}, new String[]{});
-    test(ENABLE_NLJ_SCALAR);
+    try {
+      setOption(PlannerSettings.NLJOIN_FOR_SCALAR, false);
+      testPlanMatchingPatterns(testNlJoinInequality_3, new String[]{nlpattern}, new String[]{});
+    } finally {
+      resetOption(PlannerSettings.NLJOIN_FOR_SCALAR);
+    }
   }
 
   @Test
@@ -111,11 +106,13 @@ public class TestNestedLoopJoin extends PlanTestBase {
     String query = "select r_regionkey from cp.`tpch/region.parquet` "
         + " where r_regionkey = (select min(n_regionkey) from cp.`tpch/nation.parquet` "
         + "                        where n_nationkey < 10)";
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
+    try {
+      setOption(PlannerSettings.HASHJOIN, false);
+      setOption(PlannerSettings.MERGEJOIN, false);
+      testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
+    } finally {
+      resetOptions(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN);
+    }
   }
 
   @Test // equality join and scalar right input, hj and mj disabled, enforce exchanges
@@ -123,26 +120,26 @@ public class TestNestedLoopJoin extends PlanTestBase {
     String query = "select r_regionkey from cp.`tpch/region.parquet` "
         + " where r_regionkey = (select min(n_regionkey) from cp.`tpch/nation.parquet` "
         + "                        where n_nationkey < 10)";
-    test("alter session set `planner.slice_target` = 1");
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
-    test("alter session set `planner.slice_target` = 100000");
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      setOption(PlannerSettings.HASHJOIN, false);
+      setOption(PlannerSettings.MERGEJOIN, false);
+      testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
+    } finally {
+      resetOptions(ExecConstants.PLANNER_SLICE_TARGET, PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN);
+    }
   }
 
   @Test // equality join and non-scalar right input, hj and mj disabled
   public void testNlJoinEqualityNonScalar_1_planning() throws Exception {
     String query = "select r.r_regionkey from cp.`tpch/region.parquet` r inner join cp.`tpch/nation.parquet` n"
         + " on r.r_regionkey = n.n_regionkey where n.n_nationkey < 10";
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
-    test(ENABLE_NLJ_SCALAR);
+    try {
+      setAllFalse(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      testPlanMatchingPatterns(query, new String[]{nlpattern}, new String[]{});
+    } finally {
+      setAllTrue(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+    }
   }
 
   @Test // equality join and non-scalar right input, hj and mj disabled, enforce exchanges
@@ -150,15 +147,14 @@ public class TestNestedLoopJoin extends PlanTestBase {
     String query = String.format("select n.n_nationkey from cp.`tpch/nation.parquet` n, "
         + " dfs_test.`%s/multilevel/parquet` o "
         + " where n.n_regionkey = o.o_orderkey and o.o_custkey < 5", TEST_RES_PATH);
-    test("alter session set `planner.slice_target` = 1");
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
-    test(DISABLE_NLJ_SCALAR);
-    testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
-    test(ENABLE_NLJ_SCALAR);
-    test("alter session set `planner.slice_target` = 100000");
+    try {
+      setAllFalse(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+      testPlanMatchingPatterns(query, new String[]{nlpattern, "BroadcastExchange"}, new String[]{});
+    } finally {
+      setAllTrue(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+      resetToDefaultExchanges();
+    }
   }
 
   // EXECUTION TESTS
@@ -207,50 +203,48 @@ public class TestNestedLoopJoin extends PlanTestBase {
   public void testNLJWithEmptyBatch() throws Exception {
     Long result = 0l;
 
-    test(DISABLE_NLJ_SCALAR);
-    test(DISABLE_HJ);
-    test(DISABLE_MJ);
+    try {
+      setAllFalse(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
 
-    // We have a false filter causing empty left batch
-    String query = "select count(*) col from (select a.lastname " +
-        "from cp.`employee.json` a " +
-        "where exists (select n_name from cp.`tpch/nation.parquet` b) AND 1 = 0)";
+      // We have a false filter causing empty left batch
+      String query = "select count(*) col from (select a.lastname " +
+          "from cp.`employee.json` a " +
+          "where exists (select n_name from cp.`tpch/nation.parquet` b) AND 1 = 0)";
 
-    testBuilder()
-        .sqlQuery(query)
-        .unOrdered()
-        .baselineColumns("col")
-        .baselineValues(result)
-        .go();
+      testBuilder()
+          .sqlQuery(query)
+          .unOrdered()
+          .baselineColumns("col")
+          .baselineValues(result)
+          .go();
 
-    // Below tests use NLJ in a general case (non-scalar subqueries, followed by filter) with empty batches
-    query = "select count(*) col from " +
-        "(select t1.department_id " +
-        "from cp.`employee.json` t1 inner join cp.`department.json` t2 " +
-        "on t1.department_id = t2.department_id where t1.department_id = -1)";
+      // Below tests use NLJ in a general case (non-scalar subqueries, followed by filter) with empty batches
+      query = "select count(*) col from " +
+          "(select t1.department_id " +
+          "from cp.`employee.json` t1 inner join cp.`department.json` t2 " +
+          "on t1.department_id = t2.department_id where t1.department_id = -1)";
 
-    testBuilder()
-        .sqlQuery(query)
-        .unOrdered()
-        .baselineColumns("col")
-        .baselineValues(result)
-        .go();
+      testBuilder()
+          .sqlQuery(query)
+          .unOrdered()
+          .baselineColumns("col")
+          .baselineValues(result)
+          .go();
 
-    query = "select count(*) col from " +
-        "(select t1.department_id " +
-        "from cp.`employee.json` t1 inner join cp.`department.json` t2 " +
-        "on t1.department_id = t2.department_id where t2.department_id = -1)";
+      query = "select count(*) col from " +
+          "(select t1.department_id " +
+          "from cp.`employee.json` t1 inner join cp.`department.json` t2 " +
+          "on t1.department_id = t2.department_id where t2.department_id = -1)";
 
 
-    testBuilder()
-        .sqlQuery(query)
-        .unOrdered()
-        .baselineColumns("col")
-        .baselineValues(result)
-        .go();
-
-    test(ENABLE_NLJ_SCALAR);
-    test(ENABLE_HJ);
-    test(ENABLE_MJ);
+      testBuilder()
+          .sqlQuery(query)
+          .unOrdered()
+          .baselineColumns("col")
+          .baselineValues(result)
+          .go();
+    } finally {
+      resetOptions(PlannerSettings.HASHJOIN, PlannerSettings.MERGEJOIN, PlannerSettings.NLJOIN_FOR_SCALAR);
+    }
   }
 }

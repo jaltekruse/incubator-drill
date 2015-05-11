@@ -34,6 +34,7 @@ import java.util.zip.GZIPOutputStream;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.record.RecordBatchLoader;
@@ -216,12 +217,15 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void testAllTextMode() throws Exception {
-    test("alter system set `store.json.all_text_mode` = true");
-    String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
-    long[] rowCounts = {3};
-    String filename = "/store/json/schema_change_int_to_string.json";
-    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
-    test("alter system set `store.json.all_text_mode` = false");
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      String[] queries = {"select * from cp.`/store/json/schema_change_int_to_string.json`"};
+      long[] rowCounts = {3};
+      String filename = "/store/json/schema_change_int_to_string.json";
+      runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test
@@ -242,29 +246,35 @@ public class TestJsonReader extends BaseTestQuery {
 
   @Test
   public void testNullWhereListExpected() throws Exception {
-    test("alter system set `store.json.all_text_mode` = true");
-    String[] queries = {"select * from cp.`/store/json/null_where_list_expected.json`"};
-    long[] rowCounts = {3};
-    String filename = "/store/json/null_where_list_expected.json";
-    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
-    test("alter system set `store.json.all_text_mode` = false");
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      String[] queries = {"select * from cp.`/store/json/null_where_list_expected.json`"};
+      long[] rowCounts = {3};
+      String filename = "/store/json/null_where_list_expected.json";
+      runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test
   public void testNullWhereMapExpected() throws Exception {
-    test("alter system set `store.json.all_text_mode` = true");
-    String[] queries = {"select * from cp.`/store/json/null_where_map_expected.json`"};
-    long[] rowCounts = {3};
-    String filename = "/store/json/null_where_map_expected.json";
-    runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
-    test("alter system set `store.json.all_text_mode` = false");
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      String[] queries = {"select * from cp.`/store/json/null_where_map_expected.json`"};
+      long[] rowCounts = {3};
+      String filename = "/store/json/null_where_map_expected.json";
+      runTestsOnFile(filename, UserBitShared.QueryType.SQL, queries, rowCounts);
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test
   public void ensureProjectionPushdown() throws Exception {
+    resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
     // Tests to make sure that we are correctly eliminating schema changing columns.  If completes, means that the projection pushdown was successful.
-    test("alter system set `store.json.all_text_mode` = false; "
-        + "select  t.field_1, t.field_3.inner_1, t.field_3.inner_2, t.field_4.inner_1 "
+    test("select  t.field_1, t.field_3.inner_1, t.field_3.inner_2, t.field_4.inner_1 "
         + "from cp.`store/json/schema_change_int_to_string.json` t");
   }
 
@@ -276,7 +286,7 @@ public class TestJsonReader extends BaseTestQuery {
     String[] queries = {Files.toString(FileUtils.getResourceAsFile("/store/json/project_pushdown_json_physical_plan.json"), Charsets.UTF_8)};
     long[] rowCounts = {3};
     String filename = "/store/json/schema_change_int_to_string.json";
-    test("alter system set `store.json.all_text_mode` = false");
+    resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
     runTestsOnFile(filename, UserBitShared.QueryType.PHYSICAL, queries, rowCounts);
 
     List<QueryDataBatch> results = testPhysicalWithResults(queries[0]);

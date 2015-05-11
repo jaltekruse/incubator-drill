@@ -17,8 +17,10 @@
  */
 package org.apache.drill.exec;
 
+import org.apache.drill.common.exceptions.ExpressionParsingException;
+import org.apache.drill.exec.compile.QueryClassLoader.CompilerPolicy;
 import org.apache.drill.exec.physical.impl.common.HashTable;
-import org.apache.drill.exec.server.options.OptionValidator;
+import org.apache.drill.exec.server.options.OptionValue;
 import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
 import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
 import org.apache.drill.exec.server.options.TypeValidators.EnumeratedStringValidator;
@@ -31,6 +33,16 @@ import org.apache.drill.exec.server.options.TypeValidators.StringValidator;
 import org.apache.drill.exec.testing.ExecutionControls;
 
 public interface ExecConstants {
+
+  // CONSTANTS
+  public static final String BOOTSTRAP_STORAGE_PLUGINS_FILE = "bootstrap-storage-plugins.json";
+  public static final String DRILL_SYS_FILE_SUFFIX = ".drill.json";
+
+  // SYSTEM PROPERTIES
+  public static final String USE_LINUX_EPOLL = "drill.exec.enable-epoll";
+
+  // BOOTSTRAP OPTIONS
+  public static final String MAX_LOADING_CACHE_SIZE_CONFIG = "drill.exec.compile.cache_max_size";
   public static final String ZK_RETRY_TIMES = "drill.exec.zk.retry.count";
   public static final String ZK_RETRY_DELAY = "drill.exec.zk.retry.delay";
   public static final String ZK_CONNECTION = "drill.exec.zk.connect";
@@ -104,33 +116,29 @@ public interface ExecConstants {
   public static final String ENABLE_FRAGMENT_MEMORY_LIMIT = "drill.exec.memory.enable_frag_limit";
   public static final String FRAGMENT_MEM_OVERCOMMIT_FACTOR = "drill.exec.memory.frag_mem_overcommit_factor";
 
-  public static final String USE_LINUX_EPOLL = "drill.exec.enable-epoll";
-
   public static final String CLIENT_SUPPORT_COMPLEX_TYPES = "drill.client.supports-complex-types";
 
-  public static final String OUTPUT_FORMAT_OPTION = "store.format";
-  public static final OptionValidator OUTPUT_FORMAT_VALIDATOR = new StringValidator(OUTPUT_FORMAT_OPTION, "parquet");
-  public static final String PARQUET_BLOCK_SIZE = "store.parquet.block-size";
-  public static final OptionValidator PARQUET_BLOCK_SIZE_VALIDATOR = new LongValidator(PARQUET_BLOCK_SIZE, 512*1024*1024);
-  public static final String PARQUET_WRITER_COMPRESSION_TYPE = "store.parquet.compression";
-  public static final OptionValidator PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR = new EnumeratedStringValidator(
-      PARQUET_WRITER_COMPRESSION_TYPE, "snappy", "snappy", "gzip", "none");
-  public static final String PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING = "store.parquet.enable_dictionary_encoding";
-  public static final OptionValidator PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING_VALIDATOR = new BooleanValidator(
-      PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING, false);
+  // SYSTEM & SESSION OPTIONS.
 
-  public static final String PARQUET_VECTOR_FILL_THRESHOLD = "store.parquet.vector_fill_threshold";
-  public static final OptionValidator PARQUET_VECTOR_FILL_THRESHOLD_VALIDATOR = new PositiveLongValidator(PARQUET_VECTOR_FILL_THRESHOLD, 99l, 85l);
-  public static final String PARQUET_VECTOR_FILL_CHECK_THRESHOLD = "store.parquet.vector_fill_check_threshold";
-  public static final OptionValidator PARQUET_VECTOR_FILL_CHECK_THRESHOLD_VALIDATOR = new PositiveLongValidator(PARQUET_VECTOR_FILL_CHECK_THRESHOLD, 100l, 10l);
-  public static String PARQUET_NEW_RECORD_READER = "store.parquet.use_new_reader";
-  public static OptionValidator PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR = new BooleanValidator(PARQUET_NEW_RECORD_READER, false);
+  public static final StringValidator OUTPUT_FORMAT_VALIDATOR = new EnumeratedStringValidator("store.files.format",
+      "parquet", "parquet", "json", "csv");
+  public static final LongValidator PARQUET_BLOCK_SIZE_VALIDATOR = new RangeLongValidator(
+      "store.files.parquet.block-size", 4 * 1024 * 1024, 16 * 1024 * 1024 * 1024, 512 * 1024 * 1024);
+  public static final StringValidator PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR = new EnumeratedStringValidator(
+      "store.files.parquet.compression", "snappy", "snappy", "gzip", "none");
+  public static final BooleanValidator PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING = new BooleanValidator(
+      "store.files.parquet.enable_dictionary_encoding", false);
+  public static final BooleanValidator PARQUET_RECORD_READER_IMPLEMENTATION = new BooleanValidator(
+      "store.files.parquet.use_new_reader", false);
 
-  public static OptionValidator COMPILE_SCALAR_REPLACEMENT = new BooleanValidator("exec.compile.scalar_replacement", false);
+  public static final BooleanValidator COMPILE_SCALAR_REPLACEMENT = new BooleanValidator(
+      "exec.compile.scalar_replacement", false);
 
-  public static String JSON_ALL_TEXT_MODE = "store.json.all_text_mode";
-  public static BooleanValidator JSON_READER_ALL_TEXT_MODE_VALIDATOR = new BooleanValidator(JSON_ALL_TEXT_MODE, false);
-  public static final BooleanValidator JSON_EXTENDED_TYPES = new BooleanValidator("store.json.extended_types", false);
+  public static final BooleanValidator JSON_READER_ALL_TEXT_MODE = new BooleanValidator(
+      "store.files.json.all_text_mode",
+      false);
+  public static final BooleanValidator JSON_EXTENDED_TYPES = new BooleanValidator("store.files.json.extended_types",
+      true);
   public static final DoubleValidator TEXT_ESTIMATED_ROW_SIZE = new RangeDoubleValidator(
       "store.text.estimated_row_size_bytes", 1, Long.MAX_VALUE, 100.0);
 
@@ -141,63 +149,60 @@ public interface ExecConstants {
    *                |-    bar  -  a.parquet
    *                |-    baz  -  b.parquet
    */
-  public static final String FILESYSTEM_PARTITION_COLUMN_LABEL = "drill.exec.storage.file.partition.column.label";
-  public static final OptionValidator FILESYSTEM_PARTITION_COLUMN_LABEL_VALIDATOR = new StringValidator(FILESYSTEM_PARTITION_COLUMN_LABEL, "dir");
+  public static final StringValidator FILESYSTEM_PARTITION_COLUMN_LABEL = new StringValidator(
+      "store.files.partition.label", "dir");
 
-  public static String JSON_READ_NUMBERS_AS_DOUBLE = "store.json.read_numbers_as_double";
-  public static OptionValidator JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR = new BooleanValidator(JSON_READ_NUMBERS_AS_DOUBLE, false);
+  public static final BooleanValidator JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR = new BooleanValidator(
+      "store.json.read_numbers_as_double", false);
 
-  public static String MONGO_ALL_TEXT_MODE = "store.mongo.all_text_mode";
-  public static OptionValidator MONGO_READER_ALL_TEXT_MODE_VALIDATOR = new BooleanValidator(MONGO_ALL_TEXT_MODE, false);
-  public static String MONGO_READER_READ_NUMBERS_AS_DOUBLE = "store.mongo.read_numbers_as_double";
-  public static OptionValidator MONGO_READER_READ_NUMBERS_AS_DOUBLE_VALIDATOR = new BooleanValidator(MONGO_READER_READ_NUMBERS_AS_DOUBLE, false);
+  public static final BooleanValidator MONGO_READER_ALL_TEXT_MODE_VALIDATOR = new BooleanValidator(
+      "store.mongo.all_text_mode", false);
 
-  public static final String SLICE_TARGET = "planner.slice_target";
-  public static final long SLICE_TARGET_DEFAULT = 100000l;
-  public static final OptionValidator SLICE_TARGET_OPTION = new PositiveLongValidator(SLICE_TARGET, Long.MAX_VALUE, SLICE_TARGET_DEFAULT);
+  public static final BooleanValidator MONGO_READER_READ_NUMBERS_AS_DOUBLE_VALIDATOR = new BooleanValidator(
+      "store.mongo.read_numbers_as_double", false);
 
-  public static final String CAST_TO_NULLABLE_NUMERIC = "drill.exec.functions.cast_empty_string_to_null";
-  public static final OptionValidator CAST_TO_NULLABLE_NUMERIC_OPTION = new BooleanValidator(CAST_TO_NULLABLE_NUMERIC, false);
+  public static final LongValidator PLANNER_SLICE_TARGET = new PositiveLongValidator("planner.slice_target",
+      Long.MAX_VALUE, 100000l);
+
+  public static final BooleanValidator CAST_TO_NULLABLE_NUMERIC_OPTION = new BooleanValidator(
+      "exec.functions.cast_empty_string_to_null", false);
 
   /**
    * HashTable runtime settings
    */
-  public static final String MIN_HASH_TABLE_SIZE_KEY = "exec.min_hash_table_size";
-  public static final OptionValidator MIN_HASH_TABLE_SIZE = new PositiveLongValidator(MIN_HASH_TABLE_SIZE_KEY, HashTable.MAXIMUM_CAPACITY, HashTable.DEFAULT_INITIAL_CAPACITY);
-  public static final String MAX_HASH_TABLE_SIZE_KEY = "exec.max_hash_table_size";
-  public static final OptionValidator MAX_HASH_TABLE_SIZE = new PositiveLongValidator(MAX_HASH_TABLE_SIZE_KEY, HashTable.MAXIMUM_CAPACITY, HashTable.MAXIMUM_CAPACITY);
+  public static final LongValidator MIN_HASH_TABLE_SIZE = new PositiveLongValidator("exec.hash.min_table_size",
+      HashTable.MAXIMUM_CAPACITY, HashTable.DEFAULT_INITIAL_CAPACITY);
+  public static final LongValidator MAX_HASH_TABLE_SIZE = new PositiveLongValidator("exec.hash.max_table_size",
+      HashTable.MAXIMUM_CAPACITY, HashTable.MAXIMUM_CAPACITY);
 
   /**
    * Limits the maximum level of parallelization to this factor time the number of Drillbits
    */
-  public static final String MAX_WIDTH_PER_NODE_KEY = "planner.width.max_per_node";
-  public static final OptionValidator MAX_WIDTH_PER_NODE = new PositiveLongValidator(MAX_WIDTH_PER_NODE_KEY, Integer.MAX_VALUE, (long) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.70));
-
+  public static final LongValidator MAX_WIDTH_PER_NODE = new PositiveLongValidator("planner.width.max_per_node",
+      Integer.MAX_VALUE, (long) Math.ceil(Runtime.getRuntime().availableProcessors() * 0.70));
   /**
    * The maximum level or parallelization any stage of the query can do. Note that while this
    * might be the number of active Drillbits, realistically, this could be well beyond that
    * number of we want to do things like speed results return.
    */
-  public static final String MAX_WIDTH_GLOBAL_KEY = "planner.width.max_per_query";
-  public static final OptionValidator MAX_WIDTH_GLOBAL = new PositiveLongValidator(MAX_WIDTH_GLOBAL_KEY, Integer.MAX_VALUE, 1000);
+  public static final LongValidator MAX_WIDTH_GLOBAL = new PositiveLongValidator("planner.width.max_per_query",
+      Integer.MAX_VALUE, 1000);
 
   /**
    * Factor by which a node with endpoint affinity will be favored while creating assignment
    */
-  public static final String AFFINITY_FACTOR_KEY = "planner.affinity_factor";
-  public static final OptionValidator AFFINITY_FACTOR = new DoubleValidator(AFFINITY_FACTOR_KEY, 1.2d);
+  public static final DoubleValidator AFFINITY_FACTOR = new DoubleValidator("planner.affinity_factor", 1.2d);
 
-  public static final String ENABLE_MEMORY_ESTIMATION_KEY = "planner.memory.enable_memory_estimation";
-  public static final OptionValidator ENABLE_MEMORY_ESTIMATION = new BooleanValidator(ENABLE_MEMORY_ESTIMATION_KEY, false);
+  public static final BooleanValidator ENABLE_MEMORY_ESTIMATION = new BooleanValidator(
+      "planner.memory.enable_memory_estimation", false);
 
   /**
    * Maximum query memory per node (in MB). Re-plan with cheaper operators if memory estimation exceeds this limit.
    * <p/>
    * DEFAULT: 2048 MB
    */
-  public static final String MAX_QUERY_MEMORY_PER_NODE_KEY = "planner.memory.max_query_memory_per_node";
   public static final LongValidator MAX_QUERY_MEMORY_PER_NODE = new RangeLongValidator(
-      MAX_QUERY_MEMORY_PER_NODE_KEY, 1024 * 1024, Long.MAX_VALUE, 2 * 1024 * 1024 * 1024L);
+      "planner.memory.max_query_memory_per_node", 1024 * 1024, Long.MAX_VALUE, 2 * 1024 * 1024 * 1024L);
 
   /**
    * Extra query memory per node for non-blocking operators.
@@ -206,18 +211,16 @@ public interface ExecConstants {
    * DEFAULT: 64 MB
    * MAXIMUM: 2048 MB
    */
-  public static final String NON_BLOCKING_OPERATORS_MEMORY_KEY = "planner.memory.non_blocking_operators_memory";
-  public static final OptionValidator NON_BLOCKING_OPERATORS_MEMORY = new PowerOfTwoLongValidator(
-    NON_BLOCKING_OPERATORS_MEMORY_KEY, 1 << 11, 1 << 6);
+  public static final LongValidator NON_BLOCKING_OPERATORS_MEMORY = new PowerOfTwoLongValidator(
+      "planner.memory.non_blocking_operators_memory", 1 << 11, 1 << 6);
 
-  public static final String HASH_JOIN_TABLE_FACTOR_KEY = "planner.memory.hash_join_table_factor";
-  public static final OptionValidator HASH_JOIN_TABLE_FACTOR = new DoubleValidator(HASH_JOIN_TABLE_FACTOR_KEY, 1.1d);
+  public static final DoubleValidator HASH_JOIN_TABLE_FACTOR = new DoubleValidator(
+      "planner.memory.hash_join_table_factor", 1.1d);
 
-  public static final String HASH_AGG_TABLE_FACTOR_KEY = "planner.memory.hash_agg_table_factor";
-  public static final OptionValidator HASH_AGG_TABLE_FACTOR = new DoubleValidator(HASH_AGG_TABLE_FACTOR_KEY, 1.1d);
-
-  public static final String AVERAGE_FIELD_WIDTH_KEY = "planner.memory.average_field_width";
-  public static final OptionValidator AVERAGE_FIELD_WIDTH = new PositiveLongValidator(AVERAGE_FIELD_WIDTH_KEY, Long.MAX_VALUE, 8);
+  public static final DoubleValidator HASH_AGG_TABLE_FACTOR = new DoubleValidator(
+      "planner.memory.hash_agg_table_factor", 1.1d);
+  public static final LongValidator AVERAGE_FIELD_WIDTH = new PositiveLongValidator(
+      "planner.memory.average_field_width", Long.MAX_VALUE, 8);
 
   public static final BooleanValidator ENABLE_QUEUE = new BooleanValidator("exec.queue.enable", false);
   public static final LongValidator LARGE_QUEUE_SIZE = new PositiveLongValidator("exec.queue.large", 1000, 10);
@@ -227,31 +230,38 @@ public interface ExecConstants {
   public static final LongValidator QUEUE_TIMEOUT = new PositiveLongValidator("exec.queue.timeout_millis",
       Long.MAX_VALUE, 60 * 1000 * 5);
 
-  public static final String ENABLE_VERBOSE_ERRORS_KEY = "exec.errors.verbose";
-  public static final OptionValidator ENABLE_VERBOSE_ERRORS = new BooleanValidator(ENABLE_VERBOSE_ERRORS_KEY, false);
+  public static final BooleanValidator ENABLE_VERBOSE_ERRORS = new BooleanValidator("exec.errors.verbose", false);
+  public static final BooleanValidator ENABLE_NEW_TEXT_READER = new BooleanValidator(
+      "store.files.text.enable_new_text_reader", true);
 
-  public static final String ENABLE_NEW_TEXT_READER_KEY = "exec.storage.enable_new_text_reader";
-  public static final OptionValidator ENABLE_NEW_TEXT_READER = new BooleanValidator(ENABLE_NEW_TEXT_READER_KEY, true);
+  public static final BooleanValidator ENABLE_WINDOW_FUNCTIONS = new BooleanValidator("exec.window.enable", true);
 
-  public static final String BOOTSTRAP_STORAGE_PLUGINS_FILE = "bootstrap-storage-plugins.json";
-  public static final String MAX_LOADING_CACHE_SIZE_CONFIG = "drill.exec.compile.cache_max_size";
+  public static final ExecutionControls.ControlsOptionValidator DRILLBIT_CONTROLS_VALIDATOR =
+      new ExecutionControls.ControlsOptionValidator("exec.testing.controls", ExecutionControls.DEFAULT_CONTROLS, 1);
 
-  public static final String DRILL_SYS_FILE_SUFFIX = ".sys.drill";
+  public static final BooleanValidator JAVA_COMPILER_DEBUG = new BooleanValidator("exec.compiler.debug", true);
 
-  public static final String ENABLE_WINDOW_FUNCTIONS = "window.enable";
-  public static final OptionValidator ENABLE_WINDOW_FUNCTIONS_VALIDATOR = new BooleanValidator(ENABLE_WINDOW_FUNCTIONS, true);
+  public static final LongValidator JAVA_COMPILER_JANINO_MAXSIZE = new LongValidator(
+      "exec.compiler.jdk_threshold_bytes", 256 * 1024);
 
-  public static final String DRILLBIT_CONTROL_INJECTIONS = "drill.exec.testing.controls";
-  public static final OptionValidator DRILLBIT_CONTROLS_VALIDATOR =
-    new ExecutionControls.ControlsOptionValidator(DRILLBIT_CONTROL_INJECTIONS, ExecutionControls.DEFAULT_CONTROLS, 1);
+  public static final StringValidator JAVA_COMPILER_OPTION = new EnumeratedStringValidator("exec.compiler.vendor",
+      CompilerPolicy.DEFAULT.toString(), CompilerPolicy.DEFAULT.toString(), CompilerPolicy.JANINO.toString(),
+      CompilerPolicy.JDK.toString());
 
-  public static final String NEW_VIEW_DEFAULT_PERMS_KEY = "new_view_default_permissions";
-  public static final OptionValidator NEW_VIEW_DEFAULT_PERMS_VALIDATOR =
-      new StringValidator(NEW_VIEW_DEFAULT_PERMS_KEY, "700");
+  public static final StringValidator NEW_VIEW_DEFAULT_PERMS_VALIDATOR =
+      new StringValidator("store.files.new_view_permissions", "700") {
+        @Override
+        public void validate(OptionValue v) throws ExpressionParsingException {
+          super.validate(v);
+          if (!v.string_val.matches("[012457]{3}")) {
+            throw new ExpressionParsingException("Default view permissions must match ###.");
+          }
+        }
 
-  public static final String USE_OLD_ASSIGNMENT_CREATOR = "exec.schedule.assignment.old";
-  public static final OptionValidator USE_OLD_ASSIGNMENT_CREATOR_VALIDATOR = new BooleanValidator(USE_OLD_ASSIGNMENT_CREATOR, false);
+      };
 
-  public static final String CTAS_PARTITIONING_HASH_DISTRIBUTE = "store.partition.hash_distribute";
-  public static final BooleanValidator CTAS_PARTITIONING_HASH_DISTRIBUTE_VALIDATOR = new BooleanValidator(CTAS_PARTITIONING_HASH_DISTRIBUTE, false);
+  public static final BooleanValidator CTAS_PARTITIONING_HASH_DISTRIBUTE_VALIDATOR =
+      new BooleanValidator("store.partition.hash_distribute", false);
+  public static final BooleanValidator USE_OLD_ASSIGNMENT_CREATOR_VALIDATOR = new BooleanValidator(
+      "exec.schedule.assignment.old", false);
 }

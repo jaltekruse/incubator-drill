@@ -21,6 +21,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import org.apache.drill.PlanTestBase;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.hadoop.io.Text;
@@ -119,8 +120,8 @@ public class TestConstantFolding extends PlanTestBase {
   @Test
   public void testConstantFolding_allTypes() throws Exception {
     try {
-      test("alter session set `store.json.all_text_mode` = true;");
-      test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
 
       String query2 = "SELECT *  " +
           "FROM   cp.`/parquet/alltypes.json`  " +
@@ -166,8 +167,8 @@ public class TestConstantFolding extends PlanTestBase {
           )
           .go();
     } finally {
-      test("alter session set `store.json.all_text_mode` = false;");
-      test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+      resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
     }
   }
 
@@ -203,13 +204,13 @@ public class TestConstantFolding extends PlanTestBase {
   @Test
   public void testConstantFoldingDisableOption() throws Exception {
     try {
-      test("alter session set `planner.enable_constant_folding` = false");
+      setOption(PlannerSettings.CONSTANT_FOLDING, false);
       testPlanOneExpectedPatternOneExcluded(
           "select * from cp.`functions/interp/test_input.csv` where columns[0] = 2+2",
           "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 0\\), \\+\\(2, 2\\)\\)",
           "Filter\\(condition=\\[=\\(ITEM\\(\\$[0-9]+, 0\\), 4\\)");
     } finally {
-      test("alter session set `planner.enable_constant_folding` = true");
+      resetOption(PlannerSettings.CONSTANT_FOLDING);
     }
   }
 

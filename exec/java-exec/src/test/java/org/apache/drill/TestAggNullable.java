@@ -20,6 +20,8 @@ package org.apache.drill;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Test;
 
 public class TestAggNullable extends BaseTestQuery{
@@ -30,9 +32,9 @@ public class TestAggNullable extends BaseTestQuery{
 
   private static void enableAggr(boolean ha, boolean sa) throws Exception {
 
-    test(String.format("alter session set `planner.enable_hashagg` = %s", ha ? "true":"false"));
-    test(String.format("alter session set `planner.enable_streamagg` = %s", sa ? "true":"false"));
-    test("alter session set `planner.slice_target` = 1");
+    setOption(PlannerSettings.HASHAGG, ha);
+    setOption(PlannerSettings.STREAMAGG, sa);
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
   }
 
   @Test  // HashAgg on nullable columns

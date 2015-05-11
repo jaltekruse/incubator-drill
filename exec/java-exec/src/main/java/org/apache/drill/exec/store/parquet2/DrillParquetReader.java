@@ -31,7 +31,6 @@ import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
-import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
@@ -89,8 +88,6 @@ public class DrillParquetReader extends AbstractRecordReader {
   // fixed size value vectors, we must check how full the vectors are after some number of reads, for performance
   // we avoid doing this every record. These values are populated with system/session settings to allow users to optimize
   // for performance or allow a wider record size to be suported
-  private final int fillLevelCheckFrequency;
-  private final int fillLevelCheckThreshold;
   private FragmentContext fragmentContext;
 
   // For columns not found in the file, we need to return a schema element with the correct number of values
@@ -112,8 +109,6 @@ public class DrillParquetReader extends AbstractRecordReader {
     this.entry = entry;
     setColumns(columns);
     this.fragmentContext = fragmentContext;
-    fillLevelCheckFrequency = this.fragmentContext.getOptions().getOption(ExecConstants.PARQUET_VECTOR_FILL_CHECK_THRESHOLD).num_val.intValue();
-    fillLevelCheckThreshold = this.fragmentContext.getOptions().getOption(ExecConstants.PARQUET_VECTOR_FILL_THRESHOLD).num_val.intValue();
   }
 
   public static MessageType getProjection(MessageType schema,

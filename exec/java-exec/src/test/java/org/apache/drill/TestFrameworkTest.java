@@ -22,6 +22,7 @@ import static org.apache.drill.TestBuilder.mapOf;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.Types;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Test;
 
@@ -70,7 +71,7 @@ public class TestFrameworkTest extends BaseTestQuery{
   @Test
   public void testDecimalBaseline() throws  Exception {
     try {
-      test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
 
       // type information can be provided explicitly
       testBuilder()
@@ -99,7 +100,7 @@ public class TestFrameworkTest extends BaseTestQuery{
           .baselineValues(new BigDecimal("3.70"))
           .build().run();
     } finally {
-      test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+      resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
     }
   }
 
@@ -290,33 +291,32 @@ public class TestFrameworkTest extends BaseTestQuery{
 
   @Test
   public void testComplexJSON_all_text() throws Exception {
-    testBuilder()
-        .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-        .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
-        .ordered()
-        .jsonBaselineFile("store/json/schema_change_int_to_string.json")
-        .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
-        .build().run();
+    try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
+      testBuilder()
+          .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
+          .ordered()
+          .jsonBaselineFile("store/json/schema_change_int_to_string.json")
+          .build().run();
 
-    testBuilder()
-        .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-        .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
-        .unOrdered() // Check other verification method with same files
-        .jsonBaselineFile("store/json/schema_change_int_to_string.json")
-        .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
-        .build().run();
-    test("alter system set `store.json.all_text_mode` = false");
+      testBuilder()
+          .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
+          .unOrdered() // Check other verification method with same files
+          .jsonBaselineFile("store/json/schema_change_int_to_string.json")
+          .build().run();
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    }
   }
 
   @Test
   public void testRepeatedColumnMatching() throws Exception {
     try {
+      setOption(ExecConstants.JSON_READER_ALL_TEXT_MODE, true);
       testBuilder()
           .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-          .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
           .ordered()
           .jsonBaselineFile("testframework/schema_change_int_to_string_non-matching.json")
-          .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
           .build().run();
     } catch (Exception ex) {
       assertEquals("at position 1 column '`field_1`' mismatched values, " +
@@ -324,6 +324,8 @@ public class TestFrameworkTest extends BaseTestQuery{
           ex.getMessage());
       // this indicates successful completion of the test
       return;
+    } finally {
+      resetOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
     }
     throw new Exception("Test framework verification failed, expected failure on order check.");
   }

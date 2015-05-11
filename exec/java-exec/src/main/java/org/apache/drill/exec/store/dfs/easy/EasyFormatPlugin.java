@@ -124,7 +124,7 @@ public abstract class EasyFormatPlugin<T extends FormatPluginConfig> implements 
 
   CloseableRecordBatch getReaderBatch(FragmentContext context, EasySubScan scan) throws ExecutionSetupException {
     String partitionDesignator = context.getOptions()
-      .getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL).string_val;
+        .getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL);
     List<SchemaPath> columns = scan.getColumns();
     List<RecordReader> readers = Lists.newArrayList();
     List<String[]> partitionColumns = Lists.newArrayList();
