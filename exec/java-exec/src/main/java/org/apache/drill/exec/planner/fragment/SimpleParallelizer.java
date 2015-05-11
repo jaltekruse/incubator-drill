@@ -86,11 +86,11 @@ public class SimpleParallelizer {
 
   public SimpleParallelizer(QueryContext context) {
     OptionManager optionManager = context.getOptions();
-    long sliceTarget = optionManager.getOption(ExecConstants.SLICE_TARGET).num_val;
+    long sliceTarget = optionManager.getOption(ExecConstants.PLANNER_SLICE_TARGET);
     this.parallelizationThreshold = sliceTarget > 0 ? sliceTarget : 1;
-    this.maxWidthPerNode = optionManager.getOption(ExecConstants.MAX_WIDTH_PER_NODE_KEY).num_val.intValue();
-    this.maxGlobalWidth = optionManager.getOption(ExecConstants.MAX_WIDTH_GLOBAL_KEY).num_val.intValue();
-    this.affinityFactor = optionManager.getOption(ExecConstants.AFFINITY_FACTOR_KEY).float_val.intValue();
+    this.maxWidthPerNode = (int) optionManager.getOption(ExecConstants.MAX_WIDTH_PER_NODE);
+    this.maxGlobalWidth = (int) optionManager.getOption(ExecConstants.MAX_WIDTH_GLOBAL);
+    this.affinityFactor = optionManager.getOption(ExecConstants.AFFINITY_FACTOR);
   }
 
   public SimpleParallelizer(long parallelizationThreshold, int maxWidthPerNode, int maxGlobalWidth, double affinityFactor) {

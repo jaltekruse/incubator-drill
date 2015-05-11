@@ -33,6 +33,7 @@ import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.proto.UserBitShared.QueryType;
@@ -43,12 +44,14 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.server.options.OptionValidator;
+import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
+import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
+import org.apache.drill.exec.server.options.TypeValidators.LongValidator;
+import org.apache.drill.exec.server.options.TypeValidators.StringValidator;
 import org.apache.drill.exec.store.StoragePluginRegistry;
-import org.apache.drill.exec.util.JsonStringArrayList;
-import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.util.TestUtilities;
 import org.apache.drill.exec.util.VectorUtil;
-import org.apache.hadoop.io.Text;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.rules.TestRule;
@@ -306,6 +309,46 @@ public class BaseTestQuery extends ExecTest {
 
   public static void test(final String query) throws Exception {
     QueryTestUtil.test(client, query);
+  }
+
+  public static void forceExchanges() throws RuntimeException {
+    OptionTestUtils.forceExchanges(client);
+  }
+
+  public static void resetToDefaultExchanges() throws RuntimeException {
+    OptionTestUtils.resetToDefaultExchanges(client);
+  }
+
+  public static void setAllTrue(BooleanValidator... validators) throws RuntimeException {
+    OptionTestUtils.setAllTrue(client, validators);
+  }
+
+  public static void setAllFalse(BooleanValidator... validators) throws RuntimeException {
+    OptionTestUtils.setAllFalse(client, validators);
+  }
+
+  public static void setOption(BooleanValidator validator, boolean value) throws RuntimeException {
+    OptionTestUtils.setOption(client, validator, value);
+  }
+
+  public static void resetOption(OptionValidator validator) throws RuntimeException  {
+    OptionTestUtils.resetOption(client, validator);
+  }
+
+  public static void resetOptions(OptionValidator... validators) throws RuntimeException {
+    OptionTestUtils.resetOptions(client, validators);
+  }
+
+  public static void setOption(DoubleValidator validator, double value) throws RuntimeException {
+    OptionTestUtils.setOption(client, validator, value);
+  }
+
+  public static void setOption(StringValidator validator, String value) throws RuntimeException {
+    OptionTestUtils.setOption(client, validator, value);
+  }
+
+  public static void setOption(LongValidator validator, long value) throws RuntimeException {
+    OptionTestUtils.setOption(client, validator, value);
   }
 
   protected static int testLogical(String query) throws Exception{

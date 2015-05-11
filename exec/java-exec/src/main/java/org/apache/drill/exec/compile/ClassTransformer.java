@@ -27,7 +27,6 @@ import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.compile.MergeAdapter.MergedClassResult;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.server.options.OptionManager;
-import org.apache.drill.exec.server.options.OptionValue;
 import org.apache.drill.exec.server.options.TypeValidators.EnumeratedStringValidator;
 import org.codehaus.commons.compiler.CompileException;
 import org.objectweb.asm.ClassReader;
@@ -47,10 +46,8 @@ public class ClassTransformer {
   private final ByteCodeLoader byteCodeLoader = new ByteCodeLoader();
   private final OptionManager optionManager;
 
-  public final static String SCALAR_REPLACEMENT_OPTION =
-      "org.apache.drill.exec.compile.ClassTransformer.scalar_replacement";
-  public final static EnumeratedStringValidator SCALAR_REPLACEMENT_VALIDATOR = new EnumeratedStringValidator(
-      SCALAR_REPLACEMENT_OPTION, "try", "off", "try", "on");
+  public final static EnumeratedStringValidator SCALAR_REPLACEMENT_OPTION = new EnumeratedStringValidator(
+      "org.apache.drill.exec.compile.ClassTransformer.scalar_replacement", "try", "off", "try", "on");
 
   @VisibleForTesting // although we need it even if it weren't used in testing
   public enum ScalarReplacementOption {
@@ -66,7 +63,8 @@ public class ClassTransformer {
      * @throws IllegalArgumentException if the string doesn't match any of the enum values
      */
     public static ScalarReplacementOption fromString(final String s) {
-      switch(s) {
+      final String lower = s.toLowerCase();
+      switch (lower) {
       case "off":
         return OFF;
       case "try":
@@ -216,9 +214,8 @@ public class ClassTransformer {
       final String entireClass,
       final String materializedClassName) throws ClassTransformationException {
     // unfortunately, this hasn't been set up at construction time, so we have to do it here
-    final OptionValue optionValue = optionManager.getOption(SCALAR_REPLACEMENT_OPTION);
     final ScalarReplacementOption scalarReplacementOption =
-        ScalarReplacementOption.fromString((String) optionValue.getValue()); // TODO(DRILL-2474)
+        ScalarReplacementOption.fromString(optionManager.getOption(SCALAR_REPLACEMENT_OPTION)); // TODO(DRILL-2474)
 
     try {
       final long t1 = System.nanoTime();

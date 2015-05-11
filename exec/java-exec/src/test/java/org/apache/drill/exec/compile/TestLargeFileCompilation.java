@@ -97,43 +97,43 @@ public class TestLargeFileCompilation extends BaseTestQuery {
 
   @Test
   public void testTEXT_WRITER() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult("use dfs_test.tmp");
-    testNoResult("alter session set `%s`='csv'", ExecConstants.OUTPUT_FORMAT_OPTION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "csv");
     testNoResult(LARGE_QUERY_WRITER, "wide_table_csv");
   }
 
   @Test
   public void testPARQUET_WRITER() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult("use dfs_test.tmp");
-    testNoResult("alter session set `%s`='parquet'", ExecConstants.OUTPUT_FORMAT_OPTION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "parquet");
     testNoResult(ITERATION_COUNT, LARGE_QUERY_WRITER, "wide_table_parquet");
   }
 
   @Test
   public void testGROUP_BY() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult(ITERATION_COUNT, LARGE_QUERY_GROUP_BY);
   }
 
   @Test
   @Ignore("DRILL-1808")
   public void testEXTERNAL_SORT() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult(ITERATION_COUNT, LARGE_QUERY_ORDER_BY);
   }
 
   @Test
   @Ignore("DRILL-1808")
   public void testTOP_N_SORT() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult(ITERATION_COUNT, LARGE_QUERY_ORDER_BY_WITH_LIMIT);
   }
 
   @Test
   public void testFILTER() throws Exception {
-    testNoResult("alter session set `%s`='JDK'", QueryClassLoader.JAVA_COMPILER_OPTION);
+    setOption(ExecConstants.JAVA_COMPILER_OPTION, "JDK");
     testNoResult(ITERATION_COUNT, LARGE_QUERY_FILTER);
   }
 

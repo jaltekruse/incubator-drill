@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.parquet2;
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
@@ -29,27 +30,29 @@ public class TestDrillParquetReader extends BaseTestQuery {
   // enable decimal data type
   @BeforeClass
   public static void enableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
   }
 
   private void testColumn(String columnName) throws Exception {
-    testNoResult("alter session set `store.parquet.use_new_reader` = true");
+    try {
+      setOption(ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION, true);
 
-    BigDecimal result = new BigDecimal("1.20000000");
+      BigDecimal result = new BigDecimal("1.20000000");
 
-    testBuilder()
-      .ordered()
-      .sqlQuery("select %s from cp.`parquet2/decimal28_38.parquet`", columnName)
-      .baselineColumns(columnName)
-      .baselineValues(result)
-      .go();
-
-    testNoResult("alter session set `store.parquet.use_new_reader` = false");
+      testBuilder()
+        .ordered()
+        .sqlQuery("select %s from cp.`parquet2/decimal28_38.parquet`", columnName)
+        .baselineColumns(columnName)
+        .baselineValues(result)
+        .go();
+    } finally {
+      resetOption(ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION);
+    }
   }
 
   @Test

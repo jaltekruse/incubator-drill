@@ -17,6 +17,7 @@
  */
 package org.apache.drill;
 
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -28,8 +29,12 @@ public class TestTpchSingleMode extends BaseTestQuery{
 
   private void testSingleMode(String fileName) throws Exception{
     String query = getFile(fileName);
-    query = SINGLE_MODE + query;
-    test(query);
+    try {
+      setOption(PlannerSettings.DISABLE_EXCHANGE, true);
+      test(query);
+    } finally {
+      resetOption(PlannerSettings.DISABLE_EXCHANGE);
+    }
   }
 
   @Test

@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.server;
 
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET;
-import static org.apache.drill.exec.ExecConstants.SLICE_TARGET_DEFAULT;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.HASHAGG;
 import static org.apache.drill.exec.planner.physical.PlannerSettings.PARTITION_SENDER_SET_THREADS;
 import static org.junit.Assert.assertEquals;
@@ -32,6 +30,7 @@ import java.util.Map;
 
 import org.apache.commons.math3.util.Pair;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.OptionTestUtils;
 import org.apache.drill.QueryTestUtil;
 import org.apache.drill.SingleRowListener;
 import org.apache.drill.common.AutoCloseables;
@@ -569,18 +568,6 @@ public class TestDrillbitResilience extends DrillTest {
     assertCompleteState(result, QueryState.CANCELED);
   }
 
-  private static void setSessionOption(final String option, final String value) {
-    try {
-      final List<QueryDataBatch> results = drillClient.runQuery(QueryType.SQL,
-          String.format("alter session set `%s` = %s", option, value));
-      for (final QueryDataBatch data : results) {
-        data.release();
-      }
-    } catch(RpcException e) {
-      fail(String.format("Failed to set session option `%s` = %s, Error: %s", option, value, e.toString()));
-    }
-  }
-
   private static String createPauseInjection(final Class siteClass, final String siteDesc, final int nSkip) {
     return "{\"injections\" : [{"
       + "\"type\" : \"pause\"," +
@@ -821,14 +808,17 @@ public class TestDrillbitResilience extends DrillTest {
 
   private static void testInterruptingBlockedFragmentsWaitingForData(final String control) {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "false");
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 1);
+      OptionTestUtils.setOption(drillClient, HASHAGG, false);
 
       final String query = "SELECT sales_city, COUNT(*) cnt FROM cp.`region.json` GROUP BY sales_city";
       assertCancelled(control, query, new ListenerThatCancelsQueryAfterFirstBatchOfData());
+    } catch (Exception e) {
+      // This should only happen if one of the option setting queries above fails
+      throw new RuntimeException(e);
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
+      OptionTestUtils.resetOption(drillClient, HASHAGG);
     }
   }
 
@@ -840,9 +830,9 @@ public class TestDrillbitResilience extends DrillTest {
   @Test
   public void testInterruptingPartitionerThreadFragment() {
     try {
-      setSessionOption(SLICE_TARGET, "1");
-      setSessionOption(HASHAGG.getOptionName(), "true");
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(), "6");
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 1);
+      OptionTestUtils.setOption(drillClient, HASHAGG, true);
+      OptionTestUtils.setOption(drillClient, PARTITION_SENDER_SET_THREADS,  6l);
 
       final long before = countAllocatedMemory();
 
@@ -866,10 +856,9 @@ public class TestDrillbitResilience extends DrillTest {
       final long after = countAllocatedMemory();
       assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
     } finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
-      setSessionOption(HASHAGG.getOptionName(), HASHAGG.getDefault().bool_val.toString());
-      setSessionOption(PARTITION_SENDER_SET_THREADS.getOptionName(),
-          Long.toString(PARTITION_SENDER_SET_THREADS.getDefault().num_val));
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
+      OptionTestUtils.resetOption(drillClient, HASHAGG);
+      OptionTestUtils.resetOption(drillClient, PARTITION_SENDER_SET_THREADS);
     }
   }
 
@@ -888,62 +877,63 @@ public class TestDrillbitResilience extends DrillTest {
 
   @Test
   public void memoryLeaksWhenCancelled() {
-    setSessionOption(SLICE_TARGET, "10");
-
-    final long before = countAllocatedMemory();
-
-    final String controls = createPauseInjection(ScreenCreator.class, "sending-data", 1);
-    String query = null;
     try {
-      query = BaseTestQuery.getFile("queries/tpch/09.sql");
-    } catch (final IOException e) {
-      fail("Failed to get query file: " + e);
-    }
-
-    final WaitUntilCompleteListener listener = new WaitUntilCompleteListener() {
-      private boolean cancelRequested = false;
-
-      @Override
-      public void dataArrived(final QueryDataBatch result, final ConnectionThrottle throttle) {
-        if (!cancelRequested) {
-          check(queryId != null, "Query id should not be null, since we have waited long enough.");
-          cancelAndResume();
-          cancelRequested = true;
-        }
-        result.release();
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 10);
+      final long before = countAllocatedMemory();
+      final String controls = createPauseInjection(ScreenCreator.class, "sending-data", 1);
+      String query = null;
+      try {
+        query = BaseTestQuery.getFile("queries/tpch/09.sql");
+      } catch (final IOException e) {
+        fail("Failed to get query file: " + e);
       }
-    };
 
-    assertCancelledWithoutException(controls, listener, query.substring(0, query.length() - 1));
+      final WaitUntilCompleteListener listener = new WaitUntilCompleteListener() {
+        private boolean cancelRequested = false;
 
-    final long after = countAllocatedMemory();
-    assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+        @Override
+        public void dataArrived(final QueryDataBatch result, final ConnectionThrottle throttle) {
+          if (!cancelRequested) {
+            check(queryId != null, "Query id should not be null, since we have waited long enough.");
+            cancelAndResume();
+            cancelRequested = true;
+          }
+          result.release();
+        }
+      };
 
-    setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
+      assertCancelledWithoutException(controls, listener, query.substring(0, query.length() - 1));
+
+      final long after = countAllocatedMemory();
+      assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+    } finally {
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test
   public void memoryLeaksWhenFailed() {
-    setSessionOption(SLICE_TARGET, "10");
-
-    final long before = countAllocatedMemory();
-
-    final String exceptionDesc = "fragment-execution";
-    final Class<? extends Throwable> exceptionClass = IOException.class;
-    final String controls = createSingleException(FragmentExecutor.class, exceptionDesc, exceptionClass);
-    String query = null;
     try {
-      query = BaseTestQuery.getFile("queries/tpch/09.sql");
-    } catch (final IOException e) {
-      fail("Failed to get query file: " + e);
+      OptionTestUtils.setOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET, 10);
+      final long before = countAllocatedMemory();
+
+      final String exceptionDesc = "fragment-execution";
+      final Class<? extends Throwable> exceptionClass = IOException.class;
+      final String controls = createSingleException(FragmentExecutor.class, exceptionDesc, exceptionClass);
+      String query = null;
+      try {
+        query = BaseTestQuery.getFile("queries/tpch/09.sql");
+      } catch (final IOException e) {
+        fail("Failed to get query file: " + e);
+      }
+
+      assertFailsWithException(controls, exceptionClass, exceptionDesc, query.substring(0, query.length() - 1));
+
+      final long after = countAllocatedMemory();
+      assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+    } finally {
+      OptionTestUtils.resetOption(drillClient, ExecConstants.PLANNER_SLICE_TARGET);
     }
-
-    assertFailsWithException(controls, exceptionClass, exceptionDesc, query.substring(0, query.length() - 1));
-
-    final long after = countAllocatedMemory();
-    assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
-
-    setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
   }
 
   @Test // DRILL-3065

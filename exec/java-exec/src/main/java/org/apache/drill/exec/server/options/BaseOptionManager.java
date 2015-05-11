@@ -27,9 +27,9 @@ abstract class BaseOptionManager implements OptionManager {
 
 
   private OptionValue getOptionSafe(OptionValidator validator){
-    OptionValue value = getOption(validator.getOptionName());
+    OptionValue value = getOption(validator.name());
     if(value == null){
-      throw new IllegalArgumentException(String.format("Unknown value for boolean option `%s`.", validator.getOptionName()));
+      throw new IllegalArgumentException(String.format("Unknown value for %s option `%s`.", validator.getKind(),validator.name()));
     }
     return value;
   }

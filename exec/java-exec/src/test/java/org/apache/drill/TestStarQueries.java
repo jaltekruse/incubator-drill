@@ -20,6 +20,7 @@ package org.apache.drill;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Test;
 
 public class TestStarQueries extends BaseTestQuery{
@@ -251,10 +252,14 @@ public class TestStarQueries extends BaseTestQuery{
         "join (select * from cp.`tpch/nation.parquet`) t2 " +
         "on t1.name = t2.n_name";
 
-    test("alter session set `planner.enable_broadcast_join` = false");
-    test(query);
-    test("alter session set `planner.enable_broadcast_join` = true");
-    test(query);
+    try {
+      setOption(PlannerSettings.BROADCAST, false);
+      test(query);
+      setOption(PlannerSettings.BROADCAST, true);
+      test(query);
+    } finally {
+      resetOption(PlannerSettings.BROADCAST);
+    }
   }
 
   @Test // see DRILL-1811

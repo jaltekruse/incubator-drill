@@ -18,6 +18,7 @@
 package org.apache.drill;
 
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
@@ -30,33 +31,32 @@ import org.junit.Test;
  */
 public class TestOutOfMemoryOutcome extends BaseTestQuery{
 
-  private static final String SINGLE_MODE = "ALTER SESSION SET `planner.disable_exchanges` = true";
-
   private void testSingleMode(String fileName) throws Exception{
-    test(SINGLE_MODE);
-
-    CoordinationProtos.DrillbitEndpoint endpoint = bits[0].getContext().getEndpoint();
-    String controlsString = "{\"injections\":[{"
-      + "\"address\":\"" + endpoint.getAddress() + "\","
-      + "\"port\":\"" + endpoint.getUserPort() + "\","
-      + "\"type\":\"exception\","
-      + "\"siteClass\":\"" + "org.apache.drill.exec.physical.impl.ScanBatch" + "\","
-      + "\"desc\":\"" + "next-allocate" + "\","
-      + "\"nSkip\":0,"
-      + "\"nFire\":1,"
-      + "\"exceptionClass\":\"" + "org.apache.drill.exec.memory.OutOfMemoryException" + "\""
-      + "}]}";
-    ControlsInjectionUtil.setControls(client, controlsString);
-
-    String query = getFile(fileName);
-
     try {
+      setOption(PlannerSettings.DISABLE_EXCHANGE, true);
+
+      CoordinationProtos.DrillbitEndpoint endpoint = bits[0].getContext().getEndpoint();
+      String controlsString = "{\"injections\":[{"
+          + "\"address\":\"" + endpoint.getAddress() + "\","
+          + "\"port\":\"" + endpoint.getUserPort() + "\","
+          + "\"type\":\"exception\","
+          + "\"siteClass\":\"" + "org.apache.drill.exec.physical.impl.ScanBatch" + "\","
+          + "\"desc\":\"" + "next-allocate" + "\","
+          + "\"nSkip\":0,"
+          + "\"nFire\":1,"
+          + "\"exceptionClass\":\"" + "org.apache.drill.exec.memory.OutOfMemoryException" + "\""
+          + "}]}";
+      ControlsInjectionUtil.setControls(client, controlsString);
+
+      String query = getFile(fileName);
       test(query);
     } catch(UserException uex) {
       DrillPBError error = uex.getOrCreatePBError(false);
       Assert.assertEquals(DrillPBError.ErrorType.RESOURCE, error.getErrorType());
       Assert.assertTrue("Error message isn't related to memory error",
         uex.getMessage().contains(UserException.MEMORY_ERROR_MSG));
+    } finally {
+      resetOption(PlannerSettings.DISABLE_EXCHANGE);
     }
   }
 

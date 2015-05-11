@@ -24,13 +24,17 @@ import org.junit.Test;
 public class TestWindowFrame extends BaseTestQuery {
 
   private void runTest(String data, String results, String window) throws Exception {
-    testNoResult("alter session set `%s`= true", ExecConstants.ENABLE_WINDOW_FUNCTIONS);
-    testBuilder()
-      .sqlQuery("select count(*) over pos_win `count`, sum(salary) over pos_win `sum` from cp.`window/%s.json` window pos_win as (%s)", data, window)
-      .ordered()
-      .csvBaselineFile("window/" + results + ".tsv")
-      .baselineColumns("count", "sum")
-      .build().run();
+    try {
+      setOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS, true);
+      testBuilder()
+        .sqlQuery("select count(*) over pos_win `count`, sum(salary) over pos_win `sum` from cp.`window/%s.json` window pos_win as (%s)", data, window)
+        .ordered()
+        .csvBaselineFile("window/" + results + ".tsv")
+        .baselineColumns("count", "sum")
+        .build().run();
+    } finally {
+      resetOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS);
+    }
   }
 
   /**

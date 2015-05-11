@@ -41,8 +41,8 @@ public class TestExtendedTypes extends BaseTestQuery {
 
     final String newTable = "TestExtendedTypes/newjson";
     try {
-      testNoResult(String.format("ALTER SESSION SET `%s` = 'json'", ExecConstants.OUTPUT_FORMAT_VALIDATOR.getOptionName()));
-      testNoResult(String.format("ALTER SESSION SET `%s` = true", ExecConstants.JSON_EXTENDED_TYPES.getOptionName()));
+      setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "json");
+      setOption(ExecConstants.JSON_EXTENDED_TYPES, true);
 
       // create table
       test("create table dfs_test.tmp.`%s` as select * from dfs.`%s`", newTable, originalFile);
@@ -56,12 +56,8 @@ public class TestExtendedTypes extends BaseTestQuery {
           + "/0_0_0.json"));
       assertEquals(new String(originalData), new String(newData));
     } finally {
-      testNoResult(String.format("ALTER SESSION SET `%s` = '%s'",
-          ExecConstants.OUTPUT_FORMAT_VALIDATOR.getOptionName(),
-          ExecConstants.OUTPUT_FORMAT_VALIDATOR.getDefault().getValue()));
-      testNoResult(String.format("ALTER SESSION SET `%s` = %s",
-          ExecConstants.JSON_EXTENDED_TYPES.getOptionName(),
-          ExecConstants.JSON_EXTENDED_TYPES.getDefault().getValue()));
+      resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
+      resetOption(ExecConstants.JSON_EXTENDED_TYPES);
     }
   }
 }

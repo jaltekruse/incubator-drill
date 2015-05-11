@@ -58,6 +58,6 @@ public class TestSort extends BaseTestQuery {
         .go();
 
     // reset the planner.slice_target
-    test("alter session set `planner.slice_target` = " + ExecConstants.SLICE_TARGET_DEFAULT);
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 }

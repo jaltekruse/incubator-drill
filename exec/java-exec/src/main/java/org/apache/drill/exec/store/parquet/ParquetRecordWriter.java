@@ -108,8 +108,9 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
 
     conf = new Configuration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, writerOptions.get(FileSystem.FS_DEFAULT_NAME_KEY));
-    blockSize = Integer.parseInt(writerOptions.get(ExecConstants.PARQUET_BLOCK_SIZE));
-    String codecName = writerOptions.get(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE).toLowerCase();
+    blockSize = Integer.parseInt(writerOptions.get(ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR.name()));
+    String codecName = writerOptions.get(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR.name())
+        .toLowerCase();
     switch(codecName) {
     case "snappy":
       codec = CompressionCodecName.SNAPPY;

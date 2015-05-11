@@ -20,6 +20,7 @@ package org.apache.drill.exec.physical.impl.join;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.calcite.rel.core.JoinRelType;
 import org.apache.drill.common.expression.FieldReference;
 import org.apache.drill.common.logical.data.JoinCondition;
 import org.apache.drill.common.logical.data.NamedExpression;
@@ -56,7 +57,6 @@ import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.AbstractContainerVector;
-import org.apache.calcite.rel.core.JoinRelType;
 
 import com.sun.codemodel.JExpr;
 import com.sun.codemodel.JExpression;
@@ -311,7 +311,7 @@ public class HashJoinBatch extends AbstractRecordBatch<HashJoinPOP> {
     }
 
     HashTableConfig htConfig =
-        new HashTableConfig(context.getOptions().getOption(ExecConstants.MIN_HASH_TABLE_SIZE_KEY).num_val.intValue(),
+        new HashTableConfig((int) context.getOptions().getOption(ExecConstants.MIN_HASH_TABLE_SIZE),
             HashTable.DEFAULT_LOAD_FACTOR, rightExpr, leftExpr);
 
     // Create the chained hash table

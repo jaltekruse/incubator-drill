@@ -17,6 +17,7 @@
  */
 package org.apache.drill;
 
+import org.apache.drill.exec.ExecConstants;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -25,7 +26,12 @@ public class TestTpchDistributed extends BaseTestQuery {
 
   private static void testDistributed(final String fileName) throws Exception {
     final String query = getFile(fileName);
-    test("alter session set `planner.slice_target` = 10; " + query);
+    try {
+      setOption(ExecConstants.PLANNER_SLICE_TARGET, 10);
+      test(query);
+    } finally {
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
+    }
   }
 
   @Test

@@ -18,8 +18,9 @@
 package org.apache.drill.exec.fn.impl;
 
 import org.apache.drill.BaseTestQuery;
-import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -141,7 +142,8 @@ public class TestAggregateFunctions extends BaseTestQuery {
         "      group by l_partkey, l_suppkey) \n" +
         "   group by l_partkey )";
 
-    test("alter session set `planner.slice_target` = 1; alter session set `planner.enable_multiphase_agg` = false ;");
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    setOption(PlannerSettings.MULTIPHASE, false);
 
     testBuilder()
         .ordered()
@@ -150,7 +152,8 @@ public class TestAggregateFunctions extends BaseTestQuery {
         .baselineValues(2000L)
         .build().run();
 
-    test("alter session set `planner.slice_target` = 1; alter session set `planner.enable_multiphase_agg` = true ;");
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    setOption(PlannerSettings.MULTIPHASE, true);
 
     testBuilder()
         .ordered()
@@ -159,7 +162,7 @@ public class TestAggregateFunctions extends BaseTestQuery {
         .baselineValues(2000L)
         .build().run();
 
-    test("alter session set `planner.slice_target` = 100000");
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 
   @Test

@@ -77,34 +77,31 @@ public class TestRepeatedReaders extends BaseTestQuery {
 
   @Test //DRILL-2292
   public void testNestedRepeatedListInsideRepeatedMap() throws Exception {
-    runSQL("alter session set `store.format` = 'json'");
-
     try {
+      setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "json");
       createAndQuery("2292.rl_rm.json");
     } finally {
-      runSQL("alter session set `store.format` = 'parquet'");
+      resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
     }
   }
 
   @Test //DRILL-2292
   public void testNestedRepeatedMapInsideRepeatedList() throws Exception {
-    runSQL("alter session set `store.format` = 'json'");
-
     try {
+      setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "json");
       createAndQuery("2292.rm_rl.json");
     } finally {
-      runSQL("alter session set `store.format` = 'parquet'");
+      resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
     }
   }
 
   @Test //DRILL-2292
   public void testNestedRepeatedListInsideRepeatedList() throws Exception {
-    runSQL("alter session set `store.format` = 'json'");
-
     try {
+      setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "json");
       createAndQuery("2292.rl_rl.json");
     } finally {
-      runSQL("alter session set `store.format` = 'parquet'");
+      resetOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR);
     }
   }
 }

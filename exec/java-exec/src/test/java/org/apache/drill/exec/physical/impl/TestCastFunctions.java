@@ -56,6 +56,8 @@ import org.apache.drill.exec.rpc.user.UserServer;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.server.options.SystemOptionManager;
+import org.apache.drill.exec.store.sys.local.LocalPStoreProvider;
 import org.apache.drill.exec.vector.BigIntVector;
 import org.apache.drill.exec.vector.Float4Vector;
 import org.apache.drill.exec.vector.Float8Vector;
@@ -316,13 +318,14 @@ public class TestCastFunctions extends PopUnitTestBase{
                             @Injectable UserServer.UserClientConnection connection) throws Throwable{
 
     final BufferAllocator allocator = new TopLevelAllocator();
-
+    final SystemOptionManager systemOptions = new SystemOptionManager(c, new LocalPStoreProvider(c)).init();
     new NonStrictExpectations(){{
       bitContext.getMetrics(); result = new MetricRegistry();
       bitContext.getAllocator(); result = allocator;
       bitContext.getConfig(); result = c;
-      bitContext.getCompiler(); result = CodeCompiler.getTestCompiler(c);
+      bitContext.getCompiler(); result = CodeCompiler.getTestCompiler(c, systemOptions);
       bitContext.getOperatorCreatorRegistry(); result = new OperatorCreatorRegistry(c);
+      bitContext.getOptionManager(); result = systemOptions;
     }};
 
     PhysicalPlanReader reader = new PhysicalPlanReader(c, c.getMapper(), CoordinationProtos.DrillbitEndpoint.getDefaultInstance());

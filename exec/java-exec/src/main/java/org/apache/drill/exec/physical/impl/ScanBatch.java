@@ -111,7 +111,7 @@ public class ScanBatch implements CloseableRecordBatch {
 
     // TODO Remove null check after DRILL-2097 is resolved. That JIRA refers to test cases that do not initialize
     // options; so labelValue = null.
-    final OptionValue labelValue = context.getOptions().getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL);
+    final OptionValue labelValue = context.getOptions().getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL.name());
     this.partitionColumnDesignator = labelValue == null ? "dir" : labelValue.string_val;
 
     addPartitionVectors();

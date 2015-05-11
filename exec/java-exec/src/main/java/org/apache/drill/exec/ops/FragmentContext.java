@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.schema.SchemaPlus;
-
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.exceptions.UserException;
@@ -426,7 +425,7 @@ public class FragmentContext implements AutoCloseable, UdfUtilities {
   public PartitionExplorer getPartitionExplorer() {
     throw new UnsupportedOperationException(String.format("The partition explorer interface can only be used " +
         "in functions that can be evaluated at planning time. Make sure that the %s configuration " +
-        "option is set to true.", PlannerSettings.CONSTANT_FOLDING.getOptionName()));
+        "option is set to true.", PlannerSettings.CONSTANT_FOLDING.name()));
   }
 
   /**

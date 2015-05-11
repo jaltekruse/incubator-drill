@@ -32,7 +32,7 @@ public class TestLogicalExprSerDe extends BaseTestQuery {
   @BeforeClass
   public static void setSliceCount() throws Exception {
     // Set the slice count to low, so that query is divided into multiple fragments with exchanges.
-    test("ALTER SESSION SET `planner.slice_target`=1;");
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
   }
 
   @Test // DRILL-2606
@@ -50,6 +50,6 @@ public class TestLogicalExprSerDe extends BaseTestQuery {
   @AfterClass
   public static void resetSliceCount() throws Exception {
     // Set the slice count to low, so that query is divided into multiple fragments with exchanges.
-    test(String.format("ALTER SESSION SET `planner.slice_target`=%d;", ExecConstants.SLICE_TARGET_DEFAULT));
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 }

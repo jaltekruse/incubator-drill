@@ -95,6 +95,10 @@ public class CodeCompiler {
     return new CodeCompiler(c, new SystemOptionManager(c, new LocalPStoreProvider(c)).init());
   }
 
+  public static CodeCompiler getTestCompiler(DrillConfig c, SystemOptionManager systemOptionManager) throws IOException{
+    return new CodeCompiler(c, systemOptionManager);
+  }
+
   /**
    * Flush the compiled classes from the cache.
    *

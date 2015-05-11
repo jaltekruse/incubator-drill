@@ -64,7 +64,7 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
       throws ExecutionSetupException {
     Preconditions.checkArgument(children.isEmpty());
     String partitionDesignator = context.getOptions()
-      .getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL).string_val;
+        .getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL);
     List<SchemaPath> columns = rowGroupScan.getColumns();
     List<RecordReader> readers = Lists.newArrayList();
     OperatorContext oContext = context.newOperatorContext(rowGroupScan, false /*
@@ -125,7 +125,8 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           footers.put(e.getPath(),
               ParquetFileReader.readFooter(conf, new Path(e.getPath())));
         }
-        if (!context.getOptions().getOption(ExecConstants.PARQUET_NEW_RECORD_READER).bool_val && !isComplex(footers.get(e.getPath()))) {
+        if (!context.getOptions().getOption(ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION)
+            && !isComplex(footers.get(e.getPath()))) {
           readers.add(
               new ParquetRecordReader(
                   context, e.getPath(), e.getRowGroupIndex(), fs,

@@ -18,6 +18,8 @@
 package org.apache.drill.exec.physical.impl.broadcastsender;
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.exec.ExecConstants;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.junit.Test;
 
 public class TestBroadcast extends BaseTestQuery {
@@ -32,19 +34,32 @@ public class TestBroadcast extends BaseTestQuery {
   @Test
   public void plansWithBroadcast() throws Exception {
     //TODO: actually verify that this plan has a broadcast exchange in it once plan tools are enabled.
-    setup();
-    test("explain plan for " + broadcastQuery);
+    try {
+      setup();
+      test("explain plan for " + broadcastQuery);
+    } finally {
+      tearDown();
+    }
   }
 
   @Test
   public void broadcastExecuteWorks() throws Exception {
-    setup();
-    test(broadcastQuery);
+    try {
+      setup();
+      test(broadcastQuery);
+    } finally {
+      tearDown();
+    }
   }
 
 
   private void setup() throws Exception{
-    testNoResult("alter session set `planner.slice_target` = 1");
-    testNoResult("alter session set `planner.enable_broadcast_join` = true");
+    setOption(PlannerSettings.BROADCAST, true);
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+  }
+
+  private void tearDown() throws Exception {
+    resetOption(PlannerSettings.BROADCAST);
+    resetOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 }

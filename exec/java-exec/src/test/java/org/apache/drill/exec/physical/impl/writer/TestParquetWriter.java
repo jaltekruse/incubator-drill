@@ -50,12 +50,12 @@ public class TestParquetWriter extends BaseTestQuery {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "local");
 
     fs = FileSystem.get(conf);
-    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
+    resetOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE);
   }
 
 
@@ -141,7 +141,7 @@ public class TestParquetWriter extends BaseTestQuery {
       String inputTable = "cp.`tpch/lineitem.parquet`";
       runTestAndValidate(selection, validationSelection, inputTable, "lineitem_parquet_converted");
     } finally {
-      test("alter session set `%s` = %b", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING, ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING_VALIDATOR.getDefault().bool_val);
+      resetOption(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING);
     }
   }
 
@@ -190,24 +190,24 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testTPCHReadWriteNoDictUncompressed() throws Exception {
     try {
-      test(String.format("alter session set `%s` = false", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
-      test(String.format("alter session set `%s` = 'none'", ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE));
+      setOption(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING, false);
+      setOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR, "none");
       String inputTable = "cp.`tpch/supplier.parquet`";
       runTestAndValidate("*", "*", inputTable, "supplier_parquet_no_dict_uncompressed");
     } finally {
-      test(String.format("alter session set `%s` = %b", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING, ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING_VALIDATOR.getDefault().bool_val));
-      test(String.format("alter session set `%s` = '%s'", ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE, ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR.getDefault().string_val));
+      resetOption(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING);
+      resetOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR);
     }
   }
 
   @Test
   public void testTPCHReadWriteDictGzip() throws Exception {
     try {
-      test(String.format("alter session set `%s` = 'gzip'", ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE));
+      setOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR, "gzip");
       String inputTable = "cp.`tpch/supplier.parquet`";
       runTestAndValidate("*", "*", inputTable, "supplier_parquet_dict_gzip");
     } finally {
-      test(String.format("alter session set `%s` = '%s'", ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE, ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR.getDefault().string_val));
+      resetOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR);
     }
   }
 
@@ -263,12 +263,12 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testMulipleRowGroups() throws Exception {
     try {
-      test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 1024*1024));
+      setOption(ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR, 1024 * 1024);
       String selection = "mi";
       String inputTable = "cp.`customer.json`";
       runTestAndValidate(selection, selection, inputTable, "foodmart_customer_parquet");
     } finally {
-      test(String.format("ALTER SESSION SET `%s` = %d", ExecConstants.PARQUET_BLOCK_SIZE, 512*1024*1024));
+      resetOption(ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR);
     }
   }
 
@@ -329,7 +329,7 @@ public class TestParquetWriter extends BaseTestQuery {
         .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
         .build().run();
     } finally {
-      test("alter system set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER, ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
+      resetOption(ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION);
     }
   }
 
@@ -346,7 +346,7 @@ public class TestParquetWriter extends BaseTestQuery {
         .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
         .build().run();
     } finally {
-      test("alter system set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER, ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
+      resetOption(ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION);
     }
   }
 

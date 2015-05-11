@@ -62,7 +62,7 @@ public class QueryTestUtil {
 
     final List<QueryDataBatch> results = drillClient.runQuery(
         QueryType.SQL, String.format("alter session set `%s` = %d",
-            ExecConstants.MAX_WIDTH_PER_NODE_KEY, maxWidth));
+            ExecConstants.MAX_WIDTH_PER_NODE.name(), maxWidth));
     for (QueryDataBatch queryDataBatch : results) {
       queryDataBatch.release();
     }

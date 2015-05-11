@@ -256,7 +256,7 @@ public class DrillOptiq {
       case "DOUBLE": castType = Types.required(MinorType.FLOAT8); break;
       case "DECIMAL":
         if (context.getPlannerSettings().getOptions().
-            getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY).bool_val == false ) {
+            getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE) == false ) {
           throw UserException
               .unsupportedError()
               .message(ExecErrorConstants.DECIMAL_DISABLE_ERR_MSG)
