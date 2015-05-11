@@ -47,7 +47,6 @@ import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.record.WritableBatch;
 import org.apache.drill.exec.record.selection.SelectionVector2;
 import org.apache.drill.exec.record.selection.SelectionVector4;
-import org.apache.drill.exec.server.options.OptionValue;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.testing.ExecutionControlsInjector;
 import org.apache.drill.exec.vector.AllocationHelper;
@@ -111,8 +110,7 @@ public class ScanBatch implements CloseableRecordBatch {
 
     // TODO Remove null check after DRILL-2097 is resolved. That JIRA refers to test cases that do not initialize
     // options; so labelValue = null.
-    final OptionValue labelValue = context.getOptions().getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL);
-    this.partitionColumnDesignator = labelValue == null ? "dir" : labelValue.string_val;
+    this.partitionColumnDesignator = context.getOptions().getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL);
 
     addPartitionVectors();
   }

@@ -22,14 +22,14 @@ import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.calcite.sql.SqlLiteral;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.NlsString;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.server.options.OptionValue.Kind;
 import org.apache.drill.exec.server.options.OptionValue.OptionType;
 
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.SqlLiteral;
-import org.apache.calcite.util.NlsString;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class TypeValidators {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TypeValidators.class);
@@ -46,7 +46,7 @@ public class TypeValidators {
     public void validate(OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (v.num_val > max || v.num_val < 0) {
-        throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.", getOptionName(), 0,
+        throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.", name(), 0,
             max));
       }
     }
@@ -62,7 +62,7 @@ public class TypeValidators {
     public void validate(OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (!isPowerOfTwo(v.num_val)) {
-        throw new ExpressionParsingException(String.format("Option %s must be a power of two.", getOptionName()));
+        throw new ExpressionParsingException(String.format("Option %s must be a power of two.", name()));
       }
     }
 
@@ -86,7 +86,7 @@ public class TypeValidators {
       super.validate(v);
       if (v.float_val > max || v.float_val < min) {
         throw new ExpressionParsingException(String.format("Option %s must be between %f and %f.",
-            getOptionName(), min, max));
+            name(), min, max));
       }
     }
 
@@ -104,15 +104,24 @@ public class TypeValidators {
     }
   }
 
+
   public static class LongValidator extends TypeValidator {
     public LongValidator(String name, long def) {
       super(name, Kind.LONG, OptionValue.createLong(OptionType.SYSTEM, name, def));
+    }
+
+    public long getDefaultValue() {
+      return getDefault().num_val;
     }
   }
 
   public static class DoubleValidator extends TypeValidator {
     public DoubleValidator(String name, double def) {
       super(name, Kind.DOUBLE, OptionValue.createDouble(OptionType.SYSTEM, name, def));
+    }
+
+    protected DoubleValidator(final String name, final OptionValue defValue) {
+      super(name, Kind.DOUBLE, defValue);
     }
   }
 
@@ -131,7 +140,7 @@ public class TypeValidators {
       super.validate(v);
       if (v.num_val > max || v.num_val < min) {
         throw new ExpressionParsingException(String.format("Option %s must be between %d and %d.",
-            getOptionName(), min, max));
+            name(), min, max));
       }
     }
   }
@@ -153,7 +162,7 @@ public class TypeValidators {
     public void validate(final OptionValue v) throws ExpressionParsingException {
       super.validate(v);
       if (!valuesSet.contains(v.string_val.toLowerCase())) {
-        throw new ExpressionParsingException(String.format("Option %s must be one of: %s", getOptionName(), valuesSet));
+        throw new ExpressionParsingException(String.format("Option %s must be one of: %s", name(), valuesSet));
       }
     }
   }
@@ -205,7 +214,7 @@ public class TypeValidators {
     @Override
     public OptionValue validate(final SqlLiteral value, final OptionType optionType)
         throws ExpressionParsingException {
-      final OptionValue op = getPartialValue(getOptionName(), optionType, value);
+      final OptionValue op = getPartialValue(name(), optionType, value);
       validate(op);
       return op;
     }
@@ -215,7 +224,7 @@ public class TypeValidators {
       if (v.kind != kind) {
         throw new ExpressionParsingException(String.format(
             "Option %s must be of type %s but you tried to set to %s.",
-            getOptionName(), kind.name(), v.kind.name()));
+            name(), kind.name(), v.kind.name()));
       }
     }
   }

@@ -134,13 +134,14 @@ public class ParquetFormatPlugin implements FormatPlugin{
 
     options.put(FileSystem.FS_DEFAULT_NAME_KEY, ((FileSystemConfig)writer.getStorageConfig()).connection);
 
-    options.put(ExecConstants.PARQUET_BLOCK_SIZE, context.getOptions().getOption(ExecConstants.PARQUET_BLOCK_SIZE).num_val.toString());
+    options.put(ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR.name(),
+        Long.toString(context.getOptions().getOption(ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR)));
 
-    options.put(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE,
-        context.getOptions().getOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE).string_val);
+    options.put(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR.name(),
+        context.getOptions().getOption(ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR));
 
-    options.put(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING,
-        context.getOptions().getOption(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING).bool_val.toString());
+    options.put(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING.name(),
+        Boolean.toString(context.getOptions().getOption(ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING)));
 
     RecordWriter recordWriter = new ParquetRecordWriter(context, writer);
     recordWriter.init(options);

@@ -17,8 +17,8 @@
  ******************************************************************************/
 package org.apache.drill.exec.server.options;
 
-import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.calcite.sql.SqlLiteral;
+import org.apache.drill.common.exceptions.ExpressionParsingException;
 
 /**
  * Validates the values provided to Drill options.
@@ -48,7 +48,7 @@ public abstract class OptionValidator {
    */
   public abstract OptionValue validate(SqlLiteral value, OptionValue.OptionType optionType) throws ExpressionParsingException;
 
-  public String getOptionName() {
+  public String name() {
     return optionName;
   }
 

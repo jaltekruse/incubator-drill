@@ -28,16 +28,18 @@ public class TestSystemTable extends BaseTestQuery {
   public void alterSessionOption() throws Exception {
 
     newTest() //
-      .sqlQuery("select bool_val as bool from sys.options where name = '%s' order by type desc", ExecConstants.JSON_ALL_TEXT_MODE)
+        .sqlQuery("select bool_val as bool from sys.options where name = '%s' order by type desc",
+            ExecConstants.JSON_READER_ALL_TEXT_MODE.name())
       .baselineColumns("bool")
       .ordered()
       .baselineValues(false)
       .go();
 
-    test("alter session set `%s` = true", ExecConstants.JSON_ALL_TEXT_MODE);
+    test("alter session set `%s` = true", ExecConstants.JSON_READER_ALL_TEXT_MODE.name());
 
     newTest() //
-      .sqlQuery("select bool_val as bool from sys.options where name = '%s' order by type desc ", ExecConstants.JSON_ALL_TEXT_MODE)
+        .sqlQuery("select bool_val as bool from sys.options where name = '%s' order by type desc ",
+            ExecConstants.JSON_READER_ALL_TEXT_MODE.name())
       .baselineColumns("bool")
       .ordered()
       .baselineValues(false)

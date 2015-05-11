@@ -17,31 +17,30 @@
  */
 package org.apache.drill.exec.planner.physical.visitor;
 
-import com.google.common.collect.Lists;
+import java.util.Collections;
+import java.util.List;
 
-import org.apache.drill.common.types.TypeProtos.MajorType;
-import org.apache.drill.exec.planner.physical.ExchangePrel;
-import org.apache.drill.exec.planner.physical.HashPrelUtil;
-import org.apache.drill.exec.planner.physical.HashPrelUtil.HashExpressionCreatorHelper;
-import org.apache.drill.exec.planner.physical.HashToRandomExchangePrel;
-import org.apache.drill.exec.planner.physical.PlannerSettings;
-import org.apache.drill.exec.planner.physical.Prel;
-import org.apache.drill.exec.planner.physical.PrelUtil;
-import org.apache.drill.exec.planner.physical.ProjectPrel;
-import org.apache.drill.exec.planner.physical.DrillDistributionTrait.DistributionField;
-import org.apache.drill.exec.planner.physical.UnorderedDeMuxExchangePrel;
-import org.apache.drill.exec.planner.physical.UnorderedMuxExchangePrel;
-import org.apache.drill.exec.planner.sql.DrillSqlOperator;
-import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.calcite.rel.RelNode;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
 import org.apache.calcite.rex.RexUtil;
+import org.apache.drill.common.types.TypeProtos.MajorType;
+import org.apache.drill.exec.planner.physical.DrillDistributionTrait.DistributionField;
+import org.apache.drill.exec.planner.physical.ExchangePrel;
+import org.apache.drill.exec.planner.physical.HashPrelUtil;
+import org.apache.drill.exec.planner.physical.HashPrelUtil.HashExpressionCreatorHelper;
+import org.apache.drill.exec.planner.physical.HashToRandomExchangePrel;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
+import org.apache.drill.exec.planner.physical.Prel;
+import org.apache.drill.exec.planner.physical.ProjectPrel;
+import org.apache.drill.exec.planner.physical.UnorderedDeMuxExchangePrel;
+import org.apache.drill.exec.planner.physical.UnorderedMuxExchangePrel;
+import org.apache.drill.exec.planner.sql.DrillSqlOperator;
+import org.apache.drill.exec.server.options.OptionManager;
 
-import java.util.Collections;
-import java.util.List;
+import com.google.common.collect.Lists;
 
 public class InsertLocalExchangeVisitor extends BasePrelVisitor<Prel, Void, RuntimeException> {
   private final boolean isMuxEnabled;
@@ -64,8 +63,8 @@ public class InsertLocalExchangeVisitor extends BasePrelVisitor<Prel, Void, Runt
   }
 
   public static Prel insertLocalExchanges(Prel prel, OptionManager options) {
-    boolean isMuxEnabled = options.getOption(PlannerSettings.MUX_EXCHANGE.getOptionName()).bool_val;
-    boolean isDeMuxEnabled = options.getOption(PlannerSettings.DEMUX_EXCHANGE.getOptionName()).bool_val;
+    boolean isMuxEnabled = options.getOption(PlannerSettings.MUX_EXCHANGE);
+    boolean isDeMuxEnabled = options.getOption(PlannerSettings.DEMUX_EXCHANGE);
 
     if (isMuxEnabled || isDeMuxEnabled) {
       return prel.accept(new InsertLocalExchangeVisitor(isMuxEnabled, isDeMuxEnabled), null);

@@ -17,22 +17,24 @@
  */
 package org.apache.drill.exec.planner.sql.parser;
 
+import java.util.List;
+
+import org.apache.calcite.sql.JoinType;
+import org.apache.calcite.sql.SqlCall;
+import org.apache.calcite.sql.SqlDataTypeSpec;
+import org.apache.calcite.sql.SqlJoin;
+import org.apache.calcite.sql.SqlKind;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.SqlSelect;
+import org.apache.calcite.sql.SqlSetOperator;
 import org.apache.calcite.sql.fun.SqlCountAggFunction;
+import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.sql.util.SqlShuttle;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.exception.UnsupportedOperatorCollector;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.work.foreman.SqlUnsupportedException;
-import org.apache.calcite.sql.SqlCall;
-import org.apache.calcite.sql.SqlKind;
-import org.apache.calcite.sql.SqlJoin;
-import org.apache.calcite.sql.JoinType;
-import org.apache.calcite.sql.SqlNode;
-import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.sql.util.SqlShuttle;
-import org.apache.calcite.sql.SqlDataTypeSpec;
-import org.apache.calcite.sql.SqlSetOperator;
-import java.util.List;
+
 import com.google.common.collect.Lists;
 
 public class UnsupportedOperatorsVisitor extends SqlShuttle {
@@ -120,7 +122,7 @@ public class UnsupportedOperatorsVisitor extends SqlShuttle {
 
     // Throw exceptions if window functions are disabled
     if(sqlCall.getOperator().getKind().equals(SqlKind.OVER)
-        && !context.getOptions().getOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS).bool_val) {
+        && !context.getOptions().getOption(ExecConstants.ENABLE_WINDOW_FUNCTIONS)) {
       unsupportedOperatorCollector.setException(SqlUnsupportedException.ExceptionType.FUNCTION,
           "Window functions are disabled\n" +
           "See Apache Drill JIRA: DRILL-2559");

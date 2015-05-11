@@ -48,7 +48,6 @@ import org.apache.drill.exec.util.VectorUtil;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarCharVector;
 import org.joda.time.DateTime;
-import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -367,9 +366,10 @@ public class TestConvertFunctions extends BaseTestQuery {
     // set the system option
     final DrillbitContext drillbitContext = drillbit.getContext();
     final OptionManager optionManager = drillbitContext.getOptionManager();
-    final OptionValue originalOptionValue = optionManager.getOption(ClassTransformer.SCALAR_REPLACEMENT_OPTION);
+    final OptionValue originalOptionValue = optionManager.getOption(ClassTransformer.SCALAR_REPLACEMENT_OPTION
+        .name());
     final OptionValue newOptionValue = OptionValue.createString(OptionType.SYSTEM,
-        ClassTransformer.SCALAR_REPLACEMENT_OPTION, srOption.name().toLowerCase());
+        ClassTransformer.SCALAR_REPLACEMENT_OPTION.name(), srOption.name().toLowerCase());
     optionManager.setOption(newOptionValue);
 
     // flush the code cache

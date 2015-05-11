@@ -46,7 +46,7 @@ public abstract class AbstractStatusReporter implements StatusReporter{
     context.getStats().addMetricsToStatus(b);
     b.setState(state);
     if(ex != null){
-      final boolean verbose = context.getOptions().getOption(ExecConstants.ENABLE_VERBOSE_ERRORS_KEY).bool_val;
+      final boolean verbose = context.getOptions().getOption(ExecConstants.ENABLE_VERBOSE_ERRORS);
       b.setError(ex.getOrCreatePBError(verbose));
     }
     status.setHandle(context.getHandle());

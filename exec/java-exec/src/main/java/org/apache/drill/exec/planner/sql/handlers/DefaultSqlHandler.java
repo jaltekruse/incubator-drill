@@ -145,7 +145,7 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
     this.hepPlanner = config.getHepPlanner();
     this.config = config;
     this.textPlan = textPlan;
-    targetSliceSize = context.getOptions().getOption(ExecConstants.SLICE_TARGET).num_val;
+    targetSliceSize = context.getOptions().getOption(ExecConstants.PLANNER_SLICE_TARGET);
   }
 
   protected void log(String name, RelNode node) {
@@ -330,8 +330,10 @@ public class DefaultSqlHandler extends AbstractSqlHandler {
       log("Not enough memory for this plan", phyRelNode);
       logger.debug("Re-planning without hash operations.");
 
-      queryOptions.setOption(OptionValue.createBoolean(OptionValue.OptionType.QUERY, PlannerSettings.HASHJOIN.getOptionName(), false));
-      queryOptions.setOption(OptionValue.createBoolean(OptionValue.OptionType.QUERY, PlannerSettings.HASHAGG.getOptionName(), false));
+      queryOptions.setOption(OptionValue.createBoolean(OptionValue.OptionType.QUERY, PlannerSettings.HASHJOIN.name(),
+          false));
+      queryOptions.setOption(OptionValue.createBoolean(OptionValue.OptionType.QUERY, PlannerSettings.HASHAGG.name(),
+          false));
 
       try {
         phyRelNode = (Prel) planner.transform(DrillSqlWorker.PHYSICAL_MEM_RULES, traits, drel);

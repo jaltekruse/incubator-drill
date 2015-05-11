@@ -44,7 +44,6 @@ public class TestWriter extends BaseTestQuery {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestWriter.class);
 
   static FileSystem fs;
-  static String ALTER_SESSION = String.format("ALTER SESSION SET `%s` = 'csv'", ExecConstants.OUTPUT_FORMAT_OPTION);
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -97,7 +96,7 @@ public class TestWriter extends BaseTestQuery {
   public void simpleCTAS() throws Exception {
     final String tableName = "simplectas";
     runSQL("Use dfs_test.tmp");
-    runSQL(ALTER_SESSION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "csv");
 
     final String testQuery = String.format("CREATE TABLE %s AS SELECT * FROM cp.`employee.json`", tableName);
 
@@ -108,7 +107,7 @@ public class TestWriter extends BaseTestQuery {
   public void complex1CTAS() throws Exception {
     final String tableName = "complex1ctas";
     runSQL("Use dfs_test.tmp");
-    runSQL(ALTER_SESSION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "csv");
     final String testQuery = String.format("CREATE TABLE %s AS SELECT first_name, last_name, " +
         "position_id FROM cp.`employee.json`", tableName);
 
@@ -119,7 +118,7 @@ public class TestWriter extends BaseTestQuery {
   public void complex2CTAS() throws Exception {
     final String tableName = "complex1ctas";
     runSQL("Use dfs_test.tmp");
-    runSQL(ALTER_SESSION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "csv");
     final String testQuery = String.format("CREATE TABLE %s AS SELECT CAST(`birth_date` as Timestamp) FROM " +
         "cp.`employee.json` GROUP BY birth_date", tableName);
 
@@ -129,7 +128,7 @@ public class TestWriter extends BaseTestQuery {
   @Test
   public void simpleCTASWithSchemaInTableName() throws Exception {
     final String tableName = "/test/simplectas2";
-    runSQL(ALTER_SESSION);
+    setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR, "csv");
     final String testQuery =
         String.format("CREATE TABLE dfs_test.tmp.`%s` AS SELECT * FROM cp.`employee.json`",tableName);
 

@@ -20,7 +20,6 @@ package org.apache.drill.exec.server.options;
 import org.apache.calcite.sql.SqlLiteral;
 
 public interface OptionManager extends Iterable<OptionValue> {
-  public OptionValue getOption(String name);
   public void setOption(OptionValue value) throws SetOptionException;
   public void setOption(String name, SqlLiteral literal, OptionValue.OptionType type) throws SetOptionException;
   public OptionAdmin getAdmin();
@@ -28,6 +27,7 @@ public interface OptionManager extends Iterable<OptionValue> {
   public OptionList getOptionList();
   public OptionValue getDefault(final String name);
 
+  public OptionValue getOption(String name);
   public boolean getOption(TypeValidators.BooleanValidator validator);
   public double getOption(TypeValidators.DoubleValidator validator);
   public long getOption(TypeValidators.LongValidator validator);

@@ -82,7 +82,7 @@ public class TextFormatPlugin extends EasyFormatPlugin<TextFormatPlugin.TextForm
     Path path = dfs.makeQualified(new Path(fileWork.getPath()));
     FileSplit split = new FileSplit(path, fileWork.getStart(), fileWork.getLength(), new String[]{""});
 
-    if (context.getOptions().getOption(ExecConstants.ENABLE_NEW_TEXT_READER_KEY).bool_val == true) {
+    if (context.getOptions().getOption(ExecConstants.ENABLE_NEW_TEXT_READER)) {
       TextParsingSettings settings = new TextParsingSettings();
       settings.set((TextFormatConfig)formatConfig);
       return new CompliantTextRecordReader(split, dfs, context, settings, columns);

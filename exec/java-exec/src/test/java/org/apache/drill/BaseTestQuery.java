@@ -43,6 +43,11 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.RemoteServiceSet;
+import org.apache.drill.exec.server.options.OptionValidator;
+import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
+import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
+import org.apache.drill.exec.server.options.TypeValidators.LongValidator;
+import org.apache.drill.exec.server.options.TypeValidators.StringValidator;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.util.JsonStringArrayList;
 import org.apache.drill.exec.util.JsonStringHashMap;
@@ -338,6 +343,31 @@ public class BaseTestQuery extends ExecTest {
 
   public static void test(final String query) throws Exception {
     QueryTestUtil.test(client, query);
+  }
+
+  public static void setOption(BooleanValidator validator, boolean value) throws Exception {
+    QueryTestUtil
+        .test(client, String.format("ALTER SESSION SET `%s` = %s", validator.name(), (Boolean) value));
+  }
+
+  public static void resetOption(OptionValidator validator) throws Exception {
+    QueryTestUtil
+        .test(client,
+            String.format("ALTER SESSION SET `%s` = %s", validator.name(), validator.getDefaultString()));
+  }
+
+  public static void setOption(DoubleValidator validator, double value) throws Exception {
+    QueryTestUtil.test(client, String.format("ALTER SESSION SET `%s` = %s", validator.name(), (Double) value));
+  }
+
+  public static void setOption(StringValidator validator, String value) throws Exception {
+    Preconditions.checkNotNull(value);
+    QueryTestUtil.test(client, String.format("ALTER SESSION SET `%s` = %s", validator.name(), value));
+  }
+
+  public static void setOption(LongValidator validator, long value) throws Exception {
+    Preconditions.checkNotNull(value);
+    QueryTestUtil.test(client, String.format("ALTER SESSION SET `%s` = %s", validator.name(), (Long) value));
   }
 
   protected static int testLogical(String query) throws Exception{

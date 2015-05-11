@@ -17,20 +17,20 @@
  */
 package org.apache.drill.exec.planner.physical.visitor;
 
+import org.apache.calcite.rel.metadata.RelMetadataQuery;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.cost.DrillCostBase;
 import org.apache.drill.exec.planner.physical.Prel;
 import org.apache.drill.exec.server.options.OptionManager;
-import org.apache.calcite.rel.metadata.RelMetadataQuery;
 
 public class MemoryEstimationVisitor extends BasePrelVisitor<Double, Void, RuntimeException> {
 
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(MemoryEstimationVisitor.class);
 
   public static boolean enoughMemory(Prel prel, OptionManager options, int numDrillbits) {
-    long allottedMemory = options.getOption(ExecConstants.MAX_QUERY_MEMORY_PER_NODE_KEY).num_val * numDrillbits;
+    long allottedMemory = options.getOption(ExecConstants.MAX_QUERY_MEMORY_PER_NODE) * numDrillbits;
     long estimatedMemory = (long) Math.ceil(prel.accept(new MemoryEstimationVisitor(), null) / (1024.0 * 1024.0));
-    estimatedMemory += options.getOption(ExecConstants.NON_BLOCKING_OPERATORS_MEMORY_KEY).num_val * numDrillbits;
+    estimatedMemory += options.getOption(ExecConstants.NON_BLOCKING_OPERATORS_MEMORY) * numDrillbits;
 
     if (estimatedMemory > allottedMemory) {
       logger.debug("Estimated memory (" + estimatedMemory + ") exceeds maximum allowed (" + allottedMemory + ")");

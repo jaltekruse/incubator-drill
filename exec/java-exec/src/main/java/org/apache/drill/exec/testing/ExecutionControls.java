@@ -17,11 +17,11 @@
  */
 package org.apache.drill.exec.testing;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExpressionParsingException;
 import org.apache.drill.exec.ExecConstants;
@@ -29,13 +29,14 @@ import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.server.options.OptionValue;
 import org.apache.drill.exec.server.options.OptionValue.OptionType;
-import org.apache.drill.exec.server.options.TypeValidators.TypeValidator;
+import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
 import org.apache.drill.exec.testing.InjectionSite.InjectionSiteKeyDeserializer;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 /**
  * Tracks the simulated controls that will be injected for testing purposes.
@@ -67,7 +68,7 @@ public final class ExecutionControls {
    * The JSON specified for the {@link org.apache.drill.exec.ExecConstants#DRILLBIT_CONTROL_INJECTIONS}
    * option is validated using this class. Controls are short-lived options.
    */
-  public static class ControlsOptionValidator extends TypeValidator {
+  public static class ControlsOptionValidator extends DoubleValidator {
 
     private final int ttl; // the number of queries for which this option is valid
 
@@ -78,7 +79,7 @@ public final class ExecutionControls {
      * @param ttl  the number of queries for which this option should be valid
      */
     public ControlsOptionValidator(final String name, final String def, final int ttl) {
-      super(name, OptionValue.Kind.DOUBLE, OptionValue.createString(OptionType.SESSION, name, def));
+      super(name, OptionValue.createString(OptionType.SESSION, name, def));
       assert ttl > 0;
       this.ttl = ttl;
     }
@@ -130,7 +131,7 @@ public final class ExecutionControls {
   public ExecutionControls(final OptionManager options, final DrillbitEndpoint endpoint) {
     this.endpoint = endpoint;
 
-    final OptionValue optionValue = options.getOption(ExecConstants.DRILLBIT_CONTROL_INJECTIONS);
+    final OptionValue optionValue = options.getOption(ExecConstants.DRILLBIT_CONTROLS_VALIDATOR.name());
     if (optionValue == null) {
       return;
     }

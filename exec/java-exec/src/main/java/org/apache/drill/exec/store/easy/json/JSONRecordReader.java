@@ -105,7 +105,10 @@ public class JSONRecordReader extends AbstractRecordReader {
     this.fragmentContext = fragmentContext;
 
     // only enable all text mode if we aren't using embedded content mode.
-    this.enableAllTextMode = embeddedContent == null && fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_ALL_TEXT_MODE_VALIDATOR);
+     this.enableAllTextMode = embeddedContent == null
+         && fragmentContext.getOptions().getOption(ExecConstants.JSON_READER_ALL_TEXT_MODE);
+    this.readNumbersAsDouble = embeddedContent == null
+        && fragmentContext.getOptions().getOption(ExecConstants.JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR);
     this.readNumbersAsDouble = fragmentContext.getOptions().getOption(ExecConstants.JSON_READ_NUMBERS_AS_DOUBLE).bool_val;
     setColumns(columns);
   }

@@ -26,10 +26,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.Sets;
-import com.google.common.collect.Iterators;
-import com.google.common.collect.Ordering;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.util.DrillStringUtils;
 import org.apache.drill.exec.ExecConstants;
@@ -54,8 +50,12 @@ import org.apache.drill.exec.work.QueryWorkUnit;
 import org.apache.drill.exec.work.foreman.ForemanSetupException;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 
 /**
  * The simple parallelizer determines the level of parallelization of a plan based on the cost of the underlying
@@ -81,11 +81,11 @@ public class SimpleParallelizer {
 
   public SimpleParallelizer(QueryContext context) {
     OptionManager optionManager = context.getOptions();
-    long sliceTarget = optionManager.getOption(ExecConstants.SLICE_TARGET).num_val;
+    long sliceTarget = optionManager.getOption(ExecConstants.PLANNER_SLICE_TARGET);
     this.parallelizationThreshold = sliceTarget > 0 ? sliceTarget : 1;
-    this.maxWidthPerNode = optionManager.getOption(ExecConstants.MAX_WIDTH_PER_NODE_KEY).num_val.intValue();
-    this.maxGlobalWidth = optionManager.getOption(ExecConstants.MAX_WIDTH_GLOBAL_KEY).num_val.intValue();
-    this.affinityFactor = optionManager.getOption(ExecConstants.AFFINITY_FACTOR_KEY).float_val.intValue();
+    this.maxWidthPerNode = (int) optionManager.getOption(ExecConstants.MAX_WIDTH_PER_NODE);
+    this.maxGlobalWidth = (int) optionManager.getOption(ExecConstants.MAX_WIDTH_GLOBAL);
+    this.affinityFactor = optionManager.getOption(ExecConstants.AFFINITY_FACTOR);
   }
 
   public SimpleParallelizer(long parallelizationThreshold, int maxWidthPerNode, int maxGlobalWidth, double affinityFactor) {

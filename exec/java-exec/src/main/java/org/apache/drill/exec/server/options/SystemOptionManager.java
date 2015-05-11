@@ -23,21 +23,16 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.calcite.sql.SqlLiteral;
 import org.apache.commons.collections.IteratorUtils;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.compile.ClassTransformer;
-import org.apache.drill.exec.compile.QueryClassLoader;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.server.options.OptionValue.OptionType;
-import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
-import org.apache.drill.exec.server.options.TypeValidators.DoubleValidator;
-import org.apache.drill.exec.server.options.TypeValidators.LongValidator;
-import org.apache.drill.exec.server.options.TypeValidators.StringValidator;
 import org.apache.drill.exec.store.sys.PStore;
 import org.apache.drill.exec.store.sys.PStoreConfig;
 import org.apache.drill.exec.store.sys.PStoreProvider;
-import org.apache.calcite.sql.SqlLiteral;
 
 import com.google.common.collect.Maps;
 
@@ -76,18 +71,16 @@ public class SystemOptionManager extends BaseOptionManager {
       ExecConstants.OUTPUT_FORMAT_VALIDATOR,
       ExecConstants.PARQUET_BLOCK_SIZE_VALIDATOR,
       ExecConstants.PARQUET_WRITER_COMPRESSION_TYPE_VALIDATOR,
-      ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING_VALIDATOR,
-      ExecConstants.PARQUET_VECTOR_FILL_THRESHOLD_VALIDATOR,
-      ExecConstants.PARQUET_VECTOR_FILL_CHECK_THRESHOLD_VALIDATOR,
-      ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR,
-      ExecConstants.JSON_READER_ALL_TEXT_MODE_VALIDATOR,
+      ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING,
+      ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION,
+      ExecConstants.JSON_READER_ALL_TEXT_MODE,
       ExecConstants.TEXT_ESTIMATED_ROW_SIZE,
       ExecConstants.JSON_EXTENDED_TYPES,
       ExecConstants.JSON_READ_NUMBERS_AS_DOUBLE_VALIDATOR,
-      ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL_VALIDATOR,
+      ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL,
       ExecConstants.MONGO_READER_ALL_TEXT_MODE_VALIDATOR,
       ExecConstants.MONGO_READER_READ_NUMBERS_AS_DOUBLE_VALIDATOR,
-      ExecConstants.SLICE_TARGET_OPTION,
+      ExecConstants.PLANNER_SLICE_TARGET,
       ExecConstants.AFFINITY_FACTOR,
       ExecConstants.MAX_WIDTH_GLOBAL,
       ExecConstants.MAX_WIDTH_PER_NODE,
@@ -106,13 +99,12 @@ public class SystemOptionManager extends BaseOptionManager {
       ExecConstants.AVERAGE_FIELD_WIDTH,
       ExecConstants.NEW_VIEW_DEFAULT_PERMS_VALIDATOR,
       ExecConstants.USE_OLD_ASSIGNMENT_CREATOR_VALIDATOR,
-      QueryClassLoader.JAVA_COMPILER_VALIDATOR,
-      QueryClassLoader.JAVA_COMPILER_JANINO_MAXSIZE,
-      QueryClassLoader.JAVA_COMPILER_DEBUG,
+      ExecConstants.JAVA_COMPILER_DEBUG,
+      ExecConstants.JAVA_COMPILER_JANINO_MAXSIZE,
       ExecConstants.ENABLE_VERBOSE_ERRORS,
-      ExecConstants.ENABLE_WINDOW_FUNCTIONS_VALIDATOR,
+      ExecConstants.ENABLE_WINDOW_FUNCTIONS,
       ExecConstants.DRILLBIT_CONTROLS_VALIDATOR,
-      ClassTransformer.SCALAR_REPLACEMENT_VALIDATOR,
+      ClassTransformer.SCALAR_REPLACEMENT_OPTION,
       ExecConstants.ENABLE_NEW_TEXT_READER
   };
 
@@ -139,7 +131,7 @@ public class SystemOptionManager extends BaseOptionManager {
   public Iterator<OptionValue> iterator() {
     final Map<String, OptionValue> buildList = Maps.newHashMap();
     for(OptionValidator v : knownOptions.values()){
-      buildList.put(v.getOptionName(), v.getDefault());
+      buildList.put(v.name(), v.getDefault());
     }
     for(Map.Entry<String, OptionValue> v : options){
       final OptionValue value = v.getValue();
@@ -214,7 +206,7 @@ public class SystemOptionManager extends BaseOptionManager {
   private class SystemOptionAdmin implements OptionAdmin {
     public SystemOptionAdmin() {
       for(OptionValidator v : VALIDATORS) {
-        knownOptions.put(v.getOptionName(), v);
+        knownOptions.put(v.name(), v);
       }
 
       for(Entry<String, OptionValue> v : options) {
@@ -230,9 +222,9 @@ public class SystemOptionManager extends BaseOptionManager {
 
     @Override
     public void registerOptionType(final OptionValidator validator) {
-      if (null != knownOptions.putIfAbsent(validator.getOptionName(), validator)) {
+      if (null != knownOptions.putIfAbsent(validator.name(), validator)) {
         throw new IllegalArgumentException("Only one option is allowed to be registered with name: "
-            + validator.getOptionName());
+            + validator.name());
       }
     }
 

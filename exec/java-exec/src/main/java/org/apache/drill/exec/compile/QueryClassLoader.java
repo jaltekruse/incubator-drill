@@ -20,50 +20,20 @@ package org.apache.drill.exec.compile;
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
-import java.util.Arrays;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.drill.common.config.DrillConfig;
-import org.apache.drill.common.exceptions.ExpressionParsingException;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.compile.ClassTransformer.ClassNames;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.server.options.OptionManager;
-import org.apache.drill.exec.server.options.OptionValidator;
-import org.apache.drill.exec.server.options.OptionValue;
-import org.apache.drill.exec.server.options.TypeValidators.BooleanValidator;
-import org.apache.drill.exec.server.options.TypeValidators.LongValidator;
-import org.apache.drill.exec.server.options.TypeValidators.StringValidator;
 import org.codehaus.commons.compiler.CompileException;
 
 import com.google.common.collect.MapMaker;
 
 public class QueryClassLoader extends URLClassLoader {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(QueryClassLoader.class);
-
-  public static final String JAVA_COMPILER_OPTION = "exec.java_compiler";
-  public static final StringValidator JAVA_COMPILER_VALIDATOR = new StringValidator(JAVA_COMPILER_OPTION, CompilerPolicy.DEFAULT.toString()) {
-    @Override
-    public void validate(OptionValue v) throws ExpressionParsingException {
-      super.validate(v);
-      try {
-        CompilerPolicy.valueOf(v.string_val.toUpperCase());
-      } catch (IllegalArgumentException e) {
-        throw new ExpressionParsingException(String.format("Invalid value '%s' specified for option '%s'. Valid values are %s.",
-            v.string_val, getOptionName(), Arrays.toString(CompilerPolicy.values())));
-      }
-    }
-  };
-
-  public static final String JAVA_COMPILER_DEBUG_OPTION = "exec.java_compiler_debug";
-  public static final OptionValidator JAVA_COMPILER_DEBUG = new BooleanValidator(JAVA_COMPILER_DEBUG_OPTION, true);
-
-  public static final String JAVA_COMPILER_JANINO_MAXSIZE_OPTION = "exec.java_compiler_janino_maxsize";
-  public static final OptionValidator JAVA_COMPILER_JANINO_MAXSIZE = new LongValidator(JAVA_COMPILER_JANINO_MAXSIZE_OPTION, 256*1024);
-
-  public static final String JAVA_COMPILER_CONFIG = "drill.exec.compile.compiler";
-  public static final String JAVA_COMPILER_DEBUG_CONFIG = "drill.exec.compile.debug";
-  public static final String JAVA_COMPILER_JANINO_MAXSIZE_CONFIG = "drill.exec.compile.janino_maxsize";
 
   private ClassCompilerSelector compilerSelector;
 
@@ -104,6 +74,7 @@ public class QueryClassLoader extends URLClassLoader {
 
   public enum CompilerPolicy {
     DEFAULT, JDK, JANINO;
+
   }
 
   private class ClassCompilerSelector {
@@ -115,14 +86,9 @@ public class QueryClassLoader extends URLClassLoader {
 
 
     ClassCompilerSelector(DrillConfig config, OptionManager sessionOptions) {
-      OptionValue value = sessionOptions.getOption(JAVA_COMPILER_OPTION);
-      this.policy = CompilerPolicy.valueOf((value != null) ? value.string_val.toUpperCase() : config.getString(JAVA_COMPILER_CONFIG).toUpperCase());
-
-      value = sessionOptions.getOption(JAVA_COMPILER_JANINO_MAXSIZE_OPTION);
-      this.janinoThreshold = (value != null) ? value.num_val : config.getLong(JAVA_COMPILER_JANINO_MAXSIZE_CONFIG);
-
-      value = sessionOptions.getOption(JAVA_COMPILER_DEBUG_OPTION);
-      boolean debug = (value != null) ? value.bool_val : config.getBoolean(JAVA_COMPILER_DEBUG_CONFIG);
+      this.policy = CompilerPolicy.valueOf(sessionOptions.getOption(ExecConstants.JAVA_COMPILER_OPTION).toUpperCase());
+      this.janinoThreshold = sessionOptions.getOption(ExecConstants.JAVA_COMPILER_JANINO_MAXSIZE);
+      boolean debug = sessionOptions.getOption(ExecConstants.JAVA_COMPILER_DEBUG);
 
       this.janinoClassCompiler = (policy == CompilerPolicy.JANINO || policy == CompilerPolicy.DEFAULT) ? new JaninoClassCompiler(QueryClassLoader.this, debug) : null;
       this.jdkClassCompiler = (policy == CompilerPolicy.JDK || policy == CompilerPolicy.DEFAULT) ? JDKClassCompiler.newInstance(QueryClassLoader.this, debug) : null;
