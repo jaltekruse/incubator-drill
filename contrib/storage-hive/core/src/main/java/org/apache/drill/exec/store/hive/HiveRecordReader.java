@@ -363,7 +363,7 @@ public class HiveRecordReader extends AbstractRecordReader {
         return MinorType.TINYINT;
       case DECIMAL: {
 
-        if (context.getOptions().getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY).bool_val == false) {
+        if (context.getOptions().getOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE) == false) {
           throw UserException.unsupportedError()
               .message(ExecErrorConstants.DECIMAL_DISABLE_ERR_MSG)
               .build();
