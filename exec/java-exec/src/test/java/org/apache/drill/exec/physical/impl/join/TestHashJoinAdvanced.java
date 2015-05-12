@@ -20,12 +20,18 @@ package org.apache.drill.exec.physical.impl.join;
 
 
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.exec.fn.interp.TestConstantFolding;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 public class TestHashJoinAdvanced extends BaseTestQuery {
+
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
 
   // Have to disable merge join, if this testcase is to test "HASH-JOIN".
   @BeforeClass
@@ -36,6 +42,19 @@ public class TestHashJoinAdvanced extends BaseTestQuery {
   @AfterClass
   public static void enableMergeJoin() throws Exception {
     test("alter session set `planner.enable_mergejoin` = true");
+  }
+
+  @Test
+  public void testOutOfMemoryErrorJoiningJson() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    String jsonRecords = BaseTestQuery.getFile("store/json/2274_data.json");
+    int numCopies = 2500;
+    new TestConstantFolding.SmallFileCreator(folder).
+        setRecord(jsonRecords)
+        .createFiles(1, numCopies, "json");
+
+    runSQL("select sub1.uid from dfs.`" + path + "/bigfile/bigfile.json` sub1 inner join dfs.`" + path + "/bigfile/bigfile.json` sub2 on sub1.uid = sub2.uid order by sub1.uid");
   }
 
   @Test //DRILL-2197 Left Self Join with complex type in projection
