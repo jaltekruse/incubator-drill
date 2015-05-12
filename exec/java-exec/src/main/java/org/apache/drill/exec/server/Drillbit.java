@@ -287,7 +287,9 @@ public class Drillbit implements AutoCloseable {
 
     Closeables.closeQuietly(engine);
     AutoCloseables.close(storeProvider, logger);
-    Closeables.closeQuietly(coord);
+    // TODO - reenable, debugging local tests with one failing Drillbit, using a local coordiator this
+    // is causing the coordinator to die as I try to kill one of the bits
+//    Closeables.closeQuietly(coord);
     AutoCloseables.close(manager, logger);
     Closeables.closeQuietly(context);
 
