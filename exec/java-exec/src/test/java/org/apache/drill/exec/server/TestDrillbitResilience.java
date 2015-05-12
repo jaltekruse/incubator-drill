@@ -47,6 +47,7 @@ import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.physical.impl.ScreenCreator;
+import org.apache.drill.exec.physical.impl.WriterRecordBatch;
 import org.apache.drill.exec.physical.impl.mergereceiver.MergingRecordBatch;
 import org.apache.drill.exec.physical.impl.partitionsender.PartitionSenderRootExec;
 import org.apache.drill.exec.physical.impl.partitionsender.PartitionerDecorator;
@@ -72,6 +73,7 @@ import org.apache.drill.exec.rpc.user.UserResultsListener;
 import org.apache.drill.exec.store.pojo.PojoRecordReader;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
 import org.apache.drill.exec.util.Pointer;
+import org.apache.drill.exec.util.TestUtilities;
 import org.apache.drill.exec.work.foreman.Foreman;
 import org.apache.drill.exec.work.foreman.ForemanException;
 import org.apache.drill.exec.work.foreman.ForemanSetupException;
@@ -168,6 +170,12 @@ public class TestDrillbitResilience {
     startDrillbit(DRILLBIT_ALPHA, remoteServiceSet);
     startDrillbit(DRILLBIT_BETA, remoteServiceSet);
     startDrillbit(DRILLBIT_GAMMA, remoteServiceSet);
+
+    // set up a unique temporary folder for this test run
+    String dfsTestTmpSchemaLocation = TestUtilities.createTempDir();
+    for (Drillbit bit : drillbits.values()) {
+      TestUtilities.setupDefaultTestStoragePluginConfig(bit, dfsTestTmpSchemaLocation);
+    }
 
     // create a client
     final DrillConfig drillConfig = zkHelper.getConfig();
@@ -679,9 +687,17 @@ public class TestDrillbitResilience {
    */
   private static void assertFailsWithException(final String controls, final Class<? extends Throwable> exceptionClass,
                                                final String exceptionDesc) {
+    assertFailsWithException(TEST_QUERY, controls, exceptionClass, exceptionDesc);
+  }
+
+  /**
+   * Given a set of controls, this method ensures the provided query fails with the given class and desc.
+   */
+  private static void assertFailsWithException(final String testQuery, final String controls, final Class<? extends Throwable> exceptionClass,
+                                               final String exceptionDesc) {
     setControls(controls);
     final WaitUntilCompleteListener listener = new WaitUntilCompleteListener();
-    QueryTestUtil.testWithListener(drillClient, QueryType.SQL, TEST_QUERY, listener);
+    QueryTestUtil.testWithListener(drillClient, QueryType.SQL, testQuery, listener);
     final Pair<QueryState, Exception> result = listener.waitForCompletion();
     final QueryState state = result.getFirst();
     assertTrue(String.format("Query state should be FAILED (and not %s).", state), state == QueryState.FAILED);
@@ -710,6 +726,18 @@ public class TestDrillbitResilience {
     final Class<? extends Throwable> exceptionClass = IOException.class;
     final String controls = createSingleException(FragmentExecutor.class, exceptionDesc, exceptionClass);
     assertFailsWithException(controls, exceptionClass, exceptionDesc);
+  }
+
+  @Test
+  public void failsDuringWritingTable() throws Exception {
+    final String exceptionDesc = "io-exception-inner-next";
+    final Class<? extends Throwable> exceptionClass = IOException.class;
+    final String controls = createSingleException(WriterRecordBatch.class, exceptionDesc, exceptionClass);
+    String query = "create table small_test_file as select * from cp.`tpch/nation.parquet`";
+    QueryTestUtil.test(drillClient, "use dfs_test.tmp");
+    for (String s : new String[]{"json", "csv", "parquet"}) {
+      assertFailsWithException(query, controls, exceptionClass, exceptionDesc);
+    }
   }
 
   /**

@@ -36,6 +36,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.store.EventBasedRecordWriter;
 import org.apache.drill.exec.store.RecordWriter;
+import org.apache.drill.exec.testing.ExecutionControlsInjector;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.BigIntVector;
 import org.apache.drill.exec.vector.VarCharVector;
@@ -43,6 +44,7 @@ import org.apache.drill.exec.vector.VarCharVector;
 /* Write the RecordBatch to the given RecordWriter. */
 public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(WriterRecordBatch.class);
+  private final static ExecutionControlsInjector injector = ExecutionControlsInjector.getInjector(WriterRecordBatch.class);
 
   private EventBasedRecordWriter eventBasedRecordWriter;
   private RecordWriter recordWriter;
@@ -105,6 +107,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
             // fall through.
           case OK:
             counter += eventBasedRecordWriter.write(incoming.getRecordCount());
+            injector.injectChecked(context.getExecutionControls(), "io-exception-inner-next", IOException.class);
             logger.debug("Total records written so far: {}", counter);
 
             for(VectorWrapper<?> v : incoming) {

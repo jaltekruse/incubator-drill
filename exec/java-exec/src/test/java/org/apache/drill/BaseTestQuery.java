@@ -179,9 +179,7 @@ public class BaseTestQuery extends ExecTest {
       bits[i] = new Drillbit(config, serviceSet);
       bits[i].run();
 
-      final StoragePluginRegistry pluginRegistry = bits[i].getContext().getStorage();
-      TestUtilities.updateDfsTestTmpSchemaLocation(pluginRegistry, dfsTestTmpSchemaLocation);
-      TestUtilities.makeDfsTmpSchemaImmutable(pluginRegistry);
+      TestUtilities.setupDefaultTestStoragePluginConfig(bits[i], dfsTestTmpSchemaLocation);
     }
 
     client = QueryTestUtil.createClient(config,  serviceSet, MAX_WIDTH_PER_NODE, null);

@@ -19,6 +19,7 @@ package org.apache.drill.exec.util;
 
 import com.google.common.io.Files;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.dfs.FileSystemConfig;
@@ -52,6 +53,18 @@ public class TestUtilities {
     final File tmpDir = Files.createTempDir();
     tmpDir.deleteOnExit();
     return tmpDir.getAbsolutePath();
+  }
+
+  /**
+   * Setup the default storage plugins for tests that are dynamic (jvm unique temp folder), or
+   * that needs to override a default behavior (like making the default tmp dir immutable).
+   *
+   * @return - the new dfs_tmp location
+   */
+  public static void setupDefaultTestStoragePluginConfig(Drillbit bit, String dfsTestTmpSchemaLocation) throws ExecutionSetupException {
+    final StoragePluginRegistry pluginRegistry = bit.getContext().getStorage();
+    TestUtilities.updateDfsTestTmpSchemaLocation(pluginRegistry, dfsTestTmpSchemaLocation);
+    TestUtilities.makeDfsTmpSchemaImmutable(pluginRegistry);
   }
 
   /**
