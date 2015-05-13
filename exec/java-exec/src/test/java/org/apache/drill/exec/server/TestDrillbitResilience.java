@@ -313,6 +313,27 @@ public class TestDrillbitResilience {
    * @param siteClass      the injection site class
    * @param desc           the injection site description
    * @param exceptionClass the class of the exception to throw
+   * @return the created controls JSON as string
+   */
+  private static String createSingleUncheckedException(final Class<?> siteClass, final String desc) {
+    final String siteClassName = siteClass.getName();
+//    final String exceptionClassName = exceptionClass.getName();
+    return "{\"injections\":[{"
+        + "\"type\":\"exception\","
+        + "\"siteClass\":\"" + siteClassName + "\","
+        + "\"desc\":\"" + desc + "\","
+        + "\"nSkip\":0,"
+        + "\"nFire\":1"
+//        + "\"exceptionClass\":\"" + exceptionClassName + "\""
+        + "}]}";
+  }
+
+  /**
+   * Create a single exception injection.
+   *
+   * @param siteClass      the injection site class
+   * @param desc           the injection site description
+   * @param exceptionClass the class of the exception to throw
    * @param bitName        the drillbit name which should be injected into
    * @return the created controls JSON as string
    */
@@ -729,15 +750,59 @@ public class TestDrillbitResilience {
   }
 
   @Test
-  public void failsDuringWritingTable() throws Exception {
-    final String exceptionDesc = "io-exception-inner-next";
-    final Class<? extends Throwable> exceptionClass = IOException.class;
-    final String controls = createSingleException(WriterRecordBatch.class, exceptionDesc, exceptionClass);
-    String query = "create table small_test_file as select * from cp.`tpch/nation.parquet`";
-    QueryTestUtil.test(drillClient, "use dfs_test.tmp");
-    for (String s : new String[]{"json", "csv", "parquet"}) {
-      assertFailsWithException(query, controls, exceptionClass, exceptionDesc);
+  public void ioExceptionWhileWritingTable() throws Exception {
+    final String[] injectionControls = {
+        createSingleException(
+            WriterRecordBatch.class,
+            WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
+            IOException.class),
+        createSingleException(
+            WriterRecordBatch.class,
+            WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE,
+            RuntimeException.class),
+    };
+    final String[] injectionSiteNames = { WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
+        WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE };
+
+    final Class<? extends Throwable>[] exceptionClasses = new Class[]{IOException.class, RuntimeException.class};
+    int numTablesCreated = 0;
+    // test each of the injection sites
+    for (int injectionSiteIndex = 0; injectionSiteIndex < injectionControls.length; injectionSiteIndex++) {
+      final String controls = injectionControls[injectionSiteIndex];
+      final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
+      QueryTestUtil.test(drillClient, "use dfs_test.tmp");
+      String[] formats = new String[]{"json", "csv", "parquet"};
+      // test each of the output formats
+      for (int formatIndex = 0; formatIndex < formats.length; formatIndex++) {
+        final long before = countAllocatedMemory();
+        QueryTestUtil.test(drillClient,
+            String.format("alter session set `%s` = '%s'",
+                ExecConstants.OUTPUT_FORMAT_VALIDATOR.getOptionName(),
+                formats[formatIndex]));
+        assertFailsWithException(
+            String.format(queryFormatStr, numTablesCreated),
+            controls, exceptionClasses[injectionSiteIndex], injectionSiteNames[injectionSiteIndex]);
+        numTablesCreated++;
+        final long after = countAllocatedMemory();
+        assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+      }
     }
+  }
+
+  private long countAllocatedMemory() {
+    // wait to make sure all fragments finished cleaning up
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // just ignore
+    }
+
+    long allocated = 0;
+    for (String name : drillbits.keySet()) {
+      allocated += drillbits.get(name).getContext().getAllocator().getAllocatedMemory();
+    }
+
+    return allocated;
   }
 
   /**

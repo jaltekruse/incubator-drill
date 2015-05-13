@@ -46,6 +46,10 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(WriterRecordBatch.class);
   private final static ExecutionControlsInjector injector = ExecutionControlsInjector.getInjector(WriterRecordBatch.class);
 
+  public static final String IO_EXCEPTION_INNER_NEXT_INJECT_SITE = "io-exception-inner-next";
+  public static final String UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE = "unchecked-exception-inner-next";
+  public static final String UNCHECKED_EXCEPTION_SETUP_NEW_SCHEMA_SITE = "unchecked-exception-new-schema";
+
   private EventBasedRecordWriter eventBasedRecordWriter;
   private RecordWriter recordWriter;
   private long counter = 0;
@@ -107,7 +111,8 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
             // fall through.
           case OK:
             counter += eventBasedRecordWriter.write(incoming.getRecordCount());
-            injector.injectChecked(context.getExecutionControls(), "io-exception-inner-next", IOException.class);
+            injector.injectChecked(context.getExecutionControls(), IO_EXCEPTION_INNER_NEXT_INJECT_SITE, IOException.class);
+            injector.injectUnchecked(context.getExecutionControls(), UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE);
             logger.debug("Total records written so far: {}", counter);
 
             for(VectorWrapper<?> v : incoming) {
@@ -153,6 +158,7 @@ public class WriterRecordBatch extends AbstractRecordBatch<Writer> {
     try {
       // update the schema in RecordWriter
       stats.startSetup();
+      injector.injectUnchecked(context.getExecutionControls(), UNCHECKED_EXCEPTION_SETUP_NEW_SCHEMA_SITE);
       recordWriter.updateSchema(incoming.getSchema());
       // Create two vectors for:
       //   1. Fragment unique id.
