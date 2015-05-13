@@ -771,6 +771,7 @@ public class TestDrillbitResilience {
               WriterRecordBatch.class,
               injectionSiteNames[injectionSiteIndex],
               exceptionClasses[injectionSiteIndex]);
+      // TODO - add complex types to parquet and json writing
       final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
       QueryTestUtil.test(drillClient, "use dfs_test.tmp");
       String[] formats = new String[]{"json", "csv", "parquet"};
