@@ -22,12 +22,15 @@ import static org.junit.Assert.assertEquals;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.DrillMemoryLeakFinderTestRunner;
 import org.apache.drill.exec.ExecConstants;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
 import java.math.BigDecimal;
 
+//@RunWith(DrillMemoryLeakFinderTestRunner.class)
 public class TestExampleQueries extends BaseTestQuery{
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
@@ -517,7 +520,7 @@ public class TestExampleQueries extends BaseTestQuery{
   @Test // DRILL-1788
   public void testCaseInsensitiveJoin() throws Exception {
     test("select n3.n_name from (select n2.n_name from cp.`tpch/nation.parquet` n1, cp.`tpch/nation.parquet` n2 where n1.N_name = n2.n_name) n3 " +
-          " join cp.`tpch/nation.parquet` n4 on n3.n_name = n4.n_name");
+        " join cp.`tpch/nation.parquet` n4 on n3.n_name = n4.n_name");
   }
 
   @Test // DRILL-1561
