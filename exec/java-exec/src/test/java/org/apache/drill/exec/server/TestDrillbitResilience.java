@@ -751,24 +751,26 @@ public class TestDrillbitResilience {
 
   @Test
   public void ioExceptionWhileWritingTable() throws Exception {
-    final String[] injectionControls = {
-        createSingleException(
-            WriterRecordBatch.class,
-            WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
-            IOException.class),
-        createSingleException(
-            WriterRecordBatch.class,
-            WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE,
-            RuntimeException.class),
-    };
     final String[] injectionSiteNames = { WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
-        WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE };
+        WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE,
+        WriterRecordBatch.UNCHECKED_EXCEPTION_SETUP_NEW_SCHEMA_SITE,
+    };
 
-    final Class<? extends Throwable>[] exceptionClasses = new Class[]{IOException.class, RuntimeException.class};
+    final Class<? extends Throwable>[] exceptionClasses = new Class[]{
+        IOException.class,
+        RuntimeException.class,
+        RuntimeException.class,
+    };
+
+    assertEquals(injectionSiteNames.length, exceptionClasses.length);
     int numTablesCreated = 0;
     // test each of the injection sites
-    for (int injectionSiteIndex = 0; injectionSiteIndex < injectionControls.length; injectionSiteIndex++) {
-      final String controls = injectionControls[injectionSiteIndex];
+    for (int injectionSiteIndex = 0; injectionSiteIndex < injectionSiteNames.length; injectionSiteIndex++) {
+      final String controls =
+          createSingleException(
+              WriterRecordBatch.class,
+              injectionSiteNames[injectionSiteIndex],
+              exceptionClasses[injectionSiteIndex]);
       final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
       QueryTestUtil.test(drillClient, "use dfs_test.tmp");
       String[] formats = new String[]{"json", "csv", "parquet"};
