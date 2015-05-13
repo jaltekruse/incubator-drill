@@ -36,6 +36,7 @@ import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.store.EventBasedRecordWriter;
 import org.apache.drill.exec.store.EventBasedRecordWriter.FieldConverter;
 import org.apache.drill.exec.store.ParquetOutputRecordWriter;
+import org.apache.drill.exec.testing.ExecutionControlsInjector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -64,6 +65,9 @@ import com.google.common.collect.Lists;
 
 public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ParquetRecordWriter.class);
+  private final static ExecutionControlsInjector injector = ExecutionControlsInjector.getInjector(ParquetRecordWriter.class);
+
+  public static final String IO_EXCEPTION_IN_FLUSH = "io-in-flush";
 
   private static final int MINIMUM_BUFFER_SIZE = 64 * 1024;
   private static final int MINIMUM_RECORD_COUNT_FOR_CHECK = 100;
@@ -192,6 +196,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private void flush() throws IOException {
     if (recordCount > 0) {
       parquetFileWriter.startBlock(recordCount);
+      injector.injectChecked(oContext.getExecutionControls(), IO_EXCEPTION_IN_FLUSH, IOException.class);
       store.flush();
       ColumnChunkPageWriteStoreExposer.flushPageStore(pageStore, parquetFileWriter);
       recordCount = 0;
