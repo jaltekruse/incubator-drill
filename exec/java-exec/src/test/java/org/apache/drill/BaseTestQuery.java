@@ -61,6 +61,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
 
 import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
@@ -89,8 +90,12 @@ public class BaseTestQuery extends ExecTest {
     }
   };
 
-  protected static DrillClient client;
-  protected static Drillbit[] bits;
+  // TODO - this is set to public for a hack in a custom test runner to find memory leaks
+  // should not leave it like this
+  public static DrillClient client;
+  // TODO - this is set to public for a hack in a custom test runner to find memory leaks
+  // should not leave it like this
+  public static Drillbit[] bits;
   protected static RemoteServiceSet serviceSet;
   protected static DrillConfig config;
   protected static BufferAllocator allocator;
@@ -338,7 +343,26 @@ public class BaseTestQuery extends ExecTest {
   }
 
   public static void test(final String query) throws Exception {
-    QueryTestUtil.test(client, query);
+    final long before = countAllocatedMemory();
+    TestAllocationException.testSqlWithException(query);
+    final long after = countAllocatedMemory();
+    assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+  }
+
+  private static long countAllocatedMemory() {
+    // wait to make sure all fragments finished cleaning up
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // just ignore
+    }
+
+    long allocated = 0;
+    for (Drillbit bit: bits) {
+      allocated += bit.getContext().getAllocator().getAllocatedMemory();
+    }
+
+    return allocated;
   }
 
   protected static int testLogical(String query) throws Exception{
