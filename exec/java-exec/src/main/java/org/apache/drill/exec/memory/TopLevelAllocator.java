@@ -32,12 +32,15 @@ import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.proto.ExecProtos.FragmentHandle;
+import org.apache.drill.exec.testing.ExecutionControlsInjector;
 import org.apache.drill.exec.util.AssertionUtil;
 import org.apache.drill.exec.util.Pointer;
 
 @Deprecated // use RootAllocator instead
 public class TopLevelAllocator implements BufferAllocator {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TopLevelAllocator.class);
+  private static final ExecutionControlsInjector injector = ExecutionControlsInjector.getInjector(TopLevelAllocator.class);
+  public static String CHILD_ALLOCATOR_INJECTION_SITE = "child.buffer";
 
   public static long MAXIMUM_DIRECT_MEMORY;
 
@@ -210,13 +213,21 @@ public class TopLevelAllocator implements BufferAllocator {
 
     @Override
     public DrillBuf buffer(final int size, final int max) {
+      if (ENABLE_ACCOUNTING) {
+        try {
+          injector.injectUncheckedWithFragmentContext(fragmentContext, CHILD_ALLOCATOR_INJECTION_SITE);
+        } catch (NullPointerException e) {
+          return null;
+        }
+      }
+
       if (size == 0) {
         return empty;
       }
       if(!childAcct.reserve(size)) {
         logger.warn("Unable to allocate buffer of size {} due to memory limit. Current allocation: {}", size, getAllocatedMemory(), new Exception());
         return null;
-      };
+      }
 
       final UnsafeDirectLittleEndian buffer = innerAllocator.directBuffer(size, max);
       final DrillBuf wrapped = new DrillBuf(this, childAcct, buffer);
