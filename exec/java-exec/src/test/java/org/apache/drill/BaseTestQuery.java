@@ -19,6 +19,7 @@ package org.apache.drill;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -60,6 +61,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Resources;
 
 import static org.hamcrest.core.StringContains.containsString;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
@@ -274,7 +276,13 @@ public class BaseTestQuery extends ExecTest {
 
   public static List<QueryDataBatch>  testRunAndReturn(QueryType type, String query) throws Exception{
     query = QueryTestUtil.normalizeQuery(query);
-    return client.runQuery(type, query);
+    final long before = countAllocatedMemory();
+    TestAllocationException.testSqlWithException(query);
+    final long after = countAllocatedMemory();
+    assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+    return new ArrayList();
+    // TODO - right now I don't care about the query result comparison, I'm trying to make the queries fail anyway
+//    return client.runQuery(type, query);
   }
 
   public static int testRunAndPrint(final QueryType type, final String query) throws Exception {
@@ -305,7 +313,26 @@ public class BaseTestQuery extends ExecTest {
   }
 
   public static void test(final String query) throws Exception {
-    QueryTestUtil.test(client, query);
+    final long before = countAllocatedMemory();
+    TestAllocationException.testSqlWithException(query);
+    final long after = countAllocatedMemory();
+    assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
+  }
+
+  private static long countAllocatedMemory() {
+    // wait to make sure all fragments finished cleaning up
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // just ignore
+    }
+
+    long allocated = 0;
+    for (Drillbit bit: bits) {
+      allocated += bit.getContext().getAllocator().getAllocatedMemory();
+    }
+
+    return allocated;
   }
 
   protected static int testLogical(String query) throws Exception{
