@@ -27,9 +27,11 @@ import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.beust.jcommander.internal.Lists;
 import com.google.common.base.Preconditions;
 import org.apache.commons.math3.util.Pair;
 import org.apache.drill.QueryTestUtil;
@@ -749,9 +751,50 @@ public class TestDrillbitResilience {
     assertFailsWithException(controls, exceptionClass, exceptionDesc);
   }
 
+  /**
+   * Design for tests
+   *
+   * current
+   *  - loop through injection sites in common WriterRecodBatch
+   *    - injection sites need a String name and an exected exception class
+   *    - hard coded common class with the injector
+   *  - loop through all record readers that will be used below
+   *    - need to set session option to use these
+   *
+   * improvements
+   *  - allow for injecting exceptions into a particular class
+   *    - for these cases I need this to correspond to the session parameter for
+   *      using a particular type of writer
+   *     -
+   *
+   * Not great design to think of these as corresponding lists
+   *  - still want to avoid redundancy where possible
+   *  - what about a builder pattern that produces a list of test cases, where the previous settings
+   *    can be cloned into the next test case
+   */
+
+
+  /*
+  private class WriterResilienceTest {
+
+    final List<Iterator<String>> siteNames = Lists.newArrayList();
+    final List<Iterator<Class<? extends Throwable>>> exceptionClasses = Lists.newArrayList();
+    final List<Iterator<Class>> classesWithInjectors = Lists.newArrayList();
+
+    public void addInjectionSiteNames(Iterator<String> siteNames) {
+      this.siteNames.add(siteNames);
+    }
+
+    public void addExceptionClasses(Iterator<Class<? extends Throwable>> exceptionClasses) {
+      this.exceptionClasses.add(exceptionClasses);
+    }
+  }
+  */
+
   @Test
   public void ioExceptionWhileWritingTable() throws Exception {
-    final String[] injectionSiteNames = { WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
+    final String[] injectionSiteNames = {
+        WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE,
         WriterRecordBatch.UNCHECKED_EXCEPTION_INNER_NEXT_INJECT_SITE,
         WriterRecordBatch.UNCHECKED_EXCEPTION_SETUP_NEW_SCHEMA_SITE,
     };
@@ -763,20 +806,22 @@ public class TestDrillbitResilience {
     };
 
     assertEquals(injectionSiteNames.length, exceptionClasses.length);
+
+    // TODO - add complex types to parquet and json writing
+    final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
+    QueryTestUtil.test(drillClient, "use dfs_test.tmp");
+
     int numTablesCreated = 0;
-    // test each of the injection sites
-    for (int injectionSiteIndex = 0; injectionSiteIndex < injectionSiteNames.length; injectionSiteIndex++) {
-      final String controls =
-          createSingleException(
-              WriterRecordBatch.class,
-              injectionSiteNames[injectionSiteIndex],
-              exceptionClasses[injectionSiteIndex]);
-      // TODO - add complex types to parquet and json writing
-      final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
-      QueryTestUtil.test(drillClient, "use dfs_test.tmp");
-      String[] formats = new String[]{"json", "csv", "parquet"};
-      // test each of the output formats
-      for (int formatIndex = 0; formatIndex < formats.length; formatIndex++) {
+    String[] formats = new String[]{"json", "csv", "parquet"};
+    // test each of the output formats
+    for (int formatIndex = 0; formatIndex < formats.length; formatIndex++) {
+      // test each of the injection sites
+      for (int injectionSiteIndex = 0; injectionSiteIndex < injectionSiteNames.length; injectionSiteIndex++) {
+        final String controls =
+            createSingleException(
+                WriterRecordBatch.class,
+                injectionSiteNames[injectionSiteIndex],
+                exceptionClasses[injectionSiteIndex]);
         final long before = countAllocatedMemory();
         QueryTestUtil.test(drillClient,
             String.format("alter session set `%s` = '%s'",
@@ -789,6 +834,41 @@ public class TestDrillbitResilience {
         final long after = countAllocatedMemory();
         assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
       }
+    }
+  }
+
+  @Test
+  public void ioExceptionWhileWritingTable2() throws Exception {
+    ExceptionInWriterTest.WriterTestBuilder builder = ExceptionInWriterTest.getBuilder();
+    builder.setClassWithInjector(WriterRecordBatch.class);
+    builder.setInjectionSite(WriterRecordBatch.IO_EXCEPTION_INNER_NEXT_INJECT_SITE);
+    builder.setExceptionClass(IOException.class);
+    String[] formats = new String[]{"json", "csv", "parquet"};
+    for (String format : formats) {
+      builder.setOption(ExecConstants.OUTPUT_FORMAT_VALIDATOR.getOptionName(), format);
+      builder.saveCurrentAsNewTest();
+    }
+
+    final String queryFormatStr = "create table small_test_file_%d as select * from cp.`tpch/nation.parquet`";
+    int numTablesCreated = 0;
+    for (ExceptionInWriterTest testConfig : builder.getTests()) {
+      final String controls =
+          createSingleException(
+              testConfig.classWithInjector,
+              testConfig.siteName,
+              testConfig.exceptionClass);
+      final long before = countAllocatedMemory();
+      for (String optionName : testConfig.options.keySet()) {
+        QueryTestUtil.test(drillClient,
+            String.format("alter session set `%s` = '%s'",
+                optionName, testConfig.options.get(optionName)));
+      }
+      assertFailsWithException(
+          String.format(queryFormatStr, numTablesCreated),
+          controls, testConfig.exceptionClass, testConfig.siteName);
+      numTablesCreated++;
+      final long after = countAllocatedMemory();
+      assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
     }
   }
 
