@@ -339,6 +339,12 @@ public class ParquetRecordReader extends AbstractRecordReader {
         AllocationHelper.allocate(v, recordsPerBatch, 50, 10);
       }
     } catch (NullPointerException e) {
+      // TODO - find the JIRA for fixing the NPEs relating to memory allocation and reference it here
+      // deallocate any buffers that were allocated successfully before a failure to allocate,
+      // indicated by the NPE
+      for (final ValueVector<?, ?, ?> v : vectorMap.values()) {
+        v.clear();
+      }
       throw new OutOfMemoryException();
     }
   }
@@ -457,7 +463,6 @@ public class ParquetRecordReader extends AbstractRecordReader {
       columnStatuses = null;
     }
 
-    columnStatuses.clear();
     codecFactory.close();
 
     if (varLengthReader != null) {

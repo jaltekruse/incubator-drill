@@ -135,7 +135,7 @@ final class PageReader {
       if (parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
         dataReader.loadPage(dictionaryData, pageHeader.compressed_page_size);
       } else {
-        final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
+        DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
         try {
           dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
           DirectBytesDecompressor decompressor = codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
@@ -147,7 +147,9 @@ final class PageReader {
               pageHeader.getUncompressed_page_size());
 
         } finally {
-          compressedData.release();
+          if (compressedData != null) {
+            compressedData.release();
+          }
         }
       }
 
@@ -196,6 +198,8 @@ final class PageReader {
         if( parentColumnReader.columnChunkMetaData.getCodec()== CompressionCodecName.UNCOMPRESSED) {
           dataReader.loadPage(uncompressedData, pageHeader.compressed_page_size);
         }else{
+          // TODO - do I have to worry about an interrupt happening while this method is being called, the buffer
+          // might be able to be allocated without being stored where we can free it later (only in the
           final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
           try{
             dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
@@ -226,13 +230,16 @@ final class PageReader {
       dataReader.loadPage(pageData, pageHeader.compressed_page_size);
     }else{
       final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
+      try {
       dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
       codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
           compressedData,
           pageHeader.compressed_page_size,
           pageData,
           pageHeader.getUncompressed_page_size());
-      compressedData.release();
+      } finally {
+        compressedData.release();
+      }
     }
 
     currentPageCount = pageHeader.data_page_header.num_values;
