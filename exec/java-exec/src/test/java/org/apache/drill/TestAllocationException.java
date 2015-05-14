@@ -61,21 +61,21 @@ public class TestAllocationException extends BaseTestQuery {
     List<Integer> numSkips = new ArrayList();
     // add 1-20
     int i = 0;
-    for (; i < 20; i++ ) {
-      numSkips.add(i);
-    }
+//    for (; i < 20; i++ ) {
+//      numSkips.add(i);
+//    }
     // for 20-40, add every 4th
     for (; i < 50; i += 4 ) {
       numSkips.add(i);
     }
     // for 50-150, add every 10th
-    for (; i < 150; i+= 10 ) {
-      numSkips.add(i);
-    }
-    // for 150-400, add every 30th
-    for (; i < 400; i += 30 ) {
-      numSkips.add(i);
-    }
+//    for (; i < 150; i+= 10 ) {
+//      numSkips.add(i);
+//    }
+//    // for 150-400, add every 30th
+//    for (; i < 400; i += 30 ) {
+//      numSkips.add(i);
+//    }
     for (int currNumSkips : numSkips) {
       String controlsString = "{\"injections\":[{"
           + "\"address\":\"" + endpoint.getAddress() + "\","
