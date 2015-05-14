@@ -22,6 +22,7 @@ import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
+import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -88,10 +89,17 @@ public class TestAllocationException extends BaseTestQuery {
           + "}]}";
       ControlsInjectionUtil.setControls(client, controlsString);
 
-
+      long before = 0;
       try {
         // TODO - this was the old body the the test() method in BaseTestQuery
+
+        before = countAllocatedMemory();
         QueryTestUtil.test(client, query);
+        // The finally below will still be run to check to make sure we aren't leaking memory even if the
+        // test ran successfully
+        // in general this break will save us the time of running the query again once we have gone beyond the number
+        // of allocations required by the entire query
+        break;
       } catch(UserException uex) {
         System.out.println("exception: " + uex.getMessage());
         DrillPBError error = uex.getOrCreatePBError(false);
@@ -100,8 +108,27 @@ public class TestAllocationException extends BaseTestQuery {
         //      Assert.assertEquals(DrillPBError.ErrorType.RESOURCE, error.getErrorType());
         //      Assert.assertTrue("Error message isn't related to memory error",
         //        uex.getMessage().contains(UserException.MEMORY_ERROR_MSG));
+      } finally {
+        long after = countAllocatedMemory();
+        assertEquals(String.format("With a value of %d for nSkips - We are leaking %d bytes", currNumSkips, after - before), before, after);
       }
     }
+  }
+
+  private static long countAllocatedMemory() {
+    // wait to make sure all fragments finished cleaning up
+    try {
+      Thread.sleep(2000);
+    } catch (InterruptedException e) {
+      // just ignore
+    }
+
+    long allocated = 0;
+    for (Drillbit bit: bits) {
+      allocated += bit.getContext().getAllocator().getAllocatedMemory();
+    }
+
+    return allocated;
   }
 
   @Test
