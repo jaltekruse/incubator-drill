@@ -345,7 +345,10 @@ public class ParquetRecordReader extends AbstractRecordReader {
       for (ValueVector v : vectorMap.values()) {
         AllocationHelper.allocate(v, recordsPerBatch, 50, 10);
       }
-    } catch (NullPointerException e) {
+    } catch (Exception e) {
+      for (ValueVector v : vectorMap.values()) {
+        v.clear();
+      }
       throw new OutOfMemoryException();
     }
   }
