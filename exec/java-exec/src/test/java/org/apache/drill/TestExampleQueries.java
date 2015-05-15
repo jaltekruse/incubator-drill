@@ -256,6 +256,11 @@ public class TestExampleQueries extends BaseTestQuery{
   }
 
   @Test
+  public void testSVRV4MultBatch_leakOnAllocFailure() throws Exception{
+    test("select l_orderkey from cp.`tpch/lineitem.parquet` order by l_orderkey limit 10000 ");
+  }
+
+  @Test
   public void testSVRV4Join() throws Exception{
     test("select count(*) from cp.`tpch/lineitem.parquet` l, cp.`tpch/partsupp.parquet` ps \n" +
         " where l.l_partkey = ps.ps_partkey and l.l_suppkey = ps.ps_suppkey ;");

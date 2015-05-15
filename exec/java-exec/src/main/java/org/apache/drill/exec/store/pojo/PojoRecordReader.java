@@ -27,6 +27,7 @@ import java.util.Map;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.memory.OutOfMemoryException;
+import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
 import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.record.MaterializedField.Key;
@@ -116,8 +117,11 @@ public class PojoRecordReader<T> extends AbstractRecordReader {
 
     } catch(SchemaChangeException e) {
       throw new ExecutionSetupException("Failure while setting up schema for PojoRecordReader.", e);
+    } catch(OutOfMemoryRuntimeException e ) {
+      for (PojoWriter writer : writers) {
+        writer.cleanup();
+      }
     }
-
 
   }
 
