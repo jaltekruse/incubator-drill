@@ -74,10 +74,18 @@ public class MergeJoinBatchBuilder implements AutoCloseable {
 
     // transfer VVs to a new RecordBatchData
     RecordBatchData bd = new RecordBatchData(batch);
-    runningBytes += batchBytes;
-    queuedRightBatches.put(batch.getSchema(), bd);
-    recordCount += bd.getRecordCount();
-    return true;
+    boolean success = false;
+    try {
+      runningBytes += batchBytes;
+      queuedRightBatches.put(batch.getSchema(), bd);
+      recordCount += bd.getRecordCount();
+      success = true;
+    } finally {
+      if (!success) {
+        bd.clear();
+      }
+      return true;
+    }
   }
 
   private long getSize(RecordBatch batch) {
