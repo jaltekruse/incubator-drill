@@ -59,6 +59,7 @@ public class TestAllocationException extends BaseTestQuery {
     CoordinationProtos.DrillbitEndpoint endpoint = bits[0].getContext().getEndpoint();
 
     List<Integer> numSkips = new ArrayList();
+    numSkips.add(1);
     /*
     // add 1-20
     int i = 0;
@@ -77,8 +78,7 @@ public class TestAllocationException extends BaseTestQuery {
     for (; i < 400; i += 30 ) {
       numSkips.add(i);
     }
-    */
-    numSkips.add(5);
+     */
     for (int currNumSkips : numSkips) {
       String controlsString = "{\"injections\":[{"
           + "\"address\":\"" + endpoint.getAddress() + "\","
