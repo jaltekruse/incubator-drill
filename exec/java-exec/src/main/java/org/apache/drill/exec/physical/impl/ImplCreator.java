@@ -93,6 +93,8 @@ public class ImplCreator {
       return rootExec;
     } catch(Exception e) {
       context.fail(e);
+      // This is currently an empty list if the creation fails, operators must clean up their own
+      // partially initialized resources
       for(final CloseableRecordBatch crb : creator.getOperators()) {
         AutoCloseables.close(crb, logger);
       }

@@ -137,8 +137,8 @@ public class TestExampleQueries extends BaseTestQuery{
   @Test
   public void testParquetComplex() throws Exception {
     test("select recipe from cp.`parquet/complex.parquet`");
-    test("select * from cp.`parquet/complex.parquet`");
-    test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
+//    test("select * from cp.`parquet/complex.parquet`");
+//    test("select recipe, c.inventor.name as name, c.inventor.age as age from cp.`parquet/complex.parquet` c");
   }
 
   @Test // see DRILL-553

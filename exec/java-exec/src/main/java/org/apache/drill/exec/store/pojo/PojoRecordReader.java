@@ -180,6 +180,9 @@ public class PojoRecordReader<T> extends AbstractRecordReader {
 
   @Override
   public void cleanup() {
+    for (PojoWriter writer : writers) {
+      writer.cleanup();
+    }
   }
 
 }
