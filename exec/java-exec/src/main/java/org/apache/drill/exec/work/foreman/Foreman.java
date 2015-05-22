@@ -833,10 +833,13 @@ public class Foreman implements Runnable {
         case FAILED: {
           assert exception != null;
           queryManager.markEndTime();
-          recordNewState(QueryState.FAILED);
-          queryManager.cancelExecutingFragments(drillbitContext);
           foremanResult.setFailed(exception);
-          foremanResult.close();
+          if (queryManager.cancelExecutingFragments(drillbitContext)) {
+            recordNewState(QueryState.FAILING);
+          } else {
+            recordNewState(QueryState.FAILED);
+            foremanResult.close();
+          }
           return;
         }
 
@@ -862,6 +865,12 @@ public class Foreman implements Runnable {
            * These amount to a completion of the cancellation requests' cleanup;
            * now we can clean up and send the result.
            */
+          foremanResult.close();
+        }
+        return;
+
+      case FAILING:
+        if (newState == QueryState.COMPLETED) {
           foremanResult.close();
         }
         return;

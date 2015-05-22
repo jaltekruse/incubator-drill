@@ -202,8 +202,17 @@ public class QueryManager {
    * (2) Intermediate fragment: pending or running, send the cancel signal through a tunnel (for local and remote
    *    fragments). The actual cancel is done by delegating the cancel to the work bus.
    * (3) Leaf fragment: running, send the cancel signal through a tunnel. The cancel is done directly.
+   *
+   * @return false if there was no fragment to cancel, true otherwise
    */
-  void cancelExecutingFragments(final DrillbitContext drillbitContext) {
+  boolean cancelExecutingFragments(final DrillbitContext drillbitContext) {
+    if (fragmentDataSet.isEmpty()) {
+      logger.debug("No fragment to cancel");
+      return false;
+    }
+
+    logger.debug("cancelling {} fragments", fragmentDataSet.size());
+
     final Controller controller = drillbitContext.getController();
     for(final FragmentData data : fragmentDataSet) {
       switch(data.getState()) {
@@ -225,6 +234,8 @@ public class QueryManager {
         break;
       }
     }
+
+    return true;
   }
 
   /**
@@ -283,6 +294,7 @@ public class QueryManager {
     switch (queryState) {
       case PENDING:
       case RUNNING:
+      case FAILING:
       case CANCELLATION_REQUESTED:
         profileEStore.put(stringQueryId, getQueryInfo());  // store as ephemeral query profile.
         break;

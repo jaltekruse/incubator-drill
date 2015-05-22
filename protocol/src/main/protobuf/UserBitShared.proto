@@ -158,6 +158,7 @@ message QueryResult {
 	  CANCELED = 3; // query has been cancelled, and all cleanup is complete
 	  FAILED = 4;
 	  CANCELLATION_REQUESTED = 5; // cancellation has been requested, and is being processed
+    FAILING = 6; // a failure occured, cancellation has been requested and is being processed
 	}
 
 	optional QueryState query_state = 1;
