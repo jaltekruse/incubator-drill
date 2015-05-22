@@ -42,7 +42,8 @@ public final class QueryResult implements Externalizable, Message<QueryResult>, 
         COMPLETED(2),
         CANCELED(3),
         FAILED(4),
-        CANCELLATION_REQUESTED(5);
+        CANCELLATION_REQUESTED(5),
+        FAILING(6);
         
         public final int number;
         
@@ -66,6 +67,7 @@ public final class QueryResult implements Externalizable, Message<QueryResult>, 
                 case 3: return CANCELED;
                 case 4: return FAILED;
                 case 5: return CANCELLATION_REQUESTED;
+                case 6: return FAILING;
                 default: return null;
             }
         }
