@@ -294,6 +294,12 @@ public class TestFlatten extends BaseTestQuery {
     test(q2);
   }
 
+  @Test
+  public void testFlattenWithComplexNeighboringFields() throws Exception {
+    test("select name, hours, flatten(categories) from (select name, hours, categories from dfs.`/Users/jaltekruse/test_data_drill/yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_business.json` as yelp where name like '%zpizza%')");
+    test("select name, hours, flatten(categories) from dfs.`/Users/jaltekruse/test_data_drill/yelp_dataset_challenge_academic_dataset/yelp_academic_dataset_business.json` as yelp limit 50");
+  }
+
   @Test //DRILL-2099
   public void testFlattenAfterSort() throws Exception {
     String query = "select flatten(s1.rms.rptd) rptds from " +
