@@ -103,7 +103,7 @@
 
   <div class="page-header"></div>
   <h3>Query Profile</h3>
-  <p>STATE: ${model.getProfile().getState().name()}</p>
+  <p>STATE: ${model.queryState}</p>
   <p>FOREMAN: ${model.getProfile().getForeman().getAddress()}</p>
   <p>TOTAL FRAGMENTS: ${model.getProfile().getTotalFragments()}</p>
 

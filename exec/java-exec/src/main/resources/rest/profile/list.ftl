@@ -18,7 +18,7 @@
   <div class="page-header">
   </div>
   <#if (model.getRunningQueries()?size > 0) >
-    <h3>Running Queries</h3>
+    <h3>Active Queries</h3>
     <div class="table-responsive">
       <table class="table table-hover">
         <thead>

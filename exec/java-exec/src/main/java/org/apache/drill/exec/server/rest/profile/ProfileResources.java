@@ -37,6 +37,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryInfo;
+import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.proto.UserBitShared.QueryProfile;
 import org.apache.drill.exec.proto.helper.QueryIdHelper;
 import org.apache.drill.exec.store.sys.PStore;
@@ -70,8 +71,8 @@ public class ProfileResources {
       this.time = new Date(time);
       this.foreman = foreman;
       this.location = "http://localhost:8047/profile/" + queryId + ".json";
-      this.query = query = query.substring(0,  Math.min(query.length(), 150));
-      this.state = state;
+      this.query = query.substring(0,  Math.min(query.length(), 150));
+      this.state = state.equalsIgnoreCase(QueryState.FAILING.name()) ? "FAILED" : state;
       this.user = user;
     }
 

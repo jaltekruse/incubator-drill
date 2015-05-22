@@ -28,6 +28,7 @@ import org.apache.drill.exec.proto.UserBitShared.MajorFragmentProfile;
 import org.apache.drill.exec.proto.UserBitShared.MinorFragmentProfile;
 import org.apache.drill.exec.proto.UserBitShared.OperatorProfile;
 import org.apache.drill.exec.proto.UserBitShared.QueryProfile;
+import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.proto.helper.QueryIdHelper;
 
 import com.google.common.collect.Lists;
@@ -49,6 +50,11 @@ public class ProfileWrapper {
 
   public QueryProfile getProfile() {
     return profile;
+  }
+
+  public String getQueryState() {
+    final QueryState state = profile.getState();
+    return state == QueryState.FAILING ? "FAILED" : state.name();
   }
 
   public String getId() {
