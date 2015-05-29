@@ -405,7 +405,7 @@ public class DrillTestWrapper {
   }
 
   protected void addToMaterializedResults(List<Map> materializedRecords,  List<QueryDataBatch> records, RecordBatchLoader loader,
-                                          BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+                                          BatchSchema schema) throws UnsupportedEncodingException, SchemaChangeException {
     long totalRecords = 0;
     QueryDataBatch batch;
     int size = records.size();

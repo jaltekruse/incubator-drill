@@ -283,11 +283,17 @@ public class StoragePluginRegistry implements Iterable<Map.Entry<String, Storage
     return plugins.entrySet().iterator();
   }
 
-  public RuleSet getStoragePluginRuleSet() {
+  public RuleSet getStoragePluginRuleSet(QueryContext context) {
     // query registered engines for optimizer rules and build the storage plugin RuleSet
     Builder<RelOptRule> setBuilder = ImmutableSet.builder();
     for (StoragePlugin plugin : this.plugins.values()) {
       Set<StoragePluginOptimizerRule> rules = plugin.getOptimizerRules();
+      for (StoragePluginOptimizerRule rule : rules) {
+        // TODO - consider passing this in the constructor of StoragePluginOptimizerRule to
+        // make initialization clearer and its availability more obvious, would require changing
+        // all of the plugins constructors to take it
+        rule.setQueryContext(context);
+      }
       if (rules != null && rules.size() > 0) {
         setBuilder.addAll(rules);
       }

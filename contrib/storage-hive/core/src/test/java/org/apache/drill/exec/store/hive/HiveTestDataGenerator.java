@@ -27,7 +27,9 @@ import java.util.Map;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.drill.common.exceptions.DrillException;
+import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.store.StoragePluginRegistry;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.CommandNeedRetryException;
@@ -36,6 +38,7 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
 import com.google.common.collect.Maps;
+import org.apache.hadoop.mapred.JobConf;
 
 public class HiveTestDataGenerator {
   private static final String HIVE_TEST_PLUGIN_NAME = "hive";
@@ -46,7 +49,17 @@ public class HiveTestDataGenerator {
   private final String whDir;
   private final Map<String, String> config;
 
-  public static synchronized HiveTestDataGenerator getInstance() throws Exception {
+  // TODO - decide if I want to actually use Drill to generate the parquet file
+  /**
+   * Get an instance of the test data generator for Hive. If no instance has been created this
+   * will prompt the generation of test tables. A DrillClient is passed to enable generation of
+   * parquet files.
+   *
+   * @param client - drill client used to generate files
+   * @return
+   * @throws Exception
+   */
+  public static synchronized HiveTestDataGenerator getInstance(DrillClient client) throws Exception {
     if (instance == null) {
       final File db = Files.createTempDir();
       db.deleteOnExit();
@@ -118,6 +131,8 @@ public class HiveTestDataGenerator {
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
     conf.set("hive.metastore.warehouse.dir", whDir);
+    conf.set("mapred.job.tracker", "local");
+    conf.set("hive.exec.submit.local.task.via.child", "false");
 
     SessionState ss = new SessionState(conf);
     SessionState.start(ss);
@@ -201,7 +216,8 @@ public class HiveTestDataGenerator {
         "  string_part='string', " +
         "  varchar_part='varchar', " +
         "  timestamp_part='2013-07-05 17:01:00', " +
-        "  date_part='2013-07-05')"
+        "  date_part='2013-07-05' " +
+        ")"
     );
 
     // Load data into table 'readtest'
@@ -223,8 +239,29 @@ public class HiveTestDataGenerator {
         "  string_part='string', " +
         "  varchar_part='varchar', " +
         "  timestamp_part='2013-07-05 17:01:00', " +
-        "  date_part='2013-07-05')", testDataFile));
+        "  date_part='2013-07-05'" +
+        ")",
+            testDataFile)
+    );
 
+    executeQuery(hiveDriver,
+        "CREATE EXTERNAL TABLE IF NOT EXISTS readtest_parquet (" +
+            "  boolean_field BOOLEAN," +
+            "  tinyint_field TINYINT," +
+            "  double_field DOUBLE," +
+            "  float_field FLOAT," +
+            "  int_field INT," +
+            "  bigint_field BIGINT," +
+            "  smallint_field SMALLINT," +
+            "  string_field STRING" +
+            ") STORED as PARQUET location '/Users/jaltekruse/test_data_drill/par_hive_types'"
+    );
+//            "AS SELECT " +
+//        "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+//        "FROM readtest"
+//            /Users/jaltekruse/test_data_drill/par_hive_types
+
+    /*
     // create a table that has all Hive types. This is to test how hive tables metadata is populated in
     // Drill's INFORMATION_SCHEMA.
     executeQuery(hiveDriver,
@@ -275,6 +312,7 @@ public class HiveTestDataGenerator {
     executeQuery(hiveDriver,
         String.format("LOAD DATA LOCAL INPATH '%s' INTO TABLE default.partition_pruning_test partition(c=2, d=3, e=2)", testDateDataFile));
 
+    */
     ss.close();
   }
 
