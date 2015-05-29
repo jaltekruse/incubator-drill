@@ -17,13 +17,14 @@
  */
 package org.apache.drill.exec.planner.logical;
 
+import org.apache.calcite.schema.TranslatableTable;
 import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
 
-public class DynamicDrillTable extends DrillTable{
+public class DynamicDrillTable extends DrillTable {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DynamicDrillTable.class);
 
   private RelDataTypeHolder holder = new RelDataTypeHolder();

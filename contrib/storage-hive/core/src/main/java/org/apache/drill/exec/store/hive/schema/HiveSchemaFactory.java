@@ -100,6 +100,15 @@ public class HiveSchemaFactory implements SchemaFactory {
         .build(new TableLoaderLoader());
   }
 
+  public String getTablePathOnFs(String table) {
+    try {
+      // TODO check the file path separator, apparently hadoop always uses unix path formatting even on windows
+      return mClient.getConfigValue("hive.metastore.warehouse.dir", "VALUE NOT SET IN HIVE CONFIG") + "/" + table;
+    } catch (TException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   private class TableNameLoader extends CacheLoader<String, List<String>> {
 
     @Override

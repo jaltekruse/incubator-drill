@@ -88,7 +88,8 @@ public class TestHiveStorage extends HiveTestBase {
                   "string_part",
                   "varchar_part",
                   "timestamp_part",
-                  "date_part")
+                  "date_part"
+                  )
               .baselineValues(
                   "binaryfield",
                   false,
@@ -123,10 +124,13 @@ public class TestHiveStorage extends HiveTestBase {
                   "string",
                   "varchar",
                   new DateTime(Timestamp.valueOf("2013-07-05 17:01:00").getTime()),
-                  new DateTime(Date.valueOf("2013-07-05").getTime()))
+                  new DateTime(Date.valueOf("2013-07-05").getTime())
+                  )
               .baselineValues( // All fields are null, but partition fields have non-null values
                   "", // For binary (varchar, string too) empty value is considered as empty string instead of "null"
-                  null, null, null, null, null, null, null, null, null, null, null, null,
+                  null, null,
+                  null, null, null, null, null,
+                  null, null, null, null, null,
                   "", // string_field
                   "", // varchar_field
                   null, null,
@@ -146,11 +150,29 @@ public class TestHiveStorage extends HiveTestBase {
                   "string",
                   "varchar",
                   new DateTime(Timestamp.valueOf("2013-07-05 17:01:00").getTime()),
-                  new DateTime(Date.valueOf("2013-07-05").getTime()))
+                  new DateTime(Date.valueOf("2013-07-05").getTime())
+              )
               .go();
+
       } finally {
           test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
       }
+  }
+
+  @Test
+  public void parquetBackedTableRead() throws Exception  {
+//    test("SELECT * FROM hive.readtest_parquet");
+    test("select " +
+        "boolean_field, " +
+        "tinyint_field, " +
+        "double_field, " +
+        "float_field, " +
+        "int_field, " +
+        "bigint_field, " +
+//        "smallint_field " + //, " +
+        "string_field " +
+        "from hive.readtest_parquet");
+
   }
 
   @Test

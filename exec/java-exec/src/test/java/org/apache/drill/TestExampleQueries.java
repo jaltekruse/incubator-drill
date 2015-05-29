@@ -32,6 +32,27 @@ import static org.apache.drill.TestBuilder.listOf;
 public class TestExampleQueries extends BaseTestQuery {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
+  @Test
+  public void generateParquetFileWithHiveTypes() throws Exception {
+    test("use dfs_test.tmp");
+    test("alter session set `store.json.all_text_mode` = true");
+    System.out.println(getDfsTestTmpSchemaLocation());
+    test("create table par_hive_types as select " +
+        "cast(bit_col as boolean)      as boolean_field, " +
+        // can't figure out what this actually stores as in a parquet file, even looking at the hive
+        // code in parquet-mr
+        // scratch that, this seems to be confusingly called 'byte' at the source level, and
+        // stored in parquet as int 32
+        "cast(tinyint_col as integer)  tinyint_field, " +
+        "cast(float8_col as double)    double_field, " +
+        "cast(float4_col as float)     float_field, " +
+        "cast(int_col as integer)      int_field, " +
+        "cast(bigint_col as bigint)    bigint_field, " +
+        "cast(smallint_col as integer) smallint_field, " +
+        "varchar_col                   string_field " +
+        "from cp.`/parquet/alltypes.json`");
+  }
+
   @Test // see DRILL-2328
   public void testConcatOnNull() throws Exception {
     try {
@@ -40,7 +61,7 @@ public class TestExampleQueries extends BaseTestQuery {
 
       // Test Left Null
       testBuilder()
-          .sqlQuery("select (mi || lname) as CONCATOperator, mi, lname, concat(mi, lname) as CONCAT from concatNull")
+          .sqlQuery("select (mi || lname) as CONCATOperator,\n mi, lname, concat(mi, lname) as CONCAT from concatNull")
           .ordered()
           .baselineColumns("CONCATOperator", "mi", "lname", "CONCAT")
           .baselineValues("A.Nowmer", "A.", "Nowmer", "A.Nowmer")
@@ -132,7 +153,7 @@ public class TestExampleQueries extends BaseTestQuery {
 
   @Test
   public void testTextInClasspathStorage() throws Exception {
-    test("select * from cp.`/store/text/classpath_storage_csv_test.csv`");
+    test("select columns, a from cp.`/store/text/classpath_storage_csv_test.csv`");
   }
 
   @Test

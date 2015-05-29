@@ -70,8 +70,8 @@ public class PlannerSettings implements Context{
       new RangeLongValidator("planner.identifier_max_length", 128 /* A minimum length is needed because option names are identifiers themselves */,
                               Integer.MAX_VALUE, DEFAULT_IDENTIFIER_MAX_LENGTH);
 
-  public OptionManager options = null;
-  public FunctionImplementationRegistry functionImplementationRegistry = null;
+  private OptionManager options = null;
+  private FunctionImplementationRegistry functionImplementationRegistry = null;
 
   public PlannerSettings(OptionManager options, FunctionImplementationRegistry functionImplementationRegistry){
     this.options = options;
@@ -198,4 +198,7 @@ public class PlannerSettings implements Context{
   }
 
 
+  public FunctionImplementationRegistry getFunctionImplementationRegistry() {
+    return functionImplementationRegistry;
+  }
 }
