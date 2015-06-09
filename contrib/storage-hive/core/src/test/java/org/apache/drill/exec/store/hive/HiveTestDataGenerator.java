@@ -132,7 +132,7 @@ public class HiveTestDataGenerator {
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
     conf.set("hive.metastore.warehouse.dir", whDir);
     conf.set("mapred.job.tracker", "local");
-    conf.set("hive.exec.submit.local.task.via.child", "false");
+//    conf.set("hive.exec.submit.local.task.via.child", "false");
 
     SessionState ss = new SessionState(conf);
     SessionState.start(ss);
@@ -256,10 +256,11 @@ public class HiveTestDataGenerator {
             "  string_field STRING" +
             ") STORED as PARQUET location '/Users/jaltekruse/test_data_drill/par_hive_types'"
     );
-//            "AS SELECT " +
-//        "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
-//        "FROM readtest"
-//            /Users/jaltekruse/test_data_drill/par_hive_types
+    executeQuery(hiveDriver,
+        "CREATE TABLE IF NOT EXISTS readtest_parquet_ctas " +
+            "AS SELECT " +
+        "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+        "FROM readtest");
 
     /*
     // create a table that has all Hive types. This is to test how hive tables metadata is populated in
