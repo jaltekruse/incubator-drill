@@ -118,6 +118,7 @@ public class HiveTestDataGenerator {
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "file:///");
     conf.set("hive.metastore.warehouse.dir", whDir);
+//    conf.set("mapred.job.tracker", "local");
 
     SessionState ss = new SessionState(conf);
     SessionState.start(ss);
@@ -247,6 +248,12 @@ public class HiveTestDataGenerator {
         "structType STRUCT<sint:INT,sboolean:BOOLEAN,sstring:STRING>, " +
         "uniontypeType UNIONTYPE<int, double, array<string>>)"
     );
+
+    executeQuery(hiveDriver,
+        "CREATE TABLE IF NOT EXISTS readtest_parquet_ctas " +
+            "AS SELECT " +
+            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+            "FROM readtest");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
