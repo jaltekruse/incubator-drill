@@ -65,6 +65,8 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import org.apache.hadoop.security.UserGroupInformation;
 
+// TODO - possibly move the JSON annotation to a subclass so avoid the need for so many JsonIgnore annotations
+// TODO - make the data members private and add getters
 @JsonTypeName("hive-scan")
 public class HiveScan extends AbstractGroupScan {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(HiveScan.class);
@@ -312,6 +314,14 @@ public class HiveScan extends AbstractGroupScan {
         // having a rowCount of 0 can mean the statistics were never computed
         estRowCount = data/1024;
       }
+
+      // Hive tables are available through the SerDe interface which
+      // has a high overhead for getting data into Drill. These reads
+      // are re-planned as native Drill reads which are faster and
+      // the preference of those plans is indicated by this scaling factor.
+      double scaleFactor = 100.0;
+      estRowCount *= scaleFactor;
+
       logger.debug("estimated row count = {}, stats row count = {}", estRowCount, rowCount);
       return new ScanStats(GroupScanProperty.NO_EXACT_ROW_COUNT, estRowCount, 1, data);
     } catch (final IOException e) {

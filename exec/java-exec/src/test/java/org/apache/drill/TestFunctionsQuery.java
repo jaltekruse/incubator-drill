@@ -750,6 +750,19 @@ public class TestFunctionsQuery extends BaseTestQuery {
   }
 
   @Test
+  public void testRegexSubstring() throws Exception {
+    // TODO - file a JIRA, this fails in constant folding
+    test("alter session set `planner.enable_constant_folding` = false;");
+    test("select substr(substr('column=1234','=.*$'), 2)" +
+        "from cp.`employee.json` where employee_id = 1");
+  }
+
+  @Test
+  public void testSingleFileNestedInDir() throws Exception {
+    test("select * from dfs.`/Users/jaltekruse/test_data_drill/json_test_files/nested_dir_with_one_file`");
+  }
+
+  @Test
   public void testOptiqValidationFunctions() throws Exception {
     String query = "select trim(first_name) as TRIM_STR, substring(first_name, 2) as SUB_STR " +
         "from cp.`employee.json` where employee_id = 1";

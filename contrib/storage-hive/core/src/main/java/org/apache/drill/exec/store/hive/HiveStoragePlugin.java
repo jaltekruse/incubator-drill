@@ -28,6 +28,7 @@ import org.apache.calcite.schema.SchemaPlus;
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.planner.sql.logical.ConvertHiveTaleScanToNativeRead;
 import org.apache.drill.exec.planner.sql.logical.HivePushPartitionFilterIntoScan;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.store.AbstractStoragePlugin;
@@ -85,8 +86,13 @@ public class HiveStoragePlugin extends AbstractStoragePlugin {
   public void registerSchemas(SchemaConfig schemaConfig, SchemaPlus parent) throws IOException {
     schemaFactory.registerSchemas(schemaConfig, parent);
   }
+
+  public String getTablePathOnFs(String table) {
+    return schemaFactory.getTablePathOnFs(table);
+  }
+
   public Set<StoragePluginOptimizerRule> getOptimizerRules() {
-    return ImmutableSet.of(HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_PROJECT, HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_SCAN);
+    return ImmutableSet.of(HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_PROJECT, HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_SCAN, ConvertHiveTaleScanToNativeRead.INSTANCE);
   }
 
 }

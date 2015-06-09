@@ -19,11 +19,20 @@ package org.apache.drill.exec.store;
 
 import org.apache.calcite.plan.RelOptRule;
 import org.apache.calcite.plan.RelOptRuleOperand;
+import org.apache.drill.exec.ops.QueryContext;
 
 public abstract class StoragePluginOptimizerRule extends RelOptRule {
 
+  private QueryContext context;
   public StoragePluginOptimizerRule(RelOptRuleOperand operand, String description) {
     super(operand, description);
   }
 
+  public void setQueryContext(QueryContext context) {
+    this.context = context;
+  }
+
+  protected QueryContext getQueryContext() {
+    return context;
+  }
 }

@@ -193,6 +193,11 @@ public class QueryContext implements AutoCloseable, UdfUtilities {
     return drillbitContext.getEndpoint();
   }
 
+  // TODO - try to figure out a way to not expose this here
+  public DrillbitContext getDrillbitContext() {
+    return drillbitContext;
+  }
+
   public StoragePluginRegistry getStorage() {
     return drillbitContext.getStorage();
   }

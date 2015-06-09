@@ -17,7 +17,9 @@
  */
 package org.apache.drill.exec.hive;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.hadoop.fs.FileSystem;
 import org.joda.time.DateTime;
@@ -26,6 +28,9 @@ import org.junit.Test;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class TestHiveStorage extends HiveTestBase {
   @Test
@@ -158,6 +163,70 @@ public class TestHiveStorage extends HiveTestBase {
       } finally {
           test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
       }
+  }
+
+  @Test
+  public void parquetBackedTableRead() throws Exception  {
+//    test("SELECT * FROM hive.readtest_parquet");
+    String[] partCols = {
+        "boolean_part",
+        "tinyint_part",
+        "double_part",
+        "float_part",
+        "int_part",
+        "bigint_part",
+        "smallint_part",
+        "string_part"
+    };
+
+    String[] regularCols = {
+        "boolean_field",
+        "tinyint_field",
+        "double_field",
+        "float_field",
+        "int_field",
+        "bigint_field",
+        "smallint_field",
+        "string_field"
+    };
+    List<String> partColsList = Lists.newArrayList(partCols);
+    List<String> regularColsList = Lists.newArrayList(regularCols);
+    List<String> allColsList = Lists.newArrayList(partColsList);
+    allColsList.addAll(regularColsList);
+    String[] allCols = allColsList.toArray(new String[allColsList.size()]);
+
+    testBuilder()
+        .sqlQuery("select " +
+            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(regularCols) + " " +
+            "from hive.parquet_text_mixed_fileformat")
+        .unOrdered()
+        .baselineColumns(allCols)
+        .baselineValues(
+            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
+        .baselineValues(
+            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            null, null, null, null, null, null, null, "")
+        .go();
+
+    // try to swap the partition column order in the select list
+    Collections.swap(partColsList, 0, 1);
+
+    testBuilder()
+        .sqlQuery("select " +
+            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(regularCols) + " " +
+            "from hive.parquet_text_mixed_fileformat")
+        .unOrdered()
+        .baselineColumns(allCols)
+        .baselineValues(
+            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
+        .baselineValues(
+            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            null, null, null, null, null, null, null, "")
+        .go();
   }
 
   @Test

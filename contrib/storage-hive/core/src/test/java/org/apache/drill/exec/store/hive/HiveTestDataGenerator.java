@@ -19,14 +19,18 @@
 package org.apache.drill.exec.store.hive;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.exceptions.DrillException;
+import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -47,6 +51,14 @@ public class HiveTestDataGenerator {
   private final String whDir;
   private final Map<String, String> config;
 
+  /**
+   * Get an instance of the test data generator for Hive. If no instance has been created this
+   * will prompt the generation of test tables. A DrillClient is passed to enable generation of
+   * parquet files.
+   *
+   * @return
+   * @throws Exception
+   */
   public static synchronized HiveTestDataGenerator getInstance() throws Exception {
     if (instance == null) {
       final String dbDir = getTempDir("metastore_db");
@@ -109,6 +121,7 @@ public class HiveTestDataGenerator {
   }
 
   private void generateTestData() throws Exception {
+
     HiveConf conf = new HiveConf(SessionState.class);
 
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
@@ -224,7 +237,8 @@ public class HiveTestDataGenerator {
         "  string_part='string', " +
         "  varchar_part='varchar', " +
         "  timestamp_part='2013-07-05 17:01:00', " +
-        "  date_part='2013-07-05')"
+        "  date_part='2013-07-05' " +
+        ")"
     );
 
     // Load data into table 'readtest'
@@ -246,8 +260,29 @@ public class HiveTestDataGenerator {
         "  string_part='string', " +
         "  varchar_part='varchar', " +
         "  timestamp_part='2013-07-05 17:01:00', " +
-        "  date_part='2013-07-05')", testDataFile));
+        "  date_part='2013-07-05'" +
+        ")",
+            testDataFile)
+    );
 
+//    executeQuery(hiveDriver,
+//        "CREATE EXTERNAL TABLE IF NOT EXISTS readtest_parquet (" +
+//            "  boolean_field BOOLEAN," +
+//            "  tinyint_field TINYINT," +
+//            "  double_field DOUBLE," +
+//            "  float_field FLOAT," +
+//            "  int_field INT," +
+//            "  bigint_field BIGINT," +
+//            "  smallint_field SMALLINT," +
+//            "  string_field STRING" +
+//            ") STORED as PARQUET location '/Users/jaltekruse/test_data_drill/par_hive_types'"
+//    );
+//            "AS SELECT " +
+//        "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+//        "FROM readtest"
+//            /Users/jaltekruse/test_data_drill/par_hive_types
+
+    /*
     // create a table that has all Hive types. This is to test how hive tables metadata is populated in
     // Drill's INFORMATION_SCHEMA.
     executeQuery(hiveDriver,
@@ -270,6 +305,103 @@ public class HiveTestDataGenerator {
         "structType STRUCT<sint:INT,sboolean:BOOLEAN,sstring:STRING>, " +
         "uniontypeType UNIONTYPE<int, double, array<string>>)"
     );
+    */
+
+    executeQuery(hiveDriver, "SHOW CREATE TABLE readtest");
+
+    executeQuery(hiveDriver, "SHOW PARTITIONS readtest");
+
+    executeQuery(hiveDriver, "select * from readtest");
+
+    executeQuery(hiveDriver, "" +
+        "CREATE TABLE parquet_text_mixed_fileformat (" +
+        "  boolean_field BOOLEAN," +
+        "  tinyint_field TINYINT," +
+        "  double_field DOUBLE," +
+        "  float_field FLOAT," +
+        "  int_field INT," +
+        "  bigint_field BIGINT," +
+        "  smallint_field SMALLINT," +
+        "  string_field STRING" +
+        ") PARTITIONED BY (" +
+        "  boolean_part BOOLEAN," +
+        "  tinyint_part TINYINT," +
+        "  double_part DOUBLE," +
+        "  float_part FLOAT," +
+        "  int_part INT," +
+        "  bigint_part BIGINT," +
+        "  smallint_part SMALLINT," +
+        "  string_part STRING" +
+        ") ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE");
+
+//        "CREATE TABLE parquet_mixed_fileformat  ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE " +
+
+    // Add a partition to table 'readtest'
+    executeQuery(hiveDriver,
+        "ALTER TABLE parquet_text_mixed_fileformat ADD IF NOT EXISTS PARTITION ( " +
+            "  boolean_part='true', " +
+            "  tinyint_part='64', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string' " +
+            ")"
+    );
+
+    executeQuery(hiveDriver,
+        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+            "  tinyint_part='64', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
+            "SELECT " +
+            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+            "FROM readtest ");
+
+    System.out.println("+#+$@+%+@#$+%#@+$%+@#$%+@#+$%+@#$+%+@$+%#@+$%+@%+$%+@#$+%+");
+    executeQuery(hiveDriver, "select * from parquet_text_mixed_fileformat ");
+
+    executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_text_mixed_fileformat ");
+//    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat set SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+    executeQuery(hiveDriver, "ALTER TABLE parquet_text_mixed_fileformat " +
+        "SET FILEFORMAT " +
+        "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' " +
+        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
+        "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+//    executeQuery(hiveDriver,
+//        "INSERT INTO TABLE parquet_text_mixed_fileformat  " +
+//            "SELECT " +
+//            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+//            "FROM readtest ");
+
+    executeQuery(hiveDriver,
+        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+//            changed this from 64
+            "  tinyint_part='63', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
+            "SELECT " +
+            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+            "FROM readtest ");
+
+//    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
+//        "     SET FILEFORMAT " +
+//        "     INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'     OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");

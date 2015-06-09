@@ -26,6 +26,7 @@ import org.apache.calcite.schema.SchemaPlus;
 
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
@@ -110,10 +111,7 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     return config;
   }
 
-  @Override
-  public AbstractGroupScan getPhysicalScan(String userName, JSONOptions selection, List<SchemaPath> columns)
-      throws IOException {
-    FormatSelection formatSelection = selection.getWith(context.getConfig(), FormatSelection.class);
+  private FormatPlugin getFormatPlugin(FormatSelection formatSelection) {
     FormatPlugin plugin;
     if (formatSelection.getFormat() instanceof NamedFormatPluginConfig) {
       plugin = formatPluginsByName.get( ((NamedFormatPluginConfig) formatSelection.getFormat()).name);
@@ -121,9 +119,32 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
       plugin = formatPluginsByConfig.get(formatSelection.getFormat());
     }
     if (plugin == null) {
-      throw new IOException(String.format("Failure getting requested format plugin named '%s'.  It was not one of the format plugins registered.", formatSelection.getFormat()));
+      // TODO - think about the right exception type to use here
+      throw UserException.planError().message(
+          "Failure getting requested format plugin named '%s'. " +
+          "It was not one of the format plugins registered.",
+          formatSelection.getFormat())
+          .build();
     }
+    return plugin;
+  }
+
+  public AbstractGroupScan getPhysicalScan(String userName,
+                                           FormatPlugin plugin,
+                                           JSONOptions selection,
+                                           List<SchemaPath> columns) throws IOException {
+    FormatSelection formatSelection = selection.getWith(context.getConfig(), FormatSelection.class);
     return plugin.getGroupScan(userName, formatSelection.getSelection(), columns);
+  }
+
+  // TODO - add an alternative implementation of this method that allows passing a format plugin
+  // rather than getting it out of the registry
+  @Override
+  public AbstractGroupScan getPhysicalScan(String userName,
+                                           JSONOptions selection,
+                                           List<SchemaPath> columns) throws IOException {
+    FormatSelection formatSelection = selection.getWith(context.getConfig(), FormatSelection.class);
+    return getPhysicalScan(userName, getFormatPlugin(formatSelection), selection, columns);
   }
 
   @Override

@@ -316,6 +316,7 @@ public class WorkspaceSchemaFactory {
         }
       } catch (IOException e) {
         logger.debug("Failed to create DrillTable with root {} and name {}", config.getLocation(), key, e);
+        // TODO - shouldn't we throw an exception here? do the consumers of this method handle null?
       }
 
       return null;

@@ -81,6 +81,15 @@ public class HiveSchemaFactory implements SchemaFactory {
     }
   }
 
+  public String getTablePathOnFs(String table) {
+    try {
+      // TODO check the file path separator, apparently hadoop always uses unix path formatting even on windows
+      return globalMetastoreClient.getConfigValue("hive.metastore.warehouse.dir", "VALUE NOT SET IN HIVE CONFIG") + "/" + table;
+    } catch (TException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   /**
    * Does Drill needs to impersonate as user connected to Drill when reading data from Hive warehouse location?
    * @return True when both Drill impersonation and Hive impersonation are enabled.
