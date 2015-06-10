@@ -171,7 +171,7 @@ public class TestHiveStorage extends HiveTestBase {
         "bigint_field, " +
 //        "smallint_field " + //, " +
         "string_field " +
-        "from hive.readtest_parquet");
+        "from hive.parquet_mixed_fileformat");
 
   }
 
