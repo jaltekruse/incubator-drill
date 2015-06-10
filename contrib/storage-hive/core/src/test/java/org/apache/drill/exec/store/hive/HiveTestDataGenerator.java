@@ -270,7 +270,7 @@ public class HiveTestDataGenerator {
         "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
         "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
     executeQuery(hiveDriver,
-        "INSERT INTO parquet_mixed_fileformat  " +
+        "INSERT INTO TABLE parquet_mixed_fileformat  " +
             "SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
