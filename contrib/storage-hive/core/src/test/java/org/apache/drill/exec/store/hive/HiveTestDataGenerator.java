@@ -255,12 +255,18 @@ public class HiveTestDataGenerator {
         "uniontypeType UNIONTYPE<int, double, array<string>>)"
     );
 
+    executeQuery(hiveDriver, "SHOW CREATE TABLE readtest");
+
     executeQuery(hiveDriver,
-        "CREATE TABLE readtest_parquet_ctas stored as parquet " +
+        "CREATE TABLE parquet_mixed_fileformat  " +
             "AS SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
-    executeQuery(hiveDriver, "SHOW CREATE TABLE readtest_parquet_ctas");
+    executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_mixed_fileformat ");
+
+    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
+        "     SET FILEFORMAT " +
+        "     INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'     OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
