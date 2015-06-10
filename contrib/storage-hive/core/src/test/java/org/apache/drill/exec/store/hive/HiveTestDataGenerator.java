@@ -258,15 +258,26 @@ public class HiveTestDataGenerator {
     executeQuery(hiveDriver, "SHOW CREATE TABLE readtest");
 
     executeQuery(hiveDriver,
-        "CREATE TABLE parquet_mixed_fileformat  " +
+        "CREATE TABLE parquet_mixed_fileformat  ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE " +
             "AS SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
     executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_mixed_fileformat ");
-
+//    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat set SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
     executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
-        "     SET FILEFORMAT " +
-        "     INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'     OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'");
+        "SET FILEFORMAT " +
+        "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' " +
+        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
+        "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+    executeQuery(hiveDriver,
+        "INSERT INTO parquet_mixed_fileformat  " +
+            "SELECT " +
+            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+            "FROM readtest ");
+
+//    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
+//        "     SET FILEFORMAT " +
+//        "     INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'     OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
