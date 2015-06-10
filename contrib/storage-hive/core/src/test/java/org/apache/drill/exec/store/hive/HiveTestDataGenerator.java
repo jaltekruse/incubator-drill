@@ -19,9 +19,12 @@
 package org.apache.drill.exec.store.hive;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import com.google.common.io.Files;
@@ -113,6 +116,9 @@ public class HiveTestDataGenerator {
   }
 
   private void generateTestData() throws Exception {
+
+    org.stringtemplate.v4.ST st;
+    org.apache.hadoop.yarn.api.records.URL url;
     HiveConf conf = new HiveConf(SessionState.class);
 
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
@@ -250,10 +256,11 @@ public class HiveTestDataGenerator {
     );
 
     executeQuery(hiveDriver,
-        "CREATE TABLE IF NOT EXISTS readtest_parquet_ctas " +
+        "CREATE TABLE readtest_parquet_ctas stored as parquet " +
             "AS SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
-            "FROM readtest");
+            "FROM readtest ");
+    executeQuery(hiveDriver, "SHOW CREATE TABLE readtest_parquet_ctas");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
@@ -351,6 +358,21 @@ public class HiveTestDataGenerator {
     if (failed || response.getResponseCode() != 0 ) {
       throw new RuntimeException(String.format("Failed to execute command '%s', errorMsg = '%s'",
         query, (response != null ? response.getErrorMessage() : "")));
+    } else {
+      System.out.println(response.toString());
+      List results = new ArrayList();
+      try {
+        hiveDriver.getResults(results);
+        System.out.println(response.getSchema());
+        for (Object o : results) {
+          System.out.print(o + ", ");
+        }
+        System.out.println();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      } catch (CommandNeedRetryException e) {
+        throw new RuntimeException(e);
+      }
     }
   }
 
