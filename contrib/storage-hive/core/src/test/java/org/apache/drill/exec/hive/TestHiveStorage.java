@@ -169,7 +169,7 @@ public class TestHiveStorage extends HiveTestBase {
         "float_field, " +
         "int_field, " +
         "bigint_field, " +
-//        "smallint_field " + //, " +
+        "smallint_field " + //, " +
         "string_field " +
         "from hive.parquet_mixed_fileformat");
 
