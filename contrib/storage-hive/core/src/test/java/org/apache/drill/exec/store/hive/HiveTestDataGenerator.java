@@ -32,7 +32,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.drill.common.exceptions.DrillException;
 import org.apache.drill.exec.client.DrillClient;
 import org.apache.drill.exec.store.StoragePluginRegistry;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.ql.CommandNeedRetryException;
@@ -41,7 +40,6 @@ import org.apache.hadoop.hive.ql.processors.CommandProcessorResponse;
 import org.apache.hadoop.hive.ql.session.SessionState;
 
 import com.google.common.collect.Maps;
-import org.apache.hadoop.mapred.JobConf;
 
 public class HiveTestDataGenerator {
   private static final String HIVE_TEST_PLUGIN_NAME = "hive";
@@ -295,20 +293,84 @@ public class HiveTestDataGenerator {
 
     executeQuery(hiveDriver, "SHOW PARTITIONS readtest");
 
+    executeQuery(hiveDriver, "" +
+        "CREATE TABLE IF NOT EXISTS parquet_text_mixed_fileformat (" +
+        "  boolean_field BOOLEAN," +
+        "  tinyint_field TINYINT," +
+        "  double_field DOUBLE," +
+        "  float_field FLOAT," +
+        "  int_field INT," +
+        "  bigint_field BIGINT," +
+        "  smallint_field SMALLINT," +
+        "  string_field STRING" +
+        ") PARTITIONED BY (" +
+        "  boolean_part BOOLEAN," +
+        "  tinyint_part TINYINT," +
+        "  double_part DOUBLE," +
+        "  float_part FLOAT," +
+        "  int_part INT," +
+        "  bigint_part BIGINT," +
+        "  smallint_part SMALLINT," +
+        "  string_part STRING" +
+        ") ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE");
+
+//        "CREATE TABLE parquet_mixed_fileformat  ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE " +
+
+    // Add a partition to table 'readtest'
     executeQuery(hiveDriver,
-        "CREATE TABLE parquet_mixed_fileformat  ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE " +
-            "AS SELECT " +
+        "ALTER TABLE parquet_text_mixed_fileformat ADD IF NOT EXISTS PARTITION ( " +
+            "  boolean_part='true', " +
+            "  tinyint_part='64', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string' " +
+            ")"
+    );
+
+    executeQuery(hiveDriver,
+        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+            "  tinyint_part='64', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
+            "SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
-    executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_mixed_fileformat ");
+    executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_text_mixed_fileformat ");
 //    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat set SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
-    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
+    executeQuery(hiveDriver, "ALTER TABLE parquet_text_mixed_fileformat " +
         "SET FILEFORMAT " +
         "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' " +
         "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
         "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+//    executeQuery(hiveDriver,
+//        "INSERT INTO TABLE parquet_mixed_fileformat  " +
+//            "SELECT " +
+//            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+//            "FROM readtest ");
+
     executeQuery(hiveDriver,
-        "INSERT INTO TABLE parquet_mixed_fileformat  " +
+        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+            // changed this from 64
+            "  tinyint_part='63', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
             "SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
