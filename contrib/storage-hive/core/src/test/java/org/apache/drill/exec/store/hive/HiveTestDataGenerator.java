@@ -293,6 +293,8 @@ public class HiveTestDataGenerator {
 
     executeQuery(hiveDriver, "SHOW CREATE TABLE readtest");
 
+    executeQuery(hiveDriver, "SHOW PARTITIONS readtest");
+
     executeQuery(hiveDriver,
         "CREATE TABLE parquet_mixed_fileformat  ROW FORMAT DELIMITED FIELDS TERMINATED BY ',' STORED AS TEXTFILE " +
             "AS SELECT " +
