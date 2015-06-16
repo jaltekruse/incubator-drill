@@ -110,6 +110,8 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
     return config;
   }
 
+  // TODO - add an alternative implementation of this method that allows passing a format plugin
+  // rather than getting it out of the registry
   @Override
   public AbstractGroupScan getPhysicalScan(String userName, JSONOptions selection, List<SchemaPath> columns)
       throws IOException {

@@ -50,17 +50,15 @@ public class HiveTestDataGenerator {
   private final String whDir;
   private final Map<String, String> config;
 
-  // TODO - decide if I want to actually use Drill to generate the parquet file
   /**
    * Get an instance of the test data generator for Hive. If no instance has been created this
    * will prompt the generation of test tables. A DrillClient is passed to enable generation of
    * parquet files.
    *
-   * @param client - drill client used to generate files
    * @return
    * @throws Exception
    */
-  public static synchronized HiveTestDataGenerator getInstance(DrillClient client) throws Exception {
+  public static synchronized HiveTestDataGenerator getInstance() throws Exception {
     if (instance == null) {
       final File db = Files.createTempDir();
       db.deleteOnExit();
@@ -128,8 +126,6 @@ public class HiveTestDataGenerator {
 
   private void generateTestData() throws Exception {
 
-    org.stringtemplate.v4.ST st;
-    org.apache.hadoop.yarn.api.records.URL url;
     HiveConf conf = new HiveConf(SessionState.class);
 
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
@@ -293,8 +289,10 @@ public class HiveTestDataGenerator {
 
     executeQuery(hiveDriver, "SHOW PARTITIONS readtest");
 
+    executeQuery(hiveDriver, "select * from readtest");
+
     executeQuery(hiveDriver, "" +
-        "CREATE TABLE IF NOT EXISTS parquet_text_mixed_fileformat (" +
+        "CREATE TABLE parquet_text_mixed_fileformat (" +
         "  boolean_field BOOLEAN," +
         "  tinyint_field TINYINT," +
         "  double_field DOUBLE," +
@@ -345,6 +343,10 @@ public class HiveTestDataGenerator {
             "SELECT " +
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
+
+    System.out.println("+#+$@+%+@#$+%#@+$%+@#$%+@#+$%+@#$+%+@$+%#@+$%+@%+$%+@#$+%+");
+    executeQuery(hiveDriver, "select * from parquet_text_mixed_fileformat ");
+
     executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_text_mixed_fileformat ");
 //    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat set SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
     executeQuery(hiveDriver, "ALTER TABLE parquet_text_mixed_fileformat " +
@@ -358,22 +360,22 @@ public class HiveTestDataGenerator {
 //            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
 //            "FROM readtest ");
 
-    executeQuery(hiveDriver,
-        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
-            "PARTITION (" +
-            "  boolean_part='true', " +
-            // changed this from 64
-            "  tinyint_part='63', " +
-            "  double_part='8.345', " +
-            "  float_part='4.67', " +
-            "  int_part='123456', " +
-            "  bigint_part='234235', " +
-            "  smallint_part='3455', " +
-            "  string_part='string'" +
-            ") " +
-            "SELECT " +
-            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
-            "FROM readtest ");
+//    executeQuery(hiveDriver,
+//        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+//            "PARTITION (" +
+//            "  boolean_part='true', " +
+////            changed this from 64
+//            "  tinyint_part='63', " +
+//            "  double_part='8.345', " +
+//            "  float_part='4.67', " +
+//            "  int_part='123456', " +
+//            "  bigint_part='234235', " +
+//            "  smallint_part='3455', " +
+//            "  string_part='string'" +
+//            ") " +
+//            "SELECT " +
+//            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+//            "FROM readtest ");
 
 //    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
 //        "     SET FILEFORMAT " +

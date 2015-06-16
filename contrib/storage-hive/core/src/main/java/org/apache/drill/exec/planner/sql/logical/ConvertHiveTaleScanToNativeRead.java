@@ -31,6 +31,8 @@ import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.logical.FormatPluginConfig;
+import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.base.GroupScan;
 import org.apache.drill.exec.planner.logical.DirPathBuilder;
@@ -47,6 +49,7 @@ import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.drill.exec.store.dfs.FormatSelection;
+import org.apache.drill.exec.store.easy.text.TextFormatPlugin;
 import org.apache.drill.exec.store.hive.HiveReadEntry;
 import org.apache.drill.exec.store.hive.HiveScan;
 import org.apache.drill.exec.store.hive.HiveTable;
@@ -104,13 +107,22 @@ public abstract class ConvertHiveTaleScanToNativeRead extends StoragePluginOptim
 //          final String tablePath = hiveScan.storagePlugin.getTablePathOnFs(hiveReadEntry.getTable().getTableName());
           // TODO - find an API for getting the directory where external hive tables are stored, so far I can only
           // find the show create table command but that would require me to parse it to find the path
-          final String tablePath = "/Users/jaltekruse/test_data_drill/par_hive_types";
+//          final String tablePath = "/Users/jaltekruse/test_data_drill/par_hive_types";
+          final String tablePath = hiveReadEntry.getHivePartitionWrappers().get(0).getPartition().getSd().getLocation();
           try {
+            StoragePluginConfig storagePluginConfig = getQueryContext().getStorage().getPlugin("dfs").getConfig();
+            // TODO - this isn't working
+            // TODO - need to make this not share format config with the rest of drill, it needs to be configured to do whatever hive is doing
+            // in particular we need to not have skipHeader option set to false
+            // this shouldn't be too hard, the format config is sent with the plan, there is no need to configure a fake config in the registry
+//            FormatPluginConfig formatConfig = getQueryContext().getStorage().getFormatPlugin(storagePluginConfig, new TextFormatPlugin.TextFormatConfig()).getConfig();
             dynamicDrillTable = new DynamicDrillTable(
                 getQueryContext().getStorage().getPlugin("dfs"),
                 "file",
                 getQueryContext().getQueryUserName(),
-                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
+//                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
+//                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
+                new FormatSelection(new TextFormatPlugin.TextFormatConfig(), Lists.newArrayList(tablePath)));
           } catch (ExecutionSetupException e) {
             throw new RuntimeException(e);
           }
