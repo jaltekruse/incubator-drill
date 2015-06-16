@@ -17,6 +17,7 @@
  ******************************************************************************/
 package org.apache.drill.exec.planner.sql.logical;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -133,7 +134,12 @@ public abstract class ConvertHiveTaleScanToNativeRead extends StoragePluginOptim
               scanRel.getTable().getRelOptSchema(),
               anyType,
               dynamicDrillTable);
-          final DrillScanRel nativeScan = new DrillScanRel(scanRel.getCluster(), scanRel.getTraitSet(), table);
+          final DrillScanRel nativeScan;
+          try {
+            nativeScan = new DrillScanRel(scanRel.getCluster(), scanRel.getTraitSet(), table, dynamicDrillTable.getGroupScan(), anyType, null);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
           // TODO - add casts to make the data types the same
           //      - partly done
           //      - need to change the types where needed that are stored as a different physical type
@@ -142,6 +148,8 @@ public abstract class ConvertHiveTaleScanToNativeRead extends StoragePluginOptim
           // is exposing collation information to Calcite on columns that have it, might need to add
           // a sort as well as a project, although without collation we might not be able to reproduce the
           // same sort order
+          //    - we seem to actually be adding the collation to every column when we create the type
+          //      we aren't looking at the hive metadata to populate this
           final List<RexNode> rexNodes = Lists.newArrayList();
           final RexBuilder rb = scanRel.getCluster().getRexBuilder();
           boolean allSelected = false;
