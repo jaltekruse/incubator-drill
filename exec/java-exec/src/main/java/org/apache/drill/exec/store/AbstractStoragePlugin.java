@@ -26,6 +26,7 @@ import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.drill.exec.store.dfs.FormatPlugin;
 
 public abstract class AbstractStoragePlugin implements StoragePlugin{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AbstractStoragePlugin.class);
@@ -46,6 +47,14 @@ public abstract class AbstractStoragePlugin implements StoragePlugin{
   @Override
   public Set<StoragePluginOptimizerRule> getOptimizerRules() {
     return ImmutableSet.of();
+  }
+
+  @Override
+  public AbstractGroupScan getPhysicalScan(String userName,
+                                           FormatPlugin plugin,
+                                           JSONOptions selection,
+                                           List<SchemaPath> columns) throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   @Override

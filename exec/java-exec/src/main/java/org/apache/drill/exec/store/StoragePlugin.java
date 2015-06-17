@@ -25,6 +25,7 @@ import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
+import org.apache.drill.exec.store.dfs.FormatPlugin;
 
 public interface StoragePlugin extends SchemaFactory {
   public boolean supportsRead();
@@ -54,6 +55,26 @@ public interface StoragePlugin extends SchemaFactory {
    */
   public AbstractGroupScan getPhysicalScan(String userName, JSONOptions selection, List<SchemaPath> columns)
       throws IOException;
+
+  /**
+   * Get the physical scan operator for the particular GroupScan (read) node and custom format config.
+   *
+   * This interface should not be used in most cases. The format config should come out of
+   * the storage plugin registry to make sure it is up to date with whatever has been configured
+   * by the user. This should only be used for cases where the system needs to override the
+   * user specified configuration.
+   *
+   * @param userName User whom to impersonate when when reading the contents as part of Scan.
+   * @param selection The configured storage engine specific selection.
+   * @param selection The configured storage engine specific selection.
+   * @param columns (optional) The list of column names to scan from the data source.
+   * @return
+   * @throws IOException
+   */
+  public AbstractGroupScan getPhysicalScan(String userName,
+                                           FormatPlugin plugin,
+                                           JSONOptions selection,
+                                           List<SchemaPath> columns) throws IOException;
 
   public StoragePluginConfig getConfig();
 
