@@ -18,42 +18,27 @@
 package org.apache.drill.exec.physical.impl.project;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
 
-import org.apache.commons.collections.map.CaseInsensitiveMap;
-import org.apache.drill.common.expression.ConvertExpression;
 import org.apache.drill.common.expression.ErrorCollector;
 import org.apache.drill.common.expression.ErrorCollectorImpl;
-import org.apache.drill.common.expression.ExpressionPosition;
 import org.apache.drill.common.expression.FieldReference;
-import org.apache.drill.common.expression.FunctionCall;
-import org.apache.drill.common.expression.FunctionCallFactory;
 import org.apache.drill.common.expression.LogicalExpression;
 import org.apache.drill.common.expression.PathSegment.NameSegment;
 import org.apache.drill.common.expression.SchemaPath;
-import org.apache.drill.common.expression.ValueExpressions;
-import org.apache.drill.common.expression.fn.CastFunctions;
 import org.apache.drill.common.logical.data.NamedExpression;
-import org.apache.drill.common.types.TypeProtos.MinorType;
-import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.exception.ClassTransformationException;
 import org.apache.drill.exec.exception.SchemaChangeException;
 import org.apache.drill.exec.expr.ClassGenerator;
 import org.apache.drill.exec.expr.ClassGenerator.HoldingContainer;
-import org.apache.drill.exec.expr.CodeGenerator;
 import org.apache.drill.exec.expr.DrillFuncHolderExpr;
 import org.apache.drill.exec.expr.ExpressionTreeMaterializer;
-import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.ValueVectorWriteExpression;
 import org.apache.drill.exec.expr.fn.DrillComplexWriterFuncHolder;
 import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
-import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
-import org.apache.drill.exec.physical.config.Project;
 import org.apache.drill.exec.planner.StarColumnHelper;
-import org.apache.drill.exec.record.AbstractSingleRecordBatch;
 import org.apache.drill.exec.record.BatchSchema.SelectionVectorMode;
 import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.RecordBatch;
@@ -61,23 +46,27 @@ import org.apache.drill.exec.record.TransferPair;
 import org.apache.drill.exec.record.TypedFieldId;
 import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
-import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.FixedWidthVector;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
-import org.apache.drill.exec.vector.complex.AbstractContainerVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
 
 import com.carrotsearch.hppc.IntOpenHashSet;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
-public class ProjectorNewSchemaHandler {
+public abstract class ProjectorNewSchemaHandler <TEMPLATE, RECORD_BATCH extends RecordBatch> {
+  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProjectorNewSchemaHandler.class);
 
-  public interface ExpressionListHolder {
-    List<NamedExpression> getExpressionList();
-  }
+  abstract List<NamedExpression> getExpressionList();
+
+  abstract void generateCodeAndSetup(ClassGenerator<TEMPLATE> cg,
+                                     FragmentContext context,
+                                     RecordBatch incoming,
+                                     RECORD_BATCH recordBatch,
+                                     List<TransferPair> transfers)
+                                     throws ClassTransformationException,
+                                            IOException, SchemaChangeException;
 
   private boolean isWildcard(final NamedExpression ex) {
     if ( !(ex.getExpr() instanceof SchemaPath)) {
@@ -147,7 +136,7 @@ public class ProjectorNewSchemaHandler {
    *                            to ensure uniqueness
    * @Param allowDupsWithRename if the original name has been used, is renaming allowed to ensure output name unique
    */
-  private void addToResultMaps(final String origName, final ProjectRecordBatch.ClassifierResult result, final boolean allowDupsWithRename) {
+  public void addToResultMaps(final String origName, final ProjectRecordBatch.ClassifierResult result, final boolean allowDupsWithRename) {
     String name = origName;
     if (allowDupsWithRename) {
       name = getUniqueName(origName, result);
@@ -161,17 +150,16 @@ public class ProjectorNewSchemaHandler {
   }
 
   // TODO - this will now have an expectation that the passed allocationVectors list is non-null
-
   public boolean setupNewSchema(
       List<ValueVector> allocationVectors,
       List<ComplexWriter> complexWriters,
       VectorContainer container,
-      ExpressionListHolder expressionListHolder,
       FunctionImplementationRegistry functionImplementationRegistry,
       RecordBatch incoming,
       SchemaChangeCallBack callBack,
-
-
+      FragmentContext context,
+      ClassGenerator<TEMPLATE> cg,
+      RECORD_BATCH recordBatch
   ) throws SchemaChangeException {
     if (allocationVectors != null) {
       for (final ValueVector v : allocationVectors) {
@@ -184,11 +172,10 @@ public class ProjectorNewSchemaHandler {
     } else {
       container.zeroVectors();
     }
-    final List<NamedExpression> exprs = expressionListHolder.getExpressionList();
+    final List<NamedExpression> exprs = getExpressionList();
     final ErrorCollector collector = new ErrorCollectorImpl();
     final List<TransferPair> transfers = Lists.newArrayList();
 
-    final ClassGenerator<Projector> cg = CodeGenerator.getRoot(Projector.TEMPLATE_DEFINITION, functionImplementationRegistry);
 
     final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
@@ -333,8 +320,7 @@ public class ProjectorNewSchemaHandler {
     }
 
     try {
-      this.projector = context.getImplementationClass(cg.getCodeGenerator());
-      projector.setup(context, incoming, this, transfers);
+      generateCodeAndSetup(cg, context, incoming, recordBatch, transfers);
     } catch (ClassTransformationException | IOException e) {
       throw new SchemaChangeException("Failure while attempting to load generated class", e);
     }
@@ -346,7 +332,7 @@ public class ProjectorNewSchemaHandler {
     }
   }
 
-  private void classifyExpr(final NamedExpression ex, final RecordBatch incoming, final ProjectRecordBatch.ClassifierResult result)  {
+  public void classifyExpr(final NamedExpression ex, final RecordBatch incoming, final ProjectRecordBatch.ClassifierResult result)  {
     final NameSegment expr = ((SchemaPath)ex.getExpr()).getRootSegment();
     final NameSegment ref = ex.getRef().getRootSegment();
     final boolean exprHasPrefix = expr.getPath().contains(StarColumnHelper.PREFIX_DELIMITER);
