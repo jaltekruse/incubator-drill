@@ -1,4 +1,4 @@
-/**
+/*******************************************************************************
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -14,7 +14,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- */
+ ******************************************************************************/
 package org.apache.drill.exec.physical.impl.project;
 
 import java.io.IOException;
@@ -48,6 +48,7 @@ import org.apache.drill.exec.expr.TypeHelper;
 import org.apache.drill.exec.expr.ValueVectorReadExpression;
 import org.apache.drill.exec.expr.ValueVectorWriteExpression;
 import org.apache.drill.exec.expr.fn.DrillComplexWriterFuncHolder;
+import org.apache.drill.exec.expr.fn.FunctionImplementationRegistry;
 import org.apache.drill.exec.memory.OutOfMemoryException;
 import org.apache.drill.exec.ops.FragmentContext;
 import org.apache.drill.exec.physical.config.Project;
@@ -62,6 +63,7 @@ import org.apache.drill.exec.record.VectorContainer;
 import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.FixedWidthVector;
+import org.apache.drill.exec.vector.SchemaChangeCallBack;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.complex.AbstractContainerVector;
 import org.apache.drill.exec.vector.complex.writer.BaseWriter.ComplexWriter;
@@ -71,215 +73,128 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
-public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
-  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ProjectRecordBatch.class);
+public class ProjectorNewSchemaHandler {
 
-  private Projector projector;
-  private List<ValueVector> allocationVectors;
-  private List<ComplexWriter> complexWriters;
-  private boolean hasRemainder = false;
-  private int remainderIndex = 0;
-  private int recordCount;
+  public interface ExpressionListHolder {
+    List<NamedExpression> getExpressionList();
+  }
 
-  public static final String EMPTY_STRING = "";
-  private boolean first = true;
-
-  static class ClassifierResult {
-    public boolean isStar = false;
-    public List<String> outputNames;
-    public String prefix = "";
-    public HashMap<String, Integer> prefixMap = Maps.newHashMap();
-    public CaseInsensitiveMap outputMap = new CaseInsensitiveMap();
-    final CaseInsensitiveMap sequenceMap = new CaseInsensitiveMap();
-
-    void clear() {
-      isStar = false;
-      prefix = "";
-      if (outputNames != null) {
-        outputNames.clear();
-      }
-
-      // note:  don't clear the internal maps since they have cumulative data..
+  private boolean isWildcard(final NamedExpression ex) {
+    if ( !(ex.getExpr() instanceof SchemaPath)) {
+      return false;
     }
+    final NameSegment expr = ((SchemaPath)ex.getExpr()).getRootSegment();
+    return expr.getPath().contains(StarColumnHelper.STAR_COLUMN);
   }
 
-  public ProjectRecordBatch(final Project pop, final RecordBatch incoming, final FragmentContext context) throws OutOfMemoryException {
-    super(pop, context, incoming);
-  }
-
-  @Override
-  public int getRecordCount() {
-    return recordCount;
-  }
-
-
-  @Override
-  protected void killIncoming(final boolean sendUpstream) {
-    super.killIncoming(sendUpstream);
-    hasRemainder = false;
-  }
-
-
-  @Override
-  public IterOutcome innerNext() {
-    if (hasRemainder) {
-      handleRemainder();
-      return IterOutcome.OK;
-    }
-    return super.innerNext();
-  }
-
-  @Override
-  public VectorContainer getOutgoingContainer() {
-    return this.container;
-  }
-
-  @Override
-  protected IterOutcome doWork() {
-    int incomingRecordCount = incoming.getRecordCount();
-
-    if (first && incomingRecordCount == 0) {
-      if (complexWriters != null) {
-        IterOutcome next = null;
-        while (incomingRecordCount == 0) {
-          next = next(incoming);
-          if (next == IterOutcome.OUT_OF_MEMORY) {
-            outOfMemory = true;
-            return next;
-          } else if (next != IterOutcome.OK && next != IterOutcome.OK_NEW_SCHEMA) {
-            return next;
-          }
-          incomingRecordCount = incoming.getRecordCount();
-        }
-        if (next == IterOutcome.OK_NEW_SCHEMA) {
-          try {
-            setupNewSchema();
-          } catch (final SchemaChangeException e) {
-            throw new RuntimeException(e);
-          }
-        }
+  private boolean isAnyWildcard(final List<NamedExpression> exprs) {
+    for (final NamedExpression e : exprs) {
+      if (isWildcard(e)) {
+        return true;
       }
     }
-    first = false;
+    return false;
+  }
 
-    container.zeroVectors();
+  /** hack to make ref and full work together... need to figure out if this is still necessary. **/
+  private FieldReference getRef(final NamedExpression e) {
+    return e.getRef();
+  }
 
-    if (!doAlloc()) {
-      outOfMemory = true;
-      return IterOutcome.OUT_OF_MEMORY;
+  private boolean isClassificationNeeded(final List<NamedExpression> exprs) {
+    boolean needed = false;
+    for (int i = 0; i < exprs.size(); i++) {
+      final NamedExpression ex = exprs.get(i);
+      if (!(ex.getExpr() instanceof SchemaPath)) {
+        continue;
+      }
+      final NameSegment expr = ((SchemaPath) ex.getExpr()).getRootSegment();
+      final NameSegment ref = ex.getRef().getRootSegment();
+      final boolean refHasPrefix = ref.getPath().contains(StarColumnHelper.PREFIX_DELIMITER);
+      final boolean exprContainsStar = expr.getPath().contains(StarColumnHelper.STAR_COLUMN);
+
+      if (refHasPrefix || exprContainsStar) {
+        needed = true;
+        break;
+      }
     }
+    return needed;
+  }
 
-    final int outputRecords = projector.projectRecords(0, incomingRecordCount, 0);
-    if (outputRecords < incomingRecordCount) {
-      setValueCount(outputRecords);
-      hasRemainder = true;
-      remainderIndex = outputRecords;
-      this.recordCount = remainderIndex;
+  private String getUniqueName(final String name, final ProjectRecordBatch.ClassifierResult result) {
+    final Integer currentSeq = (Integer) result.sequenceMap.get(name);
+    if (currentSeq == null) { // name is unique, so return the original name
+      final Integer n = -1;
+      result.sequenceMap.put(name, n);
+      return name;
+    }
+    // create a new name
+    final Integer newSeq = currentSeq + 1;
+    final String newName = name + newSeq;
+    result.sequenceMap.put(name, newSeq);
+    result.sequenceMap.put(newName, -1);
+
+    return newName;
+  }
+
+  /**
+   * Helper method to ensure unique output column names. If allowDupsWithRename is set to true, the original name
+   * will be appended with a suffix number to ensure uniqueness. Otherwise, the original column would not be renamed even
+   * even if it has been used
+   *
+   * @param origName            the original input name of the column
+   * @param result              the data structure to keep track of the used names and decide what output name should be
+   *                            to ensure uniqueness
+   * @Param allowDupsWithRename if the original name has been used, is renaming allowed to ensure output name unique
+   */
+  private void addToResultMaps(final String origName, final ProjectRecordBatch.ClassifierResult result, final boolean allowDupsWithRename) {
+    String name = origName;
+    if (allowDupsWithRename) {
+      name = getUniqueName(origName, result);
+    }
+    if (!result.outputMap.containsKey(name)) {
+      result.outputNames.add(name);
+      result.outputMap.put(name,  name);
     } else {
-      setValueCount(incomingRecordCount);
-      for(final VectorWrapper<?> v: incoming) {
-        v.clear();
-      }
-      this.recordCount = outputRecords;
-    }
-    // In case of complex writer expression, vectors would be added to batch run-time.
-    // We have to re-build the schema.
-    if (complexWriters != null) {
-      container.buildSchema(SelectionVectorMode.NONE);
-    }
-
-    return IterOutcome.OK;
-  }
-
-  private void handleRemainder() {
-    final int remainingRecordCount = incoming.getRecordCount() - remainderIndex;
-    if (!doAlloc()) {
-      outOfMemory = true;
-      return;
-    }
-    final int projRecords = projector.projectRecords(remainderIndex, remainingRecordCount, 0);
-    if (projRecords < remainingRecordCount) {
-      setValueCount(projRecords);
-      this.recordCount = projRecords;
-      remainderIndex += projRecords;
-    } else {
-      setValueCount(remainingRecordCount);
-      hasRemainder = false;
-      remainderIndex = 0;
-      for (final VectorWrapper<?> v : incoming) {
-        v.clear();
-      }
-      this.recordCount = remainingRecordCount;
-    }
-    // In case of complex writer expression, vectors would be added to batch run-time.
-    // We have to re-build the schema.
-    if (complexWriters != null) {
-      container.buildSchema(SelectionVectorMode.NONE);
+      result.outputNames.add(ProjectRecordBatch.EMPTY_STRING);
     }
   }
 
-  public void addComplexWriter(final ComplexWriter writer) {
-    complexWriters.add(writer);
-  }
+  // TODO - this will now have an expectation that the passed allocationVectors list is non-null
 
-  private boolean doAlloc() {
-    //Allocate vv in the allocationVectors.
-    for (final ValueVector v : this.allocationVectors) {
-      AllocationHelper.allocateNew(v, incoming.getRecordCount());
-    }
-
-    //Allocate vv for complexWriters.
-    if (complexWriters == null) {
-      return true;
-    }
-
-    for (final ComplexWriter writer : complexWriters) {
-      writer.allocate();
-    }
-
-    return true;
-  }
-
-  private void setValueCount(final int count) {
-    for (final ValueVector v : allocationVectors) {
-      final ValueVector.Mutator m = v.getMutator();
-      m.setValueCount(count);
-    }
-
-    if (complexWriters == null) {
-      return;
-    }
-
-    for (final ComplexWriter writer : complexWriters) {
-      writer.setValueCount(count);
-    }
-  }
+  public boolean setupNewSchema(
+      List<ValueVector> allocationVectors,
+      List<ComplexWriter> complexWriters,
+      VectorContainer container,
+      ExpressionListHolder expressionListHolder,
+      FunctionImplementationRegistry functionImplementationRegistry,
+      RecordBatch incoming,
+      SchemaChangeCallBack callBack,
 
 
-  @Override
-  protected boolean setupNewSchema() throws SchemaChangeException {
+  ) throws SchemaChangeException {
     if (allocationVectors != null) {
       for (final ValueVector v : allocationVectors) {
         v.clear();
       }
     }
-    this.allocationVectors = Lists.newArrayList();
+    allocationVectors.clear();
     if (complexWriters != null) {
       container.clear();
     } else {
       container.zeroVectors();
     }
-    final List<NamedExpression> exprs = getExpressionList();
+    final List<NamedExpression> exprs = expressionListHolder.getExpressionList();
     final ErrorCollector collector = new ErrorCollectorImpl();
     final List<TransferPair> transfers = Lists.newArrayList();
 
-    final ClassGenerator<Projector> cg = CodeGenerator.getRoot(Projector.TEMPLATE_DEFINITION, context.getFunctionRegistry());
+    final ClassGenerator<Projector> cg = CodeGenerator.getRoot(Projector.TEMPLATE_DEFINITION, functionImplementationRegistry);
 
     final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
     final boolean isAnyWildcard = isAnyWildcard(exprs);
 
-    final ClassifierResult result = new ClassifierResult();
+    final ProjectRecordBatch.ClassifierResult result = new ProjectRecordBatch.ClassifierResult();
     final boolean classify = isClassificationNeeded(exprs);
 
     for (int i = 0; i < exprs.size(); i++) {
@@ -300,7 +215,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
                 assert false;
               }
               final String name = result.outputNames.get(k++);  // get the renamed column names
-              if (name == EMPTY_STRING) {
+              if (name == ProjectRecordBatch.EMPTY_STRING) {
                 continue;
               }
               final FieldReference ref = new FieldReference(name);
@@ -317,11 +232,11 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
                 assert false;
               }
               final String name = result.outputNames.get(k++);  // get the renamed column names
-              if (name == EMPTY_STRING) {
+              if (name == ProjectRecordBatch.EMPTY_STRING) {
                 continue;
               }
 
-              final LogicalExpression expr = ExpressionTreeMaterializer.materialize(originalPath, incoming, collector, context.getFunctionRegistry() );
+              final LogicalExpression expr = ExpressionTreeMaterializer.materialize(originalPath, incoming, collector, functionImplementationRegistry );
               if (collector.hasErrors()) {
                 throw new SchemaChangeException(String.format("Failure while trying to materialize incoming schema.  Errors:\n %s.", collector.toErrorString()));
               }
@@ -348,7 +263,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       if (result != null && result.outputNames != null && result.outputNames.size() > 0) {
         boolean isMatched = false;
         for (int j = 0; j < result.outputNames.size(); j++) {
-          if (!result.outputNames.get(j).equals(EMPTY_STRING)) {
+          if (!result.outputNames.get(j).equals(ProjectRecordBatch.EMPTY_STRING)) {
             outputName = result.outputNames.get(j);
             isMatched = true;
             break;
@@ -360,7 +275,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         }
       }
 
-      final LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
+      final LogicalExpression expr = ExpressionTreeMaterializer.materialize(namedExpression.getExpr(), incoming, collector, functionImplementationRegistry, true);
       final MaterializedField outputField = MaterializedField.create(outputName, expr.getMajorType());
       if (collector.hasErrors()) {
         throw new SchemaChangeException(String.format("Failure while trying to materialize incoming schema.  Errors:\n %s.", collector.toErrorString()));
@@ -431,35 +346,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     }
   }
 
-  private List<NamedExpression> getExpressionList() {
-    if (popConfig.getExprs() != null) {
-      return popConfig.getExprs();
-    }
-
-    final List<NamedExpression> exprs = Lists.newArrayList();
-    for (final MaterializedField field : incoming.getSchema()) {
-      if (Types.isComplex(field.getType()) || Types.isRepeated(field.getType())) {
-        final LogicalExpression convertToJson = FunctionCallFactory.createConvert(ConvertExpression.CONVERT_TO, "JSON", field.getPath(), ExpressionPosition.UNKNOWN);
-        final String castFuncName = CastFunctions.getCastFunc(MinorType.VARCHAR);
-        final List<LogicalExpression> castArgs = Lists.newArrayList();
-        castArgs.add(convertToJson);  //input_expr
-        /*
-         * We are implicitly casting to VARCHAR so we don't have a max length,
-         * using an arbitrary value. We trim down the size of the stored bytes
-         * to the actual size so this size doesn't really matter.
-         */
-        castArgs.add(new ValueExpressions.LongExpression(TypeHelper.VARCHAR_DEFAULT_CAST_LEN, null)); //
-        final FunctionCall castCall = new FunctionCall(castFuncName, castArgs, ExpressionPosition.UNKNOWN);
-        exprs.add(new NamedExpression(castCall, new FieldReference(field.getPath())));
-      } else {
-        exprs.add(new NamedExpression(field.getPath(), new FieldReference(field.getPath())));
-      }
-    }
-    return exprs;
-  }
-
-
-  private void classifyExpr(final NamedExpression ex, final RecordBatch incoming, final ClassifierResult result)  {
+  private void classifyExpr(final NamedExpression ex, final RecordBatch incoming, final ProjectRecordBatch.ClassifierResult result)  {
     final NameSegment expr = ((SchemaPath)ex.getExpr()).getRootSegment();
     final NameSegment ref = ex.getRef().getRootSegment();
     final boolean exprHasPrefix = expr.getPath().contains(StarColumnHelper.PREFIX_DELIMITER);
@@ -469,7 +356,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
     final boolean exprContainsStar = expr.getPath().contains(StarColumnHelper.STAR_COLUMN);
     final boolean refEndsWithStar = ref.getPath().endsWith(StarColumnHelper.STAR_COLUMN);
 
-    String exprPrefix = EMPTY_STRING;
+    String exprPrefix = ProjectRecordBatch.EMPTY_STRING;
     String exprSuffix = expr.getPath();
 
     if (exprHasPrefix) {
@@ -525,7 +412,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
         int k = 0;
         result.outputNames = Lists.newArrayListWithCapacity(incomingSchemaSize);
         for (int j=0; j < incomingSchemaSize; j++) {
-          result.outputNames.add(EMPTY_STRING);  // initialize
+          result.outputNames.add(ProjectRecordBatch.EMPTY_STRING);  // initialize
         }
 
         for (final VectorWrapper<?> wrapper : incoming) {
@@ -592,7 +479,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
       int k = 0;
       result.outputNames = Lists.newArrayListWithCapacity(incomingSchemaSize);
       for (int j=0; j < incomingSchemaSize; j++) {
-        result.outputNames.add(EMPTY_STRING);  // initialize
+        result.outputNames.add(ProjectRecordBatch.EMPTY_STRING);  // initialize
       }
 
       for (final VectorWrapper<?> wrapper : incoming) {
@@ -616,7 +503,7 @@ public class ProjectRecordBatch extends AbstractSingleRecordBatch<Project> {
             result.outputNames.set(k, newName);
           }
         } else {
-          result.outputNames.add(EMPTY_STRING);
+          result.outputNames.add(ProjectRecordBatch.EMPTY_STRING);
         }
         k++;
       }
