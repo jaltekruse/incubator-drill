@@ -130,6 +130,7 @@ public abstract class BasicClient<T extends EnumLite, R extends RemoteConnection
         if (!future.isSuccess()) {
           logger.error("Unable to maintain connection {}.  Closing connection.", connection.getName());
           connection.close();
+          throw new RuntimeException(String.format("Unable to maintain connection %s.  Closing connection.", connection.getName()));
         }
       }
     };
