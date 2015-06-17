@@ -17,6 +17,8 @@
  ******************************************************************************/
 package org.apache.drill.exec.physical.impl.flatten;
 
+import static org.apache.drill.TestBuilder.listOf;
+import static org.apache.drill.TestBuilder.mapOf;
 import static org.junit.Assert.assertEquals;
 
 import org.apache.drill.BaseTestQuery;
@@ -112,8 +114,8 @@ public class TestFlatten extends BaseTestQuery {
     String path = folder.getRoot().toPath().toString();
 
     String jsonRecords = BaseTestQuery.getFile("store/json/1673.json");
-    int numCopies = 25000;
-//    int numCopies = 3000;
+//    int numCopies = 25000;
+    int numCopies = 300;
     new TestConstantFolding.SmallFileCreator(folder)
         .setRecord(jsonRecords)
         .createFiles(1, numCopies, "json");
@@ -124,12 +126,12 @@ public class TestFlatten extends BaseTestQuery {
                   "from dfs.`" + path + "/bigfile/bigfile.json` as t")
         .baselineColumns("fixed_column", "list_col")
         .unOrdered();
-    Object map1 = map("id1", "1",
-                      "name", "zhu",
-                      "num", list(list(1l, 2l, 3l)));
-    Object map2 = map("id1", "2",
+    Object map1 = mapOf("id1", "1",
+                        "name", "zhu",
+                        "num", listOf(listOf(1l, 2l, 3l)));
+    Object map2 = mapOf("id1", "2",
                       "name", "hao",
-                      "num", list(list(4l, 5l, 6l)));
+                      "num", listOf(listOf(4l, 5l, 6l)));
     for (int i = 0; i < numCopies; i++) {
       builder.baselineValues("abc", map1);
       builder.baselineValues("abc", map2);
