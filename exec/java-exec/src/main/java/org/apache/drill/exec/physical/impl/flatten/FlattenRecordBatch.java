@@ -277,6 +277,23 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     return tp;
   }
 
+  private void addFlattenFieldToOutput(List<TransferPair> transfers, ErrorCollector collector ) {
+    final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
+
+    final NamedExpression flattenExpr = new NamedExpression(popConfig.getColumn(), new FieldReference(popConfig.getColumn()));
+    final ValueVectorReadExpression vectorRead =
+        (ValueVectorReadExpression)ExpressionTreeMaterializer.materialize(flattenExpr.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
+    final TransferPair tp = getFlattenFieldTransferPair(flattenExpr.getRef());
+
+    if (tp != null) {
+      transfers.add(tp);
+      container.add(tp.getTo());
+      transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);
+    }
+  }
+
+  // TODO - this has a lot of code copy-pasted from an old version of project, need to find a way to
+  // make them use a common code path
   @Override
   protected boolean setupNewSchema() throws SchemaChangeException {
     this.allocationVectors = Lists.newArrayList();
@@ -286,17 +303,8 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     final List<TransferPair> transfers = Lists.newArrayList();
 
     final ClassGenerator<Flattener> cg = CodeGenerator.getRoot(Flattener.TEMPLATE_DEFINITION, context.getFunctionRegistry());
-    final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
-    final NamedExpression flattenExpr = new NamedExpression(popConfig.getColumn(), new FieldReference(popConfig.getColumn()));
-    final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression)ExpressionTreeMaterializer.materialize(flattenExpr.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
-    final TransferPair tp = getFlattenFieldTransferPair(flattenExpr.getRef());
-
-    if (tp != null) {
-      transfers.add(tp);
-      container.add(tp.getTo());
-      transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);
-    }
+    addFlattenFieldToOutput(transfers, collector);
 
     logger.debug("Added transfer for project expression.");
 
