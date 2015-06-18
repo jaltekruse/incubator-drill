@@ -38,6 +38,7 @@ import org.apache.drill.exec.expr.holders.UInt4Holder;
 import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.memory.TopLevelAllocator;
 import org.apache.drill.exec.record.MaterializedField;
+import org.apache.drill.exec.vector.BaseValueVector;
 import org.apache.drill.exec.vector.BitVector;
 import org.apache.drill.exec.vector.NullableFloat4Vector;
 import org.apache.drill.exec.vector.NullableUInt4Vector;
@@ -56,7 +57,39 @@ public class TestValueVector extends ExecTest {
   private final static byte[] STR2 = new String("BBBBBBBBB2").getBytes(Charset.forName("UTF-8"));
   private final static byte[] STR3 = new String("CCCC3").getBytes(Charset.forName("UTF-8"));
 
-  TopLevelAllocator allocator = new TopLevelAllocator();
+  private final TopLevelAllocator allocator = new TopLevelAllocator();
+
+  @Test
+  public void testFixedVectorReallocationDoesNotOverflow() {
+    final MaterializedField field = MaterializedField.create(EMPTY_SCHEMA_PATH, UInt4Holder.TYPE);
+    final UInt4Vector vector = new UInt4Vector(field, allocator);
+    // edge case 1: value count = MAX_VALUE_ALLOCATION
+    vector.allocateNew(BaseValueVector.MAX_VALUE_ALLOCATION);
+    vector.reAlloc();
+    vector.close();
+
+    // common: value count < MAX_VALUE_ALLOCATION
+    vector.allocateNew(BaseValueVector.MAX_VALUE_ALLOCATION/2);
+    vector.reAlloc(); // value allocation reaches to MAX_VALUE_ALLOCATION
+    vector.reAlloc(); // this tests if it overflows
+    vector.close();
+  }
+
+  @Test
+  public void testBitVectorReallocationDoesNotOverflow() {
+    final MaterializedField field = MaterializedField.create(EMPTY_SCHEMA_PATH, UInt4Holder.TYPE);
+    final BitVector vector = new BitVector(field, allocator);
+    // edge case 1: value count = MAX_VALUE_ALLOCATION
+    vector.allocateNew(BaseValueVector.MAX_VALUE_ALLOCATION);
+    vector.reAlloc();
+    vector.close();
+
+    // common: value count < MAX_VALUE_ALLOCATION
+    vector.allocateNew(BaseValueVector.MAX_VALUE_ALLOCATION/2);
+    vector.reAlloc(); // value allocation reaches to MAX_VALUE_ALLOCATION
+    vector.reAlloc(); // this tests if it overflows
+    vector.close();
+  }
 
   @Test
   public void testFixedType() {

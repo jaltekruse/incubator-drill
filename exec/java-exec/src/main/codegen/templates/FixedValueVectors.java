@@ -74,7 +74,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
 
   @Override
   public void setInitialCapacity(int numRecords) {
-    allocationValueCount = numRecords;
+    allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, numRecords);
   }
 
   public void allocateNew() {
@@ -84,42 +84,41 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   }
 
   public boolean allocateNewSafe() {
-    clear();
     if (allocationMonitor > 10) {
-      allocationValueCount = Math.max(8, (int) (allocationValueCount / 2));
+      allocationValueCount = Math.max(8, allocationValueCount / 2);
       allocationMonitor = 0;
     } else if (allocationMonitor < -2) {
-      allocationValueCount = (int) (allocationValueCount * 2);
+      allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, allocationValueCount * 2);
       allocationMonitor = 0;
     }
 
-    DrillBuf newBuf = allocator.buffer(allocationValueCount * ${type.width});
-    if(newBuf == null) {
+    try{
+      allocateNew(allocationValueCount);
+    } catch (OutOfMemoryRuntimeException ex) {
       return false;
     }
-
-    this.data = newBuf;
-    this.data.readerIndex(0);
     return true;
   }
 
   /**
-   * Allocate a new buffer that supports setting at least the provided number of values.  May actually be sized bigger depending on underlying buffer rounding size. Must be called prior to using the ValueVector.
+   * Allocate a new buffer that supports setting at least the provided number of values. May actually be sized bigger
+   * depending on underlying buffer rounding size. Must be called prior to using the ValueVector.
+   *
+   * Note that the maximum number of values a vector can allocate is Integer.MAX_VALUE / value width.
+   *
    * @param valueCount
    * @throws org.apache.drill.exec.memory.OutOfMemoryRuntimeException if it can't allocate the new buffer
    */
   public void allocateNew(int valueCount) {
     clear();
 
-    DrillBuf newBuf = allocator.buffer(valueCount * ${type.width});
+    final DrillBuf newBuf = allocator.buffer(valueCount * ${type.width});
     if (newBuf == null) {
-      throw new OutOfMemoryRuntimeException(
-        String.format("Failure while allocating buffer of %d bytes",valueCount * ${type.width}));
+      throw new OutOfMemoryRuntimeException(String.format("Failure while allocating buffer of %d bytes", valueCount * ${type.width}));
     }
-
-    this.data = newBuf;
-    this.data.readerIndex(0);
-    this.allocationValueCount = valueCount;
+    data = newBuf;
+    data.readerIndex(0);
+    allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, valueCount);
   }
 
 /**
@@ -128,14 +127,14 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
  * @throws org.apache.drill.exec.memory.OutOfMemoryRuntimeException if it can't allocate the new buffer
  */
   public void reAlloc() {
-    logger.info("Realloc vector {}. [{}] -> [{}]", field, allocationValueCount * ${type.width}, allocationValueCount * 2 * ${type.width});
-    allocationValueCount *= 2;
-    DrillBuf newBuf = allocator.buffer(allocationValueCount * ${type.width});
+    final int curValueAllocation = Math.min(MAX_VALUE_ALLOCATION, allocationValueCount * 2);
+    logger.debug("Reallocating vector [{}]. # of bytes: [{}] -> [{}]", field, allocationValueCount * ${type.width}, curValueAllocation * ${type.width});
+    DrillBuf newBuf = allocator.buffer(curValueAllocation * ${type.width});
     if (newBuf == null) {
-      throw new OutOfMemoryRuntimeException(
-      String.format("Failure while reallocating buffer to %d bytes",allocationValueCount * ${type.width}));
+      throw new OutOfMemoryRuntimeException(String.format("Failure while reallocating buffer to %d bytes", curValueAllocation * ${type.width}));
     }
 
+    allocationValueCount = curValueAllocation;
     newBuf.setBytes(0, data, 0, data.capacity());
     newBuf.setZero(newBuf.capacity() / 2, newBuf.capacity() / 2);
     newBuf.writerIndex(data.writerIndex());

@@ -75,7 +75,7 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
 
   @Override
   public void setInitialCapacity(int numRecords) {
-    allocationValueCount = numRecords;
+    allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, numRecords);
   }
 
   public void allocateNew() {
@@ -85,24 +85,19 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
   }
 
   public boolean allocateNewSafe() {
-    clear();
     if (allocationMonitor > 10) {
-      allocationValueCount = Math.max(8, (int) (allocationValueCount / 2));
+      allocationValueCount = Math.max(8, allocationValueCount / 2);
       allocationMonitor = 0;
     } else if (allocationMonitor < -2) {
-      allocationValueCount = (int) (allocationValueCount * 2);
+      allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, allocationValueCount * 2);
       allocationMonitor = 0;
     }
 
-    clear();
-    int valueSize = getSizeFromCount(allocationValueCount);
-    DrillBuf newBuf = allocator.buffer(valueSize);
-    if (newBuf == null) {
+    try {
+      allocateNew(allocationValueCount);
+    } catch (OutOfMemoryRuntimeException ex) {
       return false;
     }
-
-    data = newBuf;
-    zeroVector();
     return true;
   }
 
@@ -114,12 +109,12 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
    */
   public void allocateNew(int valueCount) {
     clear();
-    int valueSize = getSizeFromCount(valueCount);
-    DrillBuf newBuf = allocator.buffer(valueSize);
+    final int valueSize = getSizeFromCount(valueCount);
+    final DrillBuf newBuf = allocator.buffer(valueSize);
     if (newBuf == null) {
       throw new OutOfMemoryRuntimeException(String.format("Failure while allocating buffer of d% bytes.", valueSize));
     }
-
+    allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, valueCount * 2);
     data = newBuf;
     zeroVector();
   }
@@ -128,13 +123,13 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
    * Allocate new buffer with double capacity, and copy data into the new buffer. Replace vector's buffer with new buffer, and release old one
    */
   public void reAlloc() {
-    allocationValueCount *= 2;
-    int valueSize = getSizeFromCount(allocationValueCount);
-    DrillBuf newBuf = allocator.buffer(valueSize);
+    final int valueSize = getSizeFromCount(allocationValueCount);
+    final DrillBuf newBuf = allocator.buffer(valueSize);
     if (newBuf == null) {
       throw new OutOfMemoryRuntimeException(String.format("Failure while allocating buffer of %d bytes.", valueSize));
     }
 
+    allocationValueCount = Math.min(MAX_VALUE_ALLOCATION, allocationValueCount * 2);
     newBuf.setZero(0, newBuf.capacity());
     newBuf.setBytes(0, data, 0, data.capacity());
     data.release();
@@ -154,7 +149,7 @@ public final class BitVector extends BaseDataValueVector implements FixedWidthVe
     clear();
     this.valueCount = valueCount;
     int len = getSizeFromCount(valueCount);
-    data = (DrillBuf) buf.slice(0, len);
+    data = buf.slice(0, len);
     data.retain();
     return len;
   }

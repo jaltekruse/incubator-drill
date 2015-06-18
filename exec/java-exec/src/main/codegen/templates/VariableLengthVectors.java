@@ -55,6 +55,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
 
   private static final int DEFAULT_RECORD_BYTE_COUNT = 8;
   private static final int INITIAL_BYTE_COUNT = 4096 * DEFAULT_RECORD_BYTE_COUNT;
+  private static final int MAX_BYTE_COUNT = MAX_VALUE_ALLOCATION * DEFAULT_RECORD_BYTE_COUNT;
   private static final int MIN_BYTE_COUNT = 4096;
 
   public final static String OFFSETS_VECTOR_NAME = "offsets";
@@ -265,7 +266,7 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
 
   @Override
   public void setInitialCapacity(int numRecords) {
-    allocationTotalByteCount = numRecords * DEFAULT_RECORD_BYTE_COUNT;
+    allocationTotalByteCount = Math.min(MAX_BYTE_COUNT, numRecords * DEFAULT_RECORD_BYTE_COUNT);
     offsetVector.setInitialCapacity(numRecords + 1);
   }
 
@@ -279,10 +280,10 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
   public boolean allocateNewSafe() {
     clear();
     if (allocationMonitor > 10) {
-      allocationTotalByteCount = Math.max(MIN_BYTE_COUNT, (int) (allocationTotalByteCount / 2));
+      allocationTotalByteCount = Math.max(MIN_BYTE_COUNT, allocationTotalByteCount / 2);
       allocationMonitor = 0;
     } else if (allocationMonitor < -2) {
-      allocationTotalByteCount = (int) (allocationTotalByteCount * 2);
+      allocationTotalByteCount = Math.min(MAX_BYTE_COUNT, allocationTotalByteCount * 2);
       allocationMonitor = 0;
     }
 
@@ -316,29 +317,29 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements V
     clear();
     assert totalBytes >= 0;
     try {
-      DrillBuf newBuf = allocator.buffer(totalBytes);
+      final DrillBuf newBuf = allocator.buffer(totalBytes);
       if (newBuf == null) {
         throw new OutOfMemoryRuntimeException(String.format("Failure while allocating buffer of %d bytes", totalBytes));
       }
-      this.data = newBuf;
+      data = newBuf;
       offsetVector.allocateNew(valueCount + 1);
     } catch (OutOfMemoryRuntimeException e) {
       clear();
       throw e;
     }
     data.readerIndex(0);
-    allocationTotalByteCount = totalBytes;
+    allocationTotalByteCount = Math.min(MAX_BYTE_COUNT, totalBytes);
     offsetVector.zeroVector();
   }
 
     public void reAlloc() {
-      allocationTotalByteCount *= 2;
-      DrillBuf newBuf = allocator.buffer(allocationTotalByteCount);
+      final int curByteAllocation = Math.min(MAX_BYTE_COUNT, allocationTotalByteCount*2);
+      DrillBuf newBuf = allocator.buffer(curByteAllocation);
       if(newBuf == null){
         throw new OutOfMemoryRuntimeException(
-          String.format("Failure while reallocating buffer of %d bytes", allocationTotalByteCount));
+          String.format("Failure while reallocating buffer of %d bytes", curByteAllocation));
       }
-
+      allocationTotalByteCount = curByteAllocation;
       newBuf.setBytes(0, data, 0, data.capacity());
       data.release();
       data = newBuf;
