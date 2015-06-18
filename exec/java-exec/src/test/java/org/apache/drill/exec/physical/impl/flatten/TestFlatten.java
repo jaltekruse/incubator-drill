@@ -53,6 +53,68 @@ public class TestFlatten extends BaseTestQuery {
   }
 
   @Test
+  public void testProjectCreatedByFlattenPlanningRule() throws Exception {
+    test("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from \n" +
+        "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2\n" +
+        "on v1.uid = v2.uid)");
+  }
+
+
+  @Test
+  public void testProjectCreatedByFlattenPlanningRule2() throws Exception {
+   test("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
+       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+       "inner join\n" +
+       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+       "on v1.uid = v2.uid)");
+  }
+
+  @Test
+  public void testFlattenWithJoinNested() throws Exception {
+    test("select v1.uid, flatten(v1.event_map.events), flatten(v2.transaction_map.transactions) from \n" +
+        "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2\n" +
+        "on v1.uid = v2.uid;");
+  }
+
+  @Test
+  public void testFlattenWithJoin() throws Exception {
+    test("alter session set `planner.width.max_per_node` = 1");
+    test("select v1.uid, flatten(events), flatten(transactions) from \n" +
+        "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+        "on v1.uid = v2.uid;");
+
+
+
+    // both of these work
+//    test("select e as events2, e as e2 from (select uid as u, events as e, events from cp.`flatten/complex_transaction_example_data.json`)");
+//    test("select events as events2, events as e2 from (select uid as u, events as e, events from cp.`flatten/complex_transaction_example_data.json`)");
+
+//   test("select uid, transactions from (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) as t");
+//   testPhysicalFromFile("flatten/test_project_complex_twice_plan.json");
+  }
+
+  @Test
+  public void testFlattenDatasetFromList() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    String jsonRecords = BaseTestQuery.getFile("flatten/FROM_LIST_ASK_PERMISSION_TO_DISTRIBUTE.json");
+    int numCopies = 10000;
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecords)
+        .createFiles(1, numCopies, "json");
+
+//    test("select flatten(campaign['funders'])['user_id']  from " +
+    test("select flatten(d.campaign.funders)['user_id']  from " +
+                "dfs.`" + path + "/bigfile/bigfile.json` d");
+  }
+
+  @Test
   public void testFlatten_Drill2162_complex() throws Exception {
     String path = folder.getRoot().toPath().toString();
 
@@ -97,16 +159,70 @@ public class TestFlatten extends BaseTestQuery {
             "select flatten(int_list) from dfs.`" + path + "/bigfile/bigfile.json`"));
   };
 
+  private String generateIntList(int listSize) {
+    StringBuffer jsonList = new StringBuffer("[");
+    for (int i = 1; i < listSize; i++ ) {
+      jsonList.append(i).append(", ");
+    }
+    return jsonList.append(listSize).append("]").toString();
+  }
+
+  @Test
+  public void readLargeLists() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    final int listSize = 99_999;
+    String jsonRecord = new StringBuffer("{ \"int_list\" : ").append(generateIntList(listSize)).append("}").toString();
+    int numRecords = 2000;
+
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecord)
+        .createFiles(1, numRecords, "json");
+
+    runSQL("select int_list from dfs.`" + path + "/bigfile/bigfile.json`");
+  };
+
+  @Test
+  public void largeList_2851() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    final int listSize = 99_999;
+    String jsonRecord = new StringBuffer("{ \"int_list\" : ").append(generateIntList(listSize)).append("}").toString();
+
+    int numRecords = 1;
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecord)
+        .createFiles(1, numRecords, "json");
+
+    assertEquals("Wrong record count returned from flatten.", listSize * numRecords,
+        testRunAndPrint(UserBitShared.QueryType.SQL,
+            "select flatten(int_list) from dfs.`" + path + "/bigfile/bigfile.json`"));
+  };
+
   @Test
   public void drill1671() throws Exception{
     int rowCount = testSql("select * from (select count(*) as cnt from (select id, flatten(evnts1), flatten(evnts2), flatten(evnts3), flatten(evnts4), flatten(evnts5), flatten(evnts6), flatten(evnts7), flatten(evnts8), flatten(evnts9), flatten(evnts10), flatten(evnts11) from cp.`/flatten/many-arrays-50.json`)x )y where cnt = 2048");
     assertEquals(rowCount, 1);
   }
 
+  @Ignore
   @Test
-  @Ignore("not yet fixed")
   public void drill1660() throws Exception {
-    test("select * from cp.`/flatten/empty-rm.json`");
+    testBuilder()
+        .sqlQuery("select * from cp.`/flatten/empty-rm.json`")
+        .ordered()
+        .baselineColumns("id", "evnts")
+        .baselineValues(1l, listOf(mapOf(), mapOf()))
+        .go();
+
+    // TODO - currently failing
+    testBuilder()
+        .sqlQuery("select flatten(evnts) as flat_evnts from cp.`/flatten/empty-rm.json`")
+        .ordered()
+        .baselineColumns("flat_evnts")
+        .baselineValues(mapOf())
+        .baselineValues(mapOf())
+        .go();
   }
 
   @Test // repeated list within a repeated map
@@ -142,7 +258,8 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void drill1653() throws Exception{
-    int rowCount = testSql("select * from (select sum(t.flat.`value`) as sm from (select id, flatten(kvgen(m)) as flat from cp.`/flatten/missing-map.json`)t) where sm = 10 ");
+    int rowCount = testSql("select * from (select sum(flatten(kvgen(m))['value']) sm from cp.`/flatten/missing-map.json`) where sm = 10 ");
+//    int rowCount = testSql("select * from (select sum(t.flat.`value`) as sm from (select id, flatten(kvgen(m)) as flat from cp.`/flatten/missing-map.json`)t) where sm = 10 ");
     assertEquals(1, rowCount);
   }
 

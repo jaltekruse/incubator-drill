@@ -1,0 +1,71 @@
+{
+  "campaign": {
+    "funders": [
+      {
+        "donation": "null",
+        "funding_period": "null",
+        "user_id": "null",
+        "current_date": "null",
+        "campaign_id": "null"
+      }
+    ],
+    "category": "Community",
+    "campaign_teammember": [
+      {
+        "team_size": "1",
+        "at_date": "2015-02-20T20:51:33",
+        "user_id": "9325429",
+        "campaign_id": "663286"
+      }
+    ],
+    "campaign_text": "Now tell a story   primitive  in Moldova today ! A family with three children living in ... a car body.Home , for these children means what others would call any dog house - a UAZ  car with broken windowsThe kitchen and it means a table without chairs around it and a few other pieces of furniture oldEvening its gather around a candle because do not even have electricity!Winter comes , and they do not have a shelter,\nPlease help these children to have a normal life and a place to live",
+    "end_date": "2015-01-15",
+    "campaign_updts": [
+
+    ],
+    "funding_type": "Flexible Funding",
+    "money_raised": "0",
+    "campaign_id": "663286",
+    "comments": [
+      {
+        "comment": "null",
+        "current_date": "null",
+        "user_id": "null",
+        "comment_date": "null",
+        "campaign_id": "null"
+      }
+    ],
+    "campaign_goal": "23500",
+    "currency": "USD",
+    "campaign_teammember_updts": [
+
+    ],
+    "updates": [
+      {
+        "user_id": "null",
+        "current_date": "null",
+        "update_period": "null",
+        "campaign_id": "null",
+        "post_text": "null"
+      }
+    ],
+    "campaign_name": "Fund for the 3 children of Moldova",
+    "perks": [
+      {
+        "perk_description": "null",
+        "price": "null",
+        "campaign_id": "null",
+        "perk_title": "null",
+        "at_date": "null",
+        "perk_claimed": "null",
+        "perk_limit": "null"
+      }
+    ],
+    "at_date": "2015-02-26T05:16:43",
+    "perks_updts": [
+
+    ],
+    "start_date": "2014-12-06",
+    "location": "Chisinau, Moldova, Republic of"
+  }
+}
