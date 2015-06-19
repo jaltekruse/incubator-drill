@@ -23,13 +23,14 @@ import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
+import org.apache.drill.exec.store.dfs.FormatSelection;
 
 public class DynamicDrillTable extends DrillTable {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DynamicDrillTable.class);
 
   private RelDataTypeHolder holder = new RelDataTypeHolder();
 
-  public DynamicDrillTable(StoragePlugin plugin, String storageEngineName, String userName, Object selection) {
+  public DynamicDrillTable(StoragePlugin plugin, String storageEngineName, String userName, FormatSelection selection) {
     super(storageEngineName, plugin, userName, selection);
   }
 
