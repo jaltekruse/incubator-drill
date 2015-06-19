@@ -52,7 +52,9 @@ import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
+import org.apache.drill.exec.store.dfs.DrillFileSystem;
 import org.apache.drill.exec.store.dfs.FileSelection;
+import org.apache.drill.exec.store.dfs.FileSystemPlugin;
 import org.apache.drill.exec.store.dfs.FormatPlugin;
 import org.apache.drill.exec.store.dfs.FormatSelection;
 import org.apache.drill.exec.store.dfs.easy.EasyGroupScan;
@@ -67,7 +69,9 @@ import org.apache.calcite.plan.RelOptRuleOperand;
 import com.google.common.collect.Lists;
 import org.apache.drill.exec.store.parquet.ParquetFormatConfig;
 import org.apache.drill.exec.store.sys.StaticDrillTable;
+import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
 
 public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule {
 
@@ -111,7 +115,9 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     // TODO - find an API for getting the directory where external hive tables are stored, so far I can only
     // find the show create table command but that would require me to parse it to find the path
 //          final String tablePath = "/Users/jaltekruse/test_data_drill/par_hive_types";
-    final String tablePath = hiveReadEntry.getHivePartitionWrappers().get(0).getPartition().getSd().getLocation();
+    final StorageDescriptor sd = hiveReadEntry.getHivePartitionWrappers().get(0).getPartition().getSd();
+    final String partitionPath = sd.getLocation();
+    final String tablePath = hiveReadEntry.getTable().getSd().getLocation();
     final StoragePlugin storagePlugin;
     final FormatPluginConfig formatPluginConfig;
     try {
@@ -124,7 +130,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       // this shouldn't be too hard, the format config is sent with the plan, there is no need to configure a fake config in the registry
 //            FormatPluginConfig formatConfig = getQueryContext().getStorage().getFormatPlugin(storagePluginConfig, new TextFormatPlugin.TextFormatConfig()).getConfig();
       dynamicDrillTable = new DynamicDrillTable(
-          getQueryContext().getStorage().getPlugin("dfs"),
+          storagePlugin,
           "file",
           getQueryContext().getQueryUserName(),
 //                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
@@ -145,8 +151,11 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
 //            FormatSelection formatSelection = new FormatSelection();
 //            return plugin.getGroupScan(getQueryContext().getQueryUserName(), formatSelection.getSelection(), columns);
 
-      FileSelection selection = new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
-      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, Lists.newArrayList(tablePath));
+      DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
+
+      FileSelection selection = FileSelection.create(fs, tablePath, partitionPath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
+      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, selection);
+
       TextFormatPlugin formatPlugin = new TextFormatPlugin("hive_native_text_scan_plugin", getQueryContext().getDrillbitContext(), new Configuration(), storagePlugin.getConfig());
 //            nativeScan = new EasyGroupScan(getQueryContext().getQueryUserName(), selection, formatPlugin, hiveScan.getColumns(), tablePath);
       GroupScan groupScan = storagePlugin.getPhysicalScan(getQueryContext().getQueryUserName(), formatPlugin, new JSONOptions(formatSelection), AbstractGroupScan.ALL_COLUMNS);
