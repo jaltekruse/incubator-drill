@@ -18,8 +18,11 @@
 package org.apache.drill.exec.planner.sql.logical;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import javassist.expr.FieldAccess;
 import org.apache.calcite.prepare.RelOptTableImpl;
@@ -28,10 +31,14 @@ import org.apache.calcite.rel.type.RelDataTypeFactory;
 import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
+import org.apache.calcite.sql.SqlOperator;
+import org.apache.calcite.sql.fun.SqlCaseOperator;
+import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
@@ -48,15 +55,19 @@ import org.apache.drill.exec.planner.logical.DynamicDrillTable;
 import org.apache.drill.exec.planner.logical.PartitionPruningUtil;
 import org.apache.drill.exec.planner.logical.RelOptHelper;
 import org.apache.drill.exec.planner.sql.HivePartitionDescriptor;
+import org.apache.drill.exec.planner.types.DrillFixedRelDataTypeImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
 import org.apache.drill.exec.store.StoragePlugin;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
+import org.apache.drill.exec.store.dfs.BasicFormatMatcher;
 import org.apache.drill.exec.store.dfs.DrillFileSystem;
 import org.apache.drill.exec.store.dfs.FileSelection;
 import org.apache.drill.exec.store.dfs.FileSystemPlugin;
+import org.apache.drill.exec.store.dfs.FormatMatcher;
 import org.apache.drill.exec.store.dfs.FormatPlugin;
 import org.apache.drill.exec.store.dfs.FormatSelection;
+import org.apache.drill.exec.store.dfs.MagicString;
 import org.apache.drill.exec.store.dfs.easy.EasyGroupScan;
 import org.apache.drill.exec.store.easy.text.TextFormatPlugin;
 import org.apache.drill.exec.store.hive.HiveReadEntry;
@@ -71,16 +82,34 @@ import org.apache.drill.exec.store.parquet.ParquetFormatConfig;
 import org.apache.drill.exec.store.sys.StaticDrillTable;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
+import org.apache.hadoop.hive.ql.security.authorization.AuthorizationPreEventListener;
+import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule {
+  static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ConvertHiveTaleScanToNativeRead.class);
 
   public static final StoragePluginOptimizerRule INSTANCE = new ConvertHiveTaleScanToNativeRead();
+  private static final String HIVE_NULL_STR = "\\N";
 
   private ConvertHiveTaleScanToNativeRead() {
     super(RelOptHelper.any(DrillScanRel.class),
           "ConvertHiveTaleScanToNativeRead:Text");
   }
+
+//  RelDataType getDrillType(PrimitiveObjectInspector.PrimitiveCategory pCat, RelDataTypeFactory factory) {
+//    RelDataType t = null;
+//    switch(pCat) {
+//      case INT:
+//        t =
+//      default:
+//        throw UserException.unsupportedError().message("Unsupported type in hive scan: %s ", pCat.name()).build();
+//    }
+//  }
 
   RelDataType getDrillType(RelDataType type, RelDataTypeFactory factory) {
     switch (type.getSqlTypeName()) {
@@ -119,9 +148,18 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     final String partitionPath = sd.getLocation();
     final String tablePath = hiveReadEntry.getTable().getSd().getLocation();
     final StoragePlugin storagePlugin;
-    final FormatPluginConfig formatPluginConfig;
+    final TextFormatPlugin.TextFormatConfig formatPluginConfig;
     try {
       formatPluginConfig = new TextFormatPlugin.TextFormatConfig();
+      // TODO - look at what is in this parameters map when reading parquet backed tables
+      // TODO - make sure we only set this for text, need to ignore it for parquet
+      // TODO - see if Hive allows multi-character delimiter, I do not believe so, but this does return a String, not a char
+      formatPluginConfig.fieldDelimiter = sd.getSerdeInfo().getParameters().get("field.delim").charAt(0);
+      formatPluginConfig.lineDelimiter = "\n";
+      // This needed to be set as it need to be non-null to initialize the BasicFormatMatcher which happens down the call chain
+      // from the constructor of the TextFormatPlugin below
+      // The actual patterns used to find files (which currently match anything) are defined below in the FormatMatcher lists
+      formatPluginConfig.extensions = Lists.newArrayList();
       storagePlugin = getQueryContext().getStorage().getPlugin("dfs");
       StoragePluginConfig storagePluginConfig = getQueryContext().getStorage().getPlugin("dfs").getConfig();
       // TODO - this isn't working
@@ -151,12 +189,50 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
 //            FormatSelection formatSelection = new FormatSelection();
 //            return plugin.getGroupScan(getQueryContext().getQueryUserName(), formatSelection.getSelection(), columns);
 
+      // TODO - this takes a long time in the debugger, might be a big part of the start up time of Drill
+      TextFormatPlugin formatPlugin = new TextFormatPlugin(
+          "hive_native_text_scan_plugin",
+          getQueryContext().getDrillbitContext(),
+          new Configuration(),
+          storagePlugin.getConfig(),
+          formatPluginConfig);
       DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
 
-      FileSelection selection = FileSelection.create(fs, tablePath, partitionPath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
-      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, selection);
+      FileSelection fileSelection = FileSelection.create(fs, tablePath, partitionPath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
+//      FileSelection fileSelection = null;
 
-      TextFormatPlugin formatPlugin = new TextFormatPlugin("hive_native_text_scan_plugin", getQueryContext().getDrillbitContext(), new Configuration(), storagePlugin.getConfig());
+//      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, fileSelection);
+      FormatSelection formatSelection = null;
+
+      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
+      ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
+
+      //==========================================================================================================
+      // TODO - share this code with WorkspaceSchemaFactory.create() where it was copied out of
+      if (fileSelection.containsDirectories(fs)) {
+        for (FormatMatcher m : dirMatchers) {
+          try {
+            formatSelection = m.isReadable(fs, fileSelection);
+            if (formatSelection != null) {
+              break;
+            }
+          } catch (IOException e) {
+            logger.debug("File read failed.", e);
+          }
+        }
+        fileSelection = fileSelection.minusDirectories(fs);
+      }
+      for (FormatMatcher m : fileMatchers) {
+        formatSelection = m.isReadable(fs, fileSelection);
+        if (formatSelection != null) {
+          break;
+        }
+      }
+      // added from above
+      fileSelection = fileSelection.minusDirectories(fs);
+      //==========================================================================================================
+
+
 //            nativeScan = new EasyGroupScan(getQueryContext().getQueryUserName(), selection, formatPlugin, hiveScan.getColumns(), tablePath);
       GroupScan groupScan = storagePlugin.getPhysicalScan(getQueryContext().getQueryUserName(), formatPlugin, new JSONOptions(formatSelection), AbstractGroupScan.ALL_COLUMNS);
       nativeScan = new DrillScanRel(scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
@@ -174,9 +250,17 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     //    - we seem to actually be adding the collation to every column when we create the type
     //      we aren't looking at the hive metadata to populate this
     final List<RexNode> rexNodes = Lists.newArrayList();
+    final List<String> fieldNames = Lists.newArrayList();
     final RexBuilder rb = scanRel.getCluster().getRexBuilder();
     boolean allSelected = false;
+    int columnIndex = 0;
+    // TODO - This loop needs to go through the columns in the order they are stored in Hive, the column ordinals
+    // are used to assign the correct names and types to data read out of text tables
     for (RelDataTypeField field : scanRel.getRowType().getFieldList()) {
+    // TODO - ensure this interface has a stable ordering for the columns that will match the order
+    // they appear in raw text files
+    // TODO - grab out of the table level storage descriptor rather than the partition one
+//    for (FieldSchema field : sd.getCols()) {
       boolean selected = false;
       for (SchemaPath sp : scanRel.getColumns()) {
         if (sp.toExpr().equals(GroupScan.ALL_COLUMNS.get(0).toExpr())) {
@@ -189,13 +273,59 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       if (! (selected || allSelected)) {
         continue;
       }
+      fieldNames.add(field.getName());
       // This API strongly advises against hard coding false for case insensitivity, however Drill is case insensitive
       // throughout the system in everything but storage systems that require case sensitivity so we can push down
       // (like Hbase)
-      final RexNode fieldAccess = rb.makeInputRef(anyType, nativeScan.getRowType().getField(field.getName(), false, false).getIndex());
-      rexNodes.add(rb.makeCast(getDrillType(field.getType(), typeFactory), fieldAccess));
+//      final RexNode fieldAccess = rb.makeInputRef(anyType, nativeScan.getRowType().getField(field.getName(), false, false).getIndex());
+      final RelDataType repeatedVarchar = typeFactory.createArrayType(typeFactory.createSqlType(SqlTypeName.VARCHAR), -1);
+      // Add a cast to the correct columns coming out of the text scan
+      final RexNode fieldAccess = rb.makeCall(
+          SqlStdOperatorTable.ITEM,
+          rb.makeInputRef(
+              repeatedVarchar,
+              nativeScan.getRowType().getField("columns", false, false).getIndex()),
+          rb.makeExactLiteral(new BigDecimal(columnIndex)));
+      // Hive stores nulls as \N, these need to be turned into SQL NULLs
+      // before casting to the appropriate type
+      final RexNode removeNullsCase = rb.makeCall(
+          SqlCaseOperator.INSTANCE,
+          rb.makeCall(
+              SqlStdOperatorTable.EQUALS,
+              fieldAccess,
+              rb.makeLiteral(HIVE_NULL_STR)),
+          rb.makeNullLiteral(SqlTypeName.VARCHAR),
+          fieldAccess);
+      // TODO - make sure complex types are excluded with a useful error message elsewhere
+//      PrimitiveObjectInspector.PrimitiveCategory pCat = ((PrimitiveTypeInfo)TypeInfoUtils.getTypeInfoFromTypeString(field.getType())).getPrimitiveCategory();
+
+//      TypeInfo pType = TypeInfoUtils.getTypeInfoFromTypeString(field.getType());
+      // Cast the Varchar to the appropriate type
+      rexNodes.add(
+          rb.makeCast(
+              getDrillType(field.getType(),
+//                  scanRel.getRowType().getField(
+//                      field.getName(),
+//                      false,
+//                      false
+//                  ).getType(),
+                  typeFactory),
+              removeNullsCase));
+      columnIndex++;
     }
+
+    // TODO - look at what is stored in the partition dir name for null values
+    for (FieldSchema field : hiveReadEntry.getTable().getPartitionKeys()) {
+//      fieldNames.add(fieName());
+    }
+//    fieldNames.add("dir0");
+//    fieldNames.add("dir1");
+//    rexNodes.add(
+//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir0", false, false).getIndex()));
+//    rexNodes.add(
+//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir1", false, false).getIndex()));
+    RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
     call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
-        nativeScan .getRowType()));
+        rowDataType));
   }
 }

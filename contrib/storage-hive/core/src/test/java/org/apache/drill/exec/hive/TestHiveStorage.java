@@ -163,6 +163,7 @@ public class TestHiveStorage extends HiveTestBase {
   public void parquetBackedTableRead() throws Exception  {
 //    test("SELECT * FROM hive.readtest_parquet");
     test("select " +
+        "boolean_part, " +
         "boolean_field, " +
         "tinyint_field, " +
         "double_field, " +
