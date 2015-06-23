@@ -43,6 +43,7 @@ import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.logical.FormatPluginConfig;
 import org.apache.drill.common.logical.StoragePluginConfig;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.physical.base.GroupScan;
@@ -259,6 +260,9 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     // TODO - ensure this interface has a stable ordering for the columns that will match the order
     // they appear in raw text files
     // TODO - grab out of the table level storage descriptor rather than the partition one
+    //    - what about the case of column additions, partitions may be able to have more columns than others
+    //      this might cause problems as the parquet read will produce nullable ints for columns not found
+    //      which may not be castable to all of the other types
     for (FieldSchema field : sd.getCols()) {
       boolean selected = false;
       for (SchemaPath sp : scanRel.getColumns()) {
@@ -327,8 +331,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       // http://blog.zhengdong.me/2012/02/22/hive-external-table-with-partitions
       // http://stackoverflow.com/questions/15271061/is-it-possible-to-import-data-into-hive-table-without-copying-the-data/22170468#22170468
 
-      // TODO - pull the directory name out of the options
-      final String dirColName = "dir" + partitionIndex;
+      final String dirColName = getQueryContext().getOptions().getOption(ExecConstants.FILESYSTEM_PARTITION_COLUMN_LABEL).string_val + partitionIndex;
       final RexNode removeNullsCase = rb.makeCall(
           SqlStdOperatorTable.SUBSTRING,
           rb.makeCall(
