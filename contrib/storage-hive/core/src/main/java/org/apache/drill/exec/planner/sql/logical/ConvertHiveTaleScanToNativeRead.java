@@ -35,6 +35,7 @@ import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
+import org.apache.calcite.util.NlsString;
 import org.apache.drill.common.JSONOptions;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
@@ -98,7 +99,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
 
   private ConvertHiveTaleScanToNativeRead() {
     super(RelOptHelper.any(DrillScanRel.class),
-          "ConvertHiveTaleScanToNativeRead:Text");
+        "ConvertHiveTaleScanToNativeRead:Text");
   }
 
 //  RelDataType getDrillType(PrimitiveObjectInspector.PrimitiveCategory pCat, RelDataTypeFactory factory) {
@@ -228,8 +229,6 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
           break;
         }
       }
-      // added from above
-      fileSelection = fileSelection.minusDirectories(fs);
       //==========================================================================================================
 
 
@@ -256,11 +255,11 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     int columnIndex = 0;
     // TODO - This loop needs to go through the columns in the order they are stored in Hive, the column ordinals
     // are used to assign the correct names and types to data read out of text tables
-    for (RelDataTypeField field : scanRel.getRowType().getFieldList()) {
+//    for (RelDataTypeField field : scanRel.getRowType().getFieldList()) {
     // TODO - ensure this interface has a stable ordering for the columns that will match the order
     // they appear in raw text files
     // TODO - grab out of the table level storage descriptor rather than the partition one
-//    for (FieldSchema field : sd.getCols()) {
+    for (FieldSchema field : sd.getCols()) {
       boolean selected = false;
       for (SchemaPath sp : scanRel.getColumns()) {
         if (sp.toExpr().equals(GroupScan.ALL_COLUMNS.get(0).toExpr())) {
@@ -303,20 +302,58 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       // Cast the Varchar to the appropriate type
       rexNodes.add(
           rb.makeCast(
-              getDrillType(field.getType(),
-//                  scanRel.getRowType().getField(
-//                      field.getName(),
-//                      false,
-//                      false
-//                  ).getType(),
+              getDrillType(
+                  scanRel.getRowType().getField(
+                      field.getName(),
+                      false,
+                      false
+                  ).getType(),
                   typeFactory),
               removeNullsCase));
       columnIndex++;
     }
 
+    final RelDataType varcharType = typeFactory.createSqlType(SqlTypeName.VARCHAR);
+    int partitionIndex = 0;
     // TODO - look at what is stored in the partition dir name for null values
     for (FieldSchema field : hiveReadEntry.getTable().getPartitionKeys()) {
-//      fieldNames.add(fieName());
+      fieldNames.add(field.getName());
+
+      // Hive stores partition values in directory names with the format field_name=value
+      // TODO - strip away field names and '=' character
+      // TODO - research what Hive does if the field name or value contains =
+      // TODO - take a look at the stackoverflow answer that seemed to indicate you could give an
+      // arbitrary path to an partition, would need to resolve this mapping
+      // http://blog.zhengdong.me/2012/02/22/hive-external-table-with-partitions
+      // http://stackoverflow.com/questions/15271061/is-it-possible-to-import-data-into-hive-table-without-copying-the-data/22170468#22170468
+
+      // TODO - pull the directory name out of the options
+      final String dirColName = "dir" + partitionIndex;
+      final RexNode removeNullsCase = rb.makeCall(
+          SqlStdOperatorTable.SUBSTRING,
+          rb.makeCall(
+              SqlStdOperatorTable.SUBSTRING,
+              rb.makeInputRef(
+                  varcharType,
+                  nativeScan.getRowType().getField(dirColName, false, false).getIndex()),
+              rb.makeLiteral("=.*$")),
+          rb.makeExactLiteral(new BigDecimal(2)));
+      // TODO - make sure complex types are excluded with a useful error message elsewhere
+//      PrimitiveObjectInspector.PrimitiveCategory pCat = ((PrimitiveTypeInfo)TypeInfoUtils.getTypeInfoFromTypeString(field.getType())).getPrimitiveCategory();
+
+//      TypeInfo pType = TypeInfoUtils.getTypeInfoFromTypeString(field.getType());
+      // Cast the Varchar to the appropriate type
+      rexNodes.add(
+          rb.makeCast(
+              getDrillType(
+                  scanRel.getRowType().getField(
+                      field.getName(),
+                      false,
+                      false
+                  ).getType(),
+                  typeFactory),
+              removeNullsCase));
+      partitionIndex++;
     }
 //    fieldNames.add("dir0");
 //    fieldNames.add("dir1");
