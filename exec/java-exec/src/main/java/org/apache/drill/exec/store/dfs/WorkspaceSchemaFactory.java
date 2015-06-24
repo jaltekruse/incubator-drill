@@ -288,7 +288,7 @@ public class WorkspaceSchemaFactory {
         if (fileSelection.containsDirectories(fs)) {
           for (FormatMatcher m : dirMatchers) {
             try {
-              FormatSelection selection = m.isReadable(fs, fileSelection);
+              Object selection = m.isReadable(fs, fileSelection);
               if (selection != null) {
                 return new DynamicDrillTable(plugin, storageEngineName, schemaConfig.getUserName(), selection);
               }
@@ -300,7 +300,7 @@ public class WorkspaceSchemaFactory {
         }
 
         for (FormatMatcher m : fileMatchers) {
-          FormatSelection selection = m.isReadable(fs, fileSelection);
+          Object selection = m.isReadable(fs, fileSelection);
           if (selection != null) {
             return new DynamicDrillTable(plugin, storageEngineName, schemaConfig.getUserName(), selection);
           }
