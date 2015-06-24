@@ -355,27 +355,27 @@ public class HiveTestDataGenerator {
         "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
         "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
 //    executeQuery(hiveDriver,
-//        "INSERT INTO TABLE parquet_mixed_fileformat  " +
+//        "INSERT INTO TABLE parquet_text_mixed_fileformat  " +
 //            "SELECT " +
 //            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
 //            "FROM readtest ");
 
-//    executeQuery(hiveDriver,
-//        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
-//            "PARTITION (" +
-//            "  boolean_part='true', " +
-////            changed this from 64
-//            "  tinyint_part='63', " +
-//            "  double_part='8.345', " +
-//            "  float_part='4.67', " +
-//            "  int_part='123456', " +
-//            "  bigint_part='234235', " +
-//            "  smallint_part='3455', " +
-//            "  string_part='string'" +
-//            ") " +
-//            "SELECT " +
-//            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
-//            "FROM readtest ");
+    executeQuery(hiveDriver,
+        "INSERT INTO TABLE parquet_text_mixed_fileformat " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+//            changed this from 64
+            "  tinyint_part='63', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
+            "SELECT " +
+            "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
+            "FROM readtest ");
 
 //    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
 //        "     SET FILEFORMAT " +

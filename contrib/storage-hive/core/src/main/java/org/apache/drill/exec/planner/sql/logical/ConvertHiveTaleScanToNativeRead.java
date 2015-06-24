@@ -200,7 +200,8 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
           formatPluginConfig);
       DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
 
-      FileSelection fileSelection = FileSelection.create(fs, tablePath, partitionPath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
+      // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
+      FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
 //      FileSelection fileSelection = null;
 
 //      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, fileSelection);
