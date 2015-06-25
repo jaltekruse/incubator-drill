@@ -179,14 +179,28 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
 
       // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
       FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
-      ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
-      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
+      ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(
+          new BasicFormatMatcher(
+              formatPlugin,
+              Lists.newArrayList(
+                  Pattern.compile(".*")),
+              Lists.<MagicString>newArrayList()));
+      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(
+          new BasicFormatMatcher(
+              formatPlugin,
+              Lists.newArrayList(
+                  Pattern.compile(".*")),
+              Lists.<MagicString>newArrayList()));
 
       FormatSelection formatSelection = findFiles(fileSelection, dirMatchers, fileMatchers, fs);
 
-//            nativeScan = new EasyGroupScan(getQueryContext().getQueryUserName(), selection, formatPlugin, hiveScan.getColumns(), tablePath);
-      GroupScan groupScan = storagePlugin.getPhysicalScan(getQueryContext().getQueryUserName(), formatPlugin, new JSONOptions(formatSelection), AbstractGroupScan.ALL_COLUMNS);
-      nativeScan = new DrillScanRel(scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
+      GroupScan groupScan = storagePlugin.getPhysicalScan(
+          getQueryContext().getQueryUserName(),
+          formatPlugin,
+          new JSONOptions(formatSelection),
+          AbstractGroupScan.ALL_COLUMNS);
+      nativeScan = new DrillScanRel(
+          scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -203,6 +217,22 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     final List<RexNode> rexNodes = Lists.newArrayList();
     final List<String> fieldNames = Lists.newArrayList();
     final RexBuilder rb = scanRel.getCluster().getRexBuilder();
+
+    addColumnCasts(typeFactory, sd, fieldNames, rb, rexNodes, scanRel, nativeScan);
+    addPartitionColumns(typeFactory, hiveReadEntry, fieldNames, rb, rexNodes, scanRel, nativeScan);
+
+    RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
+    call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
+        rowDataType));
+  }
+
+  private void addColumnCasts(RelDataTypeFactory typeFactory,
+                              StorageDescriptor sd,
+                              List<String> fieldNames,
+                              RexBuilder rb,
+                              List<RexNode> rexNodes,
+                              DrillScanRel scanRel,
+                              DrillScanRel nativeScan ) {
     boolean allSelected = false;
     int columnIndex = 0;
     // TODO - This loop needs to go through the columns in the order they are stored in Hive, the column ordinals
@@ -267,18 +297,6 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
               removeNullsCase));
       columnIndex++;
     }
-
-    addPartitionColumns(typeFactory, hiveReadEntry, fieldNames,rb, rexNodes, scanRel, nativeScan);
-
-//    fieldNames.add("dir0");
-//    fieldNames.add("dir1");
-//    rexNodes.add(
-//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir0", false, false).getIndex()));
-//    rexNodes.add(
-//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir1", false, false).getIndex()));
-    RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
-    call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
-        rowDataType));
   }
 
   private void addPartitionColumns(RelDataTypeFactory typeFactory,
