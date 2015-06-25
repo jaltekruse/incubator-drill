@@ -139,7 +139,6 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     // would be nice to look through the storage plugin registry to avoid the need to set it
     // in the configuration separately if there is only one
 //          StaticDrillTable staticDrillTable = new StaticDrillTable("hive", "dfs", );
-    DynamicDrillTable dynamicDrillTable = null;
     final HiveScan hiveScan = (HiveScan)scanRel.getGroupScan();
     final HiveReadEntry hiveReadEntry = (HiveReadEntry)scanRel.getDrillTable().getSelection();
 //          final String tablePath = hiveScan.storagePlugin.getTablePathOnFs(hiveReadEntry.getTable().getTableName());
@@ -150,32 +149,19 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     final String partitionPath = sd.getLocation();
     final String tablePath = hiveReadEntry.getTable().getSd().getLocation();
     final StoragePlugin storagePlugin;
-    final TextFormatPlugin.TextFormatConfig formatPluginConfig;
+    final FormatPlugin formatPlugin;
+    final DynamicDrillTable dynamicDrillTable;
+
     try {
-      formatPluginConfig = new TextFormatPlugin.TextFormatConfig();
-      // TODO - look at what is in this parameters map when reading parquet backed tables
-      // TODO - make sure we only set this for text, need to ignore it for parquet
-      // TODO - see if Hive allows multi-character delimiter, I do not believe so, but this does return a String, not a char
-      formatPluginConfig.fieldDelimiter = sd.getSerdeInfo().getParameters().get("field.delim").charAt(0);
-      formatPluginConfig.lineDelimiter = "\n";
-      // This needed to be set as it need to be non-null to initialize the BasicFormatMatcher which happens down the call chain
-      // from the constructor of the TextFormatPlugin below
-      // The actual patterns used to find files (which currently match anything) are defined below in the FormatMatcher lists
-      formatPluginConfig.extensions = Lists.newArrayList();
       storagePlugin = getQueryContext().getStorage().getPlugin("dfs");
-      StoragePluginConfig storagePluginConfig = getQueryContext().getStorage().getPlugin("dfs").getConfig();
-      // TODO - this isn't working
-      // TODO - need to make this not share format config with the rest of drill, it needs to be configured to do whatever hive is doing
-      // in particular we need to not have skipHeader option set to false
-      // this shouldn't be too hard, the format config is sent with the plan, there is no need to configure a fake config in the registry
-//            FormatPluginConfig formatConfig = getQueryContext().getStorage().getFormatPlugin(storagePluginConfig, new TextFormatPlugin.TextFormatConfig()).getConfig();
+      formatPlugin = getFormatPlugin(sd, tablePath, storagePlugin);
       dynamicDrillTable = new DynamicDrillTable(
           storagePlugin,
           "file",
           getQueryContext().getQueryUserName(),
 //                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
 //                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
-          new FormatSelection(formatPluginConfig, Lists.newArrayList(tablePath)));
+          new FormatSelection(formatPlugin.getConfig(), Lists.newArrayList(tablePath)));
     } catch (ExecutionSetupException e) {
       throw new RuntimeException(e);
     }
@@ -188,51 +174,15 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
         dynamicDrillTable);
     final DrillScanRel nativeScan;
     try {
-//            FormatSelection formatSelection = new FormatSelection();
-//            return plugin.getGroupScan(getQueryContext().getQueryUserName(), formatSelection.getSelection(), columns);
 
-      // TODO - this takes a long time in the debugger, might be a big part of the start up time of Drill
-      TextFormatPlugin formatPlugin = new TextFormatPlugin(
-          "hive_native_text_scan_plugin",
-          getQueryContext().getDrillbitContext(),
-          new Configuration(),
-          storagePlugin.getConfig(),
-          formatPluginConfig);
       DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
 
       // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
       FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
-//      FileSelection fileSelection = null;
-
-//      FormatSelection formatSelection = new FormatSelection(formatPluginConfig, fileSelection);
-      FormatSelection formatSelection = null;
-
-      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
       ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
+      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(new BasicFormatMatcher(formatPlugin, Lists.newArrayList(Pattern.compile(".*")), Lists.<MagicString>newArrayList()));
 
-      //==========================================================================================================
-      // TODO - share this code with WorkspaceSchemaFactory.create() where it was copied out of
-      if (fileSelection.containsDirectories(fs)) {
-        for (FormatMatcher m : dirMatchers) {
-          try {
-            formatSelection = m.isReadable(fs, fileSelection);
-            if (formatSelection != null) {
-              break;
-            }
-          } catch (IOException e) {
-            logger.debug("File read failed.", e);
-          }
-        }
-        fileSelection = fileSelection.minusDirectories(fs);
-      }
-      for (FormatMatcher m : fileMatchers) {
-        formatSelection = m.isReadable(fs, fileSelection);
-        if (formatSelection != null) {
-          break;
-        }
-      }
-      //==========================================================================================================
-
+      FormatSelection formatSelection = findFiles(fileSelection, dirMatchers, fileMatchers, fs);
 
 //            nativeScan = new EasyGroupScan(getQueryContext().getQueryUserName(), selection, formatPlugin, hiveScan.getColumns(), tablePath);
       GroupScan groupScan = storagePlugin.getPhysicalScan(getQueryContext().getQueryUserName(), formatPlugin, new JSONOptions(formatSelection), AbstractGroupScan.ALL_COLUMNS);
@@ -318,6 +268,26 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       columnIndex++;
     }
 
+    addPartitionColumns(typeFactory, hiveReadEntry, fieldNames,rb, rexNodes, scanRel, nativeScan);
+
+//    fieldNames.add("dir0");
+//    fieldNames.add("dir1");
+//    rexNodes.add(
+//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir0", false, false).getIndex()));
+//    rexNodes.add(
+//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir1", false, false).getIndex()));
+    RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
+    call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
+        rowDataType));
+  }
+
+  private void addPartitionColumns(RelDataTypeFactory typeFactory,
+                                   HiveReadEntry hiveReadEntry,
+                                   List<String> fieldNames,
+                                   RexBuilder rb,
+                                   List<RexNode> rexNodes,
+                                   DrillScanRel scanRel,
+                                   DrillScanRel nativeScan ) {
     final RelDataType varcharType = typeFactory.createSqlType(SqlTypeName.VARCHAR);
     int partitionIndex = 0;
     // TODO - look at what is stored in the partition dir name for null values
@@ -359,14 +329,68 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
               removeNullsCase));
       partitionIndex++;
     }
-//    fieldNames.add("dir0");
-//    fieldNames.add("dir1");
-//    rexNodes.add(
-//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir0", false, false).getIndex()));
-//    rexNodes.add(
-//        rb.makeInputRef(typeFactory.createSqlType(SqlTypeName.VARCHAR), nativeScan.getRowType().getField("dir1", false, false).getIndex()));
-    RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
-    call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
-        rowDataType));
+  }
+
+  private FormatSelection findFiles(FileSelection fileSelection,
+                                    ArrayList<BasicFormatMatcher> dirMatchers,
+                                    ArrayList<BasicFormatMatcher> fileMatchers,
+                                    DrillFileSystem fs) throws IOException {
+    FormatSelection formatSelection = null;
+    //==========================================================================================================
+    // TODO - share this code with WorkspaceSchemaFactory.create() where it was copied out of
+    if (fileSelection.containsDirectories(fs)) {
+      for (FormatMatcher m : dirMatchers) {
+        try {
+          formatSelection = m.isReadable(fs, fileSelection);
+          if (formatSelection != null) {
+            break;
+          }
+        } catch (IOException e) {
+          logger.debug("File read failed.", e);
+        }
+      }
+      fileSelection = fileSelection.minusDirectories(fs);
+    }
+    for (FormatMatcher m : fileMatchers) {
+      formatSelection = m.isReadable(fs, fileSelection);
+      if (formatSelection != null) {
+        break;
+      }
+    }
+    //==========================================================================================================
+    return formatSelection;
+  }
+
+  private FormatPlugin getFormatPlugin(StorageDescriptor sd,
+                                        String tablePath,
+                                        StoragePlugin storagePlugin) throws ExecutionSetupException {
+
+    final TextFormatPlugin.TextFormatConfig formatPluginConfig;
+    final TextFormatPlugin formatPlugin;
+
+    formatPluginConfig = new TextFormatPlugin.TextFormatConfig();
+    // TODO - look at what is in this parameters map when reading parquet backed tables
+    // TODO - make sure we only set this for text, need to ignore it for parquet
+    // TODO - see if Hive allows multi-character delimiter, I do not believe so, but this does return a String, not a char
+    formatPluginConfig.fieldDelimiter = sd.getSerdeInfo().getParameters().get("field.delim").charAt(0);
+    formatPluginConfig.lineDelimiter = "\n";
+    // This needed to be set as it need to be non-null to initialize the BasicFormatMatcher which happens down the call chain
+    // from the constructor of the TextFormatPlugin below
+    // The actual patterns used to find files (which currently match anything) are defined below in the FormatMatcher lists
+    formatPluginConfig.extensions = Lists.newArrayList();
+//    StoragePluginConfig storagePluginConfig = getQueryContext().getStorage().getPlugin("dfs").getConfig();
+    // TODO - this isn't working
+    // TODO - need to make this not share format config with the rest of drill, it needs to be configured to do whatever hive is doing
+    // in particular we need to not have skipHeader option set to false
+    // this shouldn't be too hard, the format config is sent with the plan, there is no need to configure a fake config in the registry
+//            FormatPluginConfig formatConfig = getQueryContext().getStorage().getFormatPlugin(storagePluginConfig, new TextFormatPlugin.TextFormatConfig()).getConfig();
+    // TODO - this takes a long time in the debugger, might be a big part of the start up time of Drill
+    formatPlugin = new TextFormatPlugin(
+        "hive_native_text_scan_plugin",
+        getQueryContext().getDrillbitContext(),
+        new Configuration(),
+        storagePlugin.getConfig(),
+        formatPluginConfig);
+    return formatPlugin;
   }
 }
