@@ -103,16 +103,6 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
         "ConvertHiveTaleScanToNativeRead:Text");
   }
 
-//  RelDataType getDrillType(PrimitiveObjectInspector.PrimitiveCategory pCat, RelDataTypeFactory factory) {
-//    RelDataType t = null;
-//    switch(pCat) {
-//      case INT:
-//        t =
-//      default:
-//        throw UserException.unsupportedError().message("Unsupported type in hive scan: %s ", pCat.name()).build();
-//    }
-//  }
-
   RelDataType getDrillType(RelDataType type, RelDataTypeFactory factory) {
     switch (type.getSqlTypeName()) {
       case TINYINT:
@@ -155,52 +145,13 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     try {
       storagePlugin = getQueryContext().getStorage().getPlugin("dfs");
       formatPlugin = getFormatPlugin(sd, tablePath, storagePlugin);
-      dynamicDrillTable = new DynamicDrillTable(
-          storagePlugin,
-          "file",
-          getQueryContext().getQueryUserName(),
-//                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
-//                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
-          new FormatSelection(formatPlugin.getConfig(), Lists.newArrayList(tablePath)));
     } catch (ExecutionSetupException e) {
       throw new RuntimeException(e);
     }
     RelDataTypeFactory typeFactory = scanRel.getCluster().getTypeFactory();
-    RelDataTypeDrillImpl anyType = new RelDataTypeDrillImpl(new RelDataTypeHolder(), typeFactory);
-    // TODO - fill in DataType for columns array in text scan
-    final RelOptTableImpl table = RelOptTableImpl.create(
-        scanRel.getTable().getRelOptSchema(),
-        anyType,
-        dynamicDrillTable);
     final DrillScanRel nativeScan;
     try {
-
-      DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
-
-      // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
-      FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
-      ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(
-          new BasicFormatMatcher(
-              formatPlugin,
-              Lists.newArrayList(
-                  Pattern.compile(".*")),
-              Lists.<MagicString>newArrayList()));
-      ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(
-          new BasicFormatMatcher(
-              formatPlugin,
-              Lists.newArrayList(
-                  Pattern.compile(".*")),
-              Lists.<MagicString>newArrayList()));
-
-      FormatSelection formatSelection = findFiles(fileSelection, dirMatchers, fileMatchers, fs);
-
-      GroupScan groupScan = storagePlugin.getPhysicalScan(
-          getQueryContext().getQueryUserName(),
-          formatPlugin,
-          new JSONOptions(formatSelection),
-          AbstractGroupScan.ALL_COLUMNS);
-      nativeScan = new DrillScanRel(
-          scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
+      nativeScan = getNewScan(typeFactory, formatPlugin, storagePlugin, tablePath, scanRel);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -224,6 +175,54 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     RelDataType rowDataType = new DrillFixedRelDataTypeImpl(typeFactory, fieldNames);
     call.transformTo(DrillProjectRel.create(scanRel.getCluster(), scanRel.getTraitSet(), nativeScan, rexNodes,
         rowDataType));
+  }
+
+  private DrillScanRel getNewScan(RelDataTypeFactory typeFactory,
+                                  FormatPlugin formatPlugin,
+                                  StoragePlugin storagePlugin,
+                                  String tablePath,
+                                  DrillScanRel scanRel) throws IOException {
+
+    final DynamicDrillTable dynamicDrillTable = new DynamicDrillTable(
+        storagePlugin,
+        "file",
+        getQueryContext().getQueryUserName(),
+//                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
+//                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
+        new FormatSelection(formatPlugin.getConfig(), Lists.newArrayList(tablePath)));
+
+    RelDataTypeDrillImpl anyType = new RelDataTypeDrillImpl(new RelDataTypeHolder(), typeFactory);
+    final RelOptTableImpl table = RelOptTableImpl.create(
+        scanRel.getTable().getRelOptSchema(),
+        anyType,
+        dynamicDrillTable);
+
+    DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
+
+    // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
+    FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
+    ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(
+        new BasicFormatMatcher(
+            formatPlugin,
+            Lists.newArrayList(
+                Pattern.compile(".*")),
+            Lists.<MagicString>newArrayList()));
+    ArrayList<BasicFormatMatcher> fileMatchers = Lists.newArrayList(
+        new BasicFormatMatcher(
+            formatPlugin,
+            Lists.newArrayList(
+                Pattern.compile(".*")),
+            Lists.<MagicString>newArrayList()));
+
+    FormatSelection formatSelection = findFiles(fileSelection, dirMatchers, fileMatchers, fs);
+
+    GroupScan groupScan = storagePlugin.getPhysicalScan(
+        getQueryContext().getQueryUserName(),
+        formatPlugin,
+        new JSONOptions(formatSelection),
+        AbstractGroupScan.ALL_COLUMNS);
+    return new DrillScanRel(
+        scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
   }
 
   private void addColumnCasts(RelDataTypeFactory typeFactory,
