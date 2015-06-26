@@ -58,21 +58,44 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void testProjectCreatedByFlattenPlanningRule() throws Exception {
-    test("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from \n" +
-        "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1\n" +
-        "inner join\n" +
-        "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2\n" +
-        "on v1.uid = v2.uid)");
+    // This query produces extra copies of complex columns, while they are not specifically needed in this case these
+    // types of extra copies are supported and were previously causing query failures. These codepaths will become
+    // more common as we expand the support in Drill for more functions an operations to manipulate complex data.
+    testBuilder()
+        .sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from " +
+        "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+        "inner join " +
+        "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+        "on v1.uid = v2.uid)")
+        .unOrdered()
+        .jsonBaselineFile("flatten/complex_transaction_repeated_map_double_copy_baseline.json")
+        .go();
   }
-
 
   @Test
   public void testProjectCreatedByFlattenPlanningRule2() throws Exception {
-   test("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
-       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
-       "inner join\n" +
-       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
-       "on v1.uid = v2.uid)");
+    // same test as above but removing a level of indirection in the schema
+//    sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
+//       "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+//       "inner join\n" +
+//       "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+//       "on v1.uid = v2.uid)");
+
+
+    testBuilder()
+        .sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
+        "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+        "on v1.uid = v2.uid)")
+//        .sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from " +
+//            "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+//            "inner join " +
+//            "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+//            "on v1.uid = v2.uid)")
+        .unOrdered()
+        .jsonBaselineFile("flatten/complex_transaction_repeated_map_double_copy_baseline.json")
+        .go();
   }
 
   @Test
@@ -92,8 +115,6 @@ public class TestFlatten extends BaseTestQuery {
         "inner join\n" +
         "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
         "on v1.uid = v2.uid;");
-
-
 
     // both of these work
 //    test("select e as events2, e as e2 from (select uid as u, events as e, events from cp.`flatten/complex_transaction_example_data.json`)");
