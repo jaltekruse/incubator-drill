@@ -289,13 +289,13 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
     final NamedExpression flattenExpr = new NamedExpression(popConfig.getColumn(), new FieldReference(popConfig.getColumn()));
-    final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression)ExpressionTreeMaterializer.materialize(flattenExpr.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
+    final ValueVectorReadExpression flattenColVectorRead = (ValueVectorReadExpression)ExpressionTreeMaterializer.materialize(flattenExpr.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
     final TransferPair tp = getFlattenFieldTransferPair(flattenExpr.getRef());
 
     if (tp != null) {
       transfers.add(tp);
       container.add(tp.getTo());
-      transferFieldIds.add(vectorRead.getFieldId().getFieldIds()[0]);
+      transferFieldIds.add(flattenColVectorRead.getFieldId().getFieldIds()[0]);
     }
 
     logger.debug("Added transfer for project expression.");
@@ -340,6 +340,15 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
         ValueVectorWriteExpression write = new ValueVectorWriteExpression(fid, expr, true);
         HoldingContainer hc = cg.addExpr(write);
 
+        // We cannot do multiple transfers from the same vector. However we still need to instantiate the output vector.
+        if (expr instanceof ValueVectorReadExpression) {
+          final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression) expr;
+          if (!vectorRead.hasReadPath()) {
+            final TypedFieldId id = vectorRead.getFieldId();
+            final ValueVector vvIn = incoming.getValueAccessorById(id.getIntermediateClass(), id.getFieldIds()).getValueVector();
+            vvIn.makeTransferPair(vector);
+          }
+        }
         logger.debug("Added eval for project expression.");
       }
     }

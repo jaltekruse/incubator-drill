@@ -26,6 +26,7 @@ import org.apache.drill.BaseTestQuery;
 import org.apache.drill.TestBuilder;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.exec.fn.interp.TestConstantFolding;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.util.JsonStringHashMap;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -52,6 +53,136 @@ public class TestFlatten extends BaseTestQuery {
   public void testFlattenFailure() throws Exception {
     test("select flatten(complex), rownum from cp.`/store/json/test_flatten_mappify2.json`");
 //    test("select complex, rownum from cp.`/store/json/test_flatten_mappify2.json`");
+  }
+
+
+  // This query produces extra copies of complex columns, while they are not specifically needed in this case these
+  // types of extra copies are supported and were previously causing query failures. These codepaths will become
+  // more common as we expand the support in Drill for more functions an operations to manipulate complex data.
+  @Test
+  public void testProjectCreatedByFlattenPlanningRule2() throws Exception {
+    testBuilder()
+        .sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, events as e, events as e2 from \n" +
+        "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+        "inner join\n" +
+        "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+        "on v1.uid = v2.uid)")
+        .unOrdered()
+        .jsonBaselineFile("flatten/complex_transaction_repeated_map_double_copy_baseline.json")
+        .go();
+  }
+
+  // same test as above but adding a level of indirection (event_map) in the schema
+  @Test
+  public void testProjectCreatedByFlattenPlanningRule() throws Exception {
+    testBuilder()
+        .sqlQuery("select e2 as events, e2 as events2, uid from (select v1.uid, v1.event_map.events as e, v1.event_map.events as e2 from " +
+            "    (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+            "inner join " +
+            "    (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+            "on v1.uid = v2.uid)")
+        .unOrdered()
+        .jsonBaselineFile("flatten/complex_transaction_repeated_map_double_copy_baseline.json")
+        .go();
+  }
+
+  private List<JsonStringHashMap<String, Object>> complexTransactionRecords() {
+    return Lists.newArrayList(
+        mapOf(
+            "uid", 1l,
+            "events", listOf(
+            mapOf( "evnt_id","e1", "campaign_id","c1", "event_name","e1_name", "event_time",1000000l, "type" , "cmpgn1"),
+            mapOf( "evnt_id","e2", "campaign_id","c1", "event_name","e2_name", "event_time",2000000l, "type" , "cmpgn4"),
+            mapOf( "evnt_id","e3", "campaign_id","c1", "event_name","e3_name", "event_time",3000000l, "type" , "cmpgn1"),
+            mapOf( "evnt_id","e4", "campaign_id","c1", "event_name","e4_name", "event_time",4000000l, "type" , "cmpgn1"),
+            mapOf( "evnt_id","e5", "campaign_id","c2", "event_name","e5_name", "event_time",5000000l, "type" , "cmpgn3"),
+            mapOf( "evnt_id","e6", "campaign_id","c1", "event_name","e6_name", "event_time",6000000l, "type" , "cmpgn9"),
+            mapOf( "evnt_id","e7", "campaign_id","c1", "event_name","e7_name", "event_time",7000000l, "type" , "cmpgn3"),
+            mapOf( "evnt_id","e8", "campaign_id","c2", "event_name","e8_name", "event_time",8000000l, "type" , "cmpgn2"),
+            mapOf( "evnt_id","e9", "campaign_id","c2", "event_name","e9_name", "event_time",9000000l, "type" , "cmpgn4")
+        ),
+            "transactions" , listOf(
+            mapOf( "trans_id","t1", "amount",100l, "trans_time",7777777l, "type","sports"),
+            mapOf( "trans_id","t2", "amount",1000l, "trans_time",8888888l, "type","groceries")
+        )
+        ),
+        mapOf(
+            "uid", 2l,
+            "events", listOf(
+            mapOf( "evnt_id","e1", "campaign_id","c1", "event_name","e1_name", "event_time",1000000l, "type" , "cmpgn9"),
+            mapOf( "evnt_id","e2", "campaign_id","c1", "event_name","e2_name", "event_time",2000000l, "type" , "cmpgn4"),
+            mapOf( "evnt_id","e3", "campaign_id","c1", "event_name","e3_name", "event_time",3000000l, "type" , "cmpgn1"),
+            mapOf( "evnt_id","e4", "campaign_id","c1", "event_name","e4_name", "event_time",4000000l, "type" , "cmpgn1"),
+            mapOf( "evnt_id","e5", "campaign_id","c2", "event_name","e5_name", "event_time",5000000l, "type" , "cmpgn2"),
+            mapOf( "evnt_id","e6", "campaign_id","c1", "event_name","e6_name", "event_time",6000000l, "type" , "cmpgn9"),
+            mapOf( "evnt_id","e7", "campaign_id","c1", "event_name","e7_name", "event_time",7000000l, "type" , "cmpgn3"),
+            mapOf( "evnt_id","e8", "campaign_id","c2", "event_name","e8_name", "event_time",8000000l, "type" , "cmpgn2"),
+            mapOf( "evnt_id","e9", "campaign_id","c2", "event_name","e9_name", "event_time",9000000l, "type" , "cmpgn4")
+        ),
+            "transactions" , listOf(
+            mapOf( "trans_id","t1", "amount",100l, "trans_time",7777777l, "type","sports"),
+            mapOf( "trans_id","t2", "amount",1000l, "trans_time",8888888l, "type","groceries")
+        )
+        )
+    );
+  }
+
+  @Test
+  public void testFlattenWithJoin() throws Exception {
+    test("alter session set `planner.width.max_per_node` = 1");
+
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
+    String sql =
+        "select v1.uid, flatten(events) flat_events, flatten(transactions) flat_transactions from \n" +
+            "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
+            "inner join\n" +
+            "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
+            "on v1.uid = v2.uid";
+    int numCopies = 1;
+
+    List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "events", "flat_events"), "transactions", "flat_transactions");
+
+    TestBuilder builder = testBuilder()
+        .sqlQuery(sql)
+        .unOrdered()
+        .baselineColumns("uid", "flat_events", "flat_transactions");
+    for (int i = 0; i < numCopies; i++) {
+      for (JsonStringHashMap<String, Object> record : result) {
+        builder.baselineValues(record.get("uid"), record.get("flat_events"), record.get("flat_transactions"));
+      }
+    }
+    builder.go();
+  }
+
+  // Nearly identical to the test above testFlattenWithJoin(), the difference here is an
+  // extra level of indirection to make sure that we can include a reference into a map
+  // within the call to flatten in this case.
+  @Test
+  public void testFlattenWithJoinNested() throws Exception {
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
+    String sql =
+        "select v1.uid," +
+        "       flatten(v1.event_map.events) flat_events, " +
+        "       flatten(v2.transaction_map.transactions) flat_transactions " +
+            "from " +
+        "       (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+        "            inner join " +
+        "       (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+        "       on v1.uid = v2.uid";
+    int numCopies = 1;
+
+    List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "events", "flat_events"), "transactions", "flat_transactions");
+
+    TestBuilder builder = testBuilder()
+        .sqlQuery(sql)
+        .unOrdered()
+        .baselineColumns("uid", "flat_events", "flat_transactions");
+    for (int i = 0; i < numCopies; i++) {
+      for (JsonStringHashMap<String, Object> record : result) {
+        builder.baselineValues(record.get("uid"), record.get("flat_events"), record.get("flat_transactions"));
+      }
+    }
+    builder.go();
   }
 
   @Test
@@ -187,6 +318,46 @@ public class TestFlatten extends BaseTestQuery {
       }
     }
     builder.go();
+  };
+
+  private String generateIntList(int listSize) {
+    StringBuffer jsonList = new StringBuffer("[");
+    for (int i = 1; i < listSize; i++ ) {
+      jsonList.append(i).append(", ");
+    }
+    return jsonList.append(listSize).append("]").toString();
+  }
+
+  @Test
+  public void readLargeLists() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    final int listSize = 99_999;
+    String jsonRecord = new StringBuffer("{ \"int_list\" : ").append(generateIntList(listSize)).append("}").toString();
+    int numRecords = 2000;
+
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecord)
+        .createFiles(1, numRecords, "json");
+
+    runSQL("select int_list from dfs.`" + path + "/bigfile/bigfile.json`");
+  };
+
+  @Test
+  public void largeList_2851() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    final int listSize = 99_999;
+    String jsonRecord = new StringBuffer("{ \"int_list\" : ").append(generateIntList(listSize)).append("}").toString();
+
+    int numRecords = 1;
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecord)
+        .createFiles(1, numRecords, "json");
+
+    assertEquals("Wrong record count returned from flatten.", listSize * numRecords,
+        testRunAndPrint(UserBitShared.QueryType.SQL,
+            "select flatten(int_list) from dfs.`" + path + "/bigfile/bigfile.json`"));
   };
 
   @Test
