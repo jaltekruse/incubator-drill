@@ -87,10 +87,6 @@ public class HiveStoragePlugin extends AbstractStoragePlugin {
     schemaFactory.registerSchemas(schemaConfig, parent);
   }
 
-  public String getTablePathOnFs(String table) {
-    return schemaFactory.getTablePathOnFs(table);
-  }
-
   public Set<StoragePluginOptimizerRule> getOptimizerRules() {
     return ImmutableSet.of(HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_PROJECT, HivePushPartitionFilterIntoScan.HIVE_FILTER_ON_SCAN, ConvertHiveTaleScanToNativeRead.INSTANCE);
   }
