@@ -166,6 +166,11 @@ public class TestHiveStorage extends HiveTestBase {
   }
 
   @Test
+  public void testHiveProjectPushdown() throws Exception {
+    test("explain plan for select boolean_part, tinyint_part from hive.parquet_text_mixed_fileformat where");
+  }
+
+  @Test
   public void parquetBackedTableRead() throws Exception  {
 //    test("SELECT * FROM hive.readtest_parquet");
     String[] partCols = {
