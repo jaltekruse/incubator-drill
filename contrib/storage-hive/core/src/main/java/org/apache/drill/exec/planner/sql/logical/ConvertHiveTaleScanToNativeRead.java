@@ -135,12 +135,19 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     // TODO - find an API for getting the directory where external hive tables are stored, so far I can only
     // find the show create table command but that would require me to parse it to find the path
 //          final String tablePath = "/Users/jaltekruse/test_data_drill/par_hive_types";
-    final StorageDescriptor sd = hiveReadEntry.getHivePartitionWrappers().get(0).getPartition().getSd();
+    StorageDescriptor sd = null;
+    if (hiveReadEntry.getHivePartitionWrappers().size() == 0) {
+      // TODO - return valuesrel of size 0
+    }
+    List<String> filePaths = Lists.newArrayList();
+    for (HivePartition hivePart : hiveReadEntry.getHivePartitionWrappers() ) {
+      sd = hivePart.getPartition().getSd();
+      filePaths.add(sd.getLocation());
+    }
     final String partitionPath = sd.getLocation();
     final String tablePath = hiveReadEntry.getTable().getSd().getLocation();
     final StoragePlugin storagePlugin;
     final FormatPlugin formatPlugin;
-    final DynamicDrillTable dynamicDrillTable;
 
     try {
       storagePlugin = getQueryContext().getStorage().getPlugin("dfs");
@@ -150,11 +157,35 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     }
     RelDataTypeFactory typeFactory = scanRel.getCluster().getTypeFactory();
     final DrillScanRel nativeScan;
-    try {
-      nativeScan = getNewScan(typeFactory, formatPlugin, storagePlugin, tablePath, scanRel);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+
+    final DynamicDrillTable dynamicDrillTable = new DynamicDrillTable(
+        storagePlugin,
+        "file",
+        getQueryContext().getQueryUserName(),
+//                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
+//                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
+        new FormatSelection(formatPlugin.getConfig(), Lists.newArrayList(tablePath)));
+    RelDataTypeDrillImpl anyType = new RelDataTypeDrillImpl(new RelDataTypeHolder(), typeFactory);
+    final RelOptTableImpl table = RelOptTableImpl.create(
+        scanRel.getTable().getRelOptSchema(),
+        anyType,
+        dynamicDrillTable);
+
+//      FormatSelection formatSelection = new FormatSelection(formatPlugin.getConfig(), filePaths);
+      try {
+        FormatSelection formatSelection = getFormatSelection( formatPlugin, storagePlugin, filePaths, tablePath);
+        GroupScan groupScan = storagePlugin.getPhysicalScan(
+            getQueryContext().getQueryUserName(),
+            formatPlugin,
+            new JSONOptions(formatSelection),
+            AbstractGroupScan.ALL_COLUMNS);
+//      nativeScan = getNewScan(typeFactory, formatPlugin, storagePlugin, tablePath, scanRel);
+        nativeScan = new DrillScanRel(
+            scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
     // TODO - add casts to make the data types the same
     //      - partly done
     //      - need to change the types where needed that are stored as a different physical type
@@ -177,30 +208,20 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
         rowDataType));
   }
 
-  private DrillScanRel getNewScan(RelDataTypeFactory typeFactory,
+  // TODO - don't think I need this
+  private FormatSelection getFormatSelection(
                                   FormatPlugin formatPlugin,
                                   StoragePlugin storagePlugin,
-                                  String tablePath,
-                                  DrillScanRel scanRel) throws IOException {
+                                  List<String> partitionPaths,
+                                  String tablePath
+                                  ) throws IOException {
 
-    final DynamicDrillTable dynamicDrillTable = new DynamicDrillTable(
-        storagePlugin,
-        "file",
-        getQueryContext().getQueryUserName(),
-//                new FormatSelection(formatConfig, Lists.newArrayList(tablePath)));
-//                new FormatSelection(new ParquetFormatConfig(), Lists.newArrayList(tablePath)));
-        new FormatSelection(formatPlugin.getConfig(), Lists.newArrayList(tablePath)));
 
-    RelDataTypeDrillImpl anyType = new RelDataTypeDrillImpl(new RelDataTypeHolder(), typeFactory);
-    final RelOptTableImpl table = RelOptTableImpl.create(
-        scanRel.getTable().getRelOptSchema(),
-        anyType,
-        dynamicDrillTable);
 
     DrillFileSystem fs = ImpersonationUtil.createFileSystem(getQueryContext().getQueryUserName(), ((FileSystemPlugin)storagePlugin).getFsConf());
 
     // TODO - review this, was previously passing the partition path instead of the table path, but this didn't set the selection root correctly
-    FileSelection fileSelection = FileSelection.create(fs, "/", tablePath); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
+    FileSelection fileSelection = new FileSelection(partitionPaths, tablePath, true); // new FileSelection(Lists.newArrayList(tablePath), tablePath, true);
     ArrayList<BasicFormatMatcher> dirMatchers = Lists.newArrayList(
         new BasicFormatMatcher(
             formatPlugin,
@@ -216,13 +237,12 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
 
     FormatSelection formatSelection = findFiles(fileSelection, dirMatchers, fileMatchers, fs);
 
-    GroupScan groupScan = storagePlugin.getPhysicalScan(
-        getQueryContext().getQueryUserName(),
-        formatPlugin,
-        new JSONOptions(formatSelection),
-        AbstractGroupScan.ALL_COLUMNS);
-    return new DrillScanRel(
-        scanRel.getCluster(), scanRel.getTraitSet(), table, groupScan, anyType, AbstractGroupScan.ALL_COLUMNS);
+//    GroupScan groupScan = storagePlugin.getPhysicalScan(
+//        getQueryContext().getQueryUserName(),
+//        formatPlugin,
+//        new JSONOptions(formatSelection),
+//        AbstractGroupScan.ALL_COLUMNS);
+    return formatSelection;
   }
 
   private void addColumnCasts(RelDataTypeFactory typeFactory,
@@ -348,6 +368,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     }
   }
 
+  // TODO - don't think I need this anymore
   private FormatSelection findFiles(FileSelection fileSelection,
                                     ArrayList<BasicFormatMatcher> dirMatchers,
                                     ArrayList<BasicFormatMatcher> fileMatchers,
@@ -394,6 +415,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     // This needed to be set as it need to be non-null to initialize the BasicFormatMatcher which happens down the call chain
     // from the constructor of the TextFormatPlugin below
     // The actual patterns used to find files (which currently match anything) are defined below in the FormatMatcher lists
+    // TODO - probably need to update to make it ignore files starting with . and _
     formatPluginConfig.extensions = Lists.newArrayList();
 //    StoragePluginConfig storagePluginConfig = getQueryContext().getStorage().getPlugin("dfs").getConfig();
     // TODO - this isn't working
