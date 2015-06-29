@@ -124,7 +124,7 @@ public class FileSystemPlugin extends AbstractStoragePlugin{
           "Failure getting requested format plugin named '%s'. " +
           "It was not one of the format plugins registered.",
           formatSelection.getFormat())
-          .build();
+          .build(logger);
     }
     return plugin;
   }
