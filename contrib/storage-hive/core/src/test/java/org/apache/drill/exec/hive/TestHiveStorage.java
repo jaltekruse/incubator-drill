@@ -195,6 +195,32 @@ public class TestHiveStorage extends HiveTestBase {
     allColsList.addAll(regularColsList);
     String[] allCols = allColsList.toArray(new String[allColsList.size()]);
 
+    Object[] record1WhereTinyintPartIs63 = {
+        true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+        false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield"
+    };
+    Object[] record2WhereTinyintPartIs63 = {
+        true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+        // In the hive reader the null values are being populated with empty string
+        // in text files these appear as \N, so they are being converted to an actual
+        // null by my injected cast
+        // TODO - ask Venki about this
+        null, null, null, null, null, null, null, null
+    };
+    Object[] record1WhereTinyintPartIs64 = {
+        true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+        false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield"
+    };
+    Object[] record2WhereTinyintPartIs64 = {
+        true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+        // In the hive reader the null values are being populated with empty string
+        // in text files these appear as \N, so they are being converted to an actual
+        // null by my injected cast
+        // TODO - ask Venki about this
+        null, null, null, null, null, null, null, null
+
+    };
+
     testBuilder()
         .sqlQuery("select " +
             Joiner.on(", ").join(partCols) + ", " +
@@ -202,26 +228,10 @@ public class TestHiveStorage extends HiveTestBase {
             "from hive.parquet_text_mixed_fileformat")
         .unOrdered()
         .baselineColumns(allCols)
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            // In the hive reader the null values are being populated with empty string
-            // in text files these appear as \N, so they are being converted to an actual
-            // null by my injected cast
-            // TODO - ask Venki about this
-            null, null, null, null, null, null, null, null)
-        .baselineValues(
-            true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
-        .baselineValues(
-            true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            // In the hive reader the null values are being populated with empty string
-            // in text files these appear as \N, so they are being converted to an actual
-            // null by my injected cast
-            // TODO - ask Venki about this
-            null, null, null, null, null, null, null, null)
+        .baselineValues(record1WhereTinyintPartIs64)
+        .baselineValues(record2WhereTinyintPartIs64)
+        .baselineValues(record1WhereTinyintPartIs63)
+        .baselineValues(record2WhereTinyintPartIs63)
         .go();
 
     // try to swap the partition column order in the select list
@@ -234,26 +244,10 @@ public class TestHiveStorage extends HiveTestBase {
             "from hive.parquet_text_mixed_fileformat")
         .unOrdered()
         .baselineColumns(allCols)
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            // In the hive reader the null values are being populated with empty string
-            // in text files these appear as \N, so they are being converted to an actual
-            // null by my injected cast
-            // TODO - ask Venki about this
-            null, null, null, null, null, null, null, null)
-        .baselineValues(
-            true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
-        .baselineValues(
-            true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            // In the hive reader the null values are being populated with empty string
-            // in text files these appear as \N, so they are being converted to an actual
-            // null by my injected cast
-            // TODO - ask Venki about this
-            null, null, null, null, null, null, null, null)
+        .baselineValues(record1WhereTinyintPartIs64)
+        .baselineValues(record2WhereTinyintPartIs64)
+        .baselineValues(record1WhereTinyintPartIs63)
+        .baselineValues(record2WhereTinyintPartIs63)
         .go();
 
 
@@ -266,16 +260,8 @@ public class TestHiveStorage extends HiveTestBase {
         )
         .unOrdered()
         .baselineColumns(allCols)
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield")
-        .baselineValues(
-            true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-            // In the hive reader the null values are being populated with empty string
-            // in text files these appear as \N, so they are being converted to an actual
-            // null by my injected cast
-            // TODO - ask Venki about this
-            null, null, null, null, null, null, null, null)
+        .baselineValues(record1WhereTinyintPartIs64)
+        .baselineValues(record2WhereTinyintPartIs64)
         .go();
   }
 
