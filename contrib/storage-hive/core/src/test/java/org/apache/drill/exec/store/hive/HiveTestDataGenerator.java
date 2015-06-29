@@ -371,11 +371,14 @@ public class HiveTestDataGenerator {
 
     executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_text_mixed_fileformat ");
 //    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat set SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
-    executeQuery(hiveDriver, "ALTER TABLE parquet_text_mixed_fileformat " +
-        "SET FILEFORMAT " +
-        "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' " +
-        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
-        "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+
+  // TODO - re-enable to actually test mixed format, for now this is just testing partitions with TEXT
+//    executeQuery(hiveDriver, "ALTER TABLE parquet_text_mixed_fileformat " +
+//        "SET FILEFORMAT " +
+//        "INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' " +
+//        "OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat' " +
+//        "SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'");
+
 //    executeQuery(hiveDriver,
 //        "INSERT INTO TABLE parquet_text_mixed_fileformat  " +
 //            "SELECT " +
