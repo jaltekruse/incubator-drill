@@ -366,7 +366,6 @@ public class HiveTestDataGenerator {
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
 
-    System.out.println("+#+$@+%+@#$+%#@+$%+@#$%+@#+$%+@#$+%+@$+%#@+$%+@%+$%+@#$+%+");
     executeQuery(hiveDriver, "select * from parquet_text_mixed_fileformat ");
 
     executeQuery(hiveDriver, "SHOW CREATE TABLE parquet_text_mixed_fileformat ");
@@ -402,9 +401,31 @@ public class HiveTestDataGenerator {
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
 
-//    executeQuery(hiveDriver, "ALTER TABLE parquet_mixed_fileformat " +
-//        "     SET FILEFORMAT " +
-//        "     INPUTFORMAT 'org.apache.hadoop.mapred.TextInputFormat'     OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'");
+    File file = new File(testDataFile);
+    String parentDirectory = file.getParentFile().toString();
+
+    // External partition
+    executeQuery(hiveDriver, String.format("ALTER TABLE parquet_text_mixed_fileformat ADD " +
+            "PARTITION (" +
+            "  boolean_part='true', " +
+//            changed this from 64
+            "  tinyint_part='62', " +
+            "  double_part='8.345', " +
+            "  float_part='4.67', " +
+            "  int_part='123456', " +
+            "  bigint_part='234235', " +
+            "  smallint_part='3455', " +
+            "  string_part='string'" +
+            ") " +
+        "location '%s'", parentDirectory));
+
+    // External Table
+    // Modified from : http://stackoverflow.com/questions/15271061/is-it-possible-to-import-data-into-hive-table-without-copying-the-data/22170468#22170468
+//    executeQuery(hiveDriver, "create EXTERNAL TABLE IF NOT EXISTS test_table (testcol string) " +
+//                             "PARTITIONED BY (year INT,month INT,day INT) row format delimited fields terminated by ','");
+
+//    executeQuery(hiveDriver, "ALTER table TestTable partition (year='2014',month='2',day='17') " +
+//                             "location 'hdfs://localhost:8020/data/2014/2/17/'");
 
     // create a Hive view to test how its metadata is populated in Drill's INFORMATION_SCHEMA
     executeQuery(hiveDriver, "CREATE VIEW IF NOT EXISTS hiveview AS SELECT * FROM kv");
@@ -437,7 +458,12 @@ public class HiveTestDataGenerator {
   }
 
   private File getTempFile() throws Exception {
-    return java.nio.file.Files.createTempFile("drill-hive-test", ".txt").toFile();
+    // Generate temp files in folders so that they are isolated from one another.
+    // This allows for the parent directory to be extracted and provided as the
+    // location of an external table or partition in Hive (as we can safely assume
+    // the directory will only contain this one file we are putting in it)
+    File f = java.nio.file.Files.createTempDirectory("drill-hive-test").toFile();
+    return new File(f, "drill-hive-test.txt");
   }
 
   private String generateTestDataFile() throws Exception {
