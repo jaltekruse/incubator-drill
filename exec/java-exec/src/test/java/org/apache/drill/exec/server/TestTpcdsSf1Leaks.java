@@ -23,6 +23,8 @@ import static org.apache.drill.exec.ExecConstants.SLICE_TARGET;
 import static org.apache.drill.exec.ExecConstants.SLICE_TARGET_DEFAULT;
 import static org.junit.Assert.fail;
 
+import org.apache.drill.OptionTestUtils;
+import org.apache.drill.exec.ExecConstants;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -55,7 +57,7 @@ public class TestTpcdsSf1Leaks extends BaseTestQuery {
 
   @Test
   public void test() throws Exception {
-    setSessionOption(SLICE_TARGET, "10");
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 10);
     try {
       final String query = getFile("tpcds-sf1/q73.sql");
       for (int i = 0; i < 20; i++) {
@@ -68,7 +70,7 @@ public class TestTpcdsSf1Leaks extends BaseTestQuery {
         }
       }
     }finally {
-      setSessionOption(SLICE_TARGET, Long.toString(SLICE_TARGET_DEFAULT));
+      resetOption(ExecConstants.PLANNER_SLICE_TARGET);
     }
   }
 

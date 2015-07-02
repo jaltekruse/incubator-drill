@@ -446,15 +446,6 @@ public class BaseTestQuery extends ExecTest {
     return dir.getAbsolutePath() + File.separator + dirName;
   }
 
-
-  protected static void setSessionOption(final String option, final String value) {
-    try {
-      runSQL(String.format("alter session set `%s` = %s", option, value));
-    } catch(final Exception e) {
-      fail(String.format("Failed to set session option `%s` = %s, Error: %s", option, value, e.toString()));
-    }
-  }
-
   private static class SilentListener implements UserResultsListener {
     private volatile UserException exception;
     private AtomicInteger count = new AtomicInteger();

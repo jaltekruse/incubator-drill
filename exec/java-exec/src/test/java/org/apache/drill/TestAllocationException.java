@@ -20,6 +20,7 @@ package org.apache.drill;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.memory.OutOfMemoryRuntimeException;
 import org.apache.drill.exec.memory.TopLevelAllocator;
+import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
@@ -34,14 +35,12 @@ import org.junit.Test;
  */
 public class TestAllocationException extends BaseTestQuery {
 
-  private static final String SINGLE_MODE = "ALTER SESSION SET `planner.disable_exchanges` = true";
-
   private void testWithException(final String fileName) throws Exception {
     testWithException(fileName, OutOfMemoryRuntimeException.class);
   }
 
   private void testWithException(final String fileName, Class<? extends Throwable> exceptionClass) throws Exception{
-    test(SINGLE_MODE);
+    setOption(PlannerSettings.DISABLE_EXCHANGE, true);
 
     CoordinationProtos.DrillbitEndpoint endpoint = bits[0].getContext().getEndpoint();
 

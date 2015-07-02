@@ -30,12 +30,12 @@ public class TestHiveProjectPushDown extends HiveTestBase {
   // enable decimal data type
   @BeforeClass
   public static void enableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, true);
   }
 
   @AfterClass
   public static void disableDecimalDataType() throws Exception {
-    test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE.name()));
+    setOption(PlannerSettings.ENABLE_DECIMAL_DATA_TYPE, false);
   }
 
   private void testHelper(String query, String expectedColNamesInPlan, int expectedRecordCount)throws Exception {

@@ -20,6 +20,7 @@ package org.apache.drill;
 
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -47,53 +48,79 @@ public class TestCTASPartitionFilter extends PlanTestBase {
     testPlanMatchingPatterns(query, new String[]{numFilesPattern, includedFilterPattern}, new String[]{});
   }
 
+  private void lowSliceTargetAndPartitionHashDistribute() {
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    setOption(ExecConstants.CTAS_PARTITIONING_HASH_DISTRIBUTE_VALIDATOR, true);
+  }
+
+  private void resetSliceTargetAndPartitionHashDistribute() {
+    resetOptions(ExecConstants.PLANNER_SLICE_TARGET,
+        ExecConstants.CTAS_PARTITIONING_HASH_DISTRIBUTE_VALIDATOR);
+  }
+
   @Test
   public void withDistribution() throws Exception {
-    test("alter session set `planner.slice_target` = 1");
-    test("alter session set `store.partition.hash_distribute` = true");
-    test("use dfs_test.tmp");
-    test(String.format("create table orders_distribution partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
-    String query = "select * from orders_distribution where o_orderpriority = '1-URGENT'";
-    testExcludeFilter(query, 1, "Filter", 24);
+    lowSliceTargetAndPartitionHashDistribute();
+    try {
+      test("use dfs_test.tmp");
+      test(String.format("create table orders_distribution partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
+      String query = "select * from orders_distribution where o_orderpriority = '1-URGENT'";
+      testExcludeFilter(query, 1, "Filter", 24);
+    } finally {
+      resetSliceTargetAndPartitionHashDistribute();
+    }
   }
 
   @Test
   public void withoutDistribution() throws Exception {
-    test("alter session set `planner.slice_target` = 1");
-    test("alter session set `store.partition.hash_distribute` = false");
-    test("use dfs_test.tmp");
-    test(String.format("create table orders_no_distribution partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
-    String query = "select * from orders_no_distribution where o_orderpriority = '1-URGENT'";
-    testExcludeFilter(query, 2, "Filter", 24);
+    setOption(ExecConstants.PLANNER_SLICE_TARGET, 1);
+    setOption(ExecConstants.CTAS_PARTITIONING_HASH_DISTRIBUTE_VALIDATOR, false);
+    try {
+      test("use dfs_test.tmp");
+      test(String.format("create table orders_no_distribution partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
+      String query = "select * from orders_no_distribution where o_orderpriority = '1-URGENT'";
+      testExcludeFilter(query, 2, "Filter", 24);
+    } finally {
+      resetSliceTargetAndPartitionHashDistribute();
+    }
   }
 
   @Test
   public void testDRILL3410() throws Exception {
-    test("alter session set `planner.slice_target` = 1");
-    test("alter session set `store.partition.hash_distribute` = true");
-    test("use dfs_test.tmp");
-    test(String.format("create table drill_3410 partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
-    String query = "select * from drill_3410 where (o_orderpriority = '1-URGENT' and o_orderkey = 10) or (o_orderpriority = '2-HIGH' or o_orderkey = 11)";
-    testIncludeFilter(query, 1, "Filter", 34);
+    lowSliceTargetAndPartitionHashDistribute();
+    try {
+      test("use dfs_test.tmp");
+      test(String.format("create table drill_3410 partition by (o_orderpriority) as select * from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
+      String query = "select * from drill_3410 where (o_orderpriority = '1-URGENT' and o_orderkey = 10) or (o_orderpriority = '2-HIGH' or o_orderkey = 11)";
+      testIncludeFilter(query, 1, "Filter", 34);
+    } finally {
+      resetSliceTargetAndPartitionHashDistribute();
+    }
   }
 
   @Test
   public void testDRILL3414() throws Exception {
-    test("alter session set `planner.slice_target` = 1");
-    test("alter session set `store.partition.hash_distribute` = true");
-    test("use dfs_test.tmp");
-    test(String.format("create table drill_3414 partition by (dir0, dir1) as select * from dfs_test.`%s/multilevel/csv`", TEST_RES_PATH));
-    String query = ("select * from drill_3414 where (dir0=1994 or dir1='Q1') and (dir0=1995 or dir1='Q2' or columns[0] > 5000)");
-    testIncludeFilter(query, 6, "Filter", 20);
+    lowSliceTargetAndPartitionHashDistribute();
+    try {
+      test("use dfs_test.tmp");
+      test(String.format("create table drill_3414 partition by (dir0, dir1) as select * from dfs_test.`%s/multilevel/csv`", TEST_RES_PATH));
+      String query = ("select * from drill_3414 where (dir0=1994 or dir1='Q1') and (dir0=1995 or dir1='Q2' or columns[0] > 5000)");
+      testIncludeFilter(query, 6, "Filter", 20);
+    } finally {
+      resetSliceTargetAndPartitionHashDistribute();
+    }
   }
 
   @Test
   public void testDRILL3414_2() throws Exception {
-    test("alter session set `planner.slice_target` = 1");
-    test("alter session set `store.partition.hash_distribute` = true");
-    test("use dfs_test.tmp");
-    test(String.format("create table drill_3414_2 partition by (dir0, dir1) as select * from dfs_test.`%s/multilevel/csv`", TEST_RES_PATH));
-    String query = ("select * from drill_3414_2 where (dir0=1994 or dir1='Q1') and (dir0=1995 or dir1='Q2' or columns[0] > 5000) or columns[0] < 3000");
-    testIncludeFilter(query, 1, "Filter", 120);
+    lowSliceTargetAndPartitionHashDistribute();
+    try {
+      test("use dfs_test.tmp");
+      test(String.format("create table drill_3414_2 partition by (dir0, dir1) as select * from dfs_test.`%s/multilevel/csv`", TEST_RES_PATH));
+      String query = ("select * from drill_3414_2 where (dir0=1994 or dir1='Q1') and (dir0=1995 or dir1='Q2' or columns[0] > 5000) or columns[0] < 3000");
+      testIncludeFilter(query, 1, "Filter", 120);
+    } finally {
+      resetSliceTargetAndPartitionHashDistribute();
+    }
   }
 }
