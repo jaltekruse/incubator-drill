@@ -23,6 +23,7 @@ import java.io.PrintWriter;
 import java.net.URL;
 import java.util.List;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -47,6 +48,7 @@ import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.store.StoragePluginRegistry;
+import org.apache.drill.exec.util.JsonStringHashMap;
 import org.apache.drill.exec.util.TestUtilities;
 import org.apache.drill.exec.util.VectorUtil;
 import org.junit.AfterClass;
@@ -225,6 +227,47 @@ public class BaseTestQuery extends ExecTest {
 
   public static TestBuilder testBuilder() {
     return new TestBuilder(allocator);
+  }
+
+  /**
+   * Convenience method for running a sql query and validating it against an in-memory baseline
+   * list. The baselines records are compared to the query results ignoring order. The set
+   * of records can be copied any number of times to allow easy generation of a repetitive baseline.
+   *
+   * @param sql - the sql query to run
+   * @param baselineValues - materialized baseline values, this must contain only the columns returned
+   *                       by the final phase of the query as a complete verification will fail if there
+   *                       are extra or missing columns
+   * @param numCopies - number of times to add the provided set of baseline records to the list that the
+   *                  actual results will be compared against, allows for easy generation of large
+   *                  repetitive baseline sets
+   * @throws Exception
+   */
+  public static void testRunAndValidateUnordered(
+      String sql, List<JsonStringHashMap<String, Object>> baselineValues, int numCopies) throws Exception {
+
+    Set<String> columnNamesSet = baselineValues.get(0).keySet();
+    String[] columnNamesArray = columnNamesSet.toArray(new String[columnNamesSet.size()]);
+    TestBuilder builder = testBuilder()
+        .sqlQuery(sql)
+        .unOrdered()
+        .baselineColumns(columnNamesArray);
+    Object[] baselineVals = new Object[columnNamesArray.length];
+    for (int i = 0; i < numCopies; i++) {
+      for (JsonStringHashMap<String, Object> record : baselineValues) {
+        for (int j = 0; j < columnNamesArray.length; j++) {
+          baselineVals[i] = record.get(columnNamesArray[j]);
+        }
+        builder.baselineValues(baselineValues);
+      }
+    }
+    builder.go();
+  }
+
+  // Convenience method to validate a sql query against in-memory baseline, comparing to a single copy of the
+  // baseline records. See the other testRunAndValidateUnordered() that this method calls for more info.
+  public static void testRunAndValidateOrdered(String sql, List<JsonStringHashMap<String, Object>> baselineValues) throws Exception {
+    testRunAndValidateUnordered(sql, baselineValues, 1);
   }
 
   @AfterClass

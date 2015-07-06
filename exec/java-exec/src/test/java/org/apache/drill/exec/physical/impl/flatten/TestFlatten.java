@@ -49,6 +49,41 @@ public class TestFlatten extends BaseTestQuery {
   public TemporaryFolder folder = new TemporaryFolder();
 
   @Test
+  public void testFlattenRepeatedList() throws Exception {
+    String path = folder.getRoot().toPath().toString();
+
+    int numCopies = 50_000;
+    String jsonRecords = BaseTestQuery.getFile("flatten/complex_transaction_example_data.json");
+    new TestConstantFolding.SmallFileCreator(folder)
+        .setRecord(jsonRecords)
+        .createFiles(1, numCopies, "json");
+
+    List<JsonStringHashMap<String,Object>> data = Lists.newArrayList(
+        mapOf("uid", 1l,
+            "lst_lst_0", listOf(1l, 2l, 3l, 4l, 5l),
+            "lst_lst_1", listOf(2l, 3l, 4l, 5l, 6l),
+            "lst_lst", listOf(
+            listOf(1l, 2l, 3l, 4l, 5l),
+            listOf(2l, 3l, 4l, 5l, 6l))
+        ),
+        mapOf("uid", 2l,
+            "lst_lst_0", listOf(1l, 2l, 3l, 4l, 5l),
+            "lst_lst_1", listOf(2l, 3l, 4l, 5l, 6l),
+            "lst_lst", listOf(
+            listOf(1l, 2l, 3l, 4l, 5l),
+            listOf(2l, 3l, 4l, 5l, 6l))
+        )
+    );
+
+    List<JsonStringHashMap<String, Object>> result = flatten(flatten(flatten(data, "lst_lst_1"), "lst_lst_0"), "lst_lst");
+
+    String sql = "select uid, flatten(d.lst_lst) lst from " +
+            "dfs.`" + path + "/bigfile/bigfile.json` d";
+
+    testRunAndValidateUnordered(sql, result, numCopies);
+  }
+
+  @Test
   public void testFlattenFailure2161() throws Exception {
 
     // TODO - take the two original records and put them in the source, programmtically generate the large file with the
@@ -58,8 +93,6 @@ public class TestFlatten extends BaseTestQuery {
     // of result iterator (would be useful for cases like this where the results can be easily programmatically generated
     // without holding much in memory, this would only be useful for ordered comparisons
 
-    // seems to be working now, stack trace from JIRA was in populate empties, I think I remember seeing a bug fix merged related to this
-    testNoResult("select uid, flatten(d.lst_lst) lst from dfs.`/Users/jaltekruse/test_data_drill/json_test_files/2161_flatten_large_list.json` d");
 
     // also seems to be fixed, stack trace for JIRA looks like an error while accessing the offset within a repeated map during setChildrenPosition
     testNoResult("select s.rptds from (select d.type type, flatten(d.map.rm[1].rptd) rptds, flatten(d.features) feats from " +
