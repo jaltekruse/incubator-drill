@@ -326,7 +326,8 @@ public class TestParquetWriter extends BaseTestQuery {
 //    test("select * from dfs.`/Users/jaltekruse/test_data_drill/qa_test_framework/framework/resources/Datasources/aggregate`");
 //    test("select * from dfs.`/Users/jaltekruse/test_data_drill/qa_test_framework/framework/resources/Datasources/ericsson_complex/ericsson_20150210/dpa`");
 //    test("select * from dfs.`/Users/jaltekruse/test_data_drill/MD-91`");
-    test("select * from dfs.`/Users/jaltekruse/Downloads/part-m-00022.snappy.parquet`");
+//    test("select * from dfs.`/Users/jaltekruse/Downloads/part-m-00022.snappy.parquet`");
+    test("select t.mymap.`value` from dfs.`/var/folders/jc/wjqdcnr56219rwqhdbhw7w9m0000gp/T/TestReadWrite6694101329712119750.tmp` t");
   }
 
   public void compareParquetReadersColumnar(String selection, String table) throws Exception {
