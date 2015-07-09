@@ -158,6 +158,11 @@ public final class ${minor.class}Vector extends BaseDataValueVector implements F
   @Override
   public int load(int valueCount, DrillBuf buf){
     clear();
+    try {
+        Thread.sleep(5000);
+    } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+    }
     int len = valueCount * ${type.width};
     data = buf.slice(0, len);
     data.retain();

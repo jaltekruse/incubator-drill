@@ -689,7 +689,7 @@ public class TestDrillbitResilience extends DrillTest {
     assertEquals(String.format("We are leaking %d bytes", after - before), before, after);
   }
 
-  /**
+  /*
    * Given a set of controls, this method ensures TEST_QUERY fails with the given class and desc.
    */
   private static void assertFailsWithException(final String controls, final Class<? extends Throwable> exceptionClass,
