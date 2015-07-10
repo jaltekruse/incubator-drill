@@ -90,11 +90,11 @@ public class TestFlatten extends BaseTestQuery {
     return listOf(
         mapOf(
             "uid", 1l,
-            "lst_lst", listOf(listOf(1,2,3,4,5), listOf(2,3,4,5,6))
+            "lst_lst", listOf(listOf(1l,2l,3l,4l,5l), listOf(2l,3l,4l,5l,6l))
             ),
         mapOf(
-            "uid", 1l,
-            "lst_lst", listOf(listOf(1,2,3,4,5), listOf(2,3,4,5,6))
+            "uid", 2l,
+            "lst_lst", listOf(listOf(1l,2l,3l,4l,5l), listOf(2l,3l,4l,5l,6l))
             )
     );
   }
@@ -218,27 +218,26 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void testNestedFlattensWithJoin() throws Exception {
-    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecordsNestedList();
     String sql =
         "select v1.uid," +
-            "       flatten(v1.event_map.events) flat_events, " +
-            "       flatten(v2.transaction_map.transactions) flat_transactions " +
+            "       flatten(flatten(v1.lst_lst)) flattened_nested_list " +
             "from " +
-            "       (select uid, event_map from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+            "       (select uid, lst_lst from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
             "            inner join " +
-            "       (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+            "       (select uid from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
             "       on v1.uid = v2.uid";
     int numCopies = 1;
 
-    List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "events", "flat_events"), "transactions", "flat_transactions");
+    List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "lst_lst"), "lst_lst", "flattened_nested_list");
 
     TestBuilder builder = testBuilder()
         .sqlQuery(sql)
         .unOrdered()
-        .baselineColumns("uid", "flat_events", "flat_transactions");
+        .baselineColumns("uid", "flattened_nested_list");
     for (int i = 0; i < numCopies; i++) {
       for (JsonStringHashMap<String, Object> record : result) {
-        builder.baselineValues(record.get("uid"), record.get("flat_events"), record.get("flat_transactions"));
+        builder.baselineValues(record.get("uid"), record.get("flattened_nested_list"));
       }
     }
     builder.go();
