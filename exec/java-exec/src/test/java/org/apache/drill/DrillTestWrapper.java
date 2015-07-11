@@ -93,12 +93,12 @@ public class DrillTestWrapper {
   // if the baseline is a single option test writers can provide the baseline values and columns
   // without creating a file, these are provided to the builder in the baselineValues() and baselineColumns() methods
   // and translated into a map in the builder
-  private List<Map> baselineRecords;
+  private List<? extends Map<String, Object>> baselineRecords;
 
   public DrillTestWrapper(TestBuilder testBuilder, BufferAllocator allocator, String query, QueryType queryType,
                           String baselineOptionSettingQueries, String testOptionSettingQueries,
                           QueryType baselineQueryType, boolean ordered, boolean approximateEquality,
-                          boolean highPerformanceComparison, List<Map> baselineRecords) {
+                          boolean highPerformanceComparison, List<? extends Map<String, Object>> baselineRecords) {
     this.testBuilder = testBuilder;
     this.allocator = allocator;
     this.query = query;
@@ -272,22 +272,22 @@ public class DrillTestWrapper {
 
     List<QueryDataBatch> actual = Collections.EMPTY_LIST;;
     List<QueryDataBatch> expected = Collections.EMPTY_LIST;
-    List<Map> expectedRecords = new ArrayList<>();
-    List<Map> actualRecords = new ArrayList<>();
+    final List<? extends Map<String, Object>> expectedRecords;
+    final List<? extends Map<String, Object>> actualRecords;
 
     try {
       BaseTestQuery.test(testOptionSettingQueries);
       actual = BaseTestQuery.testRunAndReturn(queryType, query);
 
       addTypeInfoIfMissing(actual.get(0), testBuilder);
-      addToMaterializedResults(actualRecords, actual, loader, schema);
+      actualRecords = addToMaterializedResults(actual, loader, schema);
 
       // If baseline data was not provided to the test builder directly, we must run a query for the baseline, this includes
       // the cases where the baseline is stored in a file.
       if (baselineRecords == null) {
         BaseTestQuery.test(baselineOptionSettingQueries);
         expected = BaseTestQuery.testRunAndReturn(baselineQueryType, testBuilder.getValidationQuery());
-        addToMaterializedResults(expectedRecords, expected, loader, schema);
+        expectedRecords = addToMaterializedResults(expected, loader, schema);
       } else {
         expectedRecords = baselineRecords;
       }
@@ -404,8 +404,9 @@ public class DrillTestWrapper {
     }
   }
 
-  protected void addToMaterializedResults(List<Map> materializedRecords,  List<QueryDataBatch> records, RecordBatchLoader loader,
+  protected List<Map<String,Object>> addToMaterializedResults(List<QueryDataBatch> records, RecordBatchLoader loader,
                                           BatchSchema schema) throws SchemaChangeException, UnsupportedEncodingException {
+    List<Map<String,Object>> materializedRecords = new ArrayList();
     long totalRecords = 0;
     QueryDataBatch batch;
     int size = records.size();
@@ -420,7 +421,7 @@ public class DrillTestWrapper {
       logger.debug("reading batch with " + loader.getRecordCount() + " rows, total read so far " + totalRecords);
       totalRecords += loader.getRecordCount();
       for (int j = 0; j < loader.getRecordCount(); j++) {
-        HashMap<String, Object> record = new HashMap<>();
+        Map<String, Object> record = new HashMap<>();
         for (VectorWrapper w : loader) {
           Object obj = w.getValueVector().getAccessor().getObject(j);
           if (obj != null) {
@@ -443,6 +444,7 @@ public class DrillTestWrapper {
       batch.release();
       loader.clear();
     }
+    return materializedRecords;
   }
 
   public boolean compareValuesErrorOnMismatch(Object expected, Object actual, int counter, String column) throws Exception {
@@ -509,7 +511,7 @@ public class DrillTestWrapper {
    * @param actualRecords - list of records from test query, WARNING - this list is destroyed in this method
    * @throws Exception
    */
-  private void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
+  private void compareResults(List<? extends Map> expectedRecords, List<? extends Map> actualRecords) throws Exception {
 
     assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
 

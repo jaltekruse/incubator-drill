@@ -78,7 +78,7 @@ public class TestBuilder {
   // going with an approach of using this facility to validate the parts of the drill engine that could break in ways
   // that would affect the reading of baseline files (i.e. we need robust test for storage engines, project and casting that
   // use this interface) and then rely on the engine for the rest of the tests that will use the baseline queries.
-  private List<Map> baselineRecords;
+  private List<? extends Map<String, Object>> baselineRecords;
 
   public TestBuilder(BufferAllocator allocator) {
     this.allocator = allocator;
@@ -273,7 +273,14 @@ public class TestBuilder {
       ret.put(s, baselineValues[i]);
       i++;
     }
-    this.baselineRecords.add(ret);
+    try {
+      ((List<Map<String, Object>>)this.baselineRecords).add(ret);
+    } catch (ClassCastException ex) {
+      throw new RuntimeException("The baselineValues() method should not be used in " +
+          "conjunction with the baselineRecords() method. You must populate all of " +
+          "the records into a list (passed to baselineRecords) or pass them " +
+          "one by one (into baselineValues).");
+    }
     return this;
   }
 
@@ -291,7 +298,7 @@ public class TestBuilder {
    * @param materializedRecords - a list of maps representing materialized results
    * @return
    */
-  public TestBuilder baselineRecords(List<Map> materializedRecords) {
+  public TestBuilder baselineRecords(List<? extends Map<String, Object>> materializedRecords) {
     this.baselineRecords = materializedRecords;
     return this;
   }

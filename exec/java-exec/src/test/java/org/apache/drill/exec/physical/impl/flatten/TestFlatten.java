@@ -176,12 +176,7 @@ public class TestFlatten extends BaseTestQuery {
     TestBuilder builder = testBuilder()
         .sqlQuery(sql)
         .unOrdered()
-        .baselineColumns("uid", "flat_events", "flat_transactions");
-    for (int i = 0; i < numCopies; i++) {
-      for (JsonStringHashMap<String, Object> record : result) {
-        builder.baselineValues(record.get("uid"), record.get("flat_events"), record.get("flat_transactions"));
-      }
-    }
+        .baselineRecords(result)
     builder.go();
   }
 
