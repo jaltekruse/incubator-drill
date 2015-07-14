@@ -160,24 +160,23 @@ public class TestFlatten extends BaseTestQuery {
 
   @Test
   public void testFlattenWithJoin() throws Exception {
+    // TODO - figure out if I really need this, if so remember to set it back
     test("alter session set `planner.width.max_per_node` = 1");
 
-    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
     String sql =
         "select v1.uid, flatten(events) flat_events, flatten(transactions) flat_transactions from \n" +
             "    (select uid, events from cp.`flatten/complex_transaction_example_data.json`) v1\n" +
             "inner join\n" +
             "    (select uid, transactions from cp.`flatten/complex_transaction_example_data.json`) v2\n" +
             "on v1.uid = v2.uid";
-    int numCopies = 1;
-
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
     List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "events", "flat_events"), "transactions", "flat_transactions");
 
-    TestBuilder builder = testBuilder()
+    testBuilder()
         .sqlQuery(sql)
         .unOrdered()
         .baselineRecords(result)
-    builder.go();
+        .go();
   }
 
   // Nearly identical to the test above testFlattenWithJoin(), the difference here is an
@@ -185,7 +184,6 @@ public class TestFlatten extends BaseTestQuery {
   // within the call to flatten in this case.
   @Test
   public void testFlattenWithJoinNestedInput() throws Exception {
-    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
     String sql =
         "select v1.uid," +
         "       flatten(v1.event_map.events) flat_events, " +
@@ -195,25 +193,18 @@ public class TestFlatten extends BaseTestQuery {
         "            inner join " +
         "       (select uid, transaction_map from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
         "       on v1.uid = v2.uid";
-    int numCopies = 1;
-
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecords();
     List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "events", "flat_events"), "transactions", "flat_transactions");
 
-    TestBuilder builder = testBuilder()
+    testBuilder()
         .sqlQuery(sql)
         .unOrdered()
-        .baselineColumns("uid", "flat_events", "flat_transactions");
-    for (int i = 0; i < numCopies; i++) {
-      for (JsonStringHashMap<String, Object> record : result) {
-        builder.baselineValues(record.get("uid"), record.get("flat_events"), record.get("flat_transactions"));
-      }
-    }
-    builder.go();
+        .baselineRecords(result)
+        .go();
   }
 
   @Test
   public void testNestedFlattensWithJoin() throws Exception {
-    List<JsonStringHashMap<String,Object>> data = complexTransactionRecordsNestedList();
     String sql =
         "select v1.uid," +
             "       flatten(flatten(v1.lst_lst)) flattened_nested_list " +
@@ -222,20 +213,34 @@ public class TestFlatten extends BaseTestQuery {
             "            inner join " +
             "       (select uid from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
             "       on v1.uid = v2.uid";
-    int numCopies = 1;
-
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecordsNestedList();
     List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, "lst_lst"), "lst_lst", "flattened_nested_list");
 
-    TestBuilder builder = testBuilder()
+    testBuilder()
         .sqlQuery(sql)
         .unOrdered()
-        .baselineColumns("uid", "flattened_nested_list");
-    for (int i = 0; i < numCopies; i++) {
-      for (JsonStringHashMap<String, Object> record : result) {
-        builder.baselineValues(record.get("uid"), record.get("flattened_nested_list"));
-      }
-    }
-    builder.go();
+        .baselineRecords(result)
+        .go();
+  }
+
+  @Test
+  public void testComplexNestedFlattensWithJoin() throws Exception {
+    String sql =
+        "select v_outer.uid, flatten(flattened_rm.mapval.col2) " +
+            "from (v1.uid, flatten(v1.rm) flattened_rm " +
+            "    from " +
+            "       (select uid, rm from cp.`flatten/complex_transaction_example_data_modified.json`) v1 " +
+            "            inner join " +
+            "       (select uid from cp.`flatten/complex_transaction_example_data_modified.json`) v2 " +
+            "       on v1.uid = v2.uid ) v_outer";
+    List<JsonStringHashMap<String,Object>> data = complexTransactionRecordsListInsideRepeatedMap();
+    List<JsonStringHashMap<String, Object>> result = flatten(flatten(data, ""), "lst_lst", "flattened_nested_list");
+
+    testBuilder()
+        .sqlQuery(sql)
+        .unOrdered()
+        .baselineRecords(result)
+        .go();
   }
 
   @Test
@@ -313,6 +318,21 @@ public class TestFlatten extends BaseTestQuery {
       String colToFlatten) {
     return flatten(incomingRecords, colToFlatten, colToFlatten);
   }
+
+  /**
+   * A simple implementation of a projection that allows for verifying the
+   * @param incomingRecords
+   * @param colToProject
+   * @param projectSelection
+   * @param projectedDataColName
+   * @return
+   */
+  private List<JsonStringHashMap<String, Object>> project(
+      List<JsonStringHashMap<String,Object>> incomingRecords,
+      String colToProject,
+      String projectSelection,
+      String projectedDataColName) {
+  )
 
   private List<JsonStringHashMap<String, Object>> flatten(
       List<JsonStringHashMap<String,Object>> incomingRecords,

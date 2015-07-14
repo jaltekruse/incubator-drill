@@ -37,8 +37,10 @@ import org.apache.hadoop.io.Text;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 
@@ -299,6 +301,20 @@ public class TestBuilder {
    * @return
    */
   public TestBuilder baselineRecords(List<? extends Map<String, Object>> materializedRecords) {
+    Object temp;
+    // To validate the strings passed as column names they are each parsed as expressions and
+    // re-stringified as the keys in the maps of the records
+    for (Map<String, Object> record : materializedRecords) {
+      // This avoids using an extended for loop because the iterators for
+      // map keys do not allow for modification of the map while iterating
+      // over the keyset
+      Set<String> tempKeyset = new HashSet<>();
+      tempKeyset.addAll(record.keySet());
+      for (String s : tempKeyset) {
+        temp = record.remove(s);
+        record.put(colNameToExpr(s), temp);
+      }
+    }
     this.baselineRecords = materializedRecords;
     return this;
   }
@@ -316,14 +332,22 @@ public class TestBuilder {
    * For a baseline sql query, this currently has no effect.
    *
    * For explicit baseline values given in java code with the baselineValues() method, these will
-   * be used to create a map for the one record verification.
+   * be used to create maps that represent records in the expected result set.
    */
   public TestBuilder baselineColumns(String... columns) {
     for (int i = 0; i < columns.length; i++) {
-      columns[i] = parsePath(columns[i]).toExpr();
+      columns[i] = colNameToExpr(columns[i]);
     }
     this.baselineColumns = columns;
     return this;
+  }
+
+  /**
+   * The column names given
+   * @return
+   */
+  public String colNameToExpr(String colName) {
+    return parsePath(colName).toExpr();
   }
 
   private boolean singleExplicitBaselineRecord() {
