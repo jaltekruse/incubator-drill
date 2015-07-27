@@ -511,7 +511,10 @@ public class DrillTestWrapper {
    */
   private void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
 
-    assertEquals("Different number of records returned", expectedRecords.size(), actualRecords.size());
+    if (expectedRecords.size() !=  actualRecords.size()) {
+      throw new AssertionError(String.format("Different number of records returned:\n%s\n%s",
+          printRecords("Expected",expectedRecords), printRecords("Actual", actualRecords)));
+    }
 
     String missing = "";
     int i = 0;
@@ -557,6 +560,15 @@ public class DrillTestWrapper {
       }
     }
     return "Expected column(s) " + missingCols + " not found in result set.";
+  }
+
+  private String printRecords(String label, List<Map> records) {
+    StringBuffer sb = new StringBuffer();
+    sb.append(label).append(" records:\n-----------------------------");
+    for (Map record : records) {
+      sb.append(printRecord(record)).append("\n");
+    }
+    return sb.toString();
   }
 
   private String printRecord(Map<String, Object> record) {
