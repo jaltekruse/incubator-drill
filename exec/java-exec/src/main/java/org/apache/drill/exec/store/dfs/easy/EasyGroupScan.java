@@ -62,6 +62,9 @@ public class EasyGroupScan extends AbstractFileGroupScan{
   private int maxWidth;
   private List<SchemaPath> columns;
 
+//  @JsonProperty("partitions")
+//  public List<HiveTable.HivePartition> partitions;
+
   private ListMultimap<Integer, CompleteFileWork> mappings;
   private List<CompleteFileWork> chunks;
   private List<EndpointAffinity> endpointAffinities;

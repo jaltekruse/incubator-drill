@@ -122,6 +122,7 @@ public class HiveTestDataGenerator {
 
   private void generateTestData() throws Exception {
 
+    org.stringtemplate.v4.ST st;
     HiveConf conf = new HiveConf(SessionState.class);
 
     conf.set("javax.jdo.option.ConnectionURL", String.format("jdbc:derby:;databaseName=%s;create=true", dbDir));
