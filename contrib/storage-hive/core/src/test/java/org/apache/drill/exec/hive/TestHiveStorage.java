@@ -20,6 +20,7 @@ package org.apache.drill.exec.hive;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import org.apache.drill.TestBuilder;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.hadoop.fs.FileSystem;
 import org.joda.time.DateTime;
@@ -174,25 +175,13 @@ public class TestHiveStorage extends HiveTestBase {
   public void parquetBackedTableRead() throws Exception  {
 //    test("SELECT * FROM hive.readtest_parquet");
     String[] partCols = {
-        "boolean_part",
-        "tinyint_part",
-        "double_part",
-        "float_part",
-        "int_part",
-        "bigint_part",
-        "smallint_part",
-        "string_part"
+        "boolean_part", "tinyint_part", "double_part", "float_part", "int_part",
+        "bigint_part", "smallint_part", "string_part"
     };
 
     String[] regularCols = {
-        "boolean_field",
-        "tinyint_field",
-        "double_field",
-        "float_field",
-        "int_field",
-        "bigint_field",
-        "smallint_field",
-        "string_field"
+        "boolean_field", "tinyint_field", "double_field", "float_field", "int_field",
+        "bigint_field", "smallint_field","string_field"
     };
     List<String> partColsList = Lists.newArrayList(partCols);
     List<String> regularColsList = Lists.newArrayList(regularCols);
@@ -200,61 +189,44 @@ public class TestHiveStorage extends HiveTestBase {
     allColsList.addAll(regularColsList);
     String[] allCols = allColsList.toArray(new String[allColsList.size()]);
 
-    Object[] record1WhereTinyintPartIs63 = {
-        true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-        false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield"
-    };
-    Object[] record2WhereTinyintPartIs63 = {
-        true, 63, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-        // In the hive reader the null values are being populated with empty string
-        // in text files these appear as \N, so they are being converted to an actual
-        // null by my injected cast
-        // TODO - ask Venki about this
-        null, null, null, null, null, null, null, null
-    };
-    Object[] record1WhereTinyintPartIs64 = {
-        true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-        false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield"
-    };
-    Object[] record2WhereTinyintPartIs64 = {
-        true, 64, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
-        // In the hive reader the null values are being populated with empty string
-        // in text files these appear as \N, so they are being converted to an actual
-        // null by my injected cast
-        // TODO - ask Venki about this
-        null, null, null, null, null, null, null, null
-
+    int tinyintPartitionColIndex = 1;
+    Object[][] records = {
+        {
+            true, 62, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            false, 34, 8.345d, 4.67f, 123456, 234235l, 3455, "stringfield"
+        },
+        {
+            true, 62, 8.345d, 4.67f, 123456, 234235l, 3455, "string",
+            // In the hive reader the null values are being populated with empty string
+            // in text files these appear as \N, so they are being converted to an actual
+            // null by my injected cast
+            // TODO - ask Venki about this
+            null, null, null, null, null, null, null, null
+        }
     };
 
-    testBuilder()
+    TestBuilder testBuilder = testBuilder()
         .sqlQuery("select " +
             Joiner.on(", ").join(partCols) + ", " +
             Joiner.on(", ").join(regularCols) + " " +
             "from hive.parquet_text_mixed_fileformat")
         .unOrdered()
-        .baselineColumns(allCols)
-        .baselineValues(record1WhereTinyintPartIs64)
-        .baselineValues(record2WhereTinyintPartIs64)
-        .baselineValues(record1WhereTinyintPartIs63)
-        .baselineValues(record2WhereTinyintPartIs63)
-        .go();
+        .baselineColumns(allCols);
+    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64,63,62});
+    testBuilder.go();
 
     // try to swap the partition column order in the select list
     Collections.swap(partColsList, 0, 1);
 
     testBuilder()
         .sqlQuery("select " +
-            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(partColsList) + ", " +
             Joiner.on(", ").join(regularCols) + " " +
             "from hive.parquet_text_mixed_fileformat")
         .unOrdered()
-        .baselineColumns(allCols)
-        .baselineValues(record1WhereTinyintPartIs64)
-        .baselineValues(record2WhereTinyintPartIs64)
-        .baselineValues(record1WhereTinyintPartIs63)
-        .baselineValues(record2WhereTinyintPartIs63)
-        .go();
-
+        .baselineColumns(allCols);
+    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64,63,62});
+    testBuilder.go();
 
     testBuilder()
         .sqlQuery("select " +
@@ -264,10 +236,23 @@ public class TestHiveStorage extends HiveTestBase {
             "where tinyint_part = 64"
         )
         .unOrdered()
-        .baselineColumns(allCols)
-        .baselineValues(record1WhereTinyintPartIs64)
-        .baselineValues(record2WhereTinyintPartIs64)
-        .go();
+        .baselineColumns(allCols);
+    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64});
+    testBuilder.go();
+  }
+
+  private TestBuilder addRecordsWithDifferentPartitionColumnValues(TestBuilder testBuilder,
+                                                                   Object[][] baseRecords,
+                                                                   int partitionColIndex,
+                                                                   Object[] valuesToSubIn){
+    for (Object partitionValue : valuesToSubIn) {
+      for (Object[] record : baseRecords) {
+        // add another pair of records, with a new tinyint partition value
+        record[partitionColIndex] = partitionValue;
+        testBuilder.baselineValues(record);
+      }
+    }
+    return testBuilder;
   }
 
   @Test
