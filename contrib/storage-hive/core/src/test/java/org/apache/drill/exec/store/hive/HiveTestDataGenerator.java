@@ -403,13 +403,14 @@ public class HiveTestDataGenerator {
             "FROM readtest ");
 
     File file = new File(testDataFile);
+    System.out.println(testDataFile);
     String parentDirectory = file.getParentFile().toString();
 
     // External partition
     executeQuery(hiveDriver, String.format("ALTER TABLE parquet_text_mixed_fileformat ADD " +
             "PARTITION (" +
             "  boolean_part='true', " +
-//            changed this from 64
+//            changed this from 64 and 63
             "  tinyint_part='62', " +
             "  double_part='8.345', " +
             "  float_part='4.67', " +
