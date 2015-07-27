@@ -512,8 +512,10 @@ public class DrillTestWrapper {
   private void compareResults(List<Map> expectedRecords, List<Map> actualRecords) throws Exception {
 
     if (expectedRecords.size() !=  actualRecords.size()) {
-      throw new AssertionError(String.format("Different number of records returned:\n%s\n%s",
-          printRecords("Expected",expectedRecords), printRecords("Actual", actualRecords)));
+      assertEquals(
+          String.format("Different number of records returned:\n%s\n%s",
+          printRecords("Expected",expectedRecords), printRecords("Actual", actualRecords)),
+          expectedRecords.size(), actualRecords.size());
     }
 
     String missing = "";
@@ -541,7 +543,10 @@ public class DrillTestWrapper {
         break;
       }
       if (!found) {
-        throw new Exception(String.format("After matching %d records, did not find expected record in result set: %s", counter, printRecord(expectedRecord)));
+          throw new Exception(String.format("After matching %d records, did not find expected record in result set:\n%s\n%s\n%s",
+              counter, printRecord(expectedRecord), printRecords("Expected",expectedRecords),
+              printRecords("Still left to be matched\nActual", actualRecords)));
+//        throw new Exception(String.format("After matching %d records, did not find expected record in result set: %s", counter, printRecord(expectedRecord)));
       } else {
         actualRecords.remove(i);
         counter++;
@@ -564,7 +569,7 @@ public class DrillTestWrapper {
 
   private String printRecords(String label, List<Map> records) {
     StringBuffer sb = new StringBuffer();
-    sb.append(label).append(" records:\n-----------------------------");
+    sb.append(label).append(" records:\n-------------------\n");
     for (Map record : records) {
       sb.append(printRecord(record)).append("\n");
     }
