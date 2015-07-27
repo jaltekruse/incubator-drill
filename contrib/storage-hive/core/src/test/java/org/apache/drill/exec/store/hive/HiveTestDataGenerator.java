@@ -402,8 +402,8 @@ public class HiveTestDataGenerator {
             "boolean_field, tinyint_field, double_field, float_field, int_field, bigint_field, smallint_field, string_field " +
             "FROM readtest ");
 
-    File file = new File(testDataFile);
-    System.out.println(testDataFile);
+    File file = new File(generateAllParquetSupportedTypesDataFile());
+    System.out.println(file);
     String parentDirectory = file.getParentFile().toString();
 
     // External partition
@@ -488,6 +488,17 @@ public class HiveTestDataGenerator {
       Timestamp ts = new Timestamp(System.currentTimeMillis());
       printWriter.println (String.format("%s,%s", date.toString(), ts.toString()));
     }
+    printWriter.close();
+
+    return file.getPath();
+  }
+
+  private String generateAllParquetSupportedTypesDataFile() throws Exception {
+    File file = getTempFile();
+
+    PrintWriter printWriter = new PrintWriter(file);
+    printWriter.println("false,34,8.345,4.67,123456,234235,3455,stringfield");
+    printWriter.println("\\N,\\N,\\N,\\N,\\N,\\N,\\N,\\N");
     printWriter.close();
 
     return file.getPath();

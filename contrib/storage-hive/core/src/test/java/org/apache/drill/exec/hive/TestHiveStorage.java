@@ -218,7 +218,7 @@ public class TestHiveStorage extends HiveTestBase {
     // try to swap the partition column order in the select list
     Collections.swap(partColsList, 0, 1);
 
-    testBuilder()
+    testBuilder = testBuilder()
         .sqlQuery("select " +
             Joiner.on(", ").join(partColsList) + ", " +
             Joiner.on(", ").join(regularCols) + " " +
@@ -228,7 +228,7 @@ public class TestHiveStorage extends HiveTestBase {
     addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64,63,62});
     testBuilder.go();
 
-    testBuilder()
+    testBuilder = testBuilder()
         .sqlQuery("select " +
             Joiner.on(", ").join(partCols) + ", " +
             Joiner.on(", ").join(regularCols) + " " +
