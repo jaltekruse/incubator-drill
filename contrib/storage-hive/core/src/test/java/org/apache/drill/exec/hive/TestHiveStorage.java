@@ -171,6 +171,15 @@ public class TestHiveStorage extends HiveTestBase {
     test("explain plan for select boolean_part, tinyint_part from hive.parquet_text_mixed_fileformat where");
   }
 
+  // TODO - separate out a test case for mixed file types, which should be able to function soon
+  //    - for now this can use the old behavior for populating partition columns, assuming the dir names are useful
+  //        - this is not the case for external partitions
+  //    - would be nice to generate a logical fs scan
+  //        - need to remember that the files below the directory may not have a particular extension
+  //        - this might require duplicating some logic from the logical to physical scan transformation
+  //          to sidestep trying to resolve filetype by extension
+  //        - will try to reuse code as much as possible, but the whole FS scan planning process may need to be used here
+  // TODO - separate out a test case for external partitions
   @Test
   public void parquetBackedTableRead() throws Exception  {
 //    test("SELECT * FROM hive.readtest_parquet");
@@ -205,7 +214,33 @@ public class TestHiveStorage extends HiveTestBase {
         }
     };
 
+    // limit selection to one partition (non-external)
     TestBuilder testBuilder = testBuilder()
+        .sqlQuery("select " +
+            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(regularCols) + " " +
+            "from hive.parquet_text_mixed_fileformat " +
+            "where tinyint_part = 64"
+        )
+        .unOrdered()
+        .baselineColumns(allCols);
+    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64});
+    testBuilder.go();
+
+    // limit selection to a partition that is external
+    testBuilder = testBuilder()
+        .sqlQuery("select " +
+            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(regularCols) + " " +
+            "from hive.parquet_text_mixed_fileformat " +
+            "where tinyint_part = 62"
+        )
+        .unOrdered()
+        .baselineColumns(allCols);
+    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {62});
+    testBuilder.go();
+
+    testBuilder = testBuilder()
         .sqlQuery("select " +
             Joiner.on(", ").join(partCols) + ", " +
             Joiner.on(", ").join(regularCols) + " " +
@@ -228,17 +263,6 @@ public class TestHiveStorage extends HiveTestBase {
     addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64,63,62});
     testBuilder.go();
 
-    testBuilder = testBuilder()
-        .sqlQuery("select " +
-            Joiner.on(", ").join(partCols) + ", " +
-            Joiner.on(", ").join(regularCols) + " " +
-            "from hive.parquet_text_mixed_fileformat " +
-            "where tinyint_part = 64"
-        )
-        .unOrdered()
-        .baselineColumns(allCols);
-    addRecordsWithDifferentPartitionColumnValues(testBuilder, records, tinyintPartitionColIndex, new Object[] {64});
-    testBuilder.go();
   }
 
   private TestBuilder addRecordsWithDifferentPartitionColumnValues(TestBuilder testBuilder,

@@ -19,6 +19,7 @@ package org.apache.drill.exec;
 
 import static org.junit.Assert.assertFalse;
 
+import com.google.common.base.Joiner;
 import org.apache.drill.exec.hive.HiveTestBase;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -28,6 +29,29 @@ public class TestHivePartitionPruning extends HiveTestBase {
   @Test
   public void testSimplePartitionFilter() throws Exception {
     final String query = "explain plan for select * from hive.`default`.partition_pruning_test where c = 1";
+    final String plan = getPlanInString(query, OPTIQ_FORMAT);
+
+    // Check and make sure that Filter is not present in the plan
+    assertFalse(plan.contains("Filter"));
+  }
+
+  @Test
+  public void testPartitionFilter() throws Exception {
+
+    String[] partCols = {
+        "boolean_part", "tinyint_part", "double_part", "float_part", "int_part",
+        "bigint_part", "smallint_part", "string_part"
+    };
+
+    String[] regularCols = {
+        "boolean_field", "tinyint_field", "double_field", "float_field", "int_field",
+        "bigint_field", "smallint_field","string_field"
+    };
+    String query = "explain plan for select " +
+            Joiner.on(", ").join(partCols) + ", " +
+            Joiner.on(", ").join(regularCols) + " " +
+            "from hive.parquet_text_mixed_fileformat " +
+            "where tinyint_part = 64";
     final String plan = getPlanInString(query, OPTIQ_FORMAT);
 
     // Check and make sure that Filter is not present in the plan
