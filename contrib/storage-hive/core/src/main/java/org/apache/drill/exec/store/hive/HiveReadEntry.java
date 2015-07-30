@@ -17,15 +17,13 @@
  */
 package org.apache.drill.exec.store.hive;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.schema.Schema.TableType;
 
-import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.drill.exec.store.PartitionDescriptors;
+//import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
 import org.apache.hadoop.hive.metastore.api.Partition;
 import org.apache.hadoop.hive.metastore.api.Table;
 
@@ -39,7 +37,7 @@ public class HiveReadEntry {
   @JsonProperty("table")
   public HiveTable table;
   @JsonProperty("partitions")
-  public List<HiveTable.HivePartition> partitions;
+  public List<PartitionDescriptors.HivePartition> partitions;
   @JsonProperty("hiveConfigOverride")
   public Map<String, String> hiveConfigOverride;
 
@@ -48,12 +46,12 @@ public class HiveReadEntry {
 
   @JsonCreator
   public HiveReadEntry(@JsonProperty("table") HiveTable table,
-                       @JsonProperty("partitions") List<HiveTable.HivePartition> partitions,
+                       @JsonProperty("partitions") List<PartitionDescriptors.HivePartition> partitions,
                        @JsonProperty("hiveConfigOverride") Map<String, String> hiveConfigOverride) {
     this.table = table;
     this.partitions = partitions;
     if (partitions != null) {
-      for(HiveTable.HivePartition part : partitions) {
+      for(PartitionDescriptors.HivePartition part : partitions) {
         partitionsUnwrapped.add(part.getPartition());
       }
     }
@@ -76,7 +74,7 @@ public class HiveReadEntry {
   }
 
   @JsonIgnore
-  public List<HivePartition> getHivePartitionWrappers() {
+  public List<PartitionDescriptors.HivePartition> getHivePartitionWrappers() {
     return partitions;
   }
 
@@ -89,7 +87,7 @@ public class HiveReadEntry {
     return TableType.TABLE;
   }
 
-  public String getPartitionLocation(HiveTable.HivePartition partition) {
+  public String getPartitionLocation(PartitionDescriptors.HivePartition partition) {
     String partitionPath = table.getTable().getSd().getLocation();
 
     for (String value: partition.values) {

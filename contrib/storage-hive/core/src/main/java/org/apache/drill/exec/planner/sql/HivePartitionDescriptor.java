@@ -18,6 +18,7 @@
 package org.apache.drill.exec.planner.sql;
 
 import org.apache.drill.exec.planner.PartitionDescriptor;
+import org.apache.drill.exec.store.PartitionDescriptors;
 import org.apache.drill.exec.store.hive.HiveTable;
 
 import java.util.HashMap;
@@ -30,9 +31,9 @@ public class HivePartitionDescriptor implements PartitionDescriptor {
   private final Map<String, Integer> partitionMap = new HashMap<>();
   private final int MAX_NESTED_SUBDIRS;
 
-  public HivePartitionDescriptor(List<HiveTable.FieldSchemaWrapper> partitionName) {
+  public HivePartitionDescriptor(List<PartitionDescriptors.FieldSchemaWrapper> partitionName) {
     int i = 0;
-    for (HiveTable.FieldSchemaWrapper wrapper : partitionName) {
+    for (PartitionDescriptors.FieldSchemaWrapper wrapper : partitionName) {
       partitionMap.put(wrapper.name, i);
       i++;
     }

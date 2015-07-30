@@ -32,11 +32,12 @@ import org.apache.drill.exec.planner.logical.DrillScanRel;
 import org.apache.drill.exec.planner.logical.PartitionPruningUtil;
 import org.apache.drill.exec.planner.logical.RelOptHelper;
 import org.apache.drill.exec.planner.sql.HivePartitionDescriptor;
+import org.apache.drill.exec.store.PartitionDescriptors;
 import org.apache.drill.exec.store.StoragePluginOptimizerRule;
 import org.apache.drill.exec.store.hive.HiveReadEntry;
 import org.apache.drill.exec.store.hive.HiveScan;
 import org.apache.drill.exec.store.hive.HiveTable;
-import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
+//import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
 import org.apache.calcite.plan.RelOptRuleCall;
 import org.apache.calcite.plan.RelOptRuleOperand;
 
@@ -93,8 +94,8 @@ public abstract class HivePushPartitionFilterIntoScan extends StoragePluginOptim
 
   private HiveReadEntry splitFilter(HiveReadEntry origReadEntry, DirPathBuilder builder) {
     HiveTable table = origReadEntry.table;
-    List<HivePartition> partitions = origReadEntry.partitions;
-    List<HivePartition> newPartitions = new LinkedList<>();
+    List<PartitionDescriptors.HivePartition> partitions = origReadEntry.partitions;
+    List<PartitionDescriptors.HivePartition> newPartitions = new LinkedList<>();
     String pathPrefix = PartitionPruningUtil.truncatePrefixFromPath(table.getTable().getSd().getLocation());
     List<String> newFiles = Lists.newArrayList();
     List<String> dirPathList = builder.getDirPath();
@@ -102,7 +103,7 @@ public abstract class HivePushPartitionFilterIntoScan extends StoragePluginOptim
     for (String dirPath : dirPathList) {
       String fullPath = pathPrefix + dirPath;
       // check containment of this path in the list of files
-      for (HivePartition part: partitions) {
+      for (PartitionDescriptors.HivePartition part: partitions) {
         String origFilePath = origReadEntry.getPartitionLocation(part);
         String origFileName = PartitionPruningUtil.truncatePrefixFromPath(origFilePath);
 
