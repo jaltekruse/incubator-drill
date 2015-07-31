@@ -485,6 +485,7 @@ public final class ${className} extends BaseDataValueVector implements <#if type
 
     public void setValueLengthSafe(int index, int length) {
       values.getMutator().setValueLengthSafe(index, length);
+      lastSet = index;
     }
     </#if>
 
