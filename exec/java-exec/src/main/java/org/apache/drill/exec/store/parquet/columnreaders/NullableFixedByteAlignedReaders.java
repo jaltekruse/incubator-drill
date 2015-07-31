@@ -97,13 +97,12 @@ public class NullableFixedByteAlignedReaders {
         }
       } else {
         super.readField(recordsToReadInThisPass);
-      }
-
-      // TODO - replace this with fixed binary type in drill
-      // for now we need to write the lengths of each value
-      int byteLength = dataTypeLengthInBits / 8;
-      for (int i = 0; i < recordsToReadInThisPass; i++) {
-        castedVector.getMutator().setValueLengthSafe(valuesReadInCurrentPass + i, byteLength);
+        // TODO - replace this with fixed binary type in drill
+        // for now we need to write the lengths of each value
+        int byteLength = dataTypeLengthInBits / 8;
+        for (int i = 0; i < recordsToReadInThisPass; i++) {
+          castedVector.getMutator().setValueLengthSafe(valuesReadInCurrentPass + i, byteLength);
+        }
       }
     }
   }
