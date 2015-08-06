@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.drill.exec.planner.logical.DrillTable;
-import org.apache.drill.exec.store.hive.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
 import org.apache.drill.exec.store.hive.HiveStoragePlugin;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.ql.metadata.Table;
@@ -47,7 +47,7 @@ public class DrillHiveTable extends DrillTable{
 
   public DrillHiveTable(String storageEngineName, HiveStoragePlugin plugin, String userName, HiveReadEntry readEntry) {
     super(storageEngineName, plugin, userName, readEntry);
-    this.hiveTable = new Table(readEntry.getTable());
+    this.hiveTable = new Table(readEntry.getTable().getTable());
   }
 
   @Override

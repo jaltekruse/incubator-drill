@@ -44,8 +44,8 @@ import org.apache.drill.exec.ops.OperatorContext;
 import org.apache.drill.exec.physical.impl.OutputMutator;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.record.MaterializedField;
-import org.apache.drill.exec.rpc.ProtobufLengthDecoder;
 import org.apache.drill.exec.store.AbstractRecordReader;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 import org.apache.drill.exec.util.DecimalUtility;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.BigIntVector;
@@ -58,9 +58,7 @@ import org.apache.drill.exec.vector.Decimal9Vector;
 import org.apache.drill.exec.vector.Float4Vector;
 import org.apache.drill.exec.vector.Float8Vector;
 import org.apache.drill.exec.vector.IntVector;
-import org.apache.drill.exec.vector.SmallIntVector;
 import org.apache.drill.exec.vector.TimeStampVector;
-import org.apache.drill.exec.vector.TinyIntVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.drill.exec.vector.VarBinaryVector;
 import org.apache.drill.exec.vector.VarCharVector;
@@ -68,8 +66,6 @@ import org.apache.drill.exec.work.ExecErrorConstants;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.metastore.MetaStoreUtils;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
-import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.Table;
 import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
 import org.apache.hadoop.hive.serde2.SerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
@@ -97,8 +93,8 @@ public class HiveRecordReader extends AbstractRecordReader {
 
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(HiveRecordReader.class);
 
-  protected Table table;
-  protected Partition partition;
+  protected HiveTable table;
+  protected HiveTable.HivePartition partition;
   protected InputSplit inputSplit;
   protected FragmentContext context;
   protected List<String> selectedColumnNames;
@@ -125,7 +121,7 @@ public class HiveRecordReader extends AbstractRecordReader {
   protected static final int TARGET_RECORD_COUNT = 4000;
   protected static final int FIELD_SIZE = 50;
 
-  public HiveRecordReader(Table table, Partition partition, InputSplit inputSplit, List<SchemaPath> projectedColumns,
+  public HiveRecordReader(HiveTable table, HiveTable.HivePartition partition, InputSplit inputSplit, List<SchemaPath> projectedColumns,
       FragmentContext context, Map<String, String> hiveConfigOverride) throws ExecutionSetupException {
     this.table = table;
     this.partition = partition;
@@ -142,18 +138,18 @@ public class HiveRecordReader extends AbstractRecordReader {
     Properties properties;
     JobConf job = new JobConf();
     if (partition != null) {
-      properties = MetaStoreUtils.getPartitionMetadata(partition, table);
+      properties = MetaStoreUtils.getPartitionMetadata(partition.getPartition(), table.getTable());
 
       // SerDe expects properties from Table, but above call doesn't add Table properties.
       // Include Table properties in final list in order to not to break SerDes that depend on
       // Table properties. For example AvroSerDe gets the schema from properties (passed as second argument)
-      for (Map.Entry<String, String> entry : table.getParameters().entrySet()) {
+      for (Map.Entry<String, String> entry : table.getTable().getParameters().entrySet()) {
         if (entry.getKey() != null && entry.getKey() != null) {
           properties.put(entry.getKey(), entry.getValue());
         }
       }
     } else {
-      properties = MetaStoreUtils.getTableMetadata(table);
+      properties = MetaStoreUtils.getTableMetadata(table.getTable());
     }
     for (Object obj : properties.keySet()) {
       job.set((String) obj, (String) properties.get(obj));
@@ -162,8 +158,11 @@ public class HiveRecordReader extends AbstractRecordReader {
       job.set(entry.getKey(), entry.getValue());
     }
     InputFormat format;
-    String sLib = (partition == null) ? table.getSd().getSerdeInfo().getSerializationLib() : partition.getSd().getSerdeInfo().getSerializationLib();
-    String inputFormatName = (partition == null) ? table.getSd().getInputFormat() : partition.getSd().getInputFormat();
+    // TODO - Remove the indirection and redundant call to getPartition by making the hive version of the Partition class extend
+    // the Drill one (currently called HivePartition, needs to be renamed as it will be representing the minimal description
+    // of a Drill partition)
+    String sLib = (partition == null) ? table.getTable().getSd().getSerdeInfo().getSerializationLib() : partition.getPartition().getSd().getSerdeInfo().getSerializationLib();
+    String inputFormatName = (partition == null) ? table.getTable().getSd().getInputFormat() : partition.getPartition().getSd().getInputFormat();
     try {
       format = (InputFormat) Class.forName(inputFormatName).getConstructor().newInstance();
       Class c = Class.forName(sLib);
@@ -174,9 +173,9 @@ public class HiveRecordReader extends AbstractRecordReader {
     }
     job.setInputFormat(format.getClass());
 
-    List<FieldSchema> partitionKeys = table.getPartitionKeys();
+    List<HiveTable.FieldSchemaWrapper> partitionKeys = table.getPartitionKeys();
     List<String> partitionNames = Lists.newArrayList();
-    for (FieldSchema field : partitionKeys) {
+    for (HiveTable.FieldSchemaWrapper field : partitionKeys) {
       partitionNames.add(field.getName());
     }
 
@@ -227,13 +226,13 @@ public class HiveRecordReader extends AbstractRecordReader {
       }
 
       for (int i = 0; i < table.getPartitionKeys().size(); i++) {
-        FieldSchema field = table.getPartitionKeys().get(i);
+        HiveTable.FieldSchemaWrapper field = table.getPartitionKeys().get(i);
         if (selectedPartitionNames.contains(field.getName())) {
           TypeInfo pType = TypeInfoUtils.getTypeInfoFromTypeString(field.getType());
           selectedPartitionTypes.add(pType);
 
           if (partition != null) {
-            selectedPartitionValues.add(convertPartitionType(pType, partition.getValues().get(i)));
+            selectedPartitionValues.add(convertPartitionType(pType, partition.getPartitionValuesAsStrings().get(i)));
           }
         }
       }

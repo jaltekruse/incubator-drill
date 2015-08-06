@@ -25,8 +25,7 @@ import org.apache.drill.exec.physical.impl.BatchCreator;
 import org.apache.drill.exec.physical.impl.ScanBatch;
 import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.store.RecordReader;
-import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 import org.apache.hadoop.mapred.InputSplit;
 
 import com.google.common.collect.Lists;
@@ -37,9 +36,9 @@ public class HiveScanBatchCreator implements BatchCreator<HiveSubScan> {
   public ScanBatch getBatch(FragmentContext context, HiveSubScan config, List<RecordBatch> children)
       throws ExecutionSetupException {
     List<RecordReader> readers = Lists.newArrayList();
-    Table table = config.getTable();
+    HiveTable table = config.getTable();
     List<InputSplit> splits = config.getInputSplits();
-    List<Partition> partitions = config.getPartitions();
+    List<HiveTable.HivePartition> partitions = config.getPartitions();
     boolean hasPartitions = (partitions != null && partitions.size() > 0);
     int i = 0;
 

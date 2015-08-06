@@ -23,6 +23,8 @@ import com.google.common.cache.LoadingCache;
 import com.google.common.collect.Lists;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.hive.conf.HiveConf.ConfVars;
@@ -152,7 +154,7 @@ public abstract class DrillHiveMetaStoreClient extends HiveMetaStoreClient {
   public abstract List<String> getTableNames(final String dbName) throws TException;
 
   /**
-   * Higher level API that returns the {@link HiveReadEntry} for given database and table.
+   * Higher level API that returns the {@link org.apache.drill.exec.store.hive.partition.HiveReadEntry} for given database and table.
    * @param dbName
    * @param tableName
    * @return

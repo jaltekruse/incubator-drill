@@ -20,43 +20,27 @@ package org.apache.drill.exec.planner.sql.logical;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import javassist.expr.FieldAccess;
 import org.apache.calcite.prepare.RelOptTableImpl;
 import org.apache.calcite.rel.type.RelDataType;
 import org.apache.calcite.rel.type.RelDataTypeFactory;
-import org.apache.calcite.rel.type.RelDataTypeField;
 import org.apache.calcite.rex.RexBuilder;
 import org.apache.calcite.rex.RexNode;
-import org.apache.calcite.sql.SqlOperator;
 import org.apache.calcite.sql.fun.SqlCaseOperator;
 import org.apache.calcite.sql.fun.SqlStdOperatorTable;
 import org.apache.calcite.sql.type.SqlTypeName;
-import org.apache.calcite.util.NlsString;
 import org.apache.drill.common.JSONOptions;
-import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
-import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.common.expression.SchemaPath;
-import org.apache.drill.common.logical.FormatPluginConfig;
-import org.apache.drill.common.logical.StoragePluginConfig;
 import org.apache.drill.exec.ExecConstants;
-import org.apache.drill.exec.ops.QueryContext;
 import org.apache.drill.exec.physical.base.AbstractGroupScan;
 import org.apache.drill.exec.physical.base.GroupScan;
-import org.apache.drill.exec.planner.logical.DirPathBuilder;
-import org.apache.drill.exec.planner.logical.DrillFilterRel;
 import org.apache.drill.exec.planner.logical.DrillProjectRel;
-import org.apache.drill.exec.planner.logical.DrillRel;
 import org.apache.drill.exec.planner.logical.DrillScanRel;
-import org.apache.drill.exec.planner.logical.DrillTable;
 import org.apache.drill.exec.planner.logical.DynamicDrillTable;
-import org.apache.drill.exec.planner.logical.PartitionPruningUtil;
 import org.apache.drill.exec.planner.logical.RelOptHelper;
-import org.apache.drill.exec.planner.sql.HivePartitionDescriptor;
 import org.apache.drill.exec.planner.types.DrillFixedRelDataTypeImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeDrillImpl;
 import org.apache.drill.exec.planner.types.RelDataTypeHolder;
@@ -70,27 +54,17 @@ import org.apache.drill.exec.store.dfs.FormatMatcher;
 import org.apache.drill.exec.store.dfs.FormatPlugin;
 import org.apache.drill.exec.store.dfs.FormatSelection;
 import org.apache.drill.exec.store.dfs.MagicString;
-import org.apache.drill.exec.store.dfs.easy.EasyGroupScan;
 import org.apache.drill.exec.store.easy.text.TextFormatPlugin;
-import org.apache.drill.exec.store.hive.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
 import org.apache.drill.exec.store.hive.HiveScan;
-import org.apache.drill.exec.store.hive.HiveTable;
-import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
+import org.apache.drill.exec.store.hive.partition.HiveTable.HivePartition;
 import org.apache.calcite.plan.RelOptRuleCall;
-import org.apache.calcite.plan.RelOptRuleOperand;
 
 import com.google.common.collect.Lists;
-import org.apache.drill.exec.store.parquet.ParquetFormatConfig;
-import org.apache.drill.exec.store.sys.StaticDrillTable;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.StorageDescriptor;
-import org.apache.hadoop.hive.ql.security.authorization.AuthorizationPreEventListener;
-import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
-import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ConvertHiveTaleScanToNativeRead.class);
@@ -145,7 +119,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
       filePaths.add(sd.getLocation());
     }
     final String partitionPath = sd.getLocation();
-    final String tablePath = hiveReadEntry.getTable().getSd().getLocation();
+    final String tablePath = hiveReadEntry.getTable().getTable().getSd().getLocation();
     final StoragePlugin storagePlugin;
     final FormatPlugin formatPlugin;
 
@@ -328,7 +302,7 @@ public class ConvertHiveTaleScanToNativeRead extends StoragePluginOptimizerRule 
     final RelDataType varcharType = typeFactory.createSqlType(SqlTypeName.VARCHAR);
     int partitionIndex = 0;
     // TODO - look at what is stored in the partition dir name for null values
-    for (FieldSchema field : hiveReadEntry.getTable().getPartitionKeys()) {
+    for (FieldSchema field : hiveReadEntry.getTable().getTable().getPartitionKeys()) {
       fieldNames.add(field.getName());
 
       // Hive stores partition values in directory names with the format field_name=value

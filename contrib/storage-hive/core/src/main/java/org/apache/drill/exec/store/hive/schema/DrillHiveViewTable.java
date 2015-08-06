@@ -20,7 +20,7 @@ package org.apache.drill.exec.store.hive.schema;
 import org.apache.calcite.schema.Schema.TableType;
 
 import org.apache.drill.exec.planner.logical.DrillViewInfoProvider;
-import org.apache.drill.exec.store.hive.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
 import org.apache.drill.exec.store.hive.HiveStoragePlugin;
 
 public class DrillHiveViewTable extends DrillHiveTable implements DrillViewInfoProvider {

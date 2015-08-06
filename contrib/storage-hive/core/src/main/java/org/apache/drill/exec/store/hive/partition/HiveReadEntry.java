@@ -15,19 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.hive;
+package org.apache.drill.exec.store.hive.partition;
 
-import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.calcite.schema.Schema.TableType;
 
-import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
-import org.apache.hadoop.hive.metastore.api.FieldSchema;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
+import org.apache.drill.exec.store.hive.partition.HiveTable.HivePartition;
 import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.Table;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -61,13 +58,13 @@ public class HiveReadEntry {
   }
 
   @JsonIgnore
-  public Table getTable() {
-    return table.getTable();
+  public HiveTable getTable() {
+    return table;
   }
 
   @JsonIgnore
-  public List<Partition> getPartitions() {
-    return partitionsUnwrapped;
+  public List<HiveTable.HivePartition> getPartitions() {
+    return partitions;
   }
 
   @JsonIgnore

@@ -18,7 +18,7 @@
 package org.apache.drill.exec.planner.sql;
 
 import org.apache.drill.exec.planner.PartitionDescriptor;
-import org.apache.drill.exec.store.hive.HiveTable;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 
 import java.util.HashMap;
 import java.util.List;

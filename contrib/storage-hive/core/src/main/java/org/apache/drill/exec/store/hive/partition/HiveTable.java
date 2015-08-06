@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.store.hive;
+package org.apache.drill.exec.store.hive.partition;
 
 import java.util.List;
 import java.util.Map;
@@ -119,6 +119,10 @@ public class HiveTable {
     return table;
   }
 
+  public List<FieldSchemaWrapper> getPartitionKeys() {
+    return partitionKeys;
+  }
+
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder("Table(");
@@ -188,6 +192,10 @@ public class HiveTable {
     @JsonIgnore
     public Partition getPartition() {
       return partition;
+    }
+
+    public List<String> getPartitionValuesAsStrings() {
+      return values;
     }
 
     @Override
@@ -335,6 +343,14 @@ public class HiveTable {
       this.name = fieldSchema.getName();
       this.type = fieldSchema.getType();
       this.comment = fieldSchema.getComment();
+    }
+
+    public String getName() {
+      return name;
+    }
+
+    public String getType() {
+      return type;
     }
 
     @JsonIgnore

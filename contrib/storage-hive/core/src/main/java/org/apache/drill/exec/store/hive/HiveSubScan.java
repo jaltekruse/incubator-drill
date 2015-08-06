@@ -30,8 +30,8 @@ import org.apache.drill.exec.physical.base.PhysicalOperator;
 import org.apache.drill.exec.physical.base.PhysicalVisitor;
 import org.apache.drill.exec.physical.base.SubScan;
 import org.apache.drill.exec.proto.UserBitShared.CoreOperatorType;
-import org.apache.hadoop.hive.metastore.api.Partition;
-import org.apache.hadoop.hive.metastore.api.Table;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 import org.apache.hadoop.mapred.InputSplit;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -57,9 +57,9 @@ public class HiveSubScan extends AbstractBase implements SubScan {
   @JsonIgnore
   private List<InputSplit> inputSplits = Lists.newArrayList();
   @JsonIgnore
-  private Table table;
+  private HiveTable table;
   @JsonIgnore
-  private List<Partition> partitions;
+  private List<HiveTable.HivePartition> partitions;
 
   @JsonCreator
   public HiveSubScan(@JsonProperty("userName") String userName,
@@ -84,11 +84,11 @@ public class HiveSubScan extends AbstractBase implements SubScan {
     return splits;
   }
 
-  public Table getTable() {
+  public HiveTable getTable() {
     return table;
   }
 
-  public List<Partition> getPartitions() {
+  public List<HiveTable.HivePartition> getPartitions() {
     return partitions;
   }
 

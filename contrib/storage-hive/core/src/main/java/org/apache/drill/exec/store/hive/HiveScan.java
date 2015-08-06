@@ -40,7 +40,9 @@ import org.apache.drill.exec.physical.base.SubScan;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.CoordinationProtos.DrillbitEndpoint;
 import org.apache.drill.exec.store.StoragePluginRegistry;
-import org.apache.drill.exec.store.hive.HiveTable.HivePartition;
+import org.apache.drill.exec.store.hive.partition.HiveReadEntry;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
+import org.apache.drill.exec.store.hive.partition.HiveTable.HivePartition;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -158,15 +160,15 @@ public class HiveScan extends AbstractGroupScan {
 
   private void getSplits() throws ExecutionSetupException {
     try {
-      final List<Partition> partitions = hiveReadEntry.getPartitions();
-      final Table table = hiveReadEntry.getTable();
+      final List<HivePartition> partitions = hiveReadEntry.getPartitions();
+      final Table table = hiveReadEntry.getTable().getTable();
       if (partitions == null || partitions.size() == 0) {
         final Properties properties = MetaStoreUtils.getTableMetadata(table);
         splitInput(properties, table.getSd(), null);
       } else {
-        for (final Partition partition : partitions) {
-          final Properties properties = MetaStoreUtils.getPartitionMetadata(partition, table);
-          splitInput(properties, partition.getSd(), partition);
+        for (final HiveTable.HivePartition partition : partitions) {
+          final Properties properties = MetaStoreUtils.getPartitionMetadata(partition.getPartition(), table);
+          splitInput(properties, partition.getPartition().getSd(), partition.getPartition());
         }
       }
     } catch (ReflectiveOperationException | IOException e) {
@@ -361,7 +363,7 @@ public class HiveScan extends AbstractGroupScan {
 
   // Return true if the current table is partitioned false otherwise
   public boolean supportsPartitionFilterPushdown() {
-    final List<FieldSchema> partitionKeys = hiveReadEntry.getTable().getPartitionKeys();
+    final List<FieldSchema> partitionKeys = hiveReadEntry.getTable().getTable().getPartitionKeys();
     if (partitionKeys == null || partitionKeys.size() == 0) {
       return false;
     }
