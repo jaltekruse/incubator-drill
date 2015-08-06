@@ -76,6 +76,8 @@ public class DrillHiveTable extends DrillTable{
     return typeFactory.createTypeWithNullability(relDataType, true);
   }
 
+  // TODO - replace this with a call to an translation between Drill types and Calcite types
+  // storage plugins should only be concerned with a mapping between their own types and Drill's
   private RelDataType getRelDataTypeFromHivePrimitiveType(RelDataTypeFactory typeFactory, PrimitiveTypeInfo pTypeInfo) {
     switch(pTypeInfo.getPrimitiveCategory()) {
       case BOOLEAN:

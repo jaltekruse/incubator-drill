@@ -352,6 +352,8 @@ public class HiveRecordReader extends AbstractRecordReader {
     }
   }
 
+  // TODO - this type conversion should only happen once, and be bi-directional in a central location
+  // the types should be provided to the scan in the Drill types
   private MinorType getMinorTypeFromHivePrimitiveTypeInfo(PrimitiveTypeInfo primitiveTypeInfo) {
     switch(primitiveTypeInfo.getPrimitiveCategory()) {
       case BINARY:
