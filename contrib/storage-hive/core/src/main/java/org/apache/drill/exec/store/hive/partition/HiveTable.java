@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.hive.partition;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.drill.common.types.TypeProtos;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.Partition;
@@ -326,22 +327,32 @@ public class HiveTable {
     @JsonProperty
     public String name;
     @JsonProperty
-    public String type;
+    public TypeProtos.MinorType type;
+
+
+    // TODO - figure out if we need these, they were used over in MockGroupScanPOP
+    // where I got the idea to use the MinorType here instead of a bare sting that happened
+    // to contain a description of the type that Hive could map back into one of its enum values
+//    public DataMode mode;
+//    public Integer width;
+//    public Integer precision;
+//    public Integer scale;
     @JsonProperty
     public String comment;
 
     @JsonCreator
-    public FieldSchemaWrapper(@JsonProperty("name") String name, @JsonProperty("type") String type, @JsonProperty("comment") String comment) {
+    public FieldSchemaWrapper(@JsonProperty("name") String name, @JsonProperty("type") TypeProtos.MinorType type, @JsonProperty("comment") String comment) {
       this.name = name;
       this.type = type;
       this.comment = comment;
-      this.fieldSchema = new FieldSchema(name, type, comment);
+//      this.fieldSchema = new FieldSchema(name, type, comment);
     }
 
     public FieldSchemaWrapper(FieldSchema fieldSchema) {
       this.fieldSchema = fieldSchema;
       this.name = fieldSchema.getName();
-      this.type = fieldSchema.getType();
+      // TODO - add call to mapping from hive types to Drill types here
+//      this.type = fieldSchema.getType();
       this.comment = fieldSchema.getComment();
     }
 
@@ -349,7 +360,7 @@ public class HiveTable {
       return name;
     }
 
-    public String getType() {
+    public TypeProtos.MinorType getType() {
       return type;
     }
 
