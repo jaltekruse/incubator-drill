@@ -615,10 +615,10 @@ public class HiveRecordReader extends AbstractRecordReader {
         return Timestamp.valueOf(value);
       case DATE:
         return Date.valueOf(value);
+      default:
+        throwUnsupportedHiveDataTypeError(pCat.toString());
+        return null;
     }
-
-    throwUnsupportedHiveDataTypeError(pCat.toString());
-    return null;
   }
 
   public static void throwUnsupportedHiveDataTypeError(String unsupportedType) {
