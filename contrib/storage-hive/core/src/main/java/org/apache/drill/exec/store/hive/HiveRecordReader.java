@@ -228,7 +228,9 @@ public class HiveRecordReader extends AbstractRecordReader {
       for (int i = 0; i < table.getPartitionKeys().size(); i++) {
         HiveTable.FieldSchemaWrapper field = table.getPartitionKeys().get(i);
         if (selectedPartitionNames.contains(field.getName())) {
-          TypeInfo pType = TypeInfoUtils.getTypeInfoFromTypeString(field.getType());
+          // TODO - refactor this to remove any reference of the hive types in execution as far as partition columns
+          // are concerned, this should allb
+          TypeInfo pType = TypeInfoUtils.getTypeInfoFromTypeString(field.getType().getDescriptorForType().getName());
           selectedPartitionTypes.add(pType);
 
           if (partition != null) {

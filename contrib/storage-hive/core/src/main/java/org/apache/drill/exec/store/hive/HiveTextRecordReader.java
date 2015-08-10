@@ -24,6 +24,7 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.store.hive.partition.HiveTable;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableBigIntVector;
 import org.apache.drill.exec.vector.NullableIntVector;
@@ -47,9 +48,9 @@ public class HiveTextRecordReader extends HiveRecordReader {
   public final List<Integer> columnIds;
   private final int numCols;
 
-  public HiveTextRecordReader(Table table, Partition partition, InputSplit inputSplit, List<SchemaPath> projectedColumns, FragmentContext context) throws ExecutionSetupException {
+  public HiveTextRecordReader(HiveTable table, HiveTable.HivePartition partition, InputSplit inputSplit, List<SchemaPath> projectedColumns, FragmentContext context) throws ExecutionSetupException {
     super(table, partition, inputSplit, projectedColumns, context, null);
-    String d = table.getSd().getSerdeInfo().getParameters().get("field.delim");
+    String d = table.getTable().getSd().getSerdeInfo().getParameters().get("field.delim");
     if (d != null) {
       delimiter = d.getBytes()[0];
     } else {
