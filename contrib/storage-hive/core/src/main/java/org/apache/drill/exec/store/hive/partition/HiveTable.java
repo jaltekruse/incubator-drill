@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.common.types.Types;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Order;
 import org.apache.hadoop.hive.metastore.api.Partition;
@@ -353,6 +354,9 @@ public class HiveTable {
       this.name = fieldSchema.getName();
       // TODO - add call to mapping from hive types to Drill types here
 //      this.type = fieldSchema.getType();
+      // TODO - make sure this works with all types, it likely will require a mapping
+      // as described in the comment above
+      this.type = Types.getMinorTypeFromName(fieldSchema.getType());
       this.comment = fieldSchema.getComment();
     }
 
