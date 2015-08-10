@@ -627,6 +627,7 @@ public class HiveRecordReader extends AbstractRecordReader {
     errMsg.append(System.getProperty("line.separator"));
     errMsg.append("Following Hive data types are supported in Drill for querying: ");
     errMsg.append(
+        // TODO - put this in a list somewhere, will make it easier to maintain as we add support for new types
         "BOOLEAN, BYTE, SHORT, INT, LONG, FLOAT, DOUBLE, DATE, TIMESTAMP, BINARY, DECIMAL, STRING, and VARCHAR");
 
     throw new RuntimeException(errMsg.toString());
