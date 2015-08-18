@@ -132,7 +132,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
           field.getValueClass(), typedFieldId.getFieldIds()).getValueVector());
       flattener.setFlattenField(vector);
     } catch (Exception ex) {
-      throw UserException.unsupportedError(ex).message("Trying to flatten a non-repeated field.").build();
+      throw UserException.unsupportedError(ex).message("Trying to flatten a non-repeated field.").build(logger);
     }
   }
 
@@ -150,7 +150,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     setFlattenVector();
 
     int childCount = incomingRecordCount == 0 ? 0 : flattener.getFlattenField().getAccessor().getInnerValueCount();
-    int outputRecords = flattener.flattenRecords(0, incomingRecordCount, 0);
+    int outputRecords = flattener.flattenRecords(incomingRecordCount, 0);
     // TODO - change this to be based on the repeated vector length
     if (outputRecords < childCount) {
       setValueCount(outputRecords);
@@ -181,7 +181,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
       return;
     }
 
-    int projRecords = flattener.flattenRecords(remainderIndex, remainingRecordCount, 0);
+    int projRecords = flattener.flattenRecords(remainingRecordCount, 0);
     if (projRecords < remainingRecordCount) {
       setValueCount(projRecords);
       this.recordCount = projRecords;
@@ -289,6 +289,7 @@ public class FlattenRecordBatch extends AbstractSingleRecordBatch<FlattenPOP> {
     final IntOpenHashSet transferFieldIds = new IntOpenHashSet();
 
     final NamedExpression flattenExpr = new NamedExpression(popConfig.getColumn(), new FieldReference(popConfig.getColumn()));
+    // TODO - should not need this cast, at least enforce in the pop that this expression is a column reference not a general logical expression
     final ValueVectorReadExpression vectorRead = (ValueVectorReadExpression)ExpressionTreeMaterializer.materialize(flattenExpr.getExpr(), incoming, collector, context.getFunctionRegistry(), true);
     final TransferPair tp = getFlattenFieldTransferPair(flattenExpr.getRef());
 

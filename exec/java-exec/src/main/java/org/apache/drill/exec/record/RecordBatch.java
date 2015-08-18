@@ -38,10 +38,11 @@ public interface RecordBatch extends VectorAccessible {
   /**
    * Describes the outcome of a RecordBatch being incremented forward.
    */
+  // TODO - possibly replace with visitor pattern
   public static enum IterOutcome {
     NONE, // No more records were found.
     OK, // A new range of records have been provided.
-    OK_NEW_SCHEMA, // A full collection of records
+    OK_NEW_SCHEMA, // A full collection of records, should prompt code regeneration or other schema change behavior
     STOP, // Informs parent nodes that the query has terminated. In this case, a consumer can consume their QueryContext
           // to understand the current state of things.
     NOT_YET, // used by batches that haven't received incoming data yet.
