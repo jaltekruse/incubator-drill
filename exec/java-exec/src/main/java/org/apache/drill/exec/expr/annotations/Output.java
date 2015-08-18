@@ -17,6 +17,8 @@
  */
 package org.apache.drill.exec.expr.annotations;
 
+import org.apache.drill.exec.expr.DrillSimpleFunc;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -24,6 +26,8 @@ import java.lang.annotation.Target;
 
 /**
  * Describes the field will provide output from the given function.
+ *
+ * {@code Output}s are not available in the {@link DrillSimpleFunc#setup()} method.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})

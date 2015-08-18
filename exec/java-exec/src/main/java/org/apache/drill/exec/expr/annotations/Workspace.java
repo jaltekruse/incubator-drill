@@ -17,13 +17,25 @@
  */
 package org.apache.drill.exec.expr.annotations;
 
+import org.apache.drill.exec.expr.DrillSimpleFunc;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Describes the field will provide output from the given function.
+ * Describes a field that will persist across
+ *
+ * TODO - also include a reference the the UDAF interface setup method
+ * The {@link DrillSimpleFunc#setup()} method should only interact with the members
+ * annotated with {@link Workspace}, as these will persist from this setup method
+ * and across different evaluations of the function.
+ *
+ * A good example use of this method
+ * would be creating an instance of a class that will be used to parse input, assuming
+ * it can have it's state cleared at the top of the eval method, and that creating the object
+ * is reasonably heavy-weight.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD})

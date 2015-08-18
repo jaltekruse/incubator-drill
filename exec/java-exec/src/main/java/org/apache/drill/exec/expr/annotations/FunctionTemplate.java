@@ -17,12 +17,20 @@
  */
 package org.apache.drill.exec.expr.annotations;
 
+import org.apache.drill.exec.expr.DrillAggFunc;
+import org.apache.drill.exec.expr.DrillSimpleFunc;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-
+/**
+ * Annotation for specifying metadata for a Drill function.
+ *
+ * This (must/should?) accompany implementing the appropriate
+ * interface, either {@link DrillSimpleFunc} or {@link DrillAggFunc}.
+ */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE})
 public @interface FunctionTemplate {
@@ -75,6 +83,9 @@ public @interface FunctionTemplate {
     NULL_IF_NULL;
   }
 
+  /**
+   * TODO - docs
+   */
   public static enum FunctionScope {
     SIMPLE,
     POINT_AGGREGATE,
@@ -93,6 +104,18 @@ public @interface FunctionTemplate {
     SC_BOOLEAN_OPERATOR
   }
 
+  /**
+   * Specifies the complexity of a function for the sake of rating the overall
+   * cost of evaluating a given expression tree. This can be used to order expression
+   * evaluations in situations where a result of one expression can short-circuit the evaluation
+   * of another. One example would be a filter with an "and" between two other filters.
+   * In these cases, the evaluations should be re-ordered to place the least complex expression on
+   * the left side so it will be evaluated first and avoid evaluation of the more complex expression whenever possible.
+   *
+   * TODO - The {@code MEDIUM} value is currently unused, and it looks like the {@code COMPLEX} value is
+   * annotation fewer functions than it should. The current functions should likely be reviewed to determine
+   * more appropriate costs.
+   */
   public static enum FunctionCostCategory {
     SIMPLE(1), MEDIUM(20), COMPLEX(50);
 

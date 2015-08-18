@@ -15,22 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.exec.expr.annotations;
-
-import org.apache.drill.exec.expr.DrillSimpleFunc;
-
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
- * Marker annotation to determine which fields should be included as parameters for the function.
+ * Annotations for UDFs and UDAFs.
  *
- * {@code Param}s are not available in the {@link DrillSimpleFunc#setup()} method.
+ * These annotations are used to specify information about how UDFs
+ * should be registered with various names and aliases, handle their
+ * inputs and outputs, persist heavier objects between individual evaluations
+ * of a function and any other meta-data needed by Drill to register and evaluate the
+ * function as part of an expression tree.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD})
-public @interface Param {
-  boolean constant() default false;
-}
+package org.apache.drill.exec.expr.annotations;
