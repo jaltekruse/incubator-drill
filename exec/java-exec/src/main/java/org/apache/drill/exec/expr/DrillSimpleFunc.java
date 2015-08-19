@@ -30,13 +30,17 @@ import org.apache.drill.exec.record.RecordBatch;
 /**
  * Interface for a Drill function.
  *
- * Drill included functions and UDFs share a common interface, they must implement
- * this interface and (optionally?) include an
+ * Functions included by default with Drill and UDFs are defined in the same manner, they must implement
+ * this interface and (optionally? - pretty sure it is required) include an
  * {@link org.apache.drill.exec.expr.annotations.FunctionTemplate} annotation telling
  * Drill how to register the function and some of its basic properties.
  *
  * TODO - find the recent discussions about the UDF interfaces as well as Tug's blog post
  * to make sure this covers all of the current sticking points for implementing UDFs.
+ *    - in all methods: setup, eval; as well as the other methods in UDAFs, reset and output fully qualified
+ *      names are needed for external resources
+ *    - jar must include source and class files
+ *    - holders are the only things that can be used as input or output
  *
  */
 public interface DrillSimpleFunc extends DrillFunc {
@@ -44,8 +48,11 @@ public interface DrillSimpleFunc extends DrillFunc {
    * One-time function initialization steps.
    *
    * The setup method will be evaluated at least once after the function has
-   * been placed in an expression tree for evaluation. From this context the {@link Param} and {@link Output}
-   * members will be unavailable. This method should only interact with the members
+   * been placed in an expression tree for evaluation. In this method the {@link Param} and {@link Output}
+   * members will be unavailable, although this is a constraint that cannot be enforced during UDF
+   * compilation, it will fail during
+   * ( TODO - registration )
+   * evaluation. This method should only interact with the members
    * annotated with {@link Workspace}, as these will persist from this setup method
    * and across different evaluations of the function.
    *
@@ -74,7 +81,7 @@ public interface DrillSimpleFunc extends DrillFunc {
    *
    * Handling dates and variable length values can be a little more difficult, as Drill tries as hard as possible to avoid
    * allocating excessive objects or incurring unnecessary copies of data wherever possible. This unfortunately clashes with
-   * a lot of common patterns in the java standard library and commonly used 3rd-party java libraries to use immuable objects like
+   * a lot of common patterns in the java standard library and commonly used 3rd-party java libraries to use immutable objects like
    * {@link String} as inputs. When you need to work
    * with these interfaces, use the convenience methods available in {@link org.apache.drill.exec.expr.fn.impl.StringFunctionHelpers}
    * TODO - find all of these convenience methods for decimal, time, date, timestamp, etc.
