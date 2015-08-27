@@ -51,6 +51,7 @@ import org.apache.drill.exec.server.options.OptionValue;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.testing.ControlsInjector;
 import org.apache.drill.exec.testing.ControlsInjectorFactory;
+import org.apache.drill.exec.util.CallBack;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.SchemaChangeCallBack;
@@ -83,7 +84,7 @@ public class ScanBatch implements CloseableRecordBatch {
   private String partitionColumnDesignator;
   private boolean done = false;
   private SchemaChangeCallBack callBack = new SchemaChangeCallBack();
-
+  private boolean hasReadNonEmptyFile = false;
   public ScanBatch(PhysicalOperator subScanConfig, FragmentContext context, OperatorContext oContext,
                    Iterator<RecordReader> readers, List<String[]> partitionColumns, List<Integer> selectedPartitionColumns) throws ExecutionSetupException {
     this.context = context;
@@ -186,6 +187,15 @@ public class ScanBatch implements CloseableRecordBatch {
             return IterOutcome.NONE;
           }
 
+          // If all the files we have read so far are just empty, the schema is not useful
+          if(!hasReadNonEmptyFile) {
+            container.clear();
+            for (ValueVector v : fieldVectorMap.values()) {
+              v.clear();
+            }
+            fieldVectorMap.clear();
+          }
+
           currentReader.cleanup();
           currentReader = readers.next();
           partitionValues = partitionColumns.hasNext() ? partitionColumns.next() : null;
@@ -208,7 +218,13 @@ public class ScanBatch implements CloseableRecordBatch {
         }
       }
 
+      hasReadNonEmptyFile = true;
       populatePartitionVectors();
+
+      for (VectorWrapper w : container) {
+        w.getValueVector().getMutator().setValueCount(recordCount);
+      }
+
 
       // this is a slight misuse of this metric but it will allow Readers to report how many records they generated.
       final boolean isNewSchema = mutator.isNewSchema();
@@ -343,6 +359,11 @@ public class ScanBatch implements CloseableRecordBatch {
     @Override
     public DrillBuf getManagedBuffer() {
       return oContext.getManagedBuffer();
+    }
+
+    @Override
+    public CallBack getCallBack() {
+      return callBack;
     }
   }
 

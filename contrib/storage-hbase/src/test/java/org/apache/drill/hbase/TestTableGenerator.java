@@ -17,7 +17,9 @@
  */
 package org.apache.drill.hbase;
 
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Random;
 
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -79,6 +81,15 @@ public class TestTableGenerator {
     p.add("f".getBytes(), "c7".getBytes(), "4".getBytes());
     p.add("f".getBytes(), "c8".getBytes(), "5".getBytes());
     p.add("f".getBytes(), "c9".getBytes(), "6".getBytes());
+    table.put(p);
+
+    p = new Put(new byte[]{'b', '4', 0});
+    p.add("f".getBytes(), "c1".getBytes(), "1".getBytes());
+    p.add("f2".getBytes(), "c2".getBytes(), "2".getBytes());
+    p.add("f".getBytes(), "c3".getBytes(), "3".getBytes());
+    p.add("f2".getBytes(), "c4".getBytes(), "4".getBytes());
+    p.add("f".getBytes(), "c5".getBytes(), "5".getBytes());
+    p.add("f2".getBytes(), "c6".getBytes(), "6".getBytes());
     table.put(p);
 
     p = new Put("b4".getBytes());
@@ -197,4 +208,127 @@ public class TestTableGenerator {
     admin.flush(tableName);
   }
 
+  public static void generateHBaseDatasetCompositeKeyDate(HBaseAdmin admin, String tableName, int numberRegions) throws Exception {
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILY_F));
+
+    if (numberRegions > 1) {
+      admin.createTable(desc, Arrays.copyOfRange(SPLIT_KEYS, 0, numberRegions-1));
+    } else {
+      admin.createTable(desc);
+    }
+
+    HTable table = new HTable(admin.getConfiguration(), tableName);
+
+    Date startDate = new Date(1408924800000L);
+    long startTime  = startDate.getTime();
+    long MILLISECONDS_IN_A_DAY  = (long)1000 * 60 * 60 * 24;
+    long MILLISECONDS_IN_A_YEAR = MILLISECONDS_IN_A_DAY * 365;
+    long endTime    = startTime + MILLISECONDS_IN_A_YEAR;
+    long interval   = MILLISECONDS_IN_A_DAY / 3;
+
+    for (long ts = startTime, counter = 0; ts < endTime; ts += interval, counter ++) {
+      byte[] rowKey = ByteBuffer.allocate(16) .putLong(ts).array();
+
+      for(int i = 0; i < 8; ++i) {
+        rowKey[8 + i] = (byte)(counter >> (56 - (i * 8)));
+      }
+
+      Put p = new Put(rowKey);
+      p.add(FAMILY_F, COLUMN_C, "dummy".getBytes());
+      table.put(p);
+    }
+
+    table.flushCommits();
+    table.close();
+  }
+
+  public static void generateHBaseDatasetCompositeKeyTime(HBaseAdmin admin, String tableName, int numberRegions) throws Exception {
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILY_F));
+
+    if (numberRegions > 1) {
+      admin.createTable(desc, Arrays.copyOfRange(SPLIT_KEYS, 0, numberRegions-1));
+    } else {
+      admin.createTable(desc);
+    }
+
+    HTable table = new HTable(admin.getConfiguration(), tableName);
+
+    long startTime  = 0;
+    long MILLISECONDS_IN_A_SEC  = (long)1000;
+    long MILLISECONDS_IN_A_DAY = MILLISECONDS_IN_A_SEC * 60 * 60 * 24;
+    long endTime    = startTime + MILLISECONDS_IN_A_DAY;
+    long smallInterval   = 25;
+    long largeInterval   = MILLISECONDS_IN_A_SEC * 42;
+    long interval        = smallInterval;
+
+    for (long ts = startTime, counter = 0; ts < endTime; ts += interval, counter ++) {
+      byte[] rowKey = ByteBuffer.allocate(16) .putLong(ts).array();
+
+      for(int i = 0; i < 8; ++i) {
+        rowKey[8 + i] = (byte)(counter >> (56 - (i * 8)));
+      }
+
+      Put p = new Put(rowKey);
+      p.add(FAMILY_F, COLUMN_C, "dummy".getBytes());
+      table.put(p);
+
+      if (interval == smallInterval) {
+        interval = largeInterval;
+      } else {
+        interval = smallInterval;
+      }
+    }
+
+    table.flushCommits();
+    table.close();
+  }
+
+  public static void generateHBaseDatasetCompositeKeyInt(HBaseAdmin admin, String tableName, int numberRegions) throws Exception {
+    if (admin.tableExists(tableName)) {
+      admin.disableTable(tableName);
+      admin.deleteTable(tableName);
+    }
+
+    HTableDescriptor desc = new HTableDescriptor(tableName);
+    desc.addFamily(new HColumnDescriptor(FAMILY_F));
+
+    if (numberRegions > 1) {
+      admin.createTable(desc, Arrays.copyOfRange(SPLIT_KEYS, 0, numberRegions-1));
+    } else {
+      admin.createTable(desc);
+    }
+
+    HTable table = new HTable(admin.getConfiguration(), tableName);
+
+    int startVal = 0;
+    int stopVal = 1000;
+    int interval = 47;
+    long counter = 0;
+    for (int i = startVal; i < stopVal; i += interval, counter ++) {
+      byte[] rowKey = ByteBuffer.allocate(12).putInt(i).array();
+
+      for(int j = 0; j < 8; ++j) {
+        rowKey[4 + j] = (byte)(counter >> (56 - (j * 8)));
+      }
+
+      Put p = new Put(rowKey);
+      p.add(FAMILY_F, COLUMN_C, "dummy".getBytes());
+      table.put(p);
+    }
+
+    table.flushCommits();
+    table.close();
+  }
 }

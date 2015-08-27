@@ -255,4 +255,38 @@ public class TestPartitionFilter extends PlanTestBase {
     String query =  String.format("select * from (select dir0, o_custkey from dfs_test.`%s` where dir0='1994' and o_custkey = 10) t limit 0", root);
     testIncludeFilter(query, 4, "Filter", 0);
   }
+
+  @Test // see DRILL-2852 and DRILL-3591
+  public void testPartitionFilterWithCast() throws Exception {
+    String root = FileUtils.getResourceAsFile("/multilevel/parquet").toURI().toString();
+    String query = String.format("select myyear, myquarter, o_totalprice from (select cast(dir0 as varchar(10)) as myyear, "
+        + " cast(dir1 as varchar(10)) as myquarter, o_totalprice from dfs_test.`%s`) where myyear = cast('1995' as varchar(10)) "
+        + " and myquarter = cast('Q2' as varchar(10)) and o_totalprice < 40000.0 order by o_totalprice", root);
+
+    testIncludeFilter(query, 1, "Filter", 3);
+  }
+
+  @Test
+  public void testPPWithNestedExpression() throws Exception {
+    String root = FileUtils.getResourceAsFile("/multilevel/parquet").toURI().toString();
+    String query = String.format("select * from dfs_test.`%s` where dir0 not in(1994) and o_orderpriority = '2-HIGH'",
+        root);
+    testIncludeFilter(query, 8, "Filter", 24);
+  }
+
+  @Test
+  public void testPPWithCase() throws Exception {
+    String root = FileUtils.getResourceAsFile("/multilevel/parquet").toURI().toString();
+    String query = String.format("select 1 from " +
+            "(select  CASE WHEN '07' = '13' THEN '13' ELSE CAST(dir0 as VARCHAR(4)) END as YEAR_FILTER from dfs_test.`%s` where o_orderpriority = '2-HIGH') subq" +
+            " where subq.YEAR_FILTER not in('1994')", root);
+    testIncludeFilter(query, 8, "Filter", 24);
+  }
+
+  @Test // DRILL-3702
+  public void testPartitionFilterWithNonNullabeFilterExpr() throws Exception {
+    String query = String.format("select dir0, dir1, o_custkey, o_orderdate from dfs_test.`%s/multilevel/parquet` where concat(dir0, '') = '1994' and concat(dir1, '') = 'Q1'", TEST_RES_PATH);
+    testExcludeFilter(query, 1, "Filter", 10);
+  }
+
 }

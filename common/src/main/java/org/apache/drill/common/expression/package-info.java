@@ -15,8 +15,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.drill.common.expression.aggregate;
-
-public class BasicAggregates {
-
-}
+/**
+ * Logical expression tree representation.
+ *
+ * Drill manages expressions provided in many different parts of SQL queries.
+ * This includes scalar expressions in select, filter and join conditions, as
+ * well as aggregate and window functions. These expressions are represented
+ * logically as ASTs during planning. The classes defined here provide the
+ * different nodes in the expression tree, as well as utilities for building
+ * and manipulating expressions during parsing and planning.
+ *
+ */
+package org.apache.drill.common.expression;
