@@ -324,12 +324,13 @@ public class TestParquetWriter extends BaseTestQuery {
       testBuilder()
         .ordered()
         .sqlQuery(query)
-        .optionSettingQueriesForTestQuery("alter system set `store.parquet.use_new_reader` = false")
+        .optionSettingQueriesForTestQuery("alter session set `store.parquet.use_new_reader` = false")
         .sqlBaselineQuery(query)
-        .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
+        .optionSettingQueriesForBaseline("alter session set `store.parquet.use_new_reader` = true")
         .build().run();
     } finally {
-      test("alter system set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER, ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
+      test("alter session set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER,
+          ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
     }
   }
 
@@ -341,12 +342,13 @@ public class TestParquetWriter extends BaseTestQuery {
         .ordered()
         .highPerformanceComparison()
         .sqlQuery(query)
-        .optionSettingQueriesForTestQuery("alter system set `store.parquet.use_new_reader` = false")
+        .optionSettingQueriesForTestQuery("alter session set `store.parquet.use_new_reader` = false")
         .sqlBaselineQuery(query)
-        .optionSettingQueriesForBaseline("alter system set `store.parquet.use_new_reader` = true")
+        .optionSettingQueriesForBaseline("alter session set `store.parquet.use_new_reader` = true")
         .build().run();
     } finally {
-      test("alter system set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER, ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
+      test("alter session set `%s` = %b", ExecConstants.PARQUET_NEW_RECORD_READER,
+          ExecConstants.PARQUET_RECORD_READER_IMPLEMENTATION_VALIDATOR.getDefault().bool_val);
     }
   }
 

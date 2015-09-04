@@ -20,6 +20,7 @@ package org.apache.drill.exec.fn.impl;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.TestTools;
+import org.apache.drill.exec.ExecConstants;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -83,19 +84,23 @@ public class TestAggregateFunctions extends BaseTestQuery {
     // NOTE: this type of query gets rewritten by Calcite into an inner join of subqueries, so
     // we need to test with both hash join and merge join
 
-    testBuilder()
-        .sqlQuery(query)
-        .ordered()
-        .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = true")
-        .sqlBaselineQuery(baselineQuery)
-        .build().run();
+    try {
+      testBuilder()
+          .sqlQuery(query)
+          .ordered()
+          .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = true")
+          .sqlBaselineQuery(baselineQuery)
+          .build().run();
 
-    testBuilder()
-    .sqlQuery(query)
-    .ordered()
-    .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false")
-    .sqlBaselineQuery(baselineQuery)
-    .build().run();
+      testBuilder()
+          .sqlQuery(query)
+          .ordered()
+          .optionSettingQueriesForTestQuery("alter system set `planner.enable_hashjoin` = false")
+          .sqlBaselineQuery(baselineQuery)
+          .build().run();
+    } finally {
+      test("alter system set `planner.enable_hashjoin` = true");
+    }
 
   }
 
@@ -109,13 +114,18 @@ public class TestAggregateFunctions extends BaseTestQuery {
         + "group by l_orderkey order by 3 limit 100) sq \n"
         + "on sq.l_orderkey = o.o_orderkey";
 
-    testBuilder()
-    .sqlQuery(query)
-    .ordered()
-    .optionSettingQueriesForTestQuery("alter system set `planner.slice_target` = 1000")
-    .baselineColumns("cnt")
-    .baselineValues(100l)
-    .build().run();
+    try {
+      testBuilder()
+          .sqlQuery(query)
+          .ordered()
+          .optionSettingQueriesForTestQuery("alter session set `planner.slice_target` = 1000")
+          .baselineColumns("cnt")
+          .baselineValues(100l)
+          .build().run();
+    } finally {
+      test(String.format("alter session set `%s` = %d",
+          ExecConstants.SLICE_TARGET, ExecConstants.SLICE_TARGET_OPTION.getDefault().num_val));
+    }
   }
 
   @Test // DRILL-2168

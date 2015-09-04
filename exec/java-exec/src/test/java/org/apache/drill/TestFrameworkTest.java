@@ -290,22 +290,25 @@ public class TestFrameworkTest extends BaseTestQuery{
 
   @Test
   public void testComplexJSON_all_text() throws Exception {
-    testBuilder()
-        .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-        .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
-        .ordered()
-        .jsonBaselineFile("store/json/schema_change_int_to_string.json")
-        .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
-        .build().run();
+    try {
+      testBuilder()
+          .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
+          .optionSettingQueriesForTestQuery("alter session set `store.json.all_text_mode` = true")
+          .ordered()
+          .jsonBaselineFile("store/json/schema_change_int_to_string.json")
+          .optionSettingQueriesForBaseline("alter session set `store.json.all_text_mode` = true")
+          .build().run();
 
-    testBuilder()
-        .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-        .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
-        .unOrdered() // Check other verification method with same files
-        .jsonBaselineFile("store/json/schema_change_int_to_string.json")
-        .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
-        .build().run();
-    test("alter system set `store.json.all_text_mode` = false");
+      testBuilder()
+          .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
+          .optionSettingQueriesForTestQuery("alter session set `store.json.all_text_mode` = true")
+          .unOrdered() // Check other verification method with same files
+          .jsonBaselineFile("store/json/schema_change_int_to_string.json")
+          .optionSettingQueriesForBaseline("alter session set `store.json.all_text_mode` = true")
+          .build().run();
+    } finally {
+      test("alter session set `store.json.all_text_mode` = false");
+    }
   }
 
   @Test
@@ -313,10 +316,10 @@ public class TestFrameworkTest extends BaseTestQuery{
     try {
       testBuilder()
           .sqlQuery("select * from cp.`store/json/schema_change_int_to_string.json`")
-          .optionSettingQueriesForTestQuery("alter system set `store.json.all_text_mode` = true")
+          .optionSettingQueriesForTestQuery("alter session set `store.json.all_text_mode` = true")
           .ordered()
           .jsonBaselineFile("testframework/schema_change_int_to_string_non-matching.json")
-          .optionSettingQueriesForBaseline("alter system set `store.json.all_text_mode` = true")
+          .optionSettingQueriesForBaseline("alter session set `store.json.all_text_mode` = true")
           .build().run();
     } catch (Exception ex) {
       assertEquals("at position 1 column '`field_1`' mismatched values, " +
@@ -324,6 +327,8 @@ public class TestFrameworkTest extends BaseTestQuery{
           ex.getMessage());
       // this indicates successful completion of the test
       return;
+    } finally {
+      test("alter session set `store.json.all_text_mode` = false");
     }
     throw new Exception("Test framework verification failed, expected failure on order check.");
   }

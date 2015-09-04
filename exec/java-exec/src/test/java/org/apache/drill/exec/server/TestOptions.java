@@ -29,17 +29,6 @@ public class TestOptions extends BaseTestQuery{
     test("select * from sys.drillbits;");
   }
 
-  @Test
-  public void testOptions() throws Exception{
-    test(
-        "select * from sys.options;" +
-        "ALTER SYSTEM set `planner.disable_exchanges` = true;" +
-        "select * from sys.options;" +
-        "ALTER SESSION set `planner.disable_exchanges` = true;" +
-        "select * from sys.options;"
-        );
-  }
-
   @Test // DRILL-3122
   public void checkChangedColumn() throws Exception {
     test(String.format("ALTER session SET `%s` = %d;", ExecConstants.SLICE_TARGET,
