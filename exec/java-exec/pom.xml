@@ -155,7 +155,7 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-column</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -170,7 +170,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-hadoop</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -185,9 +185,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-format</artifactId>
-      <version>2.1.1-drill-r1</version>
+      <version>2.3.0-incubating</version>
       <exclusions>
         <exclusion>
           <groupId>org.apache.hadoop</groupId>
@@ -200,7 +200,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-common</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -215,7 +215,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-jackson</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -230,7 +230,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-encoding</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
@@ -245,7 +245,7 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.twitter</groupId>
+      <groupId>org.apache.parquet</groupId>
       <artifactId>parquet-generator</artifactId>
       <version>${parquet.version}</version>
       <exclusions>
