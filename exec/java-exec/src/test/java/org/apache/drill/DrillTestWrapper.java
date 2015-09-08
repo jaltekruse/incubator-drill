@@ -165,7 +165,33 @@ public class DrillTestWrapper {
       assertEquals("Different number of records returned", expectedValues.size(), actualValues.size());
 
       for (int i = 0; i < expectedValues.size(); i++) {
-        compareValuesErrorOnMismatch(expectedValues.get(i), actualValues.get(i), i, s);
+        try {
+          compareValuesErrorOnMismatch(expectedValues.get(i), actualValues.get(i), i, s);
+        } catch (Exception ex) {
+          System.out.println("Expected Records:");
+          System.out.println("-----------------");
+          for (int index = i - 5; index < i + 5; index++) {
+            System.out.println(String.format("%d: %s", index, expectedRecords.get(s).get(index)));
+//            System.out.print(index + ":" );
+//            byte[] bytes = ((String)expectedRecords.get(s).get(index)).getBytes();
+//            for (int j = 0; j < bytes.length; j++) {
+//              System.out.print(String.format("%4d,", bytes[j]));
+//            }
+//            System.out.println();
+          }
+          System.out.println("Actual Records:");
+          System.out.println("---------------");
+          for (int index = i - 5; index < i + 5; index++) {
+            System.out.println(String.format("%d: %s", index, actualRecords.get(s).get(index)));
+//            System.out.print(index + ":" );
+//            byte[] bytes = ((String)actualRecords.get(s).get(index)).getBytes();
+//            for (int j = 0; j < bytes.length; j++) {
+//              System.out.print(String.format("%4d,", bytes[j]));
+//            }
+//            System.out.println();
+          }
+          throw ex;
+        }
       }
     }
     if (actualRecords.size() < expectedRecords.size()) {

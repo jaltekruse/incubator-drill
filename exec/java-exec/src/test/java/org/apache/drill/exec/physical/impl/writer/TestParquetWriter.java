@@ -60,7 +60,8 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Test
   public void testImpalaParquet() throws Exception {
-    compareParquetReadersHyperVector("*", "dfs.`/Users/jaltekruse/Downloads/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`");
+//    compareParquetReadersColumnar("rptng_ts", "dfs.`/Users/jaltekruse/Downloads/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`");
+    compareParquetReadersColumnar("convert_from(rptng_ts, 'IMPALA_TIMESTAMP')", TABLE_NAME);
   }
 
   @Test
