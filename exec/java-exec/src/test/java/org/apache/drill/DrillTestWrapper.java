@@ -32,9 +32,11 @@ import org.apache.drill.exec.record.VectorWrapper;
 import org.apache.drill.exec.rpc.user.QueryDataBatch;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.UTF8;
 
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Array;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -171,24 +173,24 @@ public class DrillTestWrapper {
           System.out.println("Expected Records:");
           System.out.println("-----------------");
           for (int index = i - 5; index < i + 5; index++) {
-            System.out.println(String.format("%d: %s", index, expectedRecords.get(s).get(index)));
-//            System.out.print(index + ":" );
-//            byte[] bytes = ((String)expectedRecords.get(s).get(index)).getBytes();
-//            for (int j = 0; j < bytes.length; j++) {
-//              System.out.print(String.format("%4d,", bytes[j]));
-//            }
-//            System.out.println();
+//            System.out.print(String.format("%d: %s", index, expectedRecords.get(s).get(index));
+            System.out.print(index + ":" );
+            byte[] bytes = ((String)expectedRecords.get(s).get(index)).getBytes(StandardCharsets.UTF_8);
+            for (int j = 0; j < bytes.length; j++) {
+              System.out.print(String.format("%4d,", bytes[j]));
+            }
+            System.out.println();
           }
           System.out.println("Actual Records:");
           System.out.println("---------------");
           for (int index = i - 5; index < i + 5; index++) {
-            System.out.println(String.format("%d: %s", index, actualRecords.get(s).get(index)));
-//            System.out.print(index + ":" );
-//            byte[] bytes = ((String)actualRecords.get(s).get(index)).getBytes();
-//            for (int j = 0; j < bytes.length; j++) {
-//              System.out.print(String.format("%4d,", bytes[j]));
-//            }
-//            System.out.println();
+//            System.out.print(String.format("%d: %s", index, .get(s).get(index));
+            System.out.print(index + ":" );
+            byte[] bytes = ((String)actualRecords.get(s).get(index)).getBytes(StandardCharsets.UTF_8);
+            for (int j = 0; j < bytes.length; j++) {
+              System.out.print(String.format("%4d,", bytes[j]));
+            }
+            System.out.println();
           }
           throw ex;
         }

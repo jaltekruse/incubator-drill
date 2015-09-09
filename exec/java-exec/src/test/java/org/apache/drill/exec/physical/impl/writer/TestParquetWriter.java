@@ -58,10 +58,12 @@ public class TestParquetWriter extends BaseTestQuery {
     test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
 
+  private static final String TABLE_NAME = "dfs.`/Users/jaltekruse/Downloads/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`";
+
   @Test
   public void testImpalaParquet() throws Exception {
-//    compareParquetReadersColumnar("rptng_ts", "dfs.`/Users/jaltekruse/Downloads/894b9942f8411e85-7d163997afdf2587_1957277458_data.1.parq`");
-    compareParquetReadersColumnar("convert_from(rptng_ts, 'IMPALA_TIMESTAMP')", TABLE_NAME);
+    compareParquetReadersColumnar("rptng_ts", TABLE_NAME);
+//    compareParquetReadersColumnar("convert_from(rptng_ts, 'IMPALA_TIMESTAMP')", TABLE_NAME);
   }
 
   @Test
