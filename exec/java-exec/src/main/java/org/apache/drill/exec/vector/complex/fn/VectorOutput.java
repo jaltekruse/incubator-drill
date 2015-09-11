@@ -100,7 +100,7 @@ abstract class VectorOutput {
         checkNextToken(JsonToken.END_OBJECT);
         return true;
       case ExtendedTypeName.INTEGER:
-        writeInteger(checkNextToken(JsonToken.VALUE_NUMBER_INT));
+        writeInteger(checkNextToken(JsonToken.VALUE_STRING));
         checkNextToken(JsonToken.END_OBJECT);
         return true;
       case ExtendedTypeName.DECIMAL:
@@ -244,7 +244,7 @@ abstract class VectorOutput {
     public void writeInteger(boolean isNull) throws IOException {
       BigIntWriter intWriter = writer.bigInt();
       if(!isNull){
-        intWriter.writeBigInt(parser.getLongValue());
+        intWriter.writeBigInt(Long.parseLong(parser.getValueAsString()));
       }
     }
 
@@ -338,7 +338,7 @@ abstract class VectorOutput {
     public void writeInteger(boolean isNull) throws IOException {
       BigIntWriter intWriter = writer.bigInt(fieldName);
       if(!isNull){
-        intWriter.writeBigInt(parser.getLongValue());
+        intWriter.writeBigInt(Long.parseLong(parser.getValueAsString()));
       }
     }
 
