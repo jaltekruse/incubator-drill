@@ -58,6 +58,14 @@ public class TestParquetWriter extends BaseTestQuery {
     test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
 
+  @Test
+  public void testSmallFileValueReadWrite() throws Exception {
+//    String selection = "key";
+//    String inputTable = "cp.`/store/json/intData.json`";
+//    runTestAndValidate(selection, selection, inputTable, "smallFileTest")
+    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/smallFileTest.parquet`");
+    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/smallFileTest_after_rebase.parquet`");
+  }
 
   @Test
   public void testSimple() throws Exception {
@@ -102,7 +110,8 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testComplex() throws Exception {
     String selection = "*";
-    String inputTable = "cp.`donuts.json`";
+    // TODO - change back to full size file
+    String inputTable = "cp.`store/json/donuts_short.json`";
     runTestAndValidate(selection, selection, inputTable, "donuts_json");
   }
 
@@ -596,7 +605,7 @@ public class TestParquetWriter extends BaseTestQuery {
           .go();
 
     } finally {
-      deleteTableIfExists(outputFile);
+//      deleteTableIfExists(outputFile);
     }
   }
 
