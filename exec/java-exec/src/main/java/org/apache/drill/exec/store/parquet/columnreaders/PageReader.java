@@ -228,6 +228,8 @@ final class PageReader {
     }else{
       final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
       dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
+      byte[] deleteMe = new byte[pageHeader.getCompressed_page_size()];
+      compressedData.readBytes(deleteMe);
       codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
           compressedData,
           pageHeader.compressed_page_size,
