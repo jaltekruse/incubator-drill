@@ -42,6 +42,14 @@ public class ColumnDataReader {
     this.endPosition = start + length;
   }
 
+  public static String byteArrayToHex(byte[] a) {
+    StringBuilder sb = new StringBuilder(a.length * 2);
+    for(byte b: a) {
+      sb.append(String.format("%02x", b & 0xff));
+    }
+    return sb.toString();
+  }
+
   public PageHeader readPageHeader() throws IOException{
     return Util.readPageHeader(input);
   }
@@ -58,6 +66,9 @@ public class ColumnDataReader {
     while (directBuffer.remaining() > 0) {
       CompatibilityUtil.getBuf(input, directBuffer, directBuffer.remaining());
     }
+    byte[] deleteMe = new byte[pageLength];
+    target.getBytes(0, deleteMe);
+    String hexDeleteMe = byteArrayToHex(deleteMe);
     target.writerIndex(pageLength);
   }
 
