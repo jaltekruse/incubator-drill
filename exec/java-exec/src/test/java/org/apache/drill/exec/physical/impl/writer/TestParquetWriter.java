@@ -115,7 +115,10 @@ public class TestParquetWriter extends BaseTestQuery {
     String selection = "*";
     // TODO - change back to full size file
     String inputTable = "cp.`store/json/donuts_short.json`";
-    runTestAndValidate(selection, selection, inputTable, "donuts_json");
+//    runTestAndValidate(selection, selection, inputTable, "donuts_json");
+
+//    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/testComplexFailure/donuts_json/after_rebase/0_0_0.parquet`");
+    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/testComplexFailure/donuts_json/before_rebase/0_0_0.parquet`");
   }
 
   @Test
