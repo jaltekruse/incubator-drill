@@ -243,6 +243,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private void flush() throws IOException {
     if (recordCount > 0) {
       parquetFileWriter.startBlock(recordCount);
+      consumer.flush();
       store.flush();
       ColumnChunkPageWriteStoreExposer.flushPageStore(pageStore, parquetFileWriter);
       recordCount = 0;
