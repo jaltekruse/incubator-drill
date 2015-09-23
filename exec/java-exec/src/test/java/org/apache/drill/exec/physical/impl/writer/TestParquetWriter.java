@@ -63,11 +63,9 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Test
   public void testSmallFileValueReadWrite() throws Exception {
-//    String selection = "key";
-//    String inputTable = "cp.`/store/json/intData.json`";
-//    runTestAndValidate(selection, selection, inputTable, "smallFileTest")
-    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/smallFileTest.parquet`");
-    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/smallFileTest_after_rebase.parquet`");
+    String selection = "key";
+    String inputTable = "cp.`/store/json/intData.json`";
+    runTestAndValidate(selection, selection, inputTable, "smallFileTest");
   }
 
   @Test
@@ -113,12 +111,8 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testComplex() throws Exception {
     String selection = "*";
-    // TODO - change back to full size file
-    String inputTable = "cp.`store/json/donuts_short.json`";
+    String inputTable = "cp.`donuts.json`";
     runTestAndValidate(selection, selection, inputTable, "donuts_json");
-
-//    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/testComplexFailure/donuts_json/after_rebase/0_0_0.parquet`");
-//    test("select * from dfs.`/Users/jaltekruse/data_drill/parquet_rebase_debugging/testComplexFailure/donuts_json/before_rebase/0_0_0.parquet`");
   }
 
   @Test
