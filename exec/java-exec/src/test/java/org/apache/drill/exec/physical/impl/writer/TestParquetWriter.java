@@ -605,7 +605,7 @@ public class TestParquetWriter extends BaseTestQuery {
           .go();
 
     } finally {
-//      deleteTableIfExists(outputFile);
+      deleteTableIfExists(outputFile);
     }
   }
 
