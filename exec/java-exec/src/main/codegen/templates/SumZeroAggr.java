@@ -24,10 +24,6 @@
 
 <#include "/@includes/license.ftl" />
 
-/* 
- * This class is automatically generated from SumZero.tdd using FreeMarker.
- */
-
 package org.apache.drill.exec.expr.fn.impl.gaggr;
 
 import org.apache.drill.exec.expr.DrillAggFunc;
@@ -38,8 +34,8 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.annotations.Workspace;
 import org.apache.drill.exec.expr.holders.*;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class SumZeroFunctions {
 	static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(SumZeroFunctions.class);
 

@@ -31,6 +31,8 @@ package org.apache.drill.exec.vector;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
+
 /**
  * ${minor.class} implements a vector of fixed width values.  Elements in the vector are accessed
  * by position, starting from the logical start of the vector.  Values should be pushed onto the

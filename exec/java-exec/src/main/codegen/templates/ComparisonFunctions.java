@@ -169,6 +169,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import javax.inject.Inject;
 import io.netty.buffer.DrillBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class GCompare${leftTypeBase}Vs${rightTypeBase} {
 

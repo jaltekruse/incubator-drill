@@ -22,11 +22,6 @@
 
 <#include "/@includes/license.ftl" />
 
-/*
- * This class is automatically generated from AddTypes.tdd using FreeMarker.
- */
-
-
 package org.apache.drill.exec.expr.fn.impl;
 
 
@@ -45,8 +40,8 @@ import org.apache.drill.exec.expr.fn.impl.StringFunctions;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class GMathFunctions{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(GMathFunctions.class);
   
@@ -174,11 +169,11 @@ import org.apache.drill.exec.expr.fn.impl.StringFunctions;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 /*
- * This class is automatically generated from MathFunc.tdd using FreeMarker.
  */
 
+// Generated with Freemarker using template file: ${.current_template_name}
+// and data definition file: MathFunc.tdd
 @SuppressWarnings("unused")
-
 public class ExtendedMathFunctions{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(ExtendedMathFunctions.class);
 
@@ -192,6 +187,7 @@ public class ExtendedMathFunctions{
 
 <#list func.types as type>
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @FunctionTemplate(name = "${func.funcName}", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
 public static class ${func.className}${type.input} implements DrillSimpleFunc {
 
@@ -221,6 +217,7 @@ public static class ${func.className}${type.input} implements DrillSimpleFunc {
 <#list mathFunc.logBaseMathFunction as func>
 <#list func.types as type>
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @FunctionTemplate(name = "${func.funcName}", scope = FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
 public static class ${func.className}${type.input} implements DrillSimpleFunc {
 
@@ -276,12 +273,8 @@ import org.apache.drill.exec.expr.fn.impl.StringFunctions;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
-/*
- * This class is automatically generated from MathFunc.tdd using FreeMarker.
- */
-
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class TrigoMathFunctions{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TrigoMathFunctions.class);
 

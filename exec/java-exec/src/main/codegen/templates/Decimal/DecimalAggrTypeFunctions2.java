@@ -50,8 +50,8 @@ import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.record.RecordBatch;
 import io.netty.buffer.ByteBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class Decimal${aggrtype.className}Functions {
 <#list aggrtype.types as type>
 

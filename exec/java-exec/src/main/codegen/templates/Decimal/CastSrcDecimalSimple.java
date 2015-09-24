@@ -44,6 +44,7 @@ import io.netty.buffer.DrillBuf;
 
 import java.nio.ByteBuffer;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 @FunctionTemplate(name = "cast${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.DECIMAL_CAST, nulls=NullHandling.NULL_IF_NULL)
 public class Cast${type.from}${type.to} implements DrillSimpleFunc {

@@ -36,9 +36,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
-/*
- * This class is generated using FreeMarker and the ${.template_name} template.
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${mode}ListWriter extends AbstractFieldWriter {
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${mode}ListWriter.class);

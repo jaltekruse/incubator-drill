@@ -35,6 +35,7 @@ package org.apache.drill.exec.vector.accessor;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${name}Accessor extends AbstractSqlAccessor {
  <#if mode == "Nullable">

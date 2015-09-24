@@ -24,8 +24,6 @@
 
 <#include "/@includes/license.ftl" />
 
-// Source code generated using FreeMarker template ${.template_name}
-
 <#-- A utility class that is used to generate java code for aggr functions that maintain a single -->
 <#-- running counter to hold the result.  This includes: MIN, MAX, COUNT. -->
 
@@ -46,8 +44,8 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import io.netty.buffer.ByteBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class ${aggrtype.className}VarBytesFunctions {
 	static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${aggrtype.className}Functions.class);
 

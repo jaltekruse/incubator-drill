@@ -45,7 +45,7 @@ import org.apache.drill.exec.expr.holders.*;
 import org.apache.hadoop.io.Text;
 import org.joda.time.Period;
 
-// Source code generated using FreeMarker template ${.template_name}
+// Generated with Freemarker using template file: ${.current_template_name}
 
 @SuppressWarnings("unused")
 public class ${holderMode}${name}HolderReaderImpl extends AbstractFieldReader {

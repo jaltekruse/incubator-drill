@@ -47,6 +47,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${nullMode}${name}ReaderImpl extends AbstractFieldReader {
   
@@ -147,6 +148,8 @@ public class ${nullMode}${name}ReaderImpl extends AbstractFieldReader {
 package org.apache.drill.exec.vector.complex.reader;
 
 <#include "/@includes/vv_imports.ftl" />
+
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public interface ${name}Reader extends BaseReader{
   

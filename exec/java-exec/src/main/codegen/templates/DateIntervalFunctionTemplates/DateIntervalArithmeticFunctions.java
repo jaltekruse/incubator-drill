@@ -43,7 +43,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.DateMidnight;
 import org.apache.drill.exec.expr.fn.impl.DateUtility;
 
-
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ${datetype}${intervaltype}Functions {
 
 <#macro dateIntervalArithmeticBlock left right temp op output intervaltype datetype>

@@ -42,6 +42,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DrillBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 @FunctionTemplate(name = "to_char", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
 public class G${type}ToChar implements DrillSimpleFunc {

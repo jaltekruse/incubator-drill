@@ -26,9 +26,7 @@ package org.apache.drill.exec.vector.complex.writer;
 
 <#include "/@includes/vv_imports.ftl" />
 
-/*
- * File generated from ${.template_name} using FreeMarker.
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
   public interface BaseWriter extends AutoCloseable, Positionable {
   FieldWriter getParent();

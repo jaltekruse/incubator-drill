@@ -26,9 +26,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
-/*
- * This class is generated using freemarker and the ${.template_name} template.
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 abstract class AbstractFieldWriter extends AbstractBaseWriter implements FieldWriter {
   AbstractFieldWriter(FieldWriter parent) {

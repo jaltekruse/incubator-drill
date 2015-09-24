@@ -40,9 +40,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
-/*
- * This class is generated using FreeMarker on the ${.template_name} template.
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${eName}WriterImpl extends AbstractFieldWriter {
 

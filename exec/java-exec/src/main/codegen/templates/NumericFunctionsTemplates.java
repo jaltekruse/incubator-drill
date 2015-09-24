@@ -60,8 +60,8 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
 import org.apache.drill.exec.expr.holders.NullableVarCharHolder;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
-
 public class ${numericFunc.className}Functions {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${numericFunc.className}Functions.class);
 

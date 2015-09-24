@@ -33,6 +33,7 @@ import org.apache.drill.exec.expr.annotations.*;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ${className} {
 
   @FunctionTemplate(names = {"isnull", "is null"}, scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = FunctionTemplate.NullHandling.INTERNAL)

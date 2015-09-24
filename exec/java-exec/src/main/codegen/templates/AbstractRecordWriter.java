@@ -33,6 +33,7 @@ import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import java.io.IOException;
 import java.lang.UnsupportedOperationException;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public abstract class AbstractRecordWriter implements RecordWriter {
 
   private Accessor newPartitionVector;

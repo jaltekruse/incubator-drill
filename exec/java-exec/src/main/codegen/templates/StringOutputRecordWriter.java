@@ -42,6 +42,8 @@ import java.lang.UnsupportedOperationException;
 import java.util.List;
 import java.util.Map;
 
+// Generated with Freemarker using template file: ${.current_template_name}
+
 /**
  * Abstract implementation of RecordWriter interface which exposes interface:
  *    {@link #writeHeader(List)}
@@ -49,8 +51,6 @@ import java.util.Map;
  * to output the data in string format instead of implementing addField for each type holder.
  *
  * This is useful for text format writers such as CSV, TSV etc.
- *
- * NB: Source code generated using FreeMarker template ${.template_name}
  */
 public abstract class StringOutputRecordWriter extends AbstractRecordWriter {
 

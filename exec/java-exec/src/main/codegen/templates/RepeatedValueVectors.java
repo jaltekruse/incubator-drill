@@ -35,15 +35,14 @@ package org.apache.drill.exec.vector;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
+
 /**
  * Repeated${minor.class} implements a vector with multple values per row (e.g. JSON array or
  * repeated protobuf field).  The implementation uses two additional value vectors; one to convert
  * the index offset to the underlying element offset, and another to store the number of values
  * in the vector.
- *
- * NB: this class is automatically generated from ${.template_name} and ValueVectorTypes.tdd using FreeMarker.
  */
-
 public final class Repeated${minor.class}Vector extends BaseRepeatedValueVector implements Repeated<#if type.major == "VarLen">VariableWidth<#else>FixedWidth</#if>VectorLike {
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(Repeated${minor.class}Vector.class);
 

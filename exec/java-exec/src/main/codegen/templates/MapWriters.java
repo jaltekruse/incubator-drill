@@ -42,9 +42,7 @@ import org.apache.drill.exec.vector.complex.writer.FieldWriter;
 
 import com.google.common.collect.Maps;
 
-/*
- * This class is generated using FreeMarker and the ${.template_name} template.
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${mode}MapWriter extends AbstractFieldWriter {
 

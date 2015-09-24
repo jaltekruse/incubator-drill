@@ -41,7 +41,7 @@ import org.joda.time.DateTimeZone;
 import org.joda.time.DateMidnight;
 import org.apache.drill.exec.expr.fn.impl.DateUtility;
 
-
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ${intervaltype}${numerictype}Functions {
 
 <#-- Macro block to multiply interval data type with integers -->

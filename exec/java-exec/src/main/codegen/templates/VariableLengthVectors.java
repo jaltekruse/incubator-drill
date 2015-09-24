@@ -38,6 +38,8 @@ package org.apache.drill.exec.vector;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
+
 /**
  * ${minor.class}Vector implements a vector of variable width values.  Elements in the vector
  * are accessed by position from the logical start of the vector.  A fixed width offsetVector
@@ -45,8 +47,6 @@ package org.apache.drill.exec.vector;
  * DrillBuf.  Size is inferred by adjacent elements.
  *   The width of each element is ${type.width} byte(s)
  *   The equivalent Java primitive is '${minor.javaType!type.javaType}'
- *
- * NB: this class is automatically generated from ${.template_name} and ValueVectorTypes.tdd using FreeMarker.
  */
 public final class ${minor.class}Vector extends BaseDataValueVector implements VariableWidthVector{
   private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${minor.class}Vector.class);

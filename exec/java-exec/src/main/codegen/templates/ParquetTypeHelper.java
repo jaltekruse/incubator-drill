@@ -39,6 +39,7 @@ import parquet.schema.Type.Repetition;
 import java.util.HashMap;
 import java.util.Map;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ParquetTypeHelper {
   private static Map<MinorType,PrimitiveTypeName> typeMap;
   private static Map<DataMode,Repetition> modeMap;

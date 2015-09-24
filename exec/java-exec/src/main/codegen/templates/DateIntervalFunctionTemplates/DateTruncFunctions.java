@@ -37,6 +37,7 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import io.netty.buffer.ByteBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class GDateTimeTruncateFunctions {
 
 <#list dateIntervalFunc.dates as type>

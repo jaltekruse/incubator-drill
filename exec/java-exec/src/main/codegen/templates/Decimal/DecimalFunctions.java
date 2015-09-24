@@ -127,6 +127,7 @@ import io.netty.buffer.DrillBuf;
 
 import java.nio.ByteBuffer;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class ${type.name}Functions {
 

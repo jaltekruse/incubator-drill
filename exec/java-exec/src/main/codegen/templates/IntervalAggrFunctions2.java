@@ -24,7 +24,7 @@
 
 <#include "/@includes/license.ftl" />
 
-// Source code generated using FreeMarker template ${.template_name}
+// Generated with Freemarker using template file: ${.current_template_name}
 
 <#-- A utility class that is used to generate java code for aggr functions for the interval data types. It maintains a running sum  -->
 <#-- and a running count.  For now, this includes: AVG. -->

@@ -33,9 +33,7 @@ import org.apache.drill.exec.expr.holders.VarCharHolder;
 
 import javax.inject.Inject;
 
-/**
- * This file is generated with Freemarker using the template exec/java-exec/src/main/codegen/templates/DirectoryExplorers.java
- */
+// Generated with Freemarker using template file: ${.current_template_name}
 public class DirectoryExplorers {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DirectoryExplorers.class);
   private static final String FILE_SEPARATOR = "/";

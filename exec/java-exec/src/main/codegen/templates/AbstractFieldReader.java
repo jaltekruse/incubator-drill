@@ -26,6 +26,7 @@ package org.apache.drill.exec.vector.complex.impl;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 abstract class AbstractFieldReader extends AbstractBaseReader implements FieldReader{
   

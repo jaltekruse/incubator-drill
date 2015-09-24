@@ -32,6 +32,7 @@ import org.apache.drill.exec.expr.annotations.*;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 <#if minor.class.startsWith("Decimal")>
 @FunctionTemplate(name = "convertToNullable${minor.class?upper_case}", scope = FunctionTemplate.FunctionScope.DECIMAL_MAX_SCALE, nulls = FunctionTemplate.NullHandling.INTERNAL)
 <#else>

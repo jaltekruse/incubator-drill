@@ -39,6 +39,7 @@ import org.apache.drill.exec.record.RecordBatch;
 
 import io.netty.buffer.ByteBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 public class G${type}Arithmetic {
 @SuppressWarnings("unused")

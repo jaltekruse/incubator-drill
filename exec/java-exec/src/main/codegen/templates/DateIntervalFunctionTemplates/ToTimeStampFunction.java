@@ -37,8 +37,7 @@ import org.apache.drill.exec.expr.annotations.Param;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
-// This class is generated using freemarker template ToTimeStampFunction.java
-
+// Generated with Freemarker using template file: ${.current_template_name}
 @FunctionTemplate(name = "to_timestamp" , scope = FunctionTemplate.FunctionScope.SIMPLE, nulls = NullHandling.NULL_IF_NULL)
 public class G${numerics}ToTimeStamp implements DrillSimpleFunc {
 

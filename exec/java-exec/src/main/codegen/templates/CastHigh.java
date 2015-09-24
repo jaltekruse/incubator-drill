@@ -33,6 +33,7 @@ import javax.inject.Inject;
 import io.netty.buffer.DrillBuf;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class CastHighFunctions {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(CastHighFunctions.class);
 

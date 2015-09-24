@@ -37,12 +37,12 @@ package org.apache.drill.exec.vector;
 
 <#include "/@includes/vv_imports.ftl" />
 
+// Generated with Freemarker using template file: ${.current_template_name}
+
 /**
  * Nullable${minor.class} implements a vector of values which could be null.  Elements in the vector
  * are first checked against a fixed length vector of boolean values.  Then the element is retrieved
  * from the base class (if not null).
- *
- * NB: this class is automatically generated from ${.template_name} and ValueVectorTypes.tdd using FreeMarker.
  */
 @SuppressWarnings("unused")
 public final class ${className} extends BaseDataValueVector implements <#if type.major == "VarLen">VariableWidth<#else>FixedWidth</#if>Vector, NullableVector{

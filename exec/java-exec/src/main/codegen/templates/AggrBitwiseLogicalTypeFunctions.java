@@ -58,6 +58,7 @@ import org.apache.drill.exec.expr.holders.NullableUInt8Holder;
 
 @SuppressWarnings("unused")
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ${aggrtype.className}Functions {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(${aggrtype.className}Functions.class);
 

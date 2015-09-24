@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 
 /** Reads records from the RecordValueAccessor and writes into RecordWriter. */
 public class EventBasedRecordWriter {

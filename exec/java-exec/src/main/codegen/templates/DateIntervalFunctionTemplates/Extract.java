@@ -29,6 +29,7 @@ import org.apache.drill.exec.expr.annotations.*;
 import org.apache.drill.exec.expr.holders.*;
 import org.apache.drill.exec.record.RecordBatch;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 public class ${className} {
 
 <#list extract.fromTypes as fromUnit>

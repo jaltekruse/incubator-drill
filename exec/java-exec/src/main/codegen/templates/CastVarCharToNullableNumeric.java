@@ -44,6 +44,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import javax.inject.Inject;
 import io.netty.buffer.DrillBuf;
 
+// Generated with Freemarker using template file: ${.current_template_name}
 @SuppressWarnings("unused")
 @FunctionTemplate(name = "castEmptyString${type.from}ToNullable${type.to?upper_case}", scope = FunctionTemplate.FunctionScope.SIMPLE, nulls=NullHandling.INTERNAL)
 public class CastEmptyString${type.from}ToNullable${type.to} implements DrillSimpleFunc{
