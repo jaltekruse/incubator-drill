@@ -30,7 +30,27 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestExampleQueries extends BaseTestQuery {
-//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
+//  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);S
+
+  @Test
+  public void testComplexFunctionInput() throws Exception {
+    test("alter session set `store.json.all_text_mode` = true");
+//    test("select convert_to(field_5, 'JSON') from cp.`store/json/schema_change_int_to_string.json`");
+//    test("select convert_to(field_5, 'JSON'), convert_to(field_5, 'JSON') from cp.`store/json/schema_change_int_to_string.json`");
+    // works
+//    test("select " +
+//        "convert_from(convert_to(field_5, 'JSON'), 'JSON') " +
+//        "from cp.`store/json/schema_change_int_to_string.json`");
+
+    // NPE
+//    test("select convert_from(convert_to(field_5, 'JSON'), 'JSON'), " +
+//        "convert_to(convert_from(convert_to(field_5, 'JSON'), 'JSON'), 'JSON') " +
+//        "from cp.`store/json/schema_change_int_to_string.json`");
+    // NPE
+    test("select " +
+        "convert_to(convert_from(convert_to(field_5, 'JSON'), 'JSON'), 'JSON') " +
+        "from cp.`store/json/schema_change_int_to_string.json`");
+  }
 
   @Test // see DRILL-2328
   public void testConcatOnNull() throws Exception {
