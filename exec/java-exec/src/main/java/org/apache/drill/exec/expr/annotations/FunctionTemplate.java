@@ -110,7 +110,7 @@ public @interface FunctionTemplate {
    * evaluations in situations where a result of one expression can short-circuit the evaluation
    * of another. One example would be a filter with an "and" between two other filters.
    * In these cases, the evaluations should be re-ordered to place the least complex expression on
-   * the left side so it will be evaluated first and avoid evaluation of the more complex expression whenever possible.
+   * the left side so it will be evaluated first and avoid evaluation of the more complex expression.
    *
    * TODO - The {@code MEDIUM} value is currently unused, and it looks like the {@code COMPLEX} value is
    * annotation fewer functions than it should. The current functions should likely be reviewed to determine

@@ -56,6 +56,11 @@ public interface UdfUtilities {
    * DrillBuf type as an injectable, which provides access to an off-heap
    * buffer that can be tracked by Drill and re-allocated as needed.
    *
+   * TODO - add note here about weird realloc pattern, ask jacques why we need
+   * to replace the reference to the old buffer
+   *
+   * buffer = buffer.reallocIfNeeded(result.length);
+   *
    * @return - a buffer managed by Drill, connected to the fragment allocator
    *           for memory management
    */
