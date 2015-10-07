@@ -130,39 +130,44 @@ final class PageReader {
       f.seek(columnChunkMetaData.getDictionaryPageOffset());
       final PageHeader pageHeader = Util.readPageHeader(f);
       assert pageHeader.type == PageType.DICTIONARY_PAGE;
+      readDictionaryPage(pageHeader, parentStatus);
+    }
+  }
 
-      int compressedSize = pageHeader.getUncompressed_page_size();
-      int uncompressedSize = pageHeader.getUncompressed_page_size();
+  private void readDictionaryPage(final PageHeader pageHeader,
+                                  final ColumnReader<?> parentStatus) throws IOException {
+    int compressedSize = pageHeader.getUncompressed_page_size();
+    int uncompressedSize = pageHeader.getUncompressed_page_size();
 
-      final DrillBuf dictionaryData = allocateDictionaryBuffer(pageHeader.getUncompressed_page_size());
-      dictionaryData.capacity(uncompressedSize);
+    final DrillBuf dictionaryData = allocateDictionaryBuffer(uncompressedSize);
+    readPage(compressedSize, uncompressedSize, dictionaryData);
 
-      if (parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
-        dataReader.loadPage(dictionaryData, pageHeader.compressed_page_size);
-      } else {
-        final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
-        try {
-          dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
-          DirectBytesDecompressor decompressor = codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
-              .getCodec());
-          decompressor.decompress(
-              (ByteBuffer) compressedData.nioBuffer(),
-              pageHeader.compressed_page_size,
-              (ByteBuffer) dictionaryData.nioBuffer(),
-              pageHeader.getUncompressed_page_size());
+    DictionaryPage page = new DictionaryPage(
+        asBytesInput(dictionaryData, 0, uncompressedSize),
+        pageHeader.uncompressed_page_size,
+        pageHeader.dictionary_page_header.num_values,
+        valueOf(pageHeader.dictionary_page_header.encoding.name()));
 
-        } finally {
-          compressedData.release();
-        }
+    this.dictionary = page.getEncoding().initDictionary(parentStatus.columnDescriptor, page);
+  }
+
+  public void readPage(int compressedSize, int uncompressedSize, DrillBuf dest) throws IOException {
+    if (parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
+      dataReader.loadPage(dest, compressedSize);
+    } else {
+      final DrillBuf compressedData = allocateTemporaryBuffer(compressedSize);
+      try {
+        dataReader.loadPage(compressedData, compressedSize);
+        codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
+            .getCodec()).decompress(
+            compressedData.nioBuffer(0, uncompressedSize),
+            compressedSize,
+            dest.nioBuffer(0, compressedSize),
+            uncompressedSize);
+
+      } finally {
+        compressedData.release();
       }
-
-      DictionaryPage page = new DictionaryPage(
-          asBytesInput(dictionaryData, 0, pageHeader.uncompressed_page_size),
-          pageHeader.uncompressed_page_size,
-          pageHeader.dictionary_page_header.num_values,
-          valueOf(pageHeader.dictionary_page_header.encoding.name()));
-
-      this.dictionary = page.getEncoding().initDictionary(parentStatus.columnDescriptor, page);
     }
   }
 
@@ -195,31 +200,7 @@ final class PageReader {
     do {
       pageHeader = dataReader.readPageHeader();
       if (pageHeader.getType() == PageType.DICTIONARY_PAGE) {
-
-        //TODO: Handle buffer allocation exception
-        DrillBuf uncompressedData = allocateDictionaryBuffer(pageHeader.getUncompressed_page_size());
-        if( parentColumnReader.columnChunkMetaData.getCodec()== CompressionCodecName.UNCOMPRESSED) {
-          dataReader.loadPage(uncompressedData, pageHeader.compressed_page_size);
-        }else{
-          final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
-          try{
-            dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
-            codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
-                compressedData.nioBuffer(),
-                pageHeader.compressed_page_size,
-                uncompressedData.nioBuffer(),
-                pageHeader.getUncompressed_page_size());
-          } finally {
-            compressedData.release();
-          }
-        }
-        DictionaryPage page = new DictionaryPage(
-            asBytesInput(uncompressedData, 0, pageHeader.uncompressed_page_size),
-            pageHeader.uncompressed_page_size,
-            pageHeader.dictionary_page_header.num_values,
-            valueOf(pageHeader.dictionary_page_header.encoding.name()));
-
-        this.dictionary = page.getEncoding().initDictionary(parentColumnReader.columnDescriptor, page);
+        readDictionaryPage(pageHeader, parentColumnReader);
       }
     } while (pageHeader.getType() == PageType.DICTIONARY_PAGE);
 
@@ -230,6 +211,7 @@ final class PageReader {
     if(parentColumnReader.columnChunkMetaData.getCodec()==CompressionCodecName.UNCOMPRESSED) {
       dataReader.loadPage(pageData, pageHeader.compressed_page_size);
     }else{
+      readPage(compressedSize, uncompressedSize, dictionaryData);
       final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
       dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
       byte[] deleteMe = new byte[pageHeader.getCompressed_page_size()];
@@ -237,7 +219,7 @@ final class PageReader {
       codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
           compressedData.nioBuffer(),
           pageHeader.compressed_page_size,
-          pageData.nioBuffer(),
+          pageData.nioBuffer(0, ),
           pageHeader.getUncompressed_page_size());
       compressedData.release();
     }
