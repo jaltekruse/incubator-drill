@@ -72,7 +72,7 @@ public class TestDirectCodecFactory extends ExecTest {
         if (useOnHeapCompression) {
           compressed = c.compress(BytesInput.from(rawArr));
         } else {
-          compressed = c.compress(new ByteBufBytesInput(rawBuf));
+          compressed = c.compress(new ByteBufBytesInput(rawBuf.nioBuffer()));
         }
 
         switch (decomp) {
@@ -81,7 +81,7 @@ public class TestDirectCodecFactory extends ExecTest {
           final DrillBuf b = allocator.buffer(buf.capacity());
           try {
             b.writeBytes(buf);
-            d.decompress(b, (int) compressed.size(), outBuf, size);
+            d.decompress(b.nioBuffer(), (int) compressed.size(), outBuf.nioBuffer(), size);
             for (int i = 0; i < size; i++) {
               Assert.assertTrue("Data didn't match at " + i, outBuf.getByte(i) == rawBuf.getByte(i));
             }
@@ -96,7 +96,7 @@ public class TestDirectCodecFactory extends ExecTest {
           final DrillBuf b = allocator.buffer(buf.capacity());
           try {
             b.writeBytes(buf);
-            final BytesInput input = d.decompress(new ByteBufBytesInput(b), size);
+            final BytesInput input = d.decompress(new ByteBufBytesInput(b.nioBuffer()), size);
             Assert.assertArrayEquals(input.toByteArray(), rawArr);
           } finally {
             b.release();
