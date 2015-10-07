@@ -127,12 +127,11 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
     }
 
     @Override
-    public void decompress(DrillBuf input, int compressedSize, DrillBuf output, int uncompressedSize)
+    public void decompress(ByteBuffer input, int compressedSize, ByteBuffer output, int uncompressedSize)
         throws IOException {
       BytesInput uncompressed = decompress(new ByteBufBytesInput(input), uncompressedSize);
       output.clear();
-      output.setBytes(0, uncompressed.toByteArray());
-      output.writerIndex((int) uncompressed.size());
+      output.put(uncompressed.toByteArray(), 0, uncompressedSize);
     }
 
     @Override
@@ -175,17 +174,17 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
     }
 
     @Override
-    public void decompress(DrillBuf input, int compressedSize, DrillBuf output, int uncompressedSize)
+    public void decompress(ByteBuffer input, int compressedSize, ByteBuffer output, int uncompressedSize)
         throws IOException {
 
       decompressor.reset();
       byte[] inputBytes = new byte[input.capacity()];
-      input.getBytes(0, inputBytes);
+      input.get(inputBytes);
       decompressor.setInput(inputBytes, 0, inputBytes.length);
       byte[] outputBytes = new byte[uncompressedSize];
       decompressor.decompress(outputBytes, 0, uncompressedSize);
       output.clear();
-      output.writeBytes(outputBytes);
+      output.put(outputBytes);
     }
 
     @Override
@@ -233,11 +232,11 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
 
 
     @Override
-    public void decompress(DrillBuf input, int compressedSize, DrillBuf output, int uncompressedSize)
+    public void decompress(ByteBuffer input, int compressedSize, ByteBuffer output, int uncompressedSize)
         throws IOException {
       output.clear();
-      decompressor.decompress(input.nioBuffer(0, compressedSize), output.nioBuffer(0, uncompressedSize));
-      output.writerIndex(uncompressedSize);
+      decompressor.decompress((ByteBuffer) input.limit(compressedSize), (ByteBuffer) output.limit(uncompressedSize));
+      output.position(uncompressedSize);
     }
 
     @Override
@@ -253,12 +252,12 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
   public class NoopDecompressor extends DirectBytesDecompressor {
 
     @Override
-    public void decompress(DrillBuf input, int compressedSize, DrillBuf output, int uncompressedSize)
+    public void decompress(ByteBuffer input, int compressedSize, ByteBuffer output, int uncompressedSize)
         throws IOException {
       Preconditions.checkArgument(compressedSize == uncompressedSize,
           "Non-compressed data did not have matching compressed and uncompressed sizes.");
       output.clear();
-      output.writeBytes(input, compressedSize);
+      output.put((ByteBuffer) input.slice().limit(compressedSize));
     }
 
     @Override
@@ -331,19 +330,19 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
   }
 
   public static class ByteBufBytesInput extends BytesInput {
-    private final ByteBuf buf;
+    private final ByteBuffer buf;
     private final int length;
 
-    public ByteBufBytesInput(ByteBuf buf) {
+    public ByteBufBytesInput(ByteBuffer buf) {
       this(buf, 0, buf.capacity());
     }
 
-    public ByteBufBytesInput(ByteBuf buf, int offset, int length) {
+    public ByteBufBytesInput(ByteBuffer buf, int offset, int length) {
       super();
       if(buf.capacity() == length && offset == 0){
         this.buf = buf;
       }else{
-        this.buf = buf.slice(offset, length);
+        this.buf = (ByteBuffer) buf.slice().position(offset).limit(offset + length);
       }
 
       this.length = length;
@@ -352,12 +351,12 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
     @Override
     public void writeAllTo(OutputStream out) throws IOException {
       final WritableByteChannel outputChannel = Channels.newChannel(out);
-      outputChannel.write(buf.nioBuffer());
+      outputChannel.write(buf);
     }
 
     @Override
     public ByteBuffer toByteBuffer() throws IOException {
-      return buf.nioBuffer();
+      return buf;
     }
 
     @Override
@@ -368,7 +367,7 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
 
 
   public abstract class DirectBytesDecompressor extends CodecFactory.BytesDecompressor {
-    public abstract void decompress(DrillBuf input, int compressedSize, DrillBuf output, int uncompressedSize)
+    public abstract void decompress(ByteBuffer input, int compressedSize, ByteBuffer output, int uncompressedSize)
         throws IOException;
   }
 

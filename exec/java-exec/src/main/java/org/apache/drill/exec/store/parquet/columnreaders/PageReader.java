@@ -131,7 +131,11 @@ final class PageReader {
       final PageHeader pageHeader = Util.readPageHeader(f);
       assert pageHeader.type == PageType.DICTIONARY_PAGE;
 
+      int compressedSize = pageHeader.getUncompressed_page_size();
+      int uncompressedSize = pageHeader.getUncompressed_page_size();
+
       final DrillBuf dictionaryData = allocateDictionaryBuffer(pageHeader.getUncompressed_page_size());
+      dictionaryData.capacity(uncompressedSize);
 
       if (parentColumnReader.columnChunkMetaData.getCodec() == CompressionCodecName.UNCOMPRESSED) {
         dataReader.loadPage(dictionaryData, pageHeader.compressed_page_size);
@@ -142,9 +146,9 @@ final class PageReader {
           DirectBytesDecompressor decompressor = codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
               .getCodec());
           decompressor.decompress(
-              compressedData,
+              (ByteBuffer) compressedData.nioBuffer(),
               pageHeader.compressed_page_size,
-              dictionaryData,
+              (ByteBuffer) dictionaryData.nioBuffer(),
               pageHeader.getUncompressed_page_size());
 
         } finally {
@@ -163,7 +167,7 @@ final class PageReader {
   }
 
   public static BytesInput asBytesInput(DrillBuf buf, int offset, int length) throws IOException {
-    return new ByteBufBytesInput(buf);
+    return new ByteBufBytesInput(buf.nioBuffer());
   }
 
   /**
@@ -201,9 +205,9 @@ final class PageReader {
           try{
             dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
             codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
-                compressedData,
+                compressedData.nioBuffer(),
                 pageHeader.compressed_page_size,
-                uncompressedData,
+                uncompressedData.nioBuffer(),
                 pageHeader.getUncompressed_page_size());
           } finally {
             compressedData.release();
@@ -231,9 +235,9 @@ final class PageReader {
       byte[] deleteMe = new byte[pageHeader.getCompressed_page_size()];
       compressedData.readBytes(deleteMe);
       codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
-          compressedData,
+          compressedData.nioBuffer(),
           pageHeader.compressed_page_size,
-          pageData,
+          pageData.nioBuffer(),
           pageHeader.getUncompressed_page_size());
       compressedData.release();
     }
