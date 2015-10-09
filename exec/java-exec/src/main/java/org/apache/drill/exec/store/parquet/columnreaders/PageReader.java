@@ -207,22 +207,9 @@ final class PageReader {
     //TODO: Handle buffer allocation exception
 
     allocatePageData(pageHeader.getUncompressed_page_size());
-
-    if(parentColumnReader.columnChunkMetaData.getCodec()==CompressionCodecName.UNCOMPRESSED) {
-      dataReader.loadPage(pageData, pageHeader.compressed_page_size);
-    }else{
-      readPage(compressedSize, uncompressedSize, dictionaryData);
-      final DrillBuf compressedData = allocateTemporaryBuffer(pageHeader.compressed_page_size);
-      dataReader.loadPage(compressedData, pageHeader.compressed_page_size);
-      byte[] deleteMe = new byte[pageHeader.getCompressed_page_size()];
-      compressedData.readBytes(deleteMe);
-      codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData.getCodec()).decompress(
-          compressedData.nioBuffer(),
-          pageHeader.compressed_page_size,
-          pageData.nioBuffer(0, ),
-          pageHeader.getUncompressed_page_size());
-      compressedData.release();
-    }
+    int compressedSize = pageHeader.getUncompressed_page_size();
+    int uncompressedSize = pageHeader.getUncompressed_page_size();
+    readPage(compressedSize, uncompressedSize, pageData);
 
     currentPageCount = pageHeader.data_page_header.num_values;
 
