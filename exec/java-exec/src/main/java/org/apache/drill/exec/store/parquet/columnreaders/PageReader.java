@@ -160,9 +160,9 @@ final class PageReader {
         dataReader.loadPage(compressedData, compressedSize);
         codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
             .getCodec()).decompress(
-            compressedData.nioBuffer(0, uncompressedSize),
+            compressedData.nioBuffer(0, compressedSize),
             compressedSize,
-            dest.nioBuffer(0, compressedSize),
+            dest.nioBuffer(0, uncompressedSize),
             uncompressedSize);
 
       } finally {
