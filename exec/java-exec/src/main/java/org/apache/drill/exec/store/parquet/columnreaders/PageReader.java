@@ -158,6 +158,12 @@ final class PageReader {
       final DrillBuf compressedData = allocateTemporaryBuffer(compressedSize);
       try {
         dataReader.loadPage(compressedData, compressedSize);
+        byte[] uncompressed = new byte[uncompressedSize];
+        dest.nioBuffer(0, uncompressedSize).get(uncompressed);
+
+        byte[] compressed = new byte[compressedSize];
+        compressedData.nioBuffer(0, compressedSize).get(compressed);
+
         codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
             .getCodec()).decompress(
             compressedData.nioBuffer(0, compressedSize),
