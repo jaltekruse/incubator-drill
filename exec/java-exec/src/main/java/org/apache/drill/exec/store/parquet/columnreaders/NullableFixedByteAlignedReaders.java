@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.parquet.columnreaders;
 import io.netty.buffer.DrillBuf;
 
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
 
 import org.apache.drill.common.exceptions.ExecutionSetupException;
 import org.apache.drill.exec.expr.holders.NullableDecimal28SparseHolder;
@@ -91,8 +92,13 @@ public class NullableFixedByteAlignedReaders {
         Binary currDictValToWrite;
         for (int i = 0; i < recordsReadInThisIteration; i++){
           currDictValToWrite = pageReader.dictionaryValueReader.readBytes();
-          mutator.setSafe(valuesReadInCurrentPass + i, currDictValToWrite.toByteBuffer(), 0,
-              currDictValToWrite.length());
+          ByteBuffer buf = currDictValToWrite.toByteBuffer();
+          try {
+            mutator.setSafe(valuesReadInCurrentPass + i, buf, buf.position(),
+                currDictValToWrite.length());
+          } catch (RuntimeException ex) {
+            throw ex;
+          }
         }
         // Set the write Index. The next page that gets read might be a page that does not use dictionary encoding
         // and we will go into the else condition below. The readField method of the parent class requires the

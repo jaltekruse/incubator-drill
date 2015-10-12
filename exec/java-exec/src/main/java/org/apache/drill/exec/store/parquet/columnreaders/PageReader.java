@@ -136,7 +136,7 @@ final class PageReader {
 
   private void readDictionaryPage(final PageHeader pageHeader,
                                   final ColumnReader<?> parentStatus) throws IOException {
-    int compressedSize = pageHeader.getUncompressed_page_size();
+    int compressedSize = pageHeader.getCompressed_page_size();
     int uncompressedSize = pageHeader.getUncompressed_page_size();
 
     final DrillBuf dictionaryData = allocateDictionaryBuffer(uncompressedSize);
@@ -158,11 +158,11 @@ final class PageReader {
       final DrillBuf compressedData = allocateTemporaryBuffer(compressedSize);
       try {
         dataReader.loadPage(compressedData, compressedSize);
-        byte[] uncompressed = new byte[uncompressedSize];
-        dest.nioBuffer(0, uncompressedSize).get(uncompressed);
-
-        byte[] compressed = new byte[compressedSize];
-        compressedData.nioBuffer(0, compressedSize).get(compressed);
+//        byte[] uncompressed = new byte[uncompressedSize];
+//        dest.nioBuffer(0, uncompressedSize).get(uncompressed);
+//
+//        byte[] compressed = new byte[compressedSize];
+//        compressedData.nioBuffer(0, compressedSize).get(compressed);
 
         codecFactory.getDecompressor(parentColumnReader.columnChunkMetaData
             .getCodec()).decompress(
@@ -178,7 +178,7 @@ final class PageReader {
   }
 
   public static BytesInput asBytesInput(DrillBuf buf, int offset, int length) throws IOException {
-    return new ByteBufBytesInput(buf.nioBuffer());
+    return new ByteBufBytesInput(buf.nioBuffer(offset, length));
   }
 
   /**
@@ -213,7 +213,7 @@ final class PageReader {
     //TODO: Handle buffer allocation exception
 
     allocatePageData(pageHeader.getUncompressed_page_size());
-    int compressedSize = pageHeader.getUncompressed_page_size();
+    int compressedSize = pageHeader.getCompressed_page_size();
     int uncompressedSize = pageHeader.getUncompressed_page_size();
     readPage(compressedSize, uncompressedSize, pageData);
 
