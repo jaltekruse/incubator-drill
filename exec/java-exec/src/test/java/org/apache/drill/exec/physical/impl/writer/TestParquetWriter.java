@@ -44,6 +44,28 @@ public class TestParquetWriter extends BaseTestQuery {
   public TemporaryFolder folder = new TemporaryFolder();
   static FileSystem fs;
 
+  private String allTypesSelection =
+      "cast( `int_col` AS             int)                `int_col`, " +
+          "cast( `bigint_col` AS          bigint)             `bigint_col`, " +
+          // TODO(DRILL-XXXX)
+//          "cast( `decimal9_col` AS        decimal(9, 4))      `decimal9_col`, " +
+//          "cast( `decimal18_col` AS       decimal(18,9))      `decimal18_col`, " +
+//          "cast( `decimal28sparse_col` AS decimal(28, 14))    `decimal28sparse_col`, " +
+//          "cast( `decimal38sparse_col` AS decimal(38, 19))    `decimal38sparse_col`, " +
+          "cast( `date_col` AS            date)               `date_col`, " +
+          "cast( `timestamp_col` AS       timestamp)          `timestamp_col`, " +
+          "cast( `float4_col` AS          float)              `float4_col`, " +
+          "cast( `float8_col` AS          double)             `float8_col`, " +
+          "cast( `varbinary_col` AS       varbinary(65000))   `varbinary_col`, " +
+          // TODO(DRILL-XXXX)
+//        "cast( `intervalyear_col` AS    interval year)      `intervalyear_col`, " +
+          "cast( `intervalday_col` AS     interval day)       `intervalday_col`, " +
+          "cast( `bit_col` AS             boolean)            `bit_col`, " +
+          "      `varchar_col`                                `varchar_col`, " +
+          "cast( `time_col` AS            time)               `time_col` ";
+
+  private String allTypesTable = "cp.`/parquet/alltypes.json`";
+
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
@@ -106,7 +128,36 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
-  public void testComplex() throws Exception {
+  public void testAllScalarTypes() throws Exception {
+    /// read once with the flat reader
+    runTestAndValidate(allTypesSelection, "*", allTypesTable, "donuts_json");
+
+    try {
+      // read all of the types with the complex reader
+      test(String.format("alter session set %s = true", ExecConstants.PARQUET_NEW_RECORD_READER));
+      runTestAndValidate(allTypesSelection, "*", allTypesTable, "donuts_json");
+    } finally {
+      test(String.format("alter session set %s = false", ExecConstants.PARQUET_NEW_RECORD_READER));
+    }
+  }
+
+  @Test
+  public void testAllScalarTypesDictionary() throws Exception {
+    try {
+      test(String.format("alter session set %s = true", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
+      /// read once with the flat reader
+      runTestAndValidate(allTypesSelection, "*", allTypesTable, "donuts_json");
+
+      // read all of the types with the complex reader
+      test(String.format("alter session set %s = true", ExecConstants.PARQUET_NEW_RECORD_READER));
+      runTestAndValidate(allTypesSelection, "*", allTypesTable, "donuts_json");
+    } finally {
+      test(String.format("alter session set %s = false", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
+    }
+  }
+
+  @Test
+  public void testDictionaryEncoding() throws Exception {
     String selection = "type";
     String inputTable = "cp.`donuts.json`";
     try {
@@ -115,6 +166,13 @@ public class TestParquetWriter extends BaseTestQuery {
     } finally {
       test(String.format("alter session set %s = false", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
     }
+  }
+
+  @Test
+  public void testComplex() throws Exception {
+    String selection = "*";
+    String inputTable = "cp.`donuts.json`";
+    runTestAndValidate(selection, selection, inputTable, "donuts_json");
   }
 
   @Test
