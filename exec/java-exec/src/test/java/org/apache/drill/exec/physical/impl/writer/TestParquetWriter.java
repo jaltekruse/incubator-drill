@@ -107,9 +107,14 @@ public class TestParquetWriter extends BaseTestQuery {
 
   @Test
   public void testComplex() throws Exception {
-    String selection = "*";
+    String selection = "type";
     String inputTable = "cp.`donuts.json`";
-    runTestAndValidate(selection, selection, inputTable, "donuts_json");
+    try {
+      test(String.format("alter session set %s = true", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
+      runTestAndValidate(selection, selection, inputTable, "donuts_json");
+    } finally {
+      test(String.format("alter session set %s = false", ExecConstants.PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING));
+    }
   }
 
   @Test
