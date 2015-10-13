@@ -38,6 +38,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.store.parquet.DirectCodecFactory;
+import org.apache.drill.exec.store.parquet.ParquetDirectByteBufferAllocator;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetRecordReader;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -125,7 +126,8 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
                   context,
                   Path.getPathWithoutSchemeAndAuthority(finalPath).toString(),
                   rowGroupNum, fs,
-                  new DirectCodecFactory(fs.getConf(), oContext.getAllocator()),
+                  new DirectCodecFactory(fs.getConf(),
+                      new ParquetDirectByteBufferAllocator(oContext.getAllocator())),
                   parquetMetadata,
                   newColumns)
           );
