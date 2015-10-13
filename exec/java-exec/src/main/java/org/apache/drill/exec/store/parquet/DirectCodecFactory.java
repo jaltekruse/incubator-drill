@@ -17,8 +17,6 @@
  */
 package org.apache.drill.exec.store.parquet;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DrillBuf;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,7 +24,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
-import org.apache.drill.exec.memory.BufferAllocator;
 import org.apache.drill.exec.store.parquet.DirectCodecFactory.DirectBytesDecompressor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -52,10 +49,6 @@ public class DirectCodecFactory extends CodecFactory<BytesCompressor, DirectByte
     super(config);
     Preconditions.checkNotNull(allocator);
     this.allocator = allocator;
-  }
-
-  public DirectCodecFactory(Configuration config, BufferAllocator allocator) {
-    this(config, new ParquetDirectByteBufferAllocator(allocator));
   }
 
   private ByteBuffer ensure(ByteBuffer buffer, int size) {

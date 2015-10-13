@@ -30,6 +30,7 @@ import org.apache.drill.exec.memory.RootAllocatorFactory;
 import org.apache.drill.exec.store.parquet.DirectCodecFactory;
 import org.apache.drill.exec.store.parquet.DirectCodecFactory.ByteBufBytesInput;
 import org.apache.drill.exec.store.parquet.DirectCodecFactory.DirectBytesDecompressor;
+import org.apache.drill.exec.store.parquet.ParquetDirectByteBufferAllocator;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
@@ -50,7 +51,8 @@ public class TestDirectCodecFactory extends ExecTest {
     DrillBuf rawBuf = null;
     DrillBuf outBuf = null;
     try (final BufferAllocator allocator = RootAllocatorFactory.newRoot(drillConfig);
-        final DirectCodecFactory codecFactory = new DirectCodecFactory(new Configuration(), allocator)) {
+        final DirectCodecFactory codecFactory = new DirectCodecFactory(new Configuration(),
+           new ParquetDirectByteBufferAllocator(allocator))) {
       try {
         rawBuf = allocator.buffer(size);
         final byte[] rawArr = new byte[size];
