@@ -129,7 +129,9 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           readers.add(
               new ParquetRecordReader(
                   context, e.getPath(), e.getRowGroupIndex(), fs,
-                  new DirectCodecFactory(fs.getConf(), oContext.getAllocator()),
+                  new DirectCodecFactory(
+                      fs.getConf(),
+                      new ParquetDirectByteBufferAllocator(oContext.getAllocator())),
                   footers.get(e.getPath()),
                   rowGroupScan.getColumns()
               )

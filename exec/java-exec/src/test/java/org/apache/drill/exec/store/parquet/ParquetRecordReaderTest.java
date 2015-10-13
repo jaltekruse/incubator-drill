@@ -638,7 +638,8 @@ public class ParquetRecordReaderTest extends BaseTestQuery {
     final BufferAllocator allocator = RootAllocatorFactory.newRoot(c);
     for(int i = 0; i < 25; i++) {
       final ParquetRecordReader rr = new ParquetRecordReader(context, 256000, fileName, 0, fs,
-          new DirectCodecFactory(dfsConfig, allocator), f.getParquetMetadata(), columns);
+          new DirectCodecFactory(dfsConfig, new ParquetDirectByteBufferAllocator(allocator)),
+          f.getParquetMetadata(), columns);
       final TestOutputMutator mutator = new TestOutputMutator(allocator);
       rr.setup(null, mutator);
       final Stopwatch watch = new Stopwatch();
