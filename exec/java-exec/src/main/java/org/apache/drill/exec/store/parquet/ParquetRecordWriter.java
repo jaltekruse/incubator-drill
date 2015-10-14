@@ -54,6 +54,7 @@ import org.apache.parquet.column.ParquetProperties.WriterVersion;
 import org.apache.parquet.column.impl.ColumnWriteStoreV1;
 import org.apache.parquet.column.page.PageWriteStore;
 import org.apache.parquet.hadoop.ColumnChunkPageWriteStoreExposer;
+import org.apache.parquet.hadoop.DirectCodecFactory;
 import org.apache.parquet.hadoop.ParquetFileWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.ColumnIOFactory;
