@@ -176,7 +176,7 @@ final class PageReader {
   }
 
   public static BytesInput asBytesInput(DrillBuf buf, int offset, int length) throws IOException {
-    return new DirectCodecFactory.ByteBufBytesInput(buf.nioBuffer(offset, length));
+    return BytesInput.from(buf.nioBuffer(offset, length), 0, length);
   }
 
   /**
