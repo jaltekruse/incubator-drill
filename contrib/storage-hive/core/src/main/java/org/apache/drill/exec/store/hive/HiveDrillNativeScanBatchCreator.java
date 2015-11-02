@@ -49,7 +49,7 @@ import org.apache.hadoop.hive.ql.io.parquet.ProjectionPusher;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.parquet.hadoop.DirectCodecFactory;
+import org.apache.parquet.hadoop.CodecFactory;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
@@ -125,7 +125,7 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
                   context,
                   Path.getPathWithoutSchemeAndAuthority(finalPath).toString(),
                   rowGroupNum, fs,
-                  new DirectCodecFactory(fs.getConf(),
+                  CodecFactory.createDirectCodecFactory(fs.getConf(),
                       new ParquetDirectByteBufferAllocator(oContext.getAllocator()), 0),
                   parquetMetadata,
                   newColumns)

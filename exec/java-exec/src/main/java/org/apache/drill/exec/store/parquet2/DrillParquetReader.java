@@ -52,7 +52,7 @@ import org.apache.drill.exec.vector.complex.impl.VectorContainerWriter;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.parquet.column.ColumnDescriptor;
-import org.apache.parquet.hadoop.DirectCodecFactory;
+import org.apache.parquet.hadoop.CodecFactory;
 import org.apache.parquet.hadoop.metadata.ColumnPath;
 import org.apache.parquet.io.RecordReader;
 import org.apache.parquet.hadoop.ColumnChunkIncReadStore;
@@ -248,7 +248,7 @@ public class DrillParquetReader extends AbstractRecordReader {
       recordCount = (int) blockMetaData.getRowCount();
 
       pageReadStore = new ColumnChunkIncReadStore(recordCount,
-          new DirectCodecFactory(fileSystem.getConf(),
+          CodecFactory.createDirectCodecFactory(fileSystem.getConf(),
               new ParquetDirectByteBufferAllocator(operatorContext.getAllocator()), 0), operatorContext.getAllocator(),
           fileSystem, filePath);
 

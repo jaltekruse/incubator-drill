@@ -43,7 +43,6 @@ import org.apache.drill.exec.store.EventBasedRecordWriter;
 import org.apache.drill.exec.store.EventBasedRecordWriter.FieldConverter;
 import org.apache.drill.exec.store.ParquetOutputRecordWriter;
 import org.apache.drill.exec.vector.BitVector;
-import org.apache.drill.exec.vector.IntVector;
 import org.apache.drill.exec.vector.complex.reader.FieldReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,8 +52,8 @@ import org.apache.parquet.column.ColumnWriteStore;
 import org.apache.parquet.column.ParquetProperties.WriterVersion;
 import org.apache.parquet.column.impl.ColumnWriteStoreV1;
 import org.apache.parquet.column.page.PageWriteStore;
+import org.apache.parquet.hadoop.CodecFactory;
 import org.apache.parquet.hadoop.ColumnChunkPageWriteStoreExposer;
-import org.apache.parquet.hadoop.DirectCodecFactory;
 import org.apache.parquet.hadoop.ParquetFileWriter;
 import org.apache.parquet.hadoop.metadata.CompressionCodecName;
 import org.apache.parquet.io.ColumnIOFactory;
@@ -87,7 +86,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   private boolean enableDictionary = false;
   private CompressionCodecName codec = CompressionCodecName.SNAPPY;
   private WriterVersion writerVersion = WriterVersion.PARQUET_1_0;
-  private DirectCodecFactory codecFactory;
+  private CodecFactory codecFactory;
 
   private long recordCount = 0;
   private long recordCountForNextMemCheck = MINIMUM_RECORD_COUNT_FOR_CHECK;
@@ -109,7 +108,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   public ParquetRecordWriter(FragmentContext context, ParquetWriter writer) throws OutOfMemoryException{
     super();
     this.oContext = context.newOperatorContext(writer, true);
-    this.codecFactory = new DirectCodecFactory(writer.getFormatPlugin().getFsConf(),
+    this.codecFactory = CodecFactory.createDirectCodecFactory(writer.getFormatPlugin().getFsConf(),
         new ParquetDirectByteBufferAllocator(oContext.getAllocator()), pageSize);
     this.partitionColumns = writer.getPartitionColumns();
     this.hasPartitions = partitionColumns != null && partitionColumns.size() > 0;
@@ -376,6 +375,6 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
   public void cleanup() throws IOException {
     flush();
 
-    codecFactory.close();
+    codecFactory.release();
   }
 }
