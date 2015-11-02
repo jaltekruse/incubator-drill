@@ -126,7 +126,7 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
                   Path.getPathWithoutSchemeAndAuthority(finalPath).toString(),
                   rowGroupNum, fs,
                   new DirectCodecFactory(fs.getConf(),
-                      new ParquetDirectByteBufferAllocator(oContext.getAllocator())),
+                      new ParquetDirectByteBufferAllocator(oContext.getAllocator()), 0),
                   parquetMetadata,
                   newColumns)
           );

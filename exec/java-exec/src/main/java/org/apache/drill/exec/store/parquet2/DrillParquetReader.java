@@ -249,7 +249,7 @@ public class DrillParquetReader extends AbstractRecordReader {
 
       pageReadStore = new ColumnChunkIncReadStore(recordCount,
           new DirectCodecFactory(fileSystem.getConf(),
-              new ParquetDirectByteBufferAllocator(operatorContext.getAllocator())), operatorContext.getAllocator(),
+              new ParquetDirectByteBufferAllocator(operatorContext.getAllocator()), 0), operatorContext.getAllocator(),
           fileSystem, filePath);
 
       for (String[] path : schema.getPaths()) {
