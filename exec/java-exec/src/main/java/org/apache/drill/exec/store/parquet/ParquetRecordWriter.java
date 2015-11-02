@@ -110,7 +110,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
     super();
     this.oContext = context.newOperatorContext(writer, true);
     this.codecFactory = new DirectCodecFactory(writer.getFormatPlugin().getFsConf(),
-        new ParquetDirectByteBufferAllocator(oContext.getAllocator()));
+        new ParquetDirectByteBufferAllocator(oContext.getAllocator()), pageSize);
     this.partitionColumns = writer.getPartitionColumns();
     this.hasPartitions = partitionColumns != null && partitionColumns.size() > 0;
   }
@@ -188,7 +188,7 @@ public class ParquetRecordWriter extends ParquetOutputRecordWriter {
 
     int initialBlockBufferSize = max(MINIMUM_BUFFER_SIZE, blockSize / this.schema.getColumns().size() / 5);
     pageStore = ColumnChunkPageWriteStoreExposer.newColumnChunkPageWriteStore(this.oContext,
-        codecFactory.getCompressor(codec, pageSize),
+        codecFactory.getCompressor(codec),
         schema);
     int initialPageBufferSize = max(MINIMUM_BUFFER_SIZE, min(pageSize + pageSize / 10, initialBlockBufferSize));
     store = new ColumnWriteStoreV1(pageStore, pageSize, initialPageBufferSize, enableDictionary,
