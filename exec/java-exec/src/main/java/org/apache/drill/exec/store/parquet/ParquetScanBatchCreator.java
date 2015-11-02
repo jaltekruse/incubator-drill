@@ -43,7 +43,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 import org.apache.parquet.column.ColumnDescriptor;
-import org.apache.parquet.hadoop.DirectCodecFactory;
+import org.apache.parquet.hadoop.CodecFactory;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.schema.MessageType;
@@ -130,9 +130,9 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           readers.add(
               new ParquetRecordReader(
                   context, e.getPath(), e.getRowGroupIndex(), fs,
-                  new DirectCodecFactory(
-                      fs.getConf(),
-                      new ParquetDirectByteBufferAllocator(oContext.getAllocator()), 0),
+                  CodecFactory.createDirectCodecFactory(
+                  fs.getConf(),
+                  new ParquetDirectByteBufferAllocator(oContext.getAllocator()), 0),
                   footers.get(e.getPath()),
                   rowGroupScan.getColumns()
               )
