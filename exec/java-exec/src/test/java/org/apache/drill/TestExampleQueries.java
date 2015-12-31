@@ -22,48 +22,16 @@ import static org.junit.Assert.assertEquals;
 
 import java.math.BigDecimal;
 
-import io.netty.buffer.DrillBuf;
-import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
 import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
-import org.apache.drill.exec.compile.ClassTransformer;
-import org.apache.drill.exec.expr.holders.DateHolder;
-import org.apache.drill.exec.memory.BufferAllocator;
-import org.apache.drill.exec.memory.RootAllocatorFactory;
-import org.apache.drill.exec.store.ParquetOutputRecordWriter;
-import org.joda.time.Chronology;
-import org.joda.time.DateTime;
-import org.joda.time.DateTimeUtils;
 import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestExampleQueries extends BaseTestQuery {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestExampleQueries.class);
 
-  private long datetimeToDaysSinceEpoch(long datetime) {
-    return DateTimeUtils.toJulianDayNumber(datetime) - ParquetOutputRecordWriter.JULIAN_DAY_EPOC;
-  }
-
-  private long fromParquetDateToUnixTimestamp(long daysSinceEpoch) {
-    return DateTimeUtils.fromJulianDay(daysSinceEpoch + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5);
-  }
-
-  @Test
-  public void testDate() {
-    Chronology UTC = org.joda.time.chrono.ISOChronology.getInstanceUTC();
-    long datetime = UTC.getDateTimeMillis(1969, 12, 31, 0);
-    long daysSinceEpoch = datetimeToDaysSinceEpoch(datetime);
-    System.out.println(daysSinceEpoch);
-    datetime = UTC.getDateTimeMillis(1970, 1, 2, 0);
-    System.out.println(datetimeToDaysSinceEpoch(datetime));
-    long datetimeResult = fromParquetDateToUnixTimestamp(daysSinceEpoch);
-    System.out.println(datetimeResult);
-    DateTime date = new DateTime(datetimeResult, UTC);
-    System.out.println(date);
-    System.out.println(datetimeToDaysSinceEpoch(datetimeResult));
-  }
 
   @Test // see DRILL-2328
   public void testConcatOnNull() throws Exception {
