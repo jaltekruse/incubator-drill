@@ -337,7 +337,7 @@ public class NullableFixedByteAlignedReaders {
         intValue = readIntLittleEndian(bytebuf, start);
       }
 
-      dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(intValue - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+      dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(intValue + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
     }
 
   }

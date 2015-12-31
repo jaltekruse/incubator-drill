@@ -444,7 +444,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
       case DATE: {
         NullableDateVector dateVector = (NullableDateVector) v;
         Integer value = (Integer) partitionValueMap.get(f).get(column);
-        dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+        dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
         return;
       }
       case TIME: {

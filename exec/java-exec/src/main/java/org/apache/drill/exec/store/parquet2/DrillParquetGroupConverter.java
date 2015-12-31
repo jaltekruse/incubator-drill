@@ -335,7 +335,7 @@ public class DrillParquetGroupConverter extends GroupConverter {
 
     @Override
     public void addInt(int value) {
-      holder.value = DateTimeUtils.fromJulianDay(value - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5);
+      holder.value = DateTimeUtils.fromJulianDay(value + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5);
       writer.write(holder);
     }
   }
