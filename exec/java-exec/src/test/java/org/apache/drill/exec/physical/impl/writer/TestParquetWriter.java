@@ -136,6 +136,16 @@ public class TestParquetWriter extends BaseTestQuery {
   }
 
   @Test
+  public void testCorruptDateCorrection() throws Exception {
+    testBuilder()
+        .sqlQuery("select EXPR$0 from dfs.tmp.parquet_dates where fixCorruptParquetDate(EXPR$0) = '1970-01-01'")
+        .unOrdered()
+        .baselineColumns("EXPR$0")
+        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+        .go();
+  }
+
+  @Test
   public void testSmallFileValueReadWrite() throws Exception {
     String selection = "key";
     String inputTable = "cp.`/store/json/intData.json`";

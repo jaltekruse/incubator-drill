@@ -68,7 +68,7 @@ public class TestParquetTypeConversions {
     // taken from JODA, min/max allowed years
     // -292275055, 292278994
 
-    testCorruptDateAutoCorrection(-6000, 1, 1, 0);
+    testCorruptDateAutoCorrection(-10000, 1, 1, 0);
     testCorruptDateAutoCorrection(1, 1, 1, 0);
     testCorruptDateAutoCorrection(1900, 1, 1, 0);
     testCorruptDateAutoCorrection(1970, 1, 1, 0);
@@ -106,5 +106,7 @@ public class TestParquetTypeConversions {
     long recoveredCorruptValueFromFile = datetimeToDaysSinceEpoch(resultReadingCorruptValuesWithFixedReader);
     assertEquals(recoveredCorruptValueFromFile, valueInIncorrectParquetFiles);
 
+    // actually get the correct date, assuming we have an incorrect value
+    assertEquals(fromParquetDateToUnixTimestamp_OLD_INCORRECT_FORMULA(recoveredCorruptValueFromFile), datetime);
   }
 }
