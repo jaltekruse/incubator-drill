@@ -144,6 +144,33 @@ class FixedByteAlignedReader extends ColumnReader {
 
   }
 
+  /**
+   * Old versions of Drill were writing a non-standard format for date. See DRILL-4203
+   */
+  public static class CorruptDateReader extends ConvertedReader {
+
+    private final DateVector.Mutator mutator;
+
+    CorruptDateReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
+               boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
+      super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+      mutator = ((DateVector) v).getMutator();
+    }
+
+    @Override
+    void addNext(int start, int index) {
+      int intValue;
+      if (usingDictionary) {
+        intValue =  pageReader.dictionaryValueReader.readInteger();
+      } else {
+        intValue = readIntLittleEndian(bytebuf, start);
+      }
+
+      mutator.set(index, DateTimeUtils.fromJulianDay(intValue - 2 * ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+    }
+
+  }
+
   public static class Decimal28Reader extends ConvertedReader {
 
     Decimal28SparseVector decimal28Vector;

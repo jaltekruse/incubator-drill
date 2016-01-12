@@ -47,6 +47,8 @@ import org.apache.drill.exec.vector.complex.RepeatedValueVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.parquet.SemanticVersion;
+import org.apache.parquet.VersionParser;
 import org.apache.parquet.column.ColumnDescriptor;
 import org.apache.parquet.format.FileMetaData;
 import org.apache.parquet.format.SchemaElement;
@@ -106,6 +108,7 @@ public class ParquetRecordReader extends AbstractRecordReader {
   int rowGroupIndex;
   long totalRecordsRead;
   private final FragmentContext fragmentContext;
+  private final boolean containsOldCorruptDates;
 
   public ParquetReaderStats parquetReaderStats = new ParquetReaderStats();
 
@@ -135,8 +138,37 @@ public class ParquetRecordReader extends AbstractRecordReader {
     this.rowGroupIndex = rowGroupIndex;
     this.batchSize = batchSize;
     this.footer = footer;
+    String createdBy = footer.getFileMetaData().getCreatedBy();
+
+    // java issue with finals and try/catch blocks requires this
+    boolean tempContainsOldCorruptDates = false;
+    try {
+      VersionParser.ParsedVersion parsedVersion = VersionParser.parse(createdBy);
+      SemanticVersion semVer = parsedVersion.getSemanticVersion();
+      if (semVer.major == 1 && semVer.minor < 5) {
+        tempContainsOldCorruptDates = true;
+      } else {
+        tempContainsOldCorruptDates = false;
+      }
+    } catch (VersionParser.VersionParseException e) {
+      // This error can only be thrown by the line above the assignments in the try block
+      // I guess java doesn't think this is a sufficient safeguard for setting s final
+      // value only once, hence the temporary tempContainsOldCorruptDates assigned below
+    }
+
+    containsOldCorruptDates = tempContainsOldCorruptDates;
     this.fragmentContext = fragmentContext;
     setColumns(columns);
+  }
+
+  /**
+   * Flag indicating if the old non-standard data format appears
+   * in this file, see DRILL-4203.
+   *
+   * @return true if the dates are corrupted and need to be corrected
+   */
+  public boolean containsOldCorruptDates() {
+    return containsOldCorruptDates;
   }
 
   public CodecFactory getCodecFactory() {
