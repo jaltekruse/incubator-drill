@@ -121,11 +121,48 @@ public class TestParquetWriter extends BaseTestQuery {
   // TODO - jaltekruse - test all of the code paths that convert this date
   // including partition pruning, all encoding pf parquet files with both readers
   @Test
-  public void testReadDate() throws Exception {
+  public void testReadCorruptOldDates() throws Exception {
     testBuilder()
-        .sqlQuery("select * from dfs.tmp.parquet_dates")
+        .sqlQuery("select * from cp.`parquet/4203_corrupt_dates/4203_corrupt_dates.parquet`")
         .unOrdered()
-        .baselineColumns("EXPR$0")
+        .baselineColumns("date_col")
+        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
+        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
+        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
+        .go();
+  }
+
+  @Test
+  public void testReadMixedOldAndNew() throws Exception {
+
+    testBuilder()
+        .sqlQuery("select * from dfs.`[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates`")
+        .unOrdered()
+        .baselineColumns("date_col")
+        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
+        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
+        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
+        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
+        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
+        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
+        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
+        .go();
+  }
+
+  @Test
+  public void testReadCorrectedDates() throws Exception {
+    testBuilder()
+        .sqlQuery("select * from cp.`parquet/4203_corrupt_dates/4203_corrected_dates.parquet`")
+        .unOrdered()
+        .baselineColumns("date_col")
         .baselineValues(new DateTime(1970, 1, 1, 0, 0))
         .baselineValues(new DateTime(1970, 1, 2, 0, 0))
         .baselineValues(new DateTime(1969, 12, 31, 0, 0))

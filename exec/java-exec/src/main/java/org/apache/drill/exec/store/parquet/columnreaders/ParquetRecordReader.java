@@ -41,6 +41,7 @@ import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.MaterializedField.Key;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.parquet.ParquetReaderStats;
+import org.apache.drill.exec.store.parquet.ParquetRecordWriter;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableIntVector;
 import org.apache.drill.exec.vector.complex.RepeatedValueVector;
@@ -138,27 +139,77 @@ public class ParquetRecordReader extends AbstractRecordReader {
     this.rowGroupIndex = rowGroupIndex;
     this.batchSize = batchSize;
     this.footer = footer;
-    String createdBy = footer.getFileMetaData().getCreatedBy();
-
-    // java issue with finals and try/catch blocks requires this
-    boolean tempContainsOldCorruptDates = false;
-    try {
-      VersionParser.ParsedVersion parsedVersion = VersionParser.parse(createdBy);
-      SemanticVersion semVer = parsedVersion.getSemanticVersion();
-      if (semVer.major == 1 && semVer.minor < 5) {
-        tempContainsOldCorruptDates = true;
-      } else {
-        tempContainsOldCorruptDates = false;
-      }
-    } catch (VersionParser.VersionParseException e) {
-      // This error can only be thrown by the line above the assignments in the try block
-      // I guess java doesn't think this is a sufficient safeguard for setting s final
-      // value only once, hence the temporary tempContainsOldCorruptDates assigned below
-    }
-
-    containsOldCorruptDates = tempContainsOldCorruptDates;
+    containsOldCorruptDates = detectCorruptDates(footer, columns);
     this.fragmentContext = fragmentContext;
     setColumns(columns);
+  }
+
+  private boolean detectCorruptDates(ParquetMetadata footer, List<SchemaPath> columns) {
+
+    // old drill files have parquet-mr, no drill version, need to check min/max values to see if they look corrupt
+    //  - option to disable this auto-correction based on the date values, in case users are storing these dates intentionally
+
+    // migrated parquet files have 1.8.1 parquet-mr version with drill-r0 in the part of the name usually containing "SNAPSHOT"
+
+    // new parquet files 1.4 and 1.5 have drill version number
+    //  - below 1.5 dates are corrupt
+    //  - this includes 1.5 SNAPSHOT
+
+    String drillVersion = footer.getFileMetaData().getKeyValueMetaData().get(ParquetRecordWriter.DRILL_VERSION_PROPERTY);
+    String createdBy = footer.getFileMetaData().getCreatedBy();
+    boolean corruptDates = false;
+    try {
+      if (drillVersion == null) {
+        // Possibly an old, un-migrated Drill file, check the column statistics to see if min/max values look corrupt
+        // only applies if there is a date column selected
+        if (createdBy.equals("parquet-mr")) {
+          for (SchemaPath schemaPath : columns) {
+            // this reader only supports flat data, this is restricted in the ParquetScanBatchCreator
+//              for (int i = 0; i < columns.size(); ++i) {
+//                ColumnDescriptor column = columns.get(i);
+          }
+//          for (int i = 0; i < columns.size(); ++i) {
+//            ColumnDescriptor column = columns.get(i);
+//            SchemaElement se = schemaElements.get(column.getPath()[0]);
+//            MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(),
+//                getDataMode(column), se, fragmentContext.getOptions());
+//            field = MaterializedField.create(toFieldName(column.getPath()),mt);
+//            if ( ! fieldSelected(field)) {
+//              continue;
+//            }
+        } else {
+          // check the created by to see if it is a migrated Drill file
+          VersionParser.ParsedVersion parsedCreatedByVersion = VersionParser.parse(createdBy);
+          // check if this is a migrated Drill file, lacking a Drill version number, but with
+          // "drill" in the parquet created-by string
+          SemanticVersion semVer = parsedCreatedByVersion.getSemanticVersion();
+          if (semVer.major == 1 && semVer.minor == 8 && semVer.patch == 1 && semVer.unknown.contains("drill")) {
+            corruptDates = true;
+          }
+        }
+      } else {
+        // this parser expects an application name before the semantic version, just prepending Drill
+        // we know from the property name "drill.version" that we wrote this
+        VersionParser.ParsedVersion parsedDrillVersion = VersionParser.parse("drill version " + drillVersion + " (build 1234)");
+        System.out.println(parsedDrillVersion.application);
+        if (parsedDrillVersion.application.equals("drill")) {
+          SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
+          if (semVer.major == 1 && semVer.minor < 5) {
+            corruptDates = true;
+          } else {
+            System.out.println("dates not corrupt");
+            corruptDates = false;
+          }
+        } else { // Drill has always included parquet-mr as the application name in the file metadata
+          corruptDates = false;
+        }
+      }
+    } catch (VersionParser.VersionParseException e) {
+      // Default value of "false" if we cannot parse the version is fine, we are covering all
+      // of the metadata values produced by historical versions of Drill
+      // If Drill didn't write it the dates should be fine
+    }
+    return corruptDates;
   }
 
   /**
@@ -236,6 +287,31 @@ public class ParquetRecordReader extends AbstractRecordReader {
     return operatorContext;
   }
 
+  /**
+   * Returns data type length for a given {@see ColumnDescriptor} and it's corresponding
+   * {@see SchemaElement}. Neither is enough information alone as the max
+   * repetition level (indicating if it is an array type) is in the ColumnDescriptor and
+   * the length of a fixed width field is stored at the schema level.
+   *
+   * @param column
+   * @param se
+   * @return the length if fixed width, else -1
+   */
+  private int getDataTypeLength(ColumnDescriptor column, SchemaElement se) {
+    if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
+      if (column.getMaxRepetitionLevel() > 0) {
+        return -1;
+      }
+      if (column.getType() == PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY) {
+        return se.getType_length() * 8;
+      } else {
+        return getTypeLengthInBits(column.getType());
+      }
+    } else {
+      return -1;
+    }
+  }
+
   @Override
   public void setup(OperatorContext operatorContext, OutputMutator output) throws ExecutionSetupException {
     this.operatorContext = operatorContext;
@@ -280,18 +356,11 @@ public class ParquetRecordReader extends AbstractRecordReader {
         continue;
       }
       columnsToScan++;
-      // sum the lengths of all of the fixed length fields
-      if (column.getType() != PrimitiveType.PrimitiveTypeName.BINARY) {
-        if (column.getMaxRepetitionLevel() > 0) {
-          allFieldsFixedLength = false;
-        }
-        if (column.getType() == PrimitiveType.PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY) {
-            bitWidthAllFixedFields += se.getType_length() * 8;
-        } else {
-          bitWidthAllFixedFields += getTypeLengthInBits(column.getType());
-        }
-      } else {
+      int dataTypeLength = getDataTypeLength(column, se);
+      if (dataTypeLength == -1) {
         allFieldsFixedLength = false;
+      } else {
+        bitWidthAllFixedFields += dataTypeLength;
       }
     }
 //    rowGroupOffset = footer.getBlocks().get(rowGroupIndex).getColumns().get(0).getFirstDataPageOffset();

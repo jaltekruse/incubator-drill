@@ -342,6 +342,33 @@ public class NullableFixedByteAlignedReaders {
 
   }
 
+  /**
+   * Old versions of Drill were writing a non-standard format for date. See DRILL-4203
+   */
+  public static class NullableCorruptDateReader extends NullableConvertedReader {
+
+    NullableDateVector dateVector;
+
+    NullableCorruptDateReader(ParquetRecordReader parentReader, int allocateSize, ColumnDescriptor descriptor, ColumnChunkMetaData columnChunkMetaData,
+                       boolean fixedLength, ValueVector v, SchemaElement schemaElement) throws ExecutionSetupException {
+      super(parentReader, allocateSize, descriptor, columnChunkMetaData, fixedLength, v, schemaElement);
+      dateVector = (NullableDateVector) v;
+    }
+
+    @Override
+    void addNext(int start, int index) {
+      int intValue;
+      if (usingDictionary) {
+        intValue =  pageReader.dictionaryValueReader.readInteger();
+      } else {
+        intValue = readIntLittleEndian(bytebuf, start);
+      }
+
+      dateVector.getMutator().set(index, DateTimeUtils.fromJulianDay(intValue - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+    }
+
+  }
+
   public static class NullableDecimal28Reader extends NullableConvertedReader {
 
     NullableDecimal28SparseVector decimal28Vector;

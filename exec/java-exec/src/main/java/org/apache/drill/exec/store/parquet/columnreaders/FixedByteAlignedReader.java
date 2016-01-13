@@ -166,7 +166,7 @@ class FixedByteAlignedReader extends ColumnReader {
         intValue = readIntLittleEndian(bytebuf, start);
       }
 
-      mutator.set(index, DateTimeUtils.fromJulianDay(intValue - 2 * ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+      mutator.set(index, DateTimeUtils.fromJulianDay(intValue - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
     }
 
   }
