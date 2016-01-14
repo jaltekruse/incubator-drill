@@ -21,6 +21,14 @@ import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.drill.exec.server.options.OptionManager;
 import org.apache.drill.exec.work.ExecErrorConstants;
+import org.apache.parquet.format.FileMetaData;
+import org.apache.parquet.format.SchemaElement;
+import org.apache.parquet.format.converter.ParquetMetadataConverter;
+import org.apache.parquet.hadoop.ParquetFileWriter;
+import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /*
  * Utility class where we can capture common logic between the two parquet readers
@@ -45,4 +53,15 @@ public class ParquetReaderUtility {
     }
     return out;
   }
+
+  public static Map<String, SchemaElement> getColNameToSchemaElementMapping(ParquetMetadata footer) {
+    HashMap<String, SchemaElement> schemaElements = new HashMap<>();
+    FileMetaData fileMetaData = new ParquetMetadataConverter().toParquetMetadata(ParquetFileWriter.CURRENT_VERSION, footer);
+    for (SchemaElement se : fileMetaData.getSchema()) {
+      schemaElements.put(se.getName(), se);
+    }
+    return schemaElements;
+  }
+
+
 }

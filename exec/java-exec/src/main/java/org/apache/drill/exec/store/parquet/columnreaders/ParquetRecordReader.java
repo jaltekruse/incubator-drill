@@ -26,6 +26,7 @@ import java.util.Map;
 
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.ExecutionSetupException;
+import org.apache.drill.common.expression.PathSegment;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.types.TypeProtos.DataMode;
@@ -41,6 +42,7 @@ import org.apache.drill.exec.record.MaterializedField;
 import org.apache.drill.exec.record.MaterializedField.Key;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.parquet.ParquetReaderStats;
+import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.store.parquet.ParquetRecordWriter;
 import org.apache.drill.exec.vector.AllocationHelper;
 import org.apache.drill.exec.vector.NullableIntVector;
@@ -51,6 +53,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.parquet.SemanticVersion;
 import org.apache.parquet.VersionParser;
 import org.apache.parquet.column.ColumnDescriptor;
+import org.apache.parquet.column.statistics.Statistics;
+import org.apache.parquet.format.ConvertedType;
 import org.apache.parquet.format.FileMetaData;
 import org.apache.parquet.format.SchemaElement;
 import org.apache.parquet.format.converter.ParquetMetadataConverter;
@@ -114,14 +118,15 @@ public class ParquetRecordReader extends AbstractRecordReader {
   public ParquetReaderStats parquetReaderStats = new ParquetReaderStats();
 
   public ParquetRecordReader(FragmentContext fragmentContext,
-      String path,
-      int rowGroupIndex,
-      FileSystem fs,
-      CodecFactory codecFactory,
-      ParquetMetadata footer,
-      List<SchemaPath> columns) throws ExecutionSetupException {
+                             String path,
+                             int rowGroupIndex,
+                             FileSystem fs,
+                             CodecFactory codecFactory,
+                             ParquetMetadata footer,
+                             List<SchemaPath> columns,
+                             boolean containsOldCorruptDates) throws ExecutionSetupException {
     this(fragmentContext, DEFAULT_BATCH_LENGTH_IN_BITS, path, rowGroupIndex, fs, codecFactory, footer,
-        columns);
+        columns, containsOldCorruptDates);
   }
 
   public ParquetRecordReader(
@@ -132,84 +137,17 @@ public class ParquetRecordReader extends AbstractRecordReader {
       FileSystem fs,
       CodecFactory codecFactory,
       ParquetMetadata footer,
-      List<SchemaPath> columns) throws ExecutionSetupException {
+      List<SchemaPath> columns,
+      boolean containsOldCorruptDates) throws ExecutionSetupException {
     this.hadoopPath = new Path(path);
     this.fileSystem = fs;
     this.codecFactory = codecFactory;
     this.rowGroupIndex = rowGroupIndex;
     this.batchSize = batchSize;
     this.footer = footer;
-    containsOldCorruptDates = detectCorruptDates(footer, columns);
+    this.containsOldCorruptDates = containsOldCorruptDates;
     this.fragmentContext = fragmentContext;
     setColumns(columns);
-  }
-
-  private boolean detectCorruptDates(ParquetMetadata footer, List<SchemaPath> columns) {
-
-    // old drill files have parquet-mr, no drill version, need to check min/max values to see if they look corrupt
-    //  - option to disable this auto-correction based on the date values, in case users are storing these dates intentionally
-
-    // migrated parquet files have 1.8.1 parquet-mr version with drill-r0 in the part of the name usually containing "SNAPSHOT"
-
-    // new parquet files 1.4 and 1.5 have drill version number
-    //  - below 1.5 dates are corrupt
-    //  - this includes 1.5 SNAPSHOT
-
-    String drillVersion = footer.getFileMetaData().getKeyValueMetaData().get(ParquetRecordWriter.DRILL_VERSION_PROPERTY);
-    String createdBy = footer.getFileMetaData().getCreatedBy();
-    boolean corruptDates = false;
-    try {
-      if (drillVersion == null) {
-        // Possibly an old, un-migrated Drill file, check the column statistics to see if min/max values look corrupt
-        // only applies if there is a date column selected
-        if (createdBy.equals("parquet-mr")) {
-          for (SchemaPath schemaPath : columns) {
-            // this reader only supports flat data, this is restricted in the ParquetScanBatchCreator
-//              for (int i = 0; i < columns.size(); ++i) {
-//                ColumnDescriptor column = columns.get(i);
-          }
-//          for (int i = 0; i < columns.size(); ++i) {
-//            ColumnDescriptor column = columns.get(i);
-//            SchemaElement se = schemaElements.get(column.getPath()[0]);
-//            MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(),
-//                getDataMode(column), se, fragmentContext.getOptions());
-//            field = MaterializedField.create(toFieldName(column.getPath()),mt);
-//            if ( ! fieldSelected(field)) {
-//              continue;
-//            }
-        } else {
-          // check the created by to see if it is a migrated Drill file
-          VersionParser.ParsedVersion parsedCreatedByVersion = VersionParser.parse(createdBy);
-          // check if this is a migrated Drill file, lacking a Drill version number, but with
-          // "drill" in the parquet created-by string
-          SemanticVersion semVer = parsedCreatedByVersion.getSemanticVersion();
-          if (semVer.major == 1 && semVer.minor == 8 && semVer.patch == 1 && semVer.unknown.contains("drill")) {
-            corruptDates = true;
-          }
-        }
-      } else {
-        // this parser expects an application name before the semantic version, just prepending Drill
-        // we know from the property name "drill.version" that we wrote this
-        VersionParser.ParsedVersion parsedDrillVersion = VersionParser.parse("drill version " + drillVersion + " (build 1234)");
-        System.out.println(parsedDrillVersion.application);
-        if (parsedDrillVersion.application.equals("drill")) {
-          SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
-          if (semVer.major == 1 && semVer.minor < 5) {
-            corruptDates = true;
-          } else {
-            System.out.println("dates not corrupt");
-            corruptDates = false;
-          }
-        } else { // Drill has always included parquet-mr as the application name in the file metadata
-          corruptDates = false;
-        }
-      }
-    } catch (VersionParser.VersionParseException e) {
-      // Default value of "false" if we cannot parse the version is fine, we are covering all
-      // of the metadata values produced by historical versions of Drill
-      // If Drill didn't write it the dates should be fine
-    }
-    return corruptDates;
   }
 
   /**
@@ -338,16 +276,11 @@ public class ParquetRecordReader extends AbstractRecordReader {
 
     // TODO - figure out how to deal with this better once we add nested reading, note also look where this map is used below
     // store a map from column name to converted types if they are non-null
-    HashMap<String, SchemaElement> schemaElements = new HashMap<>();
-    fileMetaData = new ParquetMetadataConverter().toParquetMetadata(ParquetFileWriter.CURRENT_VERSION, footer);
-    for (SchemaElement se : fileMetaData.getSchema()) {
-      schemaElements.put(se.getName(), se);
-    }
+    Map<String, SchemaElement> schemaElements = ParquetReaderUtility.getColNameToSchemaElementMapping(footer);
 
     // loop to add up the length of the fixed width columns and build the schema
     for (int i = 0; i < columns.size(); ++i) {
       column = columns.get(i);
-      logger.debug("name: " + fileMetaData.getSchema().get(i).name);
       SchemaElement se = schemaElements.get(column.getPath()[0]);
       MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(),
           getDataMode(column), se, fragmentContext.getOptions());
