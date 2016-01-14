@@ -119,6 +119,60 @@ public class TestParquetWriter extends BaseTestQuery {
     test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
 
+  /**
+   * Test reading a directory full of partitioned parquet files with dates, for more info see DRILL-4203.
+   */
+  @Test
+  public void testReadPartitionedOnCorruptedDates() throws Exception {
+    for (String selection : new String[] {"*", "date_col"}) {
+      testBuilder()
+          .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203`")
+          .unOrdered()
+          .baselineColumns("date_col")
+          .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+          .baselineValues(new DateTime(1970, 1, 2, 0, 0))
+          .baselineValues(new DateTime(1969, 12, 31, 0, 0))
+          .baselineValues(new DateTime(1969, 12, 30, 0, 0))
+          .baselineValues(new DateTime(1900, 1, 1, 0, 0))
+          .baselineValues(new DateTime(2015, 1, 1, 0, 0))
+          .go();
+
+      // failing
+      testBuilder()
+          .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203` " +
+              "where date_col = date '1970-01-01'")
+          .unOrdered()
+          .baselineColumns("date_col")
+          .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+          .go();
+    }
+  }
+
+  /**
+   * To fix some of the corrupted dates fixed as part of DRILL-4203 it requires
+   * actually looking at the values stored in the file. A column with date values
+   * actually stored must be located to check a value. Just because we find one
+   * column where the all values are null does not mean we can safely avoid reading
+   * date columns with auto-correction, although null values do not need fixing,
+   * other columns may contain actual corrupt date values.
+   *
+   * This test checks the case where the first columns in the file are all null filled
+   * and a later column must be found to identify that the file is corrupt.
+   */
+  @Test
+  public void testReadCorruptDatesWithNullFilledColumns() throws Exception {
+    testBuilder()
+        .sqlQuery("select null_dates_1, null_dates_2, date_col from dfs.`[WORKING_PATH]/src/test/resources/parquet/null_date_cols_with_corruption_4203.parquet`")
+        .unOrdered()
+        .baselineColumns("null_dates_1", "null_dates_2", "date_col")
+        .baselineValues(null, null, new DateTime(1970, 1, 1, 0, 0))
+        .baselineValues(null, null, new DateTime(1970, 1, 2, 0, 0))
+        .baselineValues(null, null, new DateTime(1969, 12, 31, 0, 0))
+        .baselineValues(null, null, new DateTime(1969, 12, 30, 0, 0))
+        .baselineValues(null, null, new DateTime(1900, 1, 1, 0, 0))
+        .baselineValues(null, null, new DateTime(2015, 1, 1, 0, 0))
+        .go();
+  }
 
   /**
    * Test reading a directory full of parquet files with dates, some of which have corrupted values
@@ -142,11 +196,13 @@ public class TestParquetWriter extends BaseTestQuery {
     }
   }
 
+
+
   // TODO - test when one column with type DATE has all null values and another must have it's statistics
   // checked
 
   /**
-   * Read a directory with parquet files where some have corrupted dates, see DREILL-2403.
+   * Read a directory with parquet files where some have corrupted dates, see DRILL-2403.
    * @throws Exception
    */
   public void readMixedCorruptedAndCorrectedDates() throws Exception {

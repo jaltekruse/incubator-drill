@@ -116,7 +116,8 @@ public class ParquetReaderUtility {
                 Preconditions.checkArgument(colIndex != -1, "Issue reading parquet metadata");
                 Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
                 Integer max = (Integer) statistics.genericGetMax();
-                if (max != null && max > 1_000_00) {
+                // TODO - make sure this threshold is set well
+                if (statistics.hasNonNullValue() && max > 1_000_000) {
                   corruptDates = true;
                   break findDateColWithStatsLoop;
                 }
