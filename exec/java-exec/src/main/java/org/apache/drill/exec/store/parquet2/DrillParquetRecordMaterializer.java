@@ -35,9 +35,9 @@ public class DrillParquetRecordMaterializer extends RecordMaterializer<Void> {
   private ComplexWriter complexWriter;
 
   public DrillParquetRecordMaterializer(OutputMutator mutator, ComplexWriter complexWriter, MessageType schema,
-                                        Collection<SchemaPath> columns, OptionManager options) {
+                                        Collection<SchemaPath> columns, OptionManager options, boolean containsCorruptedDates) {
     this.complexWriter = complexWriter;
-    root = new DrillParquetGroupConverter(mutator, complexWriter.rootAsMap(), schema, columns, options);
+    root = new DrillParquetGroupConverter(mutator, complexWriter.rootAsMap(), schema, columns, options, containsCorruptedDates);
   }
 
   public void setPosition(int position) {

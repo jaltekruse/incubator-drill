@@ -32,6 +32,7 @@ import java.util.Map;
 
 import com.google.common.base.Joiner;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.TestBuilder;
 import org.apache.drill.common.util.DrillVersionInfo;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.fn.interp.TestConstantFolding;
@@ -118,68 +119,64 @@ public class TestParquetWriter extends BaseTestQuery {
     test(String.format("alter session set `%s` = false", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
 
-  // TODO - jaltekruse - test all of the code paths that convert this date
-  // including partition pruning, all encoding pf parquet files with both readers
+
+  /**
+   * Test reading a directory full of parquet files with dates, some of which have corrupted values
+   * due to DRILL-4203.
+   *
+   * Tests reading the files with both the vectorized and complex parquet readers.
+   *
+   * @throws Exception
+   */
   @Test
-  public void testReadCorruptOldDates() throws Exception {
-    testBuilder()
-        .sqlQuery("select * from cp.`parquet/4203_corrupt_dates/4203_corrupt_dates.parquet`")
-        .unOrdered()
-        .baselineColumns("date_col")
-        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
-        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
-        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
-        .go();
+  public void testReadMixedOldAndNewBothReaders() throws Exception {
+    /// read once with the flat reader
+    readMixedCorruptedAndCorrectedDates();
+
+    try {
+      // read all of the types with the complex reader
+      test(String.format("alter session set %s = true", ExecConstants.PARQUET_NEW_RECORD_READER));
+      readMixedCorruptedAndCorrectedDates();
+    } finally {
+      test(String.format("alter session set %s = false", ExecConstants.PARQUET_NEW_RECORD_READER));
+    }
   }
 
-  @Test
-  public void testReadMixedOldAndNew() throws Exception {
+  // TODO - test when one column with type DATE has all null values and another must have it's statistics
+  // checked
 
-    testBuilder()
-        .sqlQuery("select * from dfs.`[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates`")
-        .unOrdered()
-        .baselineColumns("date_col")
-        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
-        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
-        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
-        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
-        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
-        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
-        .go();
-  }
-
-  @Test
-  public void testReadCorrectedDates() throws Exception {
-    testBuilder()
-        .sqlQuery("select * from cp.`parquet/4203_corrupt_dates/4203_corrected_dates.parquet`")
-        .unOrdered()
-        .baselineColumns("date_col")
-        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-        .baselineValues(new DateTime(1970, 1, 2, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 31, 0, 0))
-        .baselineValues(new DateTime(1969, 12, 30, 0, 0))
-        .baselineValues(new DateTime(1900, 1, 1, 0, 0))
-        .baselineValues(new DateTime(2015, 1, 1, 0, 0))
-        .go();
-  }
-
-  @Test
-  public void testCorruptDateCorrection() throws Exception {
-    testBuilder()
-        .sqlQuery("select EXPR$0 from dfs.tmp.parquet_dates where fixCorruptParquetDate(EXPR$0) = '1970-01-01'")
-        .unOrdered()
-        .baselineColumns("EXPR$0")
-        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-        .go();
+  /**
+   * Read a directory with parquet files where some have corrupted dates, see DREILL-2403.
+   * @throws Exception
+   */
+  public void readMixedCorruptedAndCorrectedDates() throws Exception {
+    // ensure that selecting the date column explicitly or as part of a star still results
+    // in checking the file metadata for date columns (when we need to check the statistics
+    // for bad values) to set the flag that the values are corrupt
+    for (String selection : new String[] {"*", "date_col"}) {
+      TestBuilder builder = testBuilder()
+          .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates`")
+          .unOrdered()
+          .baselineColumns("date_col");
+      // TODO - modify logic not to consider 1.5 SNAPSHOT files corrupted
+      // 3 files are in the directory:
+      //    - one created with 1.5 (update this file)
+      //    - one from and old version of Drill, before we put in proper created by in metadata
+      //        - this is read properly by looking at a Max value in the file statistics, to see that
+      //          it is way off of a typical date value
+      //        - this behavior will be able to be turned off
+      //    - one from 1.4, where there is a proper created-by, but the corruption is present
+      for (int i = 0; i < 3; i++) {
+        builder
+            .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+            .baselineValues(new DateTime(1970, 1, 2, 0, 0))
+            .baselineValues(new DateTime(1969, 12, 31, 0, 0))
+            .baselineValues(new DateTime(1969, 12, 30, 0, 0))
+            .baselineValues(new DateTime(1900, 1, 1, 0, 0))
+            .baselineValues(new DateTime(2015, 1, 1, 0, 0));
+      }
+      builder.go();
+    }
   }
 
   @Test

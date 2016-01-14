@@ -87,16 +87,21 @@ public class DrillParquetGroupConverter extends GroupConverter {
   private MapWriter mapWriter;
   private final OutputMutator mutator;
   private final OptionManager options;
+  // See DRILL-4203
+  private final boolean containsCorruptedDates;
 
-  public DrillParquetGroupConverter(OutputMutator mutator, ComplexWriterImpl complexWriter, MessageType schema, Collection<SchemaPath> columns, OptionManager options) {
-    this(mutator, complexWriter.rootAsMap(), schema, columns, options);
+  public DrillParquetGroupConverter(OutputMutator mutator, ComplexWriterImpl complexWriter, MessageType schema,
+                                    Collection<SchemaPath> columns, OptionManager options, boolean containsCorruptedDates) {
+    this(mutator, complexWriter.rootAsMap(), schema, columns, options, containsCorruptedDates);
   }
 
   // This function assumes that the fields in the schema parameter are in the same order as the fields in the columns parameter. The
   // columns parameter may have fields that are not present in the schema, though.
-  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema, Collection<SchemaPath> columns, OptionManager options) {
+  public DrillParquetGroupConverter(OutputMutator mutator, MapWriter mapWriter, GroupType schema,
+                                    Collection<SchemaPath> columns, OptionManager options, boolean containsCorruptedDates) {
     this.mapWriter = mapWriter;
     this.mutator = mutator;
+    this.containsCorruptedDates = containsCorruptedDates;
     converters = Lists.newArrayList();
     this.options = options;
 
@@ -144,10 +149,12 @@ public class DrillParquetGroupConverter extends GroupConverter {
           c.add(s);
         }
         if (rep != Repetition.REPEATED) {
-          DrillParquetGroupConverter converter = new DrillParquetGroupConverter(mutator, mapWriter.map(name), type.asGroupType(), c, options);
+          DrillParquetGroupConverter converter = new DrillParquetGroupConverter(
+              mutator, mapWriter.map(name), type.asGroupType(), c, options, containsCorruptedDates);
           converters.add(converter);
         } else {
-          DrillParquetGroupConverter converter = new DrillParquetGroupConverter(mutator, mapWriter.list(name).map(), type.asGroupType(), c, options);
+          DrillParquetGroupConverter converter = new DrillParquetGroupConverter(
+              mutator, mapWriter.list(name).map(), type.asGroupType(), c, options, containsCorruptedDates);
           converters.add(converter);
         }
       } else {
@@ -173,7 +180,12 @@ public class DrillParquetGroupConverter extends GroupConverter {
           }
           case DATE: {
             DateWriter writer = type.getRepetition() == Repetition.REPEATED ? mapWriter.list(name).date() : mapWriter.date(name);
-            return new DrillDateConverter(writer);
+            if (containsCorruptedDates) {
+              return new DrillCorruptedDateConverter(writer);
+            } else {
+              return new DrillDateConverter(writer);
+            }
+
           }
           case TIME_MILLIS: {
             TimeWriter writer = type.getRepetition() == Repetition.REPEATED ? mapWriter.list(name).time() : mapWriter.time(name);
@@ -321,6 +333,21 @@ public class DrillParquetGroupConverter extends GroupConverter {
     @Override
     public void addInt(int value) {
       holder.value = value;
+      writer.write(holder);
+    }
+  }
+
+  public static class DrillCorruptedDateConverter extends PrimitiveConverter {
+    private DateWriter writer;
+    private DateHolder holder = new DateHolder();
+
+    public DrillCorruptedDateConverter(DateWriter writer) {
+      this.writer = writer;
+    }
+
+    @Override
+    public void addInt(int value) {
+      holder.value = DateTimeUtils.fromJulianDay(value - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5);
       writer.write(holder);
     }
   }

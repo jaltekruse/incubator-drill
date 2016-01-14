@@ -53,6 +53,9 @@ public class TestPartitionFilter extends PlanTestBase {
     test(String.format("create table dfs_test.tmp.parquet partition by (yr, qrtr) as select o_orderkey, o_custkey, " +
         "o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment, cast(dir0 as int) yr, dir1 qrtr " +
         "from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
+    test(String.format("create table dfs_test.tmp.parquet partition by (yr, qrtr) as select o_orderkey, o_custkey, " +
+        "o_orderstatus, o_totalprice, o_orderdate, o_orderpriority, o_clerk, o_shippriority, o_comment, cast(dir0 as int) yr, dir1 qrtr " +
+        "from dfs_test.`%s/multilevel/parquet`", TEST_RES_PATH));
     test("alter session set `planner.disable_exchanges` = false");
   }
 

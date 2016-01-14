@@ -53,6 +53,8 @@ import org.apache.parquet.format.SchemaElement;
 import org.apache.parquet.hadoop.CodecFactory;
 import org.apache.parquet.hadoop.ParquetFileReader;
 import org.apache.parquet.hadoop.metadata.BlockMetaData;
+import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
+import org.apache.parquet.hadoop.metadata.ColumnPath;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.Type;
@@ -135,8 +137,8 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           logger.trace("ParquetTrace,Read Footer,{},{},{},{},{},{},{}", "", e.getPath(), "", 0, 0, 0, timeToRead);
           footers.put(e.getPath(), footer );
         }
+        boolean containsCorruptDates = detectCorruptDates(footers.get(e.getPath()), rowGroupScan.getColumns(), e.getRowGroupIndex());
         if (!context.getOptions().getOption(ExecConstants.PARQUET_NEW_RECORD_READER).bool_val && !isComplex(footers.get(e.getPath()))) {
-          boolean containsCorruptDates = detectCorruptDates(footers.get(e.getPath()), rowGroupScan.getColumns(), e.getRowGroupIndex());
           readers.add(
               new ParquetRecordReader(
                   context, e.getPath(), e.getRowGroupIndex(), fs,
@@ -150,7 +152,7 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           );
         } else {
           ParquetMetadata footer = footers.get(e.getPath());
-          readers.add(new DrillParquetReader(context, footer, e, newColumns, fs));
+          readers.add(new DrillParquetReader(context, footer, e, newColumns, fs, containsCorruptDates));
         }
         if (rowGroupScan.getSelectionRoot() != null) {
           String[] r = Path.getPathWithoutSchemeAndAuthority(new Path(rowGroupScan.getSelectionRoot())).toString().split("/");
@@ -221,36 +223,34 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
         // only applies if there is a date column selected
         if (createdBy.equals("parquet-mr")) {
           Map<String, SchemaElement> schemaElements = ParquetReaderUtility.getColNameToSchemaElementMapping(footer);
-          for (SchemaPath schemaPath : columns) {
+          findDateColWithStatsLoop : for (SchemaPath schemaPath : columns) {
             List<ColumnDescriptor> parquetColumns = footer.getFileMetaData().getSchema().getColumns();
             for (int i = 0; i < parquetColumns.size(); ++i) {
               ColumnDescriptor column = parquetColumns.get(i);
               // this reader only supports flat data, this is restricted in the ParquetScanBatchCreator
               // creating a NameSegment makes sure we are using the standard code for comparing names,
               // currently it is all case-insensitive
-              if (new PathSegment.NameSegment(column.getPath()[0]).equals(schemaPath.getRootSegment())) {
+              if (AbstractRecordReader.isStarQuery(columns) || new PathSegment.NameSegment(column.getPath()[0]).equals(schemaPath.getRootSegment())) {
+                int colIndex = -1;
                 if (schemaElements.get(column.getPath()[0]).getConverted_type().equals(ConvertedType.DATE)) {
-                  int colIndex;
-                  for (BlockMetaData blockMetaData : footer.getBlocks()) {
-
+                  List<ColumnChunkMetaData> colChunkList = footer.getBlocks().get(rowGroupIndex).getColumns();
+                  for (int j = 0; j < colChunkList.size(); j++) {
+                    if (colChunkList.get(j).getPath().equals(ColumnPath.get(column.getPath()))) {
+                      colIndex = j;
+                      break;
+                    }
                   }
-                  Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(0 /* tod map */).getStatistics();
-                  Integer max = (Integer) statistics.genericGetMax();
-                  Integer min = (Integer) statistics.genericGetMin();
-
+                }
+                Preconditions.checkArgument(colIndex != -1, "Issue reading parquet metadata");
+                Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
+                Integer max = (Integer) statistics.genericGetMax();
+                if (max != null && max > 1_000_00) {
+                  corruptDates = true;
+                  break findDateColWithStatsLoop;
                 }
               }
             }
           }
-//          for (int i = 0; i < columns.size(); ++i) {
-//            ColumnDescriptor column = columns.get(i);
-//            SchemaElement se = schemaElements.get(column.getPath()[0]);
-//            MajorType mt = ParquetToDrillTypeConverter.toMajorType(column.getType(), se.getType_length(),
-//                getDataMode(column), se, fragmentContext.getOptions());
-//            field = MaterializedField.create(toFieldName(column.getPath()),mt);
-//            if ( ! fieldSelected(field)) {
-//              continue;
-//            }
         } else {
           // check the created by to see if it is a migrated Drill file
           VersionParser.ParsedVersion parsedCreatedByVersion = VersionParser.parse(createdBy);
@@ -265,13 +265,11 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
         // this parser expects an application name before the semantic version, just prepending Drill
         // we know from the property name "drill.version" that we wrote this
         VersionParser.ParsedVersion parsedDrillVersion = VersionParser.parse("drill version " + drillVersion + " (build 1234)");
-        System.out.println(parsedDrillVersion.application);
         if (parsedDrillVersion.application.equals("drill")) {
           SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
-          if (semVer.major == 1 && semVer.minor < 5) {
+          if (semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
             corruptDates = true;
           } else {
-            System.out.println("dates not corrupt");
             corruptDates = false;
           }
         } else { // Drill has always included parquet-mr as the application name in the file metadata

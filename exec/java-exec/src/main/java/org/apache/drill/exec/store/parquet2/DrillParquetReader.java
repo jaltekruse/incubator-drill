@@ -105,9 +105,12 @@ public class DrillParquetReader extends AbstractRecordReader {
   private List<SchemaPath> columnsNotFound=null;
   boolean noColumnsFound = false; // true if none of the columns in the projection list is found in the schema
 
+  // See DRILL-4203
+  private final boolean containsCorruptedDates;
 
   public DrillParquetReader(FragmentContext fragmentContext, ParquetMetadata footer, RowGroupReadEntry entry,
-      List<SchemaPath> columns, DrillFileSystem fileSystem) {
+      List<SchemaPath> columns, DrillFileSystem fileSystem, boolean containsCorruptedDates) {
+    this.containsCorruptedDates = containsCorruptedDates;
     this.footer = footer;
     this.fileSystem = fileSystem;
     this.entry = entry;
@@ -264,7 +267,7 @@ public class DrillParquetReader extends AbstractRecordReader {
         // Discard the columns not found in the schema when create DrillParquetRecordMaterializer, since they have been added to output already.
         final Collection<SchemaPath> columns = columnsNotFound == null || columnsNotFound.size() == 0 ? getColumns(): CollectionUtils.subtract(getColumns(), columnsNotFound);
         recordMaterializer = new DrillParquetRecordMaterializer(output, writer, projection, columns,
-            fragmentContext.getOptions());
+            fragmentContext.getOptions(), containsCorruptedDates);
         primitiveVectors = writer.getMapVector().getPrimitiveVectors();
         recordReader = columnIO.getRecordReader(pageReadStore, recordMaterializer);
       }
