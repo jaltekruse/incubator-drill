@@ -158,7 +158,6 @@ public class TestParquetWriter extends BaseTestQuery {
           .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates`")
           .unOrdered()
           .baselineColumns("date_col");
-      // TODO - modify logic not to consider 1.5 SNAPSHOT files corrupted
       // 3 files are in the directory:
       //    - one created with 1.5 (update this file)
       //    - one from and old version of Drill, before we put in proper created by in metadata

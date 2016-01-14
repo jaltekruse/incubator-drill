@@ -36,6 +36,7 @@ import org.apache.drill.exec.record.RecordBatch;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.RecordReader;
 import org.apache.drill.exec.store.parquet.ParquetDirectByteBufferAllocator;
+import org.apache.drill.exec.store.parquet.ParquetReaderUtility;
 import org.apache.drill.exec.store.parquet.columnreaders.ParquetRecordReader;
 import org.apache.drill.exec.util.ImpersonationUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -121,6 +122,7 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
         final List<Integer> rowGroupNums = getRowGroupNumbersFromFileSplit(fileSplit, parquetMetadata);
 
         for(int rowGroupNum : rowGroupNums) {
+          boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(parquetMetadata, newColumns, rowGroupNum);
           readers.add(new ParquetRecordReader(
                   context,
                   Path.getPathWithoutSchemeAndAuthority(finalPath).toString(),
@@ -128,7 +130,8 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
                   CodecFactory.createDirectCodecFactory(fs.getConf(),
                       new ParquetDirectByteBufferAllocator(oContext.getAllocator()), 0),
                   parquetMetadata,
-                  newColumns)
+                  newColumns,
+                  containsCorruptDates)
           );
 
           if (hasPartitions) {
