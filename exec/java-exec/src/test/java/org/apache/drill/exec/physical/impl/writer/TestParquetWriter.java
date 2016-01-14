@@ -174,6 +174,9 @@ public class TestParquetWriter extends BaseTestQuery {
         .go();
   }
 
+  // TODO -currently failing, need to regenete the "correct" files with a version of
+  // 1.5 (no SNAPSHOT) in the metadata, the code has been updated to consider 1.5-SNAPSHOT files
+  // as invalid
   /**
    * Test reading a directory full of parquet files with dates, some of which have corrupted values
    * due to DRILL-4203.
