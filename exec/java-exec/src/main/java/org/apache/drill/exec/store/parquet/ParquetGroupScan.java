@@ -359,6 +359,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
     return columnTypeMap.get(schemaPath);
   }
 
+  // Map from file names to maps of column name to partition value mappings
   private Map<String, Map<SchemaPath, Object>> partitionValueMap = Maps.newHashMap();
 
   public void populatePruningVector(ValueVector v, int index, SchemaPath column, String file) {
@@ -444,7 +445,13 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
       case DATE: {
         NullableDateVector dateVector = (NullableDateVector) v;
         Integer value = (Integer) partitionValueMap.get(f).get(column);
-        dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+        // TODO - make this respect the value if the Drill version in the file metadata is greater than
+        // 1.5, as this is when the corrupt dates were fixed
+        if (value > 1_000_000) {
+          dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+        } else {
+          dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
+        }
         return;
       }
       case TIME: {

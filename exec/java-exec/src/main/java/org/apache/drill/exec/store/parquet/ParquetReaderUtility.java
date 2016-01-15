@@ -75,10 +75,18 @@ public class ParquetReaderUtility {
     return schemaElements;
   }
 
-  public static boolean detectCorruptDates(ParquetMetadata footer, List<SchemaPath> columns, int rowGroupIndex) {
+  /**
+   * Check for corrupted dates in a parquet file. See Drill-4203
+   * @param footer
+   * @param columns
+   * @return
+   */
+  public static boolean detectCorruptDates(ParquetMetadata footer, List<SchemaPath> columns) {
 
-    // old drill files have parquet-mr, no drill version, need to check min/max values to see if they look corrupt
-    //  - option to disable this auto-correction based on the date values, in case users are storing these dates intentionally
+    // old drill files have "parquet-mr" as created by string, and no drill version, need to check min/max values to see
+    // if they look corrupt
+    //  - option to disable this auto-correction based on the date values, in case users are storing these
+    //    dates intentionally
 
     // migrated parquet files have 1.8.1 parquet-mr version with drill-r0 in the part of the name usually containing "SNAPSHOT"
 
@@ -88,42 +96,13 @@ public class ParquetReaderUtility {
 
     String drillVersion = footer.getFileMetaData().getKeyValueMetaData().get(ParquetRecordWriter.DRILL_VERSION_PROPERTY);
     String createdBy = footer.getFileMetaData().getCreatedBy();
-    boolean corruptDates = false;
     try {
       if (drillVersion == null) {
         // Possibly an old, un-migrated Drill file, check the column statistics to see if min/max values look corrupt
         // only applies if there is a date column selected
         if (createdBy.equals("parquet-mr")) {
-          Map<String, SchemaElement> schemaElements = ParquetReaderUtility.getColNameToSchemaElementMapping(footer);
-          findDateColWithStatsLoop : for (SchemaPath schemaPath : columns) {
-            List<ColumnDescriptor> parquetColumns = footer.getFileMetaData().getSchema().getColumns();
-            for (int i = 0; i < parquetColumns.size(); ++i) {
-              ColumnDescriptor column = parquetColumns.get(i);
-              // this reader only supports flat data, this is restricted in the ParquetScanBatchCreator
-              // creating a NameSegment makes sure we are using the standard code for comparing names,
-              // currently it is all case-insensitive
-              if (AbstractRecordReader.isStarQuery(columns) || new PathSegment.NameSegment(column.getPath()[0]).equals(schemaPath.getRootSegment())) {
-                int colIndex = -1;
-                if (schemaElements.get(column.getPath()[0]).getConverted_type().equals(ConvertedType.DATE)) {
-                  List<ColumnChunkMetaData> colChunkList = footer.getBlocks().get(rowGroupIndex).getColumns();
-                  for (int j = 0; j < colChunkList.size(); j++) {
-                    if (colChunkList.get(j).getPath().equals(ColumnPath.get(column.getPath()))) {
-                      colIndex = j;
-                      break;
-                    }
-                  }
-                }
-                Preconditions.checkArgument(colIndex != -1, "Issue reading parquet metadata");
-                Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
-                Integer max = (Integer) statistics.genericGetMax();
-                // TODO - make sure this threshold is set well
-                if (statistics.hasNonNullValue() && max > 1_000_000) {
-                  corruptDates = true;
-                  break findDateColWithStatsLoop;
-                }
-              }
-            }
-          }
+          // loop through parquet column metadata to find date columns, check for corrupt valuues
+          return checkForCorruptDateValuesInStatistics(footer, columns);
         } else {
           // check the created by to see if it is a migrated Drill file
           VersionParser.ParsedVersion parsedCreatedByVersion = VersionParser.parse(createdBy);
@@ -131,7 +110,10 @@ public class ParquetReaderUtility {
           // "drill" in the parquet created-by string
           SemanticVersion semVer = parsedCreatedByVersion.getSemanticVersion();
           if (semVer.major == 1 && semVer.minor == 8 && semVer.patch == 1 && semVer.unknown.contains("drill")) {
-            corruptDates = true;
+            return true;
+          } else {
+            // written by a tool that wasn't Drill, the dates are not corrupted
+            return false;
           }
         }
       } else {
@@ -141,21 +123,65 @@ public class ParquetReaderUtility {
         if (parsedDrillVersion.application.equals("drill")) {
           SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
           if (semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
-            corruptDates = true;
+            return true;
           } else {
-            corruptDates = false;
+            return false;
           }
         } else { // Drill has always included parquet-mr as the application name in the file metadata
-          corruptDates = false;
+          return false;
         }
       }
     } catch (VersionParser.VersionParseException e) {
       // Default value of "false" if we cannot parse the version is fine, we are covering all
       // of the metadata values produced by historical versions of Drill
       // If Drill didn't write it the dates should be fine
+      return false;
     }
-    return corruptDates;
   }
 
-
+  /**
+   * Detect corrupt date values by looking at the min/max values in the metadata.
+   *
+   * This method only checks the first Row Group, because Drill has only ever written
+   * a single Row Group per file.
+   *
+   * @param footer
+   * @param columns
+   * @return
+   */
+  public static boolean checkForCorruptDateValuesInStatistics(ParquetMetadata footer, List<SchemaPath> columns) {
+    // Drill produced files have only ever have a single row group, if this changes in the future it won't matter
+    // as we will know from the Drill version written in the files that the dates are correct
+    int rowGroupIndex = 0;
+    Map<String, SchemaElement> schemaElements = ParquetReaderUtility.getColNameToSchemaElementMapping(footer);
+    findDateColWithStatsLoop : for (SchemaPath schemaPath : columns) {
+      List<ColumnDescriptor> parquetColumns = footer.getFileMetaData().getSchema().getColumns();
+      for (int i = 0; i < parquetColumns.size(); ++i) {
+        ColumnDescriptor column = parquetColumns.get(i);
+        // this reader only supports flat data, this is restricted in the ParquetScanBatchCreator
+        // creating a NameSegment makes sure we are using the standard code for comparing names,
+        // currently it is all case-insensitive
+        if (AbstractRecordReader.isStarQuery(columns) || new PathSegment.NameSegment(column.getPath()[0]).equals(schemaPath.getRootSegment())) {
+          int colIndex = -1;
+          if (schemaElements.get(column.getPath()[0]).getConverted_type().equals(ConvertedType.DATE)) {
+            List<ColumnChunkMetaData> colChunkList = footer.getBlocks().get(rowGroupIndex).getColumns();
+            for (int j = 0; j < colChunkList.size(); j++) {
+              if (colChunkList.get(j).getPath().equals(ColumnPath.get(column.getPath()))) {
+                colIndex = j;
+                break;
+              }
+            }
+          }
+          Preconditions.checkArgument(colIndex != -1, "Issue reading parquet metadata");
+          Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
+          Integer max = (Integer) statistics.genericGetMax();
+          // TODO - make sure this threshold is set well
+          if (statistics.hasNonNullValue() && max > 1_000_000) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
 }

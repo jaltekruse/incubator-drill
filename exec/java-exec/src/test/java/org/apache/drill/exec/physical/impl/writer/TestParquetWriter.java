@@ -32,6 +32,7 @@ import java.util.Map;
 
 import com.google.common.base.Joiner;
 import org.apache.drill.BaseTestQuery;
+import org.apache.drill.PlanTestBase;
 import org.apache.drill.TestBuilder;
 import org.apache.drill.common.util.DrillVersionInfo;
 import org.apache.drill.exec.ExecConstants;
@@ -55,7 +56,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-public class TestParquetWriter extends BaseTestQuery {
+public class TestParquetWriter extends PlanTestBase {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestParquetWriter.class);
 
   @Rule
@@ -125,6 +126,7 @@ public class TestParquetWriter extends BaseTestQuery {
   @Test
   public void testReadPartitionedOnCorruptedDates() throws Exception {
     for (String selection : new String[] {"*", "date_col"}) {
+      // for sanity, try reading all partitions without a filter
       testBuilder()
           .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203`")
           .unOrdered()
@@ -137,10 +139,14 @@ public class TestParquetWriter extends BaseTestQuery {
           .baselineValues(new DateTime(2015, 1, 1, 0, 0))
           .go();
 
-      // failing
+      String query = "select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203` " +
+              "where date_col = date '1970-01-01'";
+      // verify that pruning is actually taking place
+      testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+
+      // read with a filter on the partition column
       testBuilder()
-          .sqlQuery("select " + selection + " from dfs.`[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203` " +
-              "where date_col = date '1970-01-01'")
+          .sqlQuery(query)
           .unOrdered()
           .baselineColumns("date_col")
           .baselineValues(new DateTime(1970, 1, 1, 0, 0))

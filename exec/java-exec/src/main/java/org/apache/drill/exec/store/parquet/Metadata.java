@@ -40,6 +40,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.TimedRunnable;
 import org.apache.drill.exec.store.dfs.DrillPathFilter;
 import org.apache.hadoop.fs.BlockLocation;
@@ -52,6 +53,7 @@ import org.apache.parquet.schema.GroupType;
 import org.apache.parquet.schema.MessageType;
 import org.apache.parquet.schema.OriginalType;
 import org.apache.parquet.schema.Type;
+import org.apache.parquet.schema.Types;
 import org.codehaus.jackson.annotate.JsonIgnore;
 import org.apache.parquet.column.statistics.Statistics;
 import org.apache.parquet.hadoop.ParquetFileReader;
@@ -319,6 +321,9 @@ public class Metadata {
 
     List<RowGroupMetadata_v2> rowGroupMetadataList = Lists.newArrayList();
 
+    ArrayList<SchemaPath> ALL_COLS = new ArrayList<>();
+    ALL_COLS.add(AbstractRecordReader.STAR_COLUMN);
+    boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(metadata, ALL_COLS);
     for (BlockMetaData rowGroup : metadata.getBlocks()) {
       List<ColumnMetadata_v2> columnMetadataList = Lists.newArrayList();
       long length = 0;
@@ -362,7 +367,7 @@ public class Metadata {
     }
     String path = Path.getPathWithoutSchemeAndAuthority(file.getPath()).toString();
 
-    return new ParquetFileMetadata_v2(path, file.getLen(), rowGroupMetadataList);
+    return new ParquetFileMetadata_v2(path, file.getLen(), rowGroupMetadataList, containsCorruptDates);
   }
 
   /**
@@ -771,6 +776,7 @@ public class Metadata {
     @JsonProperty public ConcurrentHashMap<ColumnTypeMetadata_v2.Key, ColumnTypeMetadata_v2> columnTypeInfo;
     @JsonProperty List<ParquetFileMetadata_v2> files;
     @JsonProperty List<String> directories;
+    @JsonProperty String drillVersion;
 
     public ParquetTableMetadata_v2() {
       super();
@@ -821,15 +827,18 @@ public class Metadata {
     @JsonProperty public String path;
     @JsonProperty public Long length;
     @JsonProperty public List<RowGroupMetadata_v2> rowGroups;
+    // See DRILL-4203
+    private boolean containsCorruptDates;
 
     public ParquetFileMetadata_v2() {
       super();
     }
 
-    public ParquetFileMetadata_v2(String path, Long length, List<RowGroupMetadata_v2> rowGroups) {
+    public ParquetFileMetadata_v2(String path, Long length, List<RowGroupMetadata_v2> rowGroups, boolean containsCorruptDates) {
       this.path = path;
       this.length = length;
       this.rowGroups = rowGroups;
+      this.containsCorruptDates = containsCorruptDates;
     }
 
     @Override public String toString() {
@@ -838,6 +847,10 @@ public class Metadata {
 
     @JsonIgnore @Override public String getPath() {
       return path;
+    }
+
+    @JsonIgnore public boolean isContainsCorruptDates() {
+      return containsCorruptDates;
     }
 
     @JsonIgnore @Override public Long getLength() {
