@@ -205,11 +205,6 @@ public class TestParquetWriter extends PlanTestBase {
     }
   }
 
-
-
-  // TODO - test when one column with type DATE has all null values and another must have it's statistics
-  // checked
-
   /**
    * Read a directory with parquet files where some have corrupted dates, see DRILL-2403.
    * @throws Exception
