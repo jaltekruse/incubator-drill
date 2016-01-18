@@ -219,7 +219,9 @@ public class TestParquetWriter extends PlanTestBase {
           .unOrdered()
           .baselineColumns("date_col");
       // 3 files are in the directory:
-      //    - one created with 1.5 (update this file)
+      //    - one created with the fixed version of the reader, right before 1.5
+      //        - the code was change to write the version number 1.5 (without snapshot) into the file
+      //        - for compatibility all 1.5-SNAPSHOT files are read to correct the corrupt dates
       //    - one from and old version of Drill, before we put in proper created by in metadata
       //        - this is read properly by looking at a Max value in the file statistics, to see that
       //          it is way off of a typical date value
