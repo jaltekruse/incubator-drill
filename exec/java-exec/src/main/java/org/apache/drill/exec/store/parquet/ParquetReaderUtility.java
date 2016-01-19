@@ -81,8 +81,9 @@ public class ParquetReaderUtility {
    * @param columns
    * @return
    */
-  public static boolean detectCorruptDates(ParquetMetadata footer, List<SchemaPath> columns) {
-
+  public static boolean detectCorruptDates(ParquetMetadata footer,
+                                           List<SchemaPath> columns,
+                                           boolean autoCorrectCorruptDates) {
     // old drill files have "parquet-mr" as created by string, and no drill version, need to check min/max values to see
     // if they look corrupt
     //  - option to disable this auto-correction based on the date values, in case users are storing these
@@ -102,7 +103,7 @@ public class ParquetReaderUtility {
         // only applies if there is a date column selected
         if (createdBy.equals("parquet-mr")) {
           // loop through parquet column metadata to find date columns, check for corrupt valuues
-          return checkForCorruptDateValuesInStatistics(footer, columns);
+          return checkForCorruptDateValuesInStatistics(footer, columns, autoCorrectCorruptDates);
         } else {
           // check the created by to see if it is a migrated Drill file
           VersionParser.ParsedVersion parsedCreatedByVersion = VersionParser.parse(createdBy);
@@ -142,14 +143,25 @@ public class ParquetReaderUtility {
   /**
    * Detect corrupt date values by looking at the min/max values in the metadata.
    *
+   * This should only be used when a file does not have enough metadata to determine if
+   * the data was written with an older version of Drill, or an external tool. Drill
+   * versions 1.3 and beyond should have enough metadata to confirm that the data was written
+   * by Drill.
+   *
    * This method only checks the first Row Group, because Drill has only ever written
    * a single Row Group per file.
    *
    * @param footer
    * @param columns
+   * @param autoCorrectCorruptDates user setting to allow enabling/disabling of auto-correction
+   *                                of corrupt dates. There are some rare cases (storing dates hundreds
+   *                                of years into the future, with tools other than Drill writing files)
+   *                                that would result in the date values being "corrected" into bad values.
    * @return
    */
-  public static boolean checkForCorruptDateValuesInStatistics(ParquetMetadata footer, List<SchemaPath> columns) {
+  public static boolean checkForCorruptDateValuesInStatistics(ParquetMetadata footer,
+                                                              List<SchemaPath> columns,
+                                                              boolean autoCorrectCorruptDates) {
     // Drill produced files have only ever have a single row group, if this changes in the future it won't matter
     // as we will know from the Drill version written in the files that the dates are correct
     int rowGroupIndex = 0;
@@ -176,7 +188,7 @@ public class ParquetReaderUtility {
           Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
           Integer max = (Integer) statistics.genericGetMax();
           // TODO - make sure this threshold is set well
-          if (statistics.hasNonNullValue() && max > 1_000_000) {
+          if (autoCorrectCorruptDates && statistics.hasNonNullValue() && max > 1_000_000) {
             return true;
           }
         }

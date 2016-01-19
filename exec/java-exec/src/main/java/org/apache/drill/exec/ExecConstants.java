@@ -121,8 +121,8 @@ public interface ExecConstants {
       PARQUET_WRITER_ENABLE_DICTIONARY_ENCODING, false);
 
 
-  String PARQUET_SUPPRESS_DATE_CORRECTION = "store.parquet.auto_correct_corrupt_dates";
-  OptionValidator PARQUET_VECTOR_FILL_THRESHOLD_VALIDATOR = new BooleanValidator(PARQUET_VECTOR_FILL_THRESHOLD, 99l, 85l);
+  String AUTO_CORRECT_CORRUPT_DATES = "store.parquet.auto_correct_corrupt_dates";
+  OptionValidator AUTO_CORRECT_CORRUPT_DATES_VALIDATOR = new BooleanValidator(AUTO_CORRECT_CORRUPT_DATES, true);
 
   String PARQUET_VECTOR_FILL_THRESHOLD = "store.parquet.vector_fill_threshold";
   OptionValidator PARQUET_VECTOR_FILL_THRESHOLD_VALIDATOR = new PositiveLongValidator(PARQUET_VECTOR_FILL_THRESHOLD, 99l, 85l);

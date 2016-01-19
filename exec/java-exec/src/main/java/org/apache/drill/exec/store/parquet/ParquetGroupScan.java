@@ -113,6 +113,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
   private final ParquetFormatConfig formatConfig;
   private final DrillFileSystem fs;
   private final String selectionRoot;
+  private final boolean autoCorrectCorruptDates;
 
   private boolean usedMetadataCache = false;
   private List<EndpointAffinity> endpointAffinities;
@@ -158,7 +159,10 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
     this.formatConfig = formatPlugin.getConfig();
     this.entries = entries;
     this.selectionRoot = selectionRoot;
-
+    // when this is deserialized from JSON and we actually read the files
+    // we will be reading the metadata again as well as checking the system/setting option
+    // there is no need to duplicate that information in the plan
+    autoCorrectCorruptDates = false;
     init();
   }
 
@@ -167,7 +171,8 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
       FileSelection selection, //
       ParquetFormatPlugin formatPlugin, //
       String selectionRoot,
-      List<SchemaPath> columns) //
+      List<SchemaPath> columns,
+      boolean autoCorrectCorruptDates) // See DRILL-4203
       throws IOException {
     super(userName);
     this.formatPlugin = formatPlugin;
@@ -186,7 +191,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
       final ParquetFileSelection pfs = ParquetFileSelection.class.cast(selection);
       this.parquetTableMetadata = pfs.getParquetMetadata();
     }
-
+    this.autoCorrectCorruptDates = autoCorrectCorruptDates;
     init();
   }
 
@@ -211,6 +216,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
     this.fileSet = that.fileSet == null ? null : new HashSet(that.fileSet);
     this.usedMetadataCache = that.usedMetadataCache;
     this.parquetTableMetadata = that.parquetTableMetadata;
+    this.autoCorrectCorruptDates = that.autoCorrectCorruptDates;
   }
 
 
@@ -447,7 +453,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
         Integer value = (Integer) partitionValueMap.get(f).get(column);
         // TODO - make this respect the value if the Drill version in the file metadata is greater than
         // 1.5, as this is when the corrupt dates were fixed
-        if (value > 1_000_000) {
+        if (autoCorrectCorruptDates && value > 1_000_000) {
           dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value - ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));
         } else {
           dateVector.getMutator().setSafe(index, DateTimeUtils.fromJulianDay(value + ParquetOutputRecordWriter.JULIAN_DAY_EPOC - 0.5));

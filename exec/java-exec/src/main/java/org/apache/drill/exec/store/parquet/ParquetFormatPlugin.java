@@ -164,7 +164,9 @@ public class ParquetFormatPlugin implements FormatPlugin{
   @Override
   public ParquetGroupScan getGroupScan(String userName, FileSelection selection, List<SchemaPath> columns)
       throws IOException {
-    return new ParquetGroupScan(userName, selection, this, selection.selectionRoot, columns);
+
+    boolean autoCorrectCorruptDates = context.getOptionManager().getOption(ExecConstants.AUTO_CORRECT_CORRUPT_DATES).bool_val;
+    return new ParquetGroupScan(userName, selection, this, selection.selectionRoot, columns, autoCorrectCorruptDates);
   }
 
   @Override

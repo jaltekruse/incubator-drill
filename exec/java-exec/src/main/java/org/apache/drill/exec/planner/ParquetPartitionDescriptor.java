@@ -20,6 +20,7 @@ package org.apache.drill.exec.planner;
 import org.apache.calcite.util.BitSets;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.types.TypeProtos;
+import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.physical.base.FileGroupScan;
 import org.apache.drill.exec.physical.base.GroupScan;
 import org.apache.drill.exec.planner.logical.DrillScanRel;
@@ -46,8 +47,11 @@ public class ParquetPartitionDescriptor extends AbstractPartitionDescriptor {
 
   private final List<SchemaPath> partitionColumns;
   private final DrillScanRel scanRel;
+  private final boolean userOverrideCorruptDateCorrection;
 
   public ParquetPartitionDescriptor(PlannerSettings settings, DrillScanRel scanRel) {
+    userOverrideCorruptDateCorrection =
+        settings.getOptions().getOption(ExecConstants.AUTO_CORRECT_CORRUPT_DATES).bool_val;
     ParquetGroupScan scan = (ParquetGroupScan) scanRel.getGroupScan();
     this.partitionColumns = scan.getPartitionColumns();
     this.scanRel = scanRel;
