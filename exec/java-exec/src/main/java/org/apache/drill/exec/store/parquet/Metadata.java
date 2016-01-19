@@ -40,6 +40,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.drill.common.expression.SchemaPath;
+import org.apache.drill.common.util.DrillVersionInfo;
 import org.apache.drill.exec.store.AbstractRecordReader;
 import org.apache.drill.exec.store.TimedRunnable;
 import org.apache.drill.exec.store.dfs.DrillPathFilter;
@@ -776,6 +777,9 @@ public class Metadata {
     @JsonProperty public ConcurrentHashMap<ColumnTypeMetadata_v2.Key, ColumnTypeMetadata_v2> columnTypeInfo;
     @JsonProperty List<ParquetFileMetadata_v2> files;
     @JsonProperty List<String> directories;
+    // TODO - do I need to make a new version of this metadata class? This should just be an optional field that is
+    // left null in the case where it didn't appear in the cache file (because it was written with an old
+    // version of Drill)
     @JsonProperty String drillVersion;
 
     public ParquetTableMetadata_v2() {
@@ -787,6 +791,7 @@ public class Metadata {
       this.files = files;
       this.directories = directories;
       this.columnTypeInfo = ((ParquetTableMetadata_v2) parquetTable).columnTypeInfo;
+      this.drillVersion = DrillVersionInfo.getVersion();
     }
 
     public ColumnTypeMetadata_v2 getColumnTypeInfo(String[] name) {
