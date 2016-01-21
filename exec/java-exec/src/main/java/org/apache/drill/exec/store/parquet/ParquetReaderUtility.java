@@ -162,6 +162,12 @@ public class ParquetReaderUtility {
   public static boolean checkForCorruptDateValuesInStatistics(ParquetMetadata footer,
                                                               List<SchemaPath> columns,
                                                               boolean autoCorrectCorruptDates) {
+    // Users can turn-off date correction in cases where we are detecting corruption based on the date values
+    // that are unlikely to appear in common datasets. In this case report that no correction needs to happen
+    // during the file read
+    if (! autoCorrectCorruptDates) {
+      return false;
+    }
     // Drill produced files have only ever have a single row group, if this changes in the future it won't matter
     // as we will know from the Drill version written in the files that the dates are correct
     int rowGroupIndex = 0;
@@ -188,7 +194,7 @@ public class ParquetReaderUtility {
           Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
           Integer max = (Integer) statistics.genericGetMax();
           // TODO - make sure this threshold is set well
-          if (autoCorrectCorruptDates && statistics.hasNonNullValue() && max > 1_000_000) {
+          if (statistics.hasNonNullValue() && max > 1_000_000) {
             return true;
           }
         }
