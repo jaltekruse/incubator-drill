@@ -137,7 +137,7 @@ public class ParquetScanBatchCreator implements BatchCreator<ParquetRowGroupScan
           logger.trace("ParquetTrace,Read Footer,{},{},{},{},{},{},{}", "", e.getPath(), "", 0, 0, 0, timeToRead);
           footers.put(e.getPath(), footer );
         }
-        boolean autoCorrectCorruptDates = context.getOptions().getOption(ExecConstants.AUTO_CORRECT_CORRUPT_DATES).bool_val;
+        boolean autoCorrectCorruptDates = rowGroupScan.formatConfig.autoCorrectCorruptDates;
         boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(footers.get(e.getPath()), rowGroupScan.getColumns(),
                 autoCorrectCorruptDates);
         if (!context.getOptions().getOption(ExecConstants.PARQUET_NEW_RECORD_READER).bool_val && !isComplex(footers.get(e.getPath()))) {

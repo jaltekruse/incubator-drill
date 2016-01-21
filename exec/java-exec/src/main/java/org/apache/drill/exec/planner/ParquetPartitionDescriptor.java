@@ -50,8 +50,7 @@ public class ParquetPartitionDescriptor extends AbstractPartitionDescriptor {
   private final boolean userOverrideCorruptDateCorrection;
 
   public ParquetPartitionDescriptor(PlannerSettings settings, DrillScanRel scanRel) {
-    userOverrideCorruptDateCorrection =
-        settings.getOptions().getOption(ExecConstants.AUTO_CORRECT_CORRUPT_DATES).bool_val;
+    userOverrideCorruptDateCorrection = ((ParquetGroupScan)scanRel.getGroupScan()).getFormatConfig().autoCorrectCorruptDates;
     ParquetGroupScan scan = (ParquetGroupScan) scanRel.getGroupScan();
     this.partitionColumns = scan.getPartitionColumns();
     this.scanRel = scanRel;

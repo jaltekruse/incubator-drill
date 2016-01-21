@@ -165,7 +165,8 @@ public class ParquetFormatPlugin implements FormatPlugin{
   public ParquetGroupScan getGroupScan(String userName, FileSelection selection, List<SchemaPath> columns)
       throws IOException {
 
-    boolean autoCorrectCorruptDates = context.getOptionManager().getOption(ExecConstants.AUTO_CORRECT_CORRUPT_DATES).bool_val;
+    // TODO - need to check file metadata here
+    boolean autoCorrectCorruptDates = config.autoCorrectCorruptDates;
     return new ParquetGroupScan(userName, selection, this, selection.selectionRoot, columns, autoCorrectCorruptDates);
   }
 

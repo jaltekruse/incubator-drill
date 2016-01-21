@@ -324,7 +324,8 @@ public class Metadata {
 
     ArrayList<SchemaPath> ALL_COLS = new ArrayList<>();
     ALL_COLS.add(AbstractRecordReader.STAR_COLUMN);
-    // TODO - grab option value to set the last flat here
+    // TODO - grab option value to set the last flag here
+
     boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(metadata, ALL_COLS, false);
     for (BlockMetaData rowGroup : metadata.getBlocks()) {
       List<ColumnMetadata_v2> columnMetadataList = Lists.newArrayList();
