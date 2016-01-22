@@ -17,7 +17,6 @@
  */
 package org.apache.drill.exec.physical.impl.writer;
 
-import org.apache.drill.BaseTestQuery;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.TestBuilder;
 import org.apache.drill.common.util.TestTools;
@@ -36,8 +35,6 @@ import java.util.regex.Pattern;
 
 public class TestCorruptParquetDateCorrection extends PlanTestBase {
 
-  private static final String ROOT_TEST_FILES_DIR=
-      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/";
   // 3 files are in the directory:
   //    - one created with the fixed version of the reader, right before 1.5
   //        - the code was changed to write the version number 1.5 (without snapshot) into the file
@@ -299,62 +296,49 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     outSteam.writeBytes(metadataFileContents.replace("REPLACED_IN_TEST", path.toString()));
     outSteam.close();
 
-    try {
-      for (String selection : new String[]{"*", "date_col"}) {
-        // for sanity, try reading all partitions without a filter
-        String query = "select " + selection + " from dfs.`" + new Path(path.toString(), folder) + "/`";
-        System.out.println(query);
-        TestBuilder builder = testBuilder()
-            .sqlQuery(query)
-            .unOrdered()
-            .baselineColumns("date_col");
-        addDateBaselineVals(builder);
-        builder.go();
+    // for sanity, try reading all partitions without a filter
+    String query = "select date_col from dfs.`" + new Path(path.toString(), folder) + "/`";
+    TestBuilder builder = testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("date_col");
+    addDateBaselineVals(builder);
+    builder.go();
 
-        query = "select " + selection + " from dfs.`" + new Path(path.toString(), folder) + "/`" +
-            " where date_col = date '1970-01-01'";
-        // verify that pruning is actually taking place
-        testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+    query = "select date_col from dfs.`" + new Path(path.toString(), folder) + "/`" +
+        " where date_col = date '1970-01-01'";
+    // verify that pruning is actually taking place
+    testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
 
-        // read with a filter on the partition column
-        testBuilder()
-            .sqlQuery(query)
-            .unOrdered()
-            .baselineColumns("date_col")
-            .baselineValues(new DateTime(1970, 1, 1, 0, 0))
-            .go();
-      }
-    } finally {
-      test("alter session reset all");
-    }
+    // read with a filter on the partition column
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("date_col")
+        .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+        .go();
 
-    try {
-      for (String selection : new String[]{"*", "date_col"}) {
-        // for sanity, try reading all partitions without a filter
-        TestBuilder builder = testBuilder()
-            .sqlQuery("select " + selection + " from table(dfs.`" + path.toString() + "`" +
-                "(type => 'parquet', autoCorrectCorruptDates => false))")
-            .unOrdered()
-            .baselineColumns("date_col");
-        addCorruptedDateBaselineVals(builder);
-        builder.go();
+    // for sanity, try reading all partitions without a filter
+    builder = testBuilder()
+        .sqlQuery("select date_col from table(dfs.`" + path.toString() + "/`" +
+            "(type => 'parquet', autoCorrectCorruptDates => false))")
+        .unOrdered()
+        .baselineColumns("date_col");
+    addCorruptedDateBaselineVals(builder);
+    builder.go();
 
-        String query = "select " + selection + " from table(dfs.`" + path.toString() + "` " +
-            "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = cast('15334-03-17' as date)";
-        // verify that pruning is actually taking place
-        testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+    query = "select date_col from table(dfs.`" + path.toString() + "/` " +
+        "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = cast('15334-03-17' as date)";
+    // verify that pruning is actually taking place
+    testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
 
-        // read with a filter on the partition column
-        testBuilder()
-            .sqlQuery(query)
-            .unOrdered()
-            .baselineColumns("date_col")
-            .baselineValues(new DateTime(15334, 03, 17, 0, 0))
-            .go();
-      }
-    } finally {
-      test("alter session reset all");
-    }
+    // read with a filter on the partition column
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("date_col")
+        .baselineValues(new DateTime(15334, 03, 17, 0, 0))
+        .go();
   }
 
   /**
