@@ -42,6 +42,7 @@ import com.google.common.collect.Maps;
 import org.apache.drill.common.expression.SchemaPath;
 import org.apache.drill.common.util.DrillVersionInfo;
 import org.apache.drill.exec.store.AbstractRecordReader;
+import org.apache.drill.exec.store.ParquetOutputRecordWriter;
 import org.apache.drill.exec.store.TimedRunnable;
 import org.apache.drill.exec.store.dfs.DrillPathFilter;
 import org.apache.hadoop.fs.BlockLocation;
@@ -79,6 +80,7 @@ public class Metadata {
   public static final String METADATA_FILENAME = ".drill.parquet_metadata";
 
   private final FileSystem fs;
+  private final ParquetFormatConfig formatConfig;
 
   /**
    * Create the parquet metadata file for the directory at the given path, and for any subdirectories
@@ -87,8 +89,8 @@ public class Metadata {
    * @param path
    * @throws IOException
    */
-  public static void createMeta(FileSystem fs, String path) throws IOException {
-    Metadata metadata = new Metadata(fs);
+  public static void createMeta(FileSystem fs, String path, ParquetFormatConfig formatConfig) throws IOException {
+    Metadata metadata = new Metadata(fs, formatConfig);
     metadata.createMetaFilesRecursively(path);
   }
 
@@ -100,9 +102,9 @@ public class Metadata {
    * @return
    * @throws IOException
    */
-  public static ParquetTableMetadata_v2 getParquetTableMetadata(FileSystem fs, String path)
+  public static ParquetTableMetadata_v2 getParquetTableMetadata(FileSystem fs, String path, ParquetFormatConfig formatConfig)
       throws IOException {
-    Metadata metadata = new Metadata(fs);
+    Metadata metadata = new Metadata(fs, formatConfig);
     return metadata.getParquetTableMetadata(path);
   }
 
@@ -115,8 +117,8 @@ public class Metadata {
    * @throws IOException
    */
   public static ParquetTableMetadata_v2 getParquetTableMetadata(FileSystem fs,
-      List<FileStatus> fileStatuses) throws IOException {
-    Metadata metadata = new Metadata(fs);
+      List<FileStatus> fileStatuses, ParquetFormatConfig formatConfig) throws IOException {
+    Metadata metadata = new Metadata(fs, formatConfig);
     return metadata.getParquetTableMetadata(fileStatuses);
   }
 
@@ -128,13 +130,14 @@ public class Metadata {
    * @return
    * @throws IOException
    */
-  public static ParquetTableMetadataBase readBlockMeta(FileSystem fs, String path) throws IOException {
-    Metadata metadata = new Metadata(fs);
+  public static ParquetTableMetadataBase readBlockMeta(FileSystem fs, String path, ParquetFormatConfig formatConfig) throws IOException {
+    Metadata metadata = new Metadata(fs, formatConfig);
     return metadata.readBlockMeta(path);
   }
 
-  private Metadata(FileSystem fs) {
+  private Metadata(FileSystem fs, ParquetFormatConfig formatConfig) {
     this.fs = fs;
+    this.formatConfig = formatConfig;
   }
 
   /**
@@ -325,8 +328,8 @@ public class Metadata {
     ArrayList<SchemaPath> ALL_COLS = new ArrayList<>();
     ALL_COLS.add(AbstractRecordReader.STAR_COLUMN);
     // TODO - grab option value to set the last flag here
-
-    boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(metadata, ALL_COLS, false);
+    boolean autoCorrectCorruptDates = formatConfig.autoCorrectCorruptDates;
+    boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(metadata, ALL_COLS, autoCorrectCorruptDates);
     for (BlockMetaData rowGroup : metadata.getBlocks()) {
       List<ColumnMetadata_v2> columnMetadataList = Lists.newArrayList();
       long length = 0;
@@ -352,6 +355,11 @@ public class Metadata {
           if (stats.genericGetMax() != null && stats.genericGetMin() != null && stats.genericGetMax()
               .equals(stats.genericGetMin())) {
             mxValue = stats.genericGetMax();
+            if (containsCorruptDates && columnTypeMetadata.originalType == OriginalType.DATE) {
+              int maxValInt = (Integer) mxValue;
+              maxValInt -= 2 * ParquetOutputRecordWriter.JULIAN_DAY_EPOC;
+              mxValue = maxValInt;
+            }
           }
           columnMetadata =
               new ColumnMetadata_v2(columnTypeMetadata.name, col.getType(), mxValue, stats.getNumNulls());
@@ -834,8 +842,6 @@ public class Metadata {
     @JsonProperty public String path;
     @JsonProperty public Long length;
     @JsonProperty public List<RowGroupMetadata_v2> rowGroups;
-    // See DRILL-4203
-    private boolean containsCorruptDates;
 
     public ParquetFileMetadata_v2() {
       super();
@@ -845,7 +851,6 @@ public class Metadata {
       this.path = path;
       this.length = length;
       this.rowGroups = rowGroups;
-      this.containsCorruptDates = containsCorruptDates;
     }
 
     @Override public String toString() {
@@ -854,10 +859,6 @@ public class Metadata {
 
     @JsonIgnore @Override public String getPath() {
       return path;
-    }
-
-    @JsonIgnore public boolean isContainsCorruptDates() {
-      return containsCorruptDates;
     }
 
     @JsonIgnore @Override public Long getLength() {

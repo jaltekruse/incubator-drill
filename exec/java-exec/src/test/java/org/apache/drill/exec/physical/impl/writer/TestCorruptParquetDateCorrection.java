@@ -117,6 +117,37 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       test("alter session reset all");
     }
   }
+
+  @Test
+  public void testCorruptValDetectionDuringPruning() throws Exception {
+    try {
+      for (String selection : new String[]{"*", "date_col"}) {
+        // for sanity, try reading all partitions without a filter
+        TestBuilder builder = testBuilder()
+            .sqlQuery("select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "`")
+            .unOrdered()
+            .baselineColumns("date_col");
+        addDateBaselineVals(builder);
+        builder.go();
+
+        String query = "select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "`" +
+            " where date_col = date '1970-01-01'";
+        // verify that pruning is actually taking place
+        testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+
+        // read with a filter on the partition column
+        testBuilder()
+            .sqlQuery(query)
+            .unOrdered()
+            .baselineColumns("date_col")
+            .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+            .go();
+      }
+    } finally {
+      test("alter session reset all");
+    }
+  }
+
   /**
    * To fix some of the corrupted dates fixed as part of DRILL-4203 it requires
    * actually looking at the values stored in the file. A column with date values

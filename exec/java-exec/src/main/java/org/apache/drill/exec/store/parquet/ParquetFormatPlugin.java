@@ -226,7 +226,8 @@ public class ParquetFormatPlugin implements FormatPlugin{
         Path metaFilePath = getMetadataPath(metaRootDir);
 
         // get the metadata for the directory by reading the metadata file
-        Metadata.ParquetTableMetadataBase metadata  = Metadata.readBlockMeta(fs, metaFilePath.toString());
+        Metadata.ParquetTableMetadataBase metadata  = Metadata.readBlockMeta(fs, metaFilePath.toString(),
+            (ParquetFormatConfig) getFormatPlugin().getConfig());
         List<String> fileNames = Lists.newArrayList();
         for (Metadata.ParquetFileMetadata file : metadata.getFiles()) {
           fileNames.add(file.getPath());
