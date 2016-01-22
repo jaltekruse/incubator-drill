@@ -20,9 +20,18 @@ package org.apache.drill.exec.physical.impl.writer;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.TestBuilder;
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.joda.time.DateTime;
+import org.junit.BeforeClass;
 import org.junit.Test;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TestCorruptParquetDateCorrection extends PlanTestBase {
 
@@ -36,19 +45,28 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
   //        - this behavior will be able to be turned off, but will be on by default
   //    - one from 1.4, where there is a proper created-by, but the corruption is present
   private static final String MIXED_CORRUPTED_AND_CORRECTED_DATES_DIR =
-      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates";
+      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/mixed_drill_versions";
   // partitioned with 1.4.0, date values are known to be corrupt
   private static final String CORRUPTED_PARTITIONED_DATES_DIR =
-      "[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203";
+      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/partitioned_with_corruption_4203";
   // partitioned with 1.2.0, no certain metadata that these were written with Drill
   // the value will be checked to see that they look corrupt and they will be corrected
   // by default. Users can use the format plugin option autoCorrectCorruptDates to disable
   // this behavior if they have foreign parquet files with valid rare date values that are
   // in the similar range as Drill's corrupt values
   private static final String CORRUPTED_PARTITIONED_DATES_DIR_1_2 =
-      "[WORKING_PATH]/src/test/resources/parquet/partitioned_with_corruption_4203_1_2";
+      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/partitioned_with_corruption_4203_1_2";
   private static final String PARQUET_DATE_FILE_WITH_NULL_FILLED_COLS =
-      "[WORKING_PATH]/src/test/resources/parquet/null_date_cols_with_corruption_4203.parquet";
+      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/null_date_cols_with_corruption_4203.parquet";
+
+  private static FileSystem fs;
+
+  @BeforeClass
+  public static void initFs() throws Exception {
+    Configuration conf = new Configuration();
+    conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "local");
+    fs = FileSystem.get(conf);
+  }
 
   /**
    * Test reading a directory full of partitioned parquet files with dates, these files have a drill version
@@ -177,7 +195,6 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
   @Test
   public void testUserOverrideDateCorrection() throws Exception {
     // TODO - make sure to test override of metadata cache file read
-    // TODO - make sure to test override of reading actual data
 
     // read once with the flat reader
     readFilesWithUserDisabledAutoCorrection();
@@ -251,6 +268,23 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       addDateBaselineVals(builder);
       addCorruptedDateBaselineVals(builder);
       builder.go();
+    }
+  }
+
+  @Test
+  public void testReadOldMetadataCacheFile() throws Exception {
+    // Move files into temp directory, rewrite the metadata cache file to contain the appropriate absolute
+    // path
+    Path path = new Path(new Path(getDfsTestTmpSchemaLocation()), "drill_4203_read_old_par_meta_cache");
+    fs.mkdirs(path);
+    fs.copyFromLocalFile(
+        new Path(CORRUPTED_PARTITIONED_DATES_DIR_1_2
+            .replaceAll(Pattern.quote("[WORKING_PATH]"), Matcher.quoteReplacement(TestTools.getWorkingPath()))),
+        path);
+    for (FileStatus fStatus : fs.listStatus(path)) {
+      for (FileStatus fStatus2 : fs.listStatus(fStatus.getPath())) {
+        System.out.println(fStatus2.getPath().toString());
+      }
     }
   }
 
