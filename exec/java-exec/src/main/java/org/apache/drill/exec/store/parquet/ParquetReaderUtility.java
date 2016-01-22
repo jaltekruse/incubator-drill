@@ -147,7 +147,7 @@ public class ParquetReaderUtility {
           // check if this is a migrated Drill file, lacking a Drill version number, but with
           // "drill" in the parquet created-by string
           SemanticVersion semVer = parsedCreatedByVersion.getSemanticVersion();
-          if (semVer.major == 1 && semVer.minor == 8 && semVer.patch == 1 && semVer.unknown.contains("drill")) {
+          if (semVer != null && semVer.major == 1 && semVer.minor == 8 && semVer.patch == 1 && semVer.unknown.contains("drill")) {
             return true;
           } else {
             // written by a tool that wasn't Drill, the dates are not corrupted
@@ -170,7 +170,7 @@ public class ParquetReaderUtility {
   public static boolean drillVersionHasCorruptedDates(String drillVersion) throws VersionParser.VersionParseException {
     VersionParser.ParsedVersion parsedDrillVersion = parseDrillVersion(drillVersion);
     SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
-    if (semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
+    if (semVer == null || semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
       return true;
     } else {
       return false;
@@ -233,7 +233,10 @@ public class ParquetReaderUtility {
               }
             }
           }
-          Preconditions.checkArgument(colIndex != -1, "Issue reading parquet metadata");
+          if (colIndex == -1) {
+            // column does not appear in this file, skip it
+            continue;
+          }
           Statistics statistics = footer.getBlocks().get(rowGroupIndex).getColumns().get(colIndex).getStatistics();
           Integer max = (Integer) statistics.genericGetMax();
           // TODO - make sure this threshold is set well

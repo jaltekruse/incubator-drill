@@ -228,15 +228,15 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
   @Test
   public void testReadCorruptDatesWithNullFilledColumns() throws Exception {
     testBuilder()
-        .sqlQuery("select null_dates_1, null_dates_2, date_col from dfs.`" + PARQUET_DATE_FILE_WITH_NULL_FILLED_COLS + "`")
+        .sqlQuery("select null_dates_1, null_dates_2, non_existent_field, date_col from dfs.`" + PARQUET_DATE_FILE_WITH_NULL_FILLED_COLS + "`")
         .unOrdered()
-        .baselineColumns("null_dates_1", "null_dates_2", "date_col")
-        .baselineValues(null, null, new DateTime(1970, 1, 1, 0, 0))
-        .baselineValues(null, null, new DateTime(1970, 1, 2, 0, 0))
-        .baselineValues(null, null, new DateTime(1969, 12, 31, 0, 0))
-        .baselineValues(null, null, new DateTime(1969, 12, 30, 0, 0))
-        .baselineValues(null, null, new DateTime(1900, 1, 1, 0, 0))
-        .baselineValues(null, null, new DateTime(2015, 1, 1, 0, 0))
+        .baselineColumns("null_dates_1", "null_dates_2", "non_existent_field", "date_col")
+        .baselineValues(null, null, null, new DateTime(1970, 1, 1, 0, 0))
+        .baselineValues(null, null, null, new DateTime(1970, 1, 2, 0, 0))
+        .baselineValues(null, null, null, new DateTime(1969, 12, 31, 0, 0))
+        .baselineValues(null, null, null, new DateTime(1969, 12, 30, 0, 0))
+        .baselineValues(null, null, null, new DateTime(1900, 1, 1, 0, 0))
+        .baselineValues(null, null, null, new DateTime(2015, 1, 1, 0, 0))
         .go();
   }
 
