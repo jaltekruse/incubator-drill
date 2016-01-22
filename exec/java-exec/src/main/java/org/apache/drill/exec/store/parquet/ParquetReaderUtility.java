@@ -223,7 +223,8 @@ public class ParquetReaderUtility {
         // currently it is all case-insensitive
         if (AbstractRecordReader.isStarQuery(columns) || new PathSegment.NameSegment(column.getPath()[0]).equals(schemaPath.getRootSegment())) {
           int colIndex = -1;
-          if (schemaElements.get(column.getPath()[0]).getConverted_type().equals(ConvertedType.DATE)) {
+          ConvertedType convertedType = schemaElements.get(column.getPath()[0]).getConverted_type();
+          if (convertedType != null && convertedType.equals(ConvertedType.DATE)) {
             List<ColumnChunkMetaData> colChunkList = footer.getBlocks().get(rowGroupIndex).getColumns();
             for (int j = 0; j < colChunkList.size(); j++) {
               if (colChunkList.get(j).getPath().equals(ColumnPath.get(column.getPath()))) {
