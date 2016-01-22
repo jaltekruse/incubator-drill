@@ -30,6 +30,7 @@ import org.joda.time.DateTime;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -60,12 +61,16 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/null_date_cols_with_corruption_4203.parquet";
 
   private static FileSystem fs;
+  private static Path path;
+  static String PARTITIONED_1_2_FOLDER = "partitioned_with_corruption_4203_1_2";
 
   @BeforeClass
   public static void initFs() throws Exception {
     Configuration conf = new Configuration();
     conf.set(FileSystem.FS_DEFAULT_NAME_KEY, "local");
     fs = FileSystem.get(conf);
+    path = new Path(getDfsTestTmpSchemaLocation());
+    copyOldPartitionedFilesToTempSpace();
   }
 
   /**
@@ -271,16 +276,13 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     }
   }
 
-  private String replaceWorkingPathInString(String orig) {
+  private static String replaceWorkingPathInString(String orig) {
     return orig.replaceAll(Pattern.quote("[WORKING_PATH]"), Matcher.quoteReplacement(TestTools.getWorkingPath()));
   }
 
-  @Test
-  public void testReadOldMetadataCacheFile() throws Exception {
+  private static void copyOldPartitionedFilesToTempSpace() throws IOException {
     // Move files into temp directory, rewrite the metadata cache file to contain the appropriate absolute
     // path
-    String folder = "partitioned_with_corruption_4203_1_2";
-    Path path = new Path(getDfsTestTmpSchemaLocation());
     fs.mkdirs(path);
     fs.copyFromLocalFile(
         new Path(replaceWorkingPathInString(CORRUPTED_PARTITIONED_DATES_DIR_1_2)),
@@ -291,24 +293,31 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       }
     }
     String metadataFileContents = getFile("parquet/4203_corrupt_dates/drill.parquet.metadata_1_2.requires_replace");
-    Path newMetaCache = new Path(path, ".drill.parquet_metadata");
+    Path newMetaCache = new Path(new Path(path, PARTITIONED_1_2_FOLDER), ".drill.parquet_metadata");
     FSDataOutputStream outSteam = fs.create(newMetaCache);
     outSteam.writeBytes(metadataFileContents.replace("REPLACED_IN_TEST", path.toString()));
     outSteam.close();
+  }
 
+  @Test
+  public void testReadOldMetadataCacheFile() throws Exception {
     // for sanity, try reading all partitions without a filter
-    String query = "select date_col from dfs.`" + new Path(path.toString(), folder) + "/`";
+    String query = "select date_col from dfs.`" + new Path(path, PARTITIONED_1_2_FOLDER) + "`";
     TestBuilder builder = testBuilder()
         .sqlQuery(query)
         .unOrdered()
         .baselineColumns("date_col");
     addDateBaselineVals(builder);
     builder.go();
+    testPlanMatchingPatterns(query, new String[]{"usedMetadataFile=true"}, null);
+  }
 
-    query = "select date_col from dfs.`" + new Path(path.toString(), folder) + "/`" +
+  @Test
+  public void testReadOldMetadataCacheFile2() throws Exception {
+    String query = "select date_col from dfs.`" + new Path(path, PARTITIONED_1_2_FOLDER) + "`" +
         " where date_col = date '1970-01-01'";
     // verify that pruning is actually taking place
-    testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+    testPlanMatchingPatterns(query, new String[]{"numFiles=1", "usedMetadataFile=true"}, null);
 
     // read with a filter on the partition column
     testBuilder()
@@ -317,20 +326,23 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
         .baselineColumns("date_col")
         .baselineValues(new DateTime(1970, 1, 1, 0, 0))
         .go();
+  }
 
+  @Test
+  public void testReadOldMetadataCacheFile3() throws Exception {
     // for sanity, try reading all partitions without a filter
-    builder = testBuilder()
-        .sqlQuery("select date_col from table(dfs.`" + path.toString() + "/`" +
+    TestBuilder builder = testBuilder()
+        .sqlQuery("select date_col from table(dfs.`" + new Path(path, PARTITIONED_1_2_FOLDER) + "`" +
             "(type => 'parquet', autoCorrectCorruptDates => false))")
         .unOrdered()
         .baselineColumns("date_col");
     addCorruptedDateBaselineVals(builder);
     builder.go();
 
-    query = "select date_col from table(dfs.`" + path.toString() + "/` " +
+    String query = "select date_col from table(dfs.`" + new Path(path, PARTITIONED_1_2_FOLDER) + "` " +
         "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = cast('15334-03-17' as date)";
     // verify that pruning is actually taking place
-    testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+    testPlanMatchingPatterns(query, new String[]{"numFiles=1", "usedMetadataFile=true"}, null);
 
     // read with a filter on the partition column
     testBuilder()

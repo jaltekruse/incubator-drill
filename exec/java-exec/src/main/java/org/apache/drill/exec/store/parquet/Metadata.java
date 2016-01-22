@@ -356,9 +356,7 @@ public class Metadata {
               .equals(stats.genericGetMin())) {
             mxValue = stats.genericGetMax();
             if (containsCorruptDates && columnTypeMetadata.originalType == OriginalType.DATE) {
-              int maxValInt = (Integer) mxValue;
-              maxValInt -= 2 * ParquetOutputRecordWriter.JULIAN_DAY_EPOC;
-              mxValue = maxValInt;
+              mxValue = ParquetReaderUtility.autoCorrectCorruptedDate((Integer) mxValue);
             }
           }
           columnMetadata =
@@ -537,6 +535,15 @@ public class Metadata {
     public abstract boolean hasSingleValue();
 
     public abstract Object getMaxValue();
+
+    /**
+     * This object would just be immutable, but due to Drill-4203 we need to correct
+     * date values that had been corrupted by earlier versions of Drill.
+     * @return
+     */
+    public abstract void setMax(Object newMax);
+
+    public abstract void setMin(Object newMax);
 
     public abstract PrimitiveTypeName getPrimitiveType();
 
@@ -771,7 +778,6 @@ public class Metadata {
     @Override public Object getMaxValue() {
       return max;
     }
-
 
   }
 
@@ -1035,6 +1041,11 @@ public class Metadata {
 
     @Override public Object getMaxValue() {
       return mxValue;
+    }
+
+    @Override
+    public void setMin(Object newMin) {
+      // noop - min value not stored in this version of the metadata
     }
 
     @Override public PrimitiveTypeName getPrimitiveType() {

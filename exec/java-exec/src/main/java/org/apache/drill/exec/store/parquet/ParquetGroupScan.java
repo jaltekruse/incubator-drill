@@ -190,6 +190,26 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
     if (selection instanceof ParquetFileSelection) {
       final ParquetFileSelection pfs = ParquetFileSelection.class.cast(selection);
       this.parquetTableMetadata = pfs.getParquetMetadata();
+      if (this.parquetTableMetadata instanceof Metadata.ParquetTableMetadata_v1) {
+        // TODO - replace with check for Drill version number
+//        if (this.parquetTableMetadata.hasColumnMetadata()) {
+          for (ParquetFileMetadata file : this.parquetTableMetadata.getFiles()) {
+            // Drill has only ever written a single row group per file, only need to correct the statistics
+            // on the first row group
+            Metadata.RowGroupMetadata rowGroupMetadata = file.getRowGroups().get(0);
+            for (ColumnMetadata columnMetadata : rowGroupMetadata.getColumns()) {
+              if (formatConfig.autoCorrectCorruptDates &&
+                  columnMetadata.getOriginalType().equals(OriginalType.DATE) &&
+                  columnMetadata.hasSingleValue() &&
+                  (Integer) columnMetadata.getMaxValue() > 1_000_000) {
+                int newMinMax = ParquetReaderUtility.autoCorrectCorruptedDate((Integer)columnMetadata.getMaxValue());
+                columnMetadata.setMax(newMinMax);
+                columnMetadata.setMin(newMinMax);
+              }
+            }
+          }
+//        }
+      }
     }
     this.autoCorrectCorruptDates = autoCorrectCorruptDates;
     init();
