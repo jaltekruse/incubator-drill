@@ -100,7 +100,8 @@ public class ParquetReaderUtility {
         // on the first row group
         Metadata.RowGroupMetadata rowGroupMetadata = file.getRowGroups().get(0);
         for (Metadata.ColumnMetadata columnMetadata : rowGroupMetadata.getColumns()) {
-          if (columnMetadata.getOriginalType().equals(OriginalType.DATE) &&
+          OriginalType originalType = columnMetadata.getOriginalType();
+          if (originalType != null && originalType.equals(OriginalType.DATE) &&
               columnMetadata.hasSingleValue() &&
               (Integer) columnMetadata.getMaxValue() > 1_000_000) {
             int newMinMax = ParquetReaderUtility.autoCorrectCorruptedDate((Integer)columnMetadata.getMaxValue());
