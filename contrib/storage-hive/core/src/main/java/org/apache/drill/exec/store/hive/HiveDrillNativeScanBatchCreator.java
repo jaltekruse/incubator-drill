@@ -122,7 +122,10 @@ public class HiveDrillNativeScanBatchCreator implements BatchCreator<HiveDrillNa
         final List<Integer> rowGroupNums = getRowGroupNumbersFromFileSplit(fileSplit, parquetMetadata);
 
         for(int rowGroupNum : rowGroupNums) {
-          boolean containsCorruptDates = ParquetReaderUtility.detectCorruptDates(parquetMetadata, newColumns, rowGroupNum);
+          // Drill has only ever written a single row group per file, only detect corruption
+          // in the first row group
+          boolean containsCorruptDates = rowGroupNum == 0 &&
+              ParquetReaderUtility.detectCorruptDates(parquetMetadata, config.getColumns(), true);
           readers.add(new ParquetRecordReader(
                   context,
                   Path.getPathWithoutSchemeAndAuthority(finalPath).toString(),
