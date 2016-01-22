@@ -45,24 +45,27 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
   //          it is way off of a typical date value
   //        - this behavior will be able to be turned off, but will be on by default
   //    - one from 1.4, where there is a proper created-by, but the corruption is present
-  private static final String MIXED_CORRUPTED_AND_CORRECTED_DATES_DIR =
+  private static final String MIXED_CORRUPTED_AND_CORRECTED_DATES_PATH =
       "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/mixed_drill_versions";
   // partitioned with 1.4.0, date values are known to be corrupt
-  private static final String CORRUPTED_PARTITIONED_DATES_DIR =
+  private static final String CORRUPTED_PARTITIONED_DATES_PATH =
       "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/partitioned_with_corruption_4203";
   // partitioned with 1.2.0, no certain metadata that these were written with Drill
   // the value will be checked to see that they look corrupt and they will be corrected
   // by default. Users can use the format plugin option autoCorrectCorruptDates to disable
   // this behavior if they have foreign parquet files with valid rare date values that are
   // in the similar range as Drill's corrupt values
-  private static final String CORRUPTED_PARTITIONED_DATES_DIR_1_2 =
+  private static final String CORRUPTED_PARTITIONED_DATES_1_2_PATH =
       "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/partitioned_with_corruption_4203_1_2";
   private static final String PARQUET_DATE_FILE_WITH_NULL_FILLED_COLS =
       "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/null_date_cols_with_corruption_4203.parquet";
+  private static final String CORRECTED_PARTITIONED_DATES_1_5_PATH =
+      "[WORKING_PATH]/src/test/resources/parquet/4203_corrupt_dates/1_5_0_partitioned_no_corruption";
 
   private static FileSystem fs;
   private static Path path;
   static String PARTITIONED_1_2_FOLDER = "partitioned_with_corruption_4203_1_2";
+  static String MIXED_CORRUPTED_AND_CORRECTED_FOLDER = "mixed_drill_versions";
 
   @BeforeClass
   public static void initFs() throws Exception {
@@ -71,6 +74,44 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     fs = FileSystem.get(conf);
     path = new Path(getDfsTestTmpSchemaLocation());
     copyOldPartitionedFilesToTempSpace();
+    copyDirectoryIntoTempSpace(MIXED_CORRUPTED_AND_CORRECTED_DATES_PATH);
+  }
+
+  /**
+   * Test reading a directory full of partitioned parquet files with dates, these files have a drill version
+   * number of 1.5.0 in their footers, so we can be certain they do not have corruption. The option to disable the
+   * correction is passed, but it will not change the result in the case where we are certain correction
+   * is NOT needed. For more info see DRILL-4203.
+   */
+  @Test
+  public void testReadPartitionedOnCorrectedDates() throws Exception {
+    try {
+      for (String selection : new String[]{"*", "date_col"}) {
+        // for sanity, try reading all partitions without a filter
+        TestBuilder builder = testBuilder()
+            .sqlQuery("select " + selection + " from table(dfs.`" + CORRECTED_PARTITIONED_DATES_1_5_PATH + "`" +
+                "(type => 'parquet', autoCorrectCorruptDates => false))")
+            .unOrdered()
+            .baselineColumns("date_col");
+        addDateBaselineVals(builder);
+        builder.go();
+
+        String query = "select " + selection + " from table(dfs.`" + CORRECTED_PARTITIONED_DATES_1_5_PATH + "` " +
+            "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = date '1970-01-01'";
+        // verify that pruning is actually taking place
+        testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
+
+        // read with a filter on the partition column
+        testBuilder()
+            .sqlQuery(query)
+            .unOrdered()
+            .baselineColumns("date_col")
+            .baselineValues(new DateTime(1970, 1, 1, 0, 0))
+            .go();
+      }
+    } finally {
+      test("alter session reset all");
+    }
   }
 
   /**
@@ -85,14 +126,14 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       for (String selection : new String[]{"*", "date_col"}) {
         // for sanity, try reading all partitions without a filter
         TestBuilder builder = testBuilder()
-            .sqlQuery("select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR + "`" +
+            .sqlQuery("select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_PATH + "`" +
                 "(type => 'parquet', autoCorrectCorruptDates => false))")
             .unOrdered()
             .baselineColumns("date_col");
         addDateBaselineVals(builder);
         builder.go();
 
-        String query = "select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR + "` " +
+        String query = "select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_PATH + "` " +
             "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = date '1970-01-01'";
         // verify that pruning is actually taking place
         testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
@@ -116,14 +157,14 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       for (String selection : new String[]{"*", "date_col"}) {
         // for sanity, try reading all partitions without a filter
         TestBuilder builder = testBuilder()
-            .sqlQuery("select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "`" +
+            .sqlQuery("select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_1_2_PATH + "`" +
                 "(type => 'parquet', autoCorrectCorruptDates => false))")
             .unOrdered()
             .baselineColumns("date_col");
         addCorruptedDateBaselineVals(builder);
         builder.go();
 
-        String query = "select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "` " +
+        String query = "select " + selection + " from table(dfs.`" + CORRUPTED_PARTITIONED_DATES_1_2_PATH + "` " +
             "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = cast('15334-03-17' as date)";
         // verify that pruning is actually taking place
         testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
@@ -147,13 +188,13 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
       for (String selection : new String[]{"*", "date_col"}) {
         // for sanity, try reading all partitions without a filter
         TestBuilder builder = testBuilder()
-            .sqlQuery("select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "`")
+            .sqlQuery("select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_1_2_PATH + "`")
             .unOrdered()
             .baselineColumns("date_col");
         addDateBaselineVals(builder);
         builder.go();
 
-        String query = "select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_DIR_1_2 + "`" +
+        String query = "select " + selection + " from dfs.`" + CORRUPTED_PARTITIONED_DATES_1_2_PATH + "`" +
             " where date_col = date '1970-01-01'";
         // verify that pruning is actually taking place
         testPlanMatchingPatterns(query, new String[]{"numFiles=1"}, null);
@@ -265,7 +306,7 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     // for bad values) to set the flag that the values are corrupt
     for (String selection : new String[] {"*", "date_col"}) {
       TestBuilder builder = testBuilder()
-          .sqlQuery("select " + selection + " from table(dfs.`" + MIXED_CORRUPTED_AND_CORRECTED_DATES_DIR + "`" +
+          .sqlQuery("select " + selection + " from table(dfs.`" + MIXED_CORRUPTED_AND_CORRECTED_DATES_PATH + "`" +
               "(type => 'parquet', autoCorrectCorruptDates => false))")
           .unOrdered()
           .baselineColumns("date_col");
@@ -280,18 +321,21 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     return orig.replaceAll(Pattern.quote("[WORKING_PATH]"), Matcher.quoteReplacement(TestTools.getWorkingPath()));
   }
 
-  private static void copyOldPartitionedFilesToTempSpace() throws IOException {
-    // Move files into temp directory, rewrite the metadata cache file to contain the appropriate absolute
-    // path
-    fs.mkdirs(path);
+  private static void copyDirectoryIntoTempSpace(String resourcesDir) throws IOException {
     fs.copyFromLocalFile(
-        new Path(replaceWorkingPathInString(CORRUPTED_PARTITIONED_DATES_DIR_1_2)),
+        new Path(replaceWorkingPathInString(resourcesDir)),
         path);
     for (FileStatus fStatus : fs.listStatus(path)) {
       for (FileStatus fStatus2 : fs.listStatus(fStatus.getPath())) {
         System.out.println(fStatus2.getPath().toString());
       }
     }
+  }
+
+  private static void copyOldPartitionedFilesToTempSpace() throws IOException {
+    // Move files into temp directory, rewrite the metadata cache file to contain the appropriate absolute
+    // path
+    copyDirectoryIntoTempSpace(CORRUPTED_PARTITIONED_DATES_1_2_PATH);
     String metadataFileContents = getFile("parquet/4203_corrupt_dates/drill.parquet.metadata_1_2.requires_replace");
     Path newMetaCache = new Path(new Path(path, PARTITIONED_1_2_FOLDER), ".drill.parquet_metadata");
     FSDataOutputStream outSteam = fs.create(newMetaCache);
@@ -353,6 +397,44 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
         .go();
   }
 
+  @Test
+  public void tempGenNewPartitionedFiles() throws Exception {
+    System.out.println(getDfsTestTmpSchemaLocation());
+    test("use dfs_test.tmp");
+    test("create table new_partitioned partition by (date_col) as select * from dfs.`" + CORRUPTED_PARTITIONED_DATES_1_2_PATH + "`");
+  }
+
+  @Test
+  public void testReadNewMetadataCacheFileOverOldAndNewFiles() throws Exception {
+    String table = "dfs.`" + new Path(path, MIXED_CORRUPTED_AND_CORRECTED_FOLDER) + "`";
+    test("refresh table metadata " + table);
+    // for sanity, try reading all partitions without a filter
+    TestBuilder builder = testBuilder()
+        .sqlQuery("select date_col from table(" + table +
+            "(type => 'parquet', autoCorrectCorruptDates => true))")
+        .unOrdered()
+        .baselineColumns("date_col");
+    addDateBaselineVals(builder);
+    addDateBaselineVals(builder);
+    addDateBaselineVals(builder);
+    builder.go();
+
+    String query = "select date_col from table(" + table +
+        "(type => 'parquet', autoCorrectCorruptDates => false))" + " where date_col = cast('15334-03-17' as date)";
+    // verify that pruning is actually taking place
+    testPlanMatchingPatterns(query, new String[]{"numFiles=1", "usedMetadataFile=true"}, null);
+
+    // read with a filter on the partition column
+    testBuilder()
+        .sqlQuery(query)
+        .unOrdered()
+        .baselineColumns("date_col")
+        .baselineValues(new DateTime(15334, 03, 17, 0, 0))
+        .go();
+  }
+
+
+
   /**
    * Read a directory with parquet files where some have corrupted dates, see DRILL-2403.
    * @throws Exception
@@ -363,7 +445,7 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     // for bad values) to set the flag that the values are corrupt
     for (String selection : new String[] {"*", "date_col"}) {
       TestBuilder builder = testBuilder()
-          .sqlQuery("select " + selection + " from dfs.`" + MIXED_CORRUPTED_AND_CORRECTED_DATES_DIR + "`")
+          .sqlQuery("select " + selection + " from dfs.`" + MIXED_CORRUPTED_AND_CORRECTED_DATES_PATH + "`")
           .unOrdered()
           .baselineColumns("date_col");
       for (int i = 0; i < 3; i++) {

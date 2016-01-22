@@ -352,8 +352,8 @@ public class Metadata {
         if (statsAvailable) {
           // Write stats only if minVal==maxVal. Also, we then store only maxVal
           Object mxValue = null;
-          if (stats.genericGetMax() != null && stats.genericGetMin() != null && stats.genericGetMax()
-              .equals(stats.genericGetMin())) {
+          if (stats.genericGetMax() != null && stats.genericGetMin() != null &&
+              stats.genericGetMax().equals(stats.genericGetMin())) {
             mxValue = stats.genericGetMax();
             if (containsCorruptDates && columnTypeMetadata.originalType == OriginalType.DATE) {
               mxValue = ParquetReaderUtility.autoCorrectCorruptedDate((Integer) mxValue);
@@ -503,6 +503,8 @@ public class Metadata {
     @JsonIgnore public abstract PrimitiveTypeName getPrimitiveType(String[] columnName);
 
     @JsonIgnore public abstract OriginalType getOriginalType(String[] columnName);
+
+    @JsonIgnore public abstract String getDrillVersion();
   }
 
   public static abstract class ParquetFileMetadata {
@@ -588,6 +590,11 @@ public class Metadata {
     }
 
     @JsonIgnore @Override public OriginalType getOriginalType(String[] columnName) {
+      return null;
+    }
+
+    @Override
+    public String getDrillVersion() {
       return null;
     }
   }
@@ -836,6 +843,11 @@ public class Metadata {
 
     @JsonIgnore @Override public OriginalType getOriginalType(String[] columnName) {
       return getColumnTypeInfo(columnName).originalType;
+    }
+
+    @Override
+    public String getDrillVersion() {
+      return drillVersion;
     }
 
   }

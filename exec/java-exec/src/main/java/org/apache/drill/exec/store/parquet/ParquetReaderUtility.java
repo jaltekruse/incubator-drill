@@ -38,6 +38,7 @@ import org.apache.parquet.hadoop.ParquetFileWriter;
 import org.apache.parquet.hadoop.metadata.ColumnChunkMetaData;
 import org.apache.parquet.hadoop.metadata.ColumnPath;
 import org.apache.parquet.hadoop.metadata.ParquetMetadata;
+import org.apache.parquet.schema.OriginalType;
 
 import java.util.HashMap;
 import java.util.List;
@@ -78,6 +79,37 @@ public class ParquetReaderUtility {
 
   public static int autoCorrectCorruptedDate(int corruptedDate) {
     return (int) (corruptedDate - 2 * ParquetOutputRecordWriter.JULIAN_DAY_EPOC);
+  }
+
+  public static void correctDatesInMetadataCache(Metadata.ParquetTableMetadataBase parquetTableMetadata) {
+    // TODO - replace with check for Drill version number
+    boolean cacheFileContainsCorruptDates;
+    String drillVersionStr = parquetTableMetadata.getDrillVersion();
+    if (drillVersionStr != null) {
+      try {
+        cacheFileContainsCorruptDates = ParquetReaderUtility.drillVersionHasCorruptedDates(drillVersionStr);
+      } catch (VersionParser.VersionParseException e) {
+        cacheFileContainsCorruptDates = true;
+      }
+    } else {
+      cacheFileContainsCorruptDates = true;
+    }
+    if (cacheFileContainsCorruptDates) {
+      for (Metadata.ParquetFileMetadata file : parquetTableMetadata.getFiles()) {
+        // Drill has only ever written a single row group per file, only need to correct the statistics
+        // on the first row group
+        Metadata.RowGroupMetadata rowGroupMetadata = file.getRowGroups().get(0);
+        for (Metadata.ColumnMetadata columnMetadata : rowGroupMetadata.getColumns()) {
+          if (columnMetadata.getOriginalType().equals(OriginalType.DATE) &&
+              columnMetadata.hasSingleValue() &&
+              (Integer) columnMetadata.getMaxValue() > 1_000_000) {
+            int newMinMax = ParquetReaderUtility.autoCorrectCorruptedDate((Integer)columnMetadata.getMaxValue());
+            columnMetadata.setMax(newMinMax);
+            columnMetadata.setMin(newMinMax);
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -125,17 +157,7 @@ public class ParquetReaderUtility {
       } else {
         // this parser expects an application name before the semantic version, just prepending Drill
         // we know from the property name "drill.version" that we wrote this
-        VersionParser.ParsedVersion parsedDrillVersion = VersionParser.parse("drill version " + drillVersion + " (build 1234)");
-        if (parsedDrillVersion.application.equals("drill")) {
-          SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
-          if (semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
-            return true;
-          } else {
-            return false;
-          }
-        } else { // Drill has always included parquet-mr as the application name in the file metadata
-          return false;
-        }
+        return drillVersionHasCorruptedDates(drillVersion);
       }
     } catch (VersionParser.VersionParseException e) {
       // Default value of "false" if we cannot parse the version is fine, we are covering all
@@ -143,6 +165,21 @@ public class ParquetReaderUtility {
       // If Drill didn't write it the dates should be fine
       return false;
     }
+  }
+
+  public static boolean drillVersionHasCorruptedDates(String drillVersion) throws VersionParser.VersionParseException {
+    VersionParser.ParsedVersion parsedDrillVersion = parseDrillVersion(drillVersion);
+    SemanticVersion semVer = parsedDrillVersion.getSemanticVersion();
+    if (semVer.compareTo(new SemanticVersion(1, 5, 0)) < 0) {
+      return true;
+    } else {
+      return false;
+    }
+
+  }
+
+  public static VersionParser.ParsedVersion parseDrillVersion(String drillVersion) throws VersionParser.VersionParseException {
+    return VersionParser.parse("drill version " + drillVersion + " (build 1234)");
   }
 
   /**

@@ -85,6 +85,8 @@ import org.apache.drill.exec.vector.NullableVarCharVector;
 import org.apache.drill.exec.vector.ValueVector;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.parquet.SemanticVersion;
+import org.apache.parquet.VersionParser;
 import org.joda.time.DateTimeUtils;
 import org.apache.parquet.io.api.Binary;
 
@@ -190,26 +192,7 @@ public class ParquetGroupScan extends AbstractFileGroupScan {
     if (selection instanceof ParquetFileSelection) {
       final ParquetFileSelection pfs = ParquetFileSelection.class.cast(selection);
       this.parquetTableMetadata = pfs.getParquetMetadata();
-      if (this.parquetTableMetadata instanceof Metadata.ParquetTableMetadata_v1) {
-        // TODO - replace with check for Drill version number
-//        if (this.parquetTableMetadata.hasColumnMetadata()) {
-          for (ParquetFileMetadata file : this.parquetTableMetadata.getFiles()) {
-            // Drill has only ever written a single row group per file, only need to correct the statistics
-            // on the first row group
-            Metadata.RowGroupMetadata rowGroupMetadata = file.getRowGroups().get(0);
-            for (ColumnMetadata columnMetadata : rowGroupMetadata.getColumns()) {
-              if (formatConfig.autoCorrectCorruptDates &&
-                  columnMetadata.getOriginalType().equals(OriginalType.DATE) &&
-                  columnMetadata.hasSingleValue() &&
-                  (Integer) columnMetadata.getMaxValue() > 1_000_000) {
-                int newMinMax = ParquetReaderUtility.autoCorrectCorruptedDate((Integer)columnMetadata.getMaxValue());
-                columnMetadata.setMax(newMinMax);
-                columnMetadata.setMin(newMinMax);
-              }
-            }
-          }
-//        }
-      }
+      ParquetReaderUtility.correctDatesInMetadataCache(this.parquetTableMetadata);
     }
     this.autoCorrectCorruptDates = autoCorrectCorruptDates;
     init();
