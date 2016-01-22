@@ -346,7 +346,7 @@ public class TestCorruptParquetDateCorrection extends PlanTestBase {
     // Move files into temp directory, rewrite the metadata cache file to contain the appropriate absolute
     // path
     copyDirectoryIntoTempSpace(CORRUPTED_PARTITIONED_DATES_1_2_PATH);
-    copyMetaDataCacheToTempReplacingInternalPaths("parquet/4203_corrupt_dates/drill.parquet.metadata_1_2.requires_replace",
+    copyMetaDataCacheToTempReplacingInternalPaths("parquet/4203_corrupt_dates/drill.parquet.metadata_1_2.requires_replace.txt",
         PARTITIONED_1_2_FOLDER);
   }
 
