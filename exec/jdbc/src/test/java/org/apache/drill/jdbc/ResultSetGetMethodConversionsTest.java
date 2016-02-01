@@ -62,6 +62,7 @@ public class ResultSetGetMethodConversionsTest extends JdbcTestBase {
 
   private static Connection connection;
   private static ResultSet testDataRow;
+  private static ResultSet testDataRowWithNulls;
 
   @BeforeClass
   public static void setUpConnectionAndMetadataToCheck() throws SQLException {
@@ -99,6 +100,33 @@ public class ResultSetGetMethodConversionsTest extends JdbcTestBase {
         + "\nLIMIT 1 " );
     // Note: Assertions must be enabled (as they have been so far in tests).
     assertTrue( testDataRow.next() );
+
+    final Statement stmtForNulls = connection.createStatement();
+    testDataRowWithNulls = stmtForNulls.executeQuery(
+        ""
+            +   "SELECT  "
+            + "\n"
+            + "\n  CAST(null as boolean)                  AS  C_BOOLEAN_TRUE, "
+            // TODO(DRILL-2470): Uncomment when TINYINT is implemented:
+            //+ "\n  CAST(  1 AS TINYINT            ) AS  C_TINYINT_1, "
+            // TODO(DRILL-2470): Uncomment when SMALLINT is implemented:
+            //+ "\n  CAST(  2 AS SMALLINT           ) AS  C_SMALLINT_2, "
+            + "\n  CAST(  null AS INTEGER            ) AS  C_INTEGER_3, "
+            + "\n  CAST(  null AS BIGINT             ) AS  C_BIGINT_4, "
+            // TODO(DRILL-2683): Uncomment when REAL is implemented:
+            //+ "\n  CAST(  5.5 AS REAL             ) AS `C_REAL_5.5`, "
+            + "\n  CAST(  null AS DOUBLE PRECISION ) AS `C_DOUBLE_PREC._6.6`, "
+            + "\n  CAST(  null AS FLOAT            ) AS `C_FLOAT_7.7`, "
+            + "\n  CAST( null AS DECIMAL         ) AS `C_DECIMAL_10.10`, "
+            + "\n  CAST( null  AS DECIMAL         ) AS `C_DECIMAL_10.5`, "
+            + "\n  CAST( null AS DECIMAL(9,2)    ) AS `C_DECIMAL(9,2)_11.11`, "
+            + "\n  CAST( null AS DECIMAL(18,2)   ) AS `C_DECIMAL(18,2)_12.12`, "
+            + "\n  CAST( null AS DECIMAL(28,2)   ) AS `C_DECIMAL(28,2)_13.13`, "
+            + "\n  CAST( null AS DECIMAL(38,2)   ) AS `C_DECIMAL(38,2)_14.14`, "
+            + "\n  '' "
+            + "\nFROM (VALUES(1))" );
+    // Note: Assertions must be enabled (as they have been so far in tests).
+    assertTrue( testDataRowWithNulls.next() );
   }
 
   @AfterClass
@@ -503,6 +531,11 @@ public class ResultSetGetMethodConversionsTest extends JdbcTestBase {
   @Test
   public void test_getString_handles_INTEGER() throws SQLException {
     assertThat( testDataRow.getString( "C_INTEGER_3" ), equalTo( "3" ) );
+  }
+
+  @Test
+  public void test_getString_handles_INTEGER_nulls() throws SQLException {
+    assertThat( testDataRowWithNulls.getString( "C_INTEGER_3" ), equalTo( null ) );
   }
 
   @Test
