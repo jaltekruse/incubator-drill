@@ -193,6 +193,8 @@
             <exclude>**/*.proto</exclude>
             <exclude>**/*.fmpp</exclude>
             <exclude>**/target/**</exclude>
+            <exclude>dependency-reduced-pom.xml</exclude>
+            <exclude>**/test-classes/**</exclude>
             <exclude>**/*.iml</exclude>
             <exclude>**/*.tdd</exclude>
             <exclude>**/*.project</exclude>
