@@ -24,11 +24,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 
-import net.hydromatic.avatica.ColumnMetaData;
-import net.hydromatic.avatica.ColumnMetaData.AvaticaType;
-import net.hydromatic.avatica.ColumnMetaData.Rep;
-
-import org.apache.drill.common.types.TypeProtos.DataMode;
+import org.apache.calcite.avatica.ColumnMetaData;
+import org.apache.calcite.avatica.ColumnMetaData.AvaticaType;
+import org.apache.calcite.avatica.ColumnMetaData.Rep;
 import org.apache.drill.common.types.TypeProtos.MajorType;
 import org.apache.drill.common.types.Types;
 import org.apache.drill.exec.record.BatchSchema;

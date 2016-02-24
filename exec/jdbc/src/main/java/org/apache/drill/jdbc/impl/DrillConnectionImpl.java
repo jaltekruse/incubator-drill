@@ -17,7 +17,6 @@
  */
 package org.apache.drill.jdbc.impl;
 
-import java.io.IOException;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -40,13 +39,12 @@ import java.util.Properties;
 import java.util.TimeZone;
 import java.util.concurrent.Executor;
 
-import net.hydromatic.avatica.AvaticaConnection;
-import net.hydromatic.avatica.AvaticaFactory;
-import net.hydromatic.avatica.AvaticaStatement;
-import net.hydromatic.avatica.Helper;
-import net.hydromatic.avatica.Meta;
-import net.hydromatic.avatica.UnregisteredDriver;
-
+import org.apache.calcite.avatica.AvaticaConnection;
+import org.apache.calcite.avatica.AvaticaFactory;
+import org.apache.calcite.avatica.AvaticaStatement;
+import org.apache.calcite.avatica.Helper;
+import org.apache.calcite.avatica.Meta.ExecuteResult;
+import org.apache.calcite.avatica.UnregisteredDriver;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
@@ -65,6 +63,8 @@ import org.apache.drill.jdbc.DrillConnectionConfig;
 import org.apache.drill.jdbc.InvalidParameterSqlException;
 import org.apache.drill.jdbc.JdbcApiSqlException;
 import org.slf4j.Logger;
+
+import com.google.common.base.Throwables;
 
 /**
  * Drill's implementation of {@link Connection}.
@@ -160,6 +160,16 @@ class DrillConnectionImpl extends AvaticaConnection
     }
   }
 
+  @Override
+  protected ExecuteResult prepareAndExecuteInternal(AvaticaStatement statement, String sql, long maxRowCount)
+      throws SQLException {
+    try {
+      return super.prepareAndExecuteInternal(statement, sql, maxRowCount);
+    } catch(RuntimeException e) {
+      Throwables.propagateIfInstanceOf(e.getCause(), SQLException.class);
+      throw e;
+    }
+  }
   /**
    * Throws AlreadyClosedSqlException <i>iff</i> this Connection is closed.
    *
@@ -174,15 +184,6 @@ class DrillConnectionImpl extends AvaticaConnection
   @Override
   public DrillConnectionConfig getConfig() {
     return config;
-  }
-
-  @Override
-  protected Meta createMeta() {
-    return new MetaImpl(this);
-  }
-
-  MetaImpl meta() {
-    return (MetaImpl) meta;
   }
 
   BufferAllocator getAllocator() {
@@ -362,12 +363,7 @@ class DrillConnectionImpl extends AvaticaConnection
                                             int resultSetHoldability) throws SQLException {
     throwIfClosed();
     try {
-      DrillPrepareResult prepareResult = new DrillPrepareResult(sql);
-      DrillPreparedStatementImpl statement =
-          (DrillPreparedStatementImpl) factory.newPreparedStatement(
-              this, prepareResult, resultSetType, resultSetConcurrency,
-              resultSetHoldability);
-      return statement;
+      return super.prepareStatement(sql, resultSetType, resultSetConcurrency, resultSetHoldability);
     } catch (RuntimeException e) {
       throw Helper.INSTANCE.createException("Error while preparing statement [" + sql + "]", e);
     } catch (Exception e) {
