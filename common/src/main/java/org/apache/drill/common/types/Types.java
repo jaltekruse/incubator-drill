@@ -19,6 +19,8 @@ package org.apache.drill.common.types;
 
 import static org.apache.drill.common.types.TypeProtos.DataMode.REPEATED;
 
+import java.sql.ResultSetMetaData;
+
 import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.types.TypeProtos.DataMode;
 import org.apache.drill.common.types.TypeProtos.MajorType;
@@ -167,7 +169,8 @@ public class Types {
    */
   public static int getJdbcTypeCode(final MajorType type) {
     if (type.getMode() == DataMode.REPEATED || type.getMinorType() == MinorType.LIST) {
-      return java.sql.Types.ARRAY;
+      // Drill doesn't support java.sql.Array
+      return java.sql.Types.OTHER;
     }
 
     switch (type.getMinorType()) {
@@ -197,7 +200,8 @@ public class Types {
     case INT:
       return java.sql.Types.INTEGER;
     case MAP:
-      return java.sql.Types.STRUCT;
+      // Drill doesn't support java.sql.Struct
+      return java.sql.Types.OTHER;
     case MONEY:
       return java.sql.Types.DECIMAL;
     case NULL:
