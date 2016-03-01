@@ -67,7 +67,7 @@ public enum SystemTable {
     }
   },
 
-  THREADS("threads", true, ThreadsIterator.ThreadsInfo.class) {
+  THREADS("threads", true, ThreadsIterator.ThreadSummary.class) {
     @Override
   public Iterator<Object> getIterator(final FragmentContext context) {
       return new ThreadsIterator(context);
