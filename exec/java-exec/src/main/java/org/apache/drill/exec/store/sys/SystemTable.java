@@ -99,9 +99,7 @@ public enum SystemTable {
     this.pojoClass = pojoClass;
   }
 
-  public Iterator<Object> getIterator(final FragmentContext context) {
-    throw new UnsupportedOperationException(tableName + " must override this method.");
-  }
+  public abstract Iterator<Object> getIterator(final FragmentContext context);
 
   public String getTableName() {
     return tableName;
