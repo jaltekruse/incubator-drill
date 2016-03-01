@@ -53,6 +53,7 @@ public class VersionIterator implements Iterator<Object>{
 
         }
       } catch (IOException | IllegalArgumentException e) {
+        // TODO - why do we just log this, why not return as user exception?
         logger.warn("Failure while trying to load \"git.properties\" file.", e);
       }
     }
