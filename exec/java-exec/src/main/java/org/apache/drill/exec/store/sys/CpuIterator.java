@@ -18,6 +18,7 @@
 package org.apache.drill.exec.store.sys;
 
 import com.sun.management.OperatingSystemMXBean;
+import org.apache.drill.exec.ops.FragmentContext;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
@@ -25,7 +26,21 @@ import java.util.Iterator;
 
 public class CpuIterator implements Iterator<Object> {
 
-  public CpuIterator() {
+  // cpu: Drillbit, # Cores, CPU consumption (with different windows?)
+  private final FragmentContext context;
+
+  public CpuIterator(FragmentContext context) {
+    this.context = context;
+  }
+
+  @Override
+  public boolean hasNext() {
+    return false;
+  }
+
+  @Override
+  public Object next() {
+    // http://stackoverflow.com/questions/74674/how-to-do-i-check-cpu-and-memory-usage-in-java
     OperatingSystemMXBean operatingSystemMXBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
     int availableProcessors = operatingSystemMXBean.getAvailableProcessors();
@@ -46,20 +61,16 @@ public class CpuIterator implements Iterator<Object> {
 
     cpuUsage = Math.min(99F, elapsedCpu / (elapsedTime * 10000F * availableProcessors));
     System.out.println("Java CPU: " + cpuUsage);
-  }
-
-  @Override
-  public boolean hasNext() {
-    return false;
-  }
-
-  @Override
-  public Object next() {
     return null;
   }
 
   @Override
   public void remove() {
 
+  }
+
+  public static class CpuInfo {
+    public String hostname;
+    public long user_port;
   }
 }
