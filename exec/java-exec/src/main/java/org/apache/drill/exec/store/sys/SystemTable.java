@@ -55,6 +55,7 @@ public enum SystemTable {
 
   // TODO - should be possibly make this a distributed table so that we can figure out if
   // users have inconsistent versions installed across their cluster?
+  // DO THIS!!
   VERSION("version", false, VersionIterator.VersionInfo.class) {
     @Override
     public Iterator<Object> getIterator(final FragmentContext context) {
@@ -67,10 +68,16 @@ public enum SystemTable {
    TODO - DRILL-4258: fill in these system tables
     cpu: Drillbit, # Cores, CPU consumption (with different windows?)
     queries: Foreman, QueryId, User, SQL, Start Time, rows processed, query plan, # nodes involved, number of running fragments, memory consumed
+        - work manager as well?
     fragments: Drillbit, queryid, major fragmentid, minorfragmentid, coordinate, memory usage, rows processed, start time
+        - combine with thread information?
     threads: name, priority, state, id, thread-level cpu stats
+        - get native thread ID
+        - every 5 seconds, go to hardware and record what happened in the last interval
     threadtraces: threads, stack trace
+        - make sure to include Drillbit info
     connections: client, server, type, establishedDate, messagesSent, bytesSent
+        - may need to record more info for connection start, track bytes sent/received
    */
 
   MEMORY("memory", true, MemoryIterator.MemoryInfo.class) {

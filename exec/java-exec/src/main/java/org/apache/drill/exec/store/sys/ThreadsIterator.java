@@ -45,6 +45,8 @@ public class ThreadsIterator implements Iterator<Object> {
 
   @Override
   public Object next() {
+    // look up thread MX bean
+
     ThreadInfo currentThread = threadInfoIter.next();
     final ThreadSummary threadSummary = new ThreadSummary();
 
