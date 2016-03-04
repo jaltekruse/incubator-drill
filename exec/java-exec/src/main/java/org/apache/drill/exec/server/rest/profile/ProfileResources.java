@@ -39,6 +39,7 @@ import org.apache.drill.common.exceptions.DrillRuntimeException;
 import org.apache.drill.common.exceptions.UserException;
 import org.apache.drill.exec.coord.ClusterCoordinator;
 import org.apache.drill.exec.coord.store.TransientStore;
+import org.apache.drill.exec.exception.StoreException;
 import org.apache.drill.exec.proto.GeneralRPCProtos.Ack;
 import org.apache.drill.exec.proto.UserBitShared.QueryId;
 import org.apache.drill.exec.proto.UserBitShared.QueryInfo;
@@ -71,13 +72,13 @@ public class ProfileResources {
   public static class ProfileInfo implements Comparable<ProfileInfo> {
     public static final SimpleDateFormat format = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
 
-    private String queryId;
-    private Date time;
-    private String location;
-    private String foreman;
-    private String query;
-    private String state;
-    private String user;
+    public String queryId;
+    public Date time;
+    public String location;
+    public String foreman;
+    public String query;
+    public String state;
+    public String user;
 
     public ProfileInfo(String queryId, long time, String foreman, String query, String state, String user) {
       this.queryId = queryId;
@@ -134,7 +135,7 @@ public class ProfileResources {
   }
 
   @XmlRootElement
-  public class QProfiles {
+  public static class QProfiles {
     private List<ProfileInfo> runningQueries;
     private List<ProfileInfo> finishedQueries;
 
@@ -157,36 +158,42 @@ public class ProfileResources {
   @Produces(MediaType.APPLICATION_JSON)
   public QProfiles getProfilesJSON() {
     try {
-      final PersistentStore<QueryProfile> completed = getProvider().getOrCreateStore(QueryManager.QUERY_PROFILE);
-      final TransientStore<QueryInfo> running = getCoordinator().getOrCreateTransientStore(QueryManager.RUNNING_QUERY_INFO);
-
-      final List<ProfileInfo> runningQueries = Lists.newArrayList();
-
-      for (final Map.Entry<String, QueryInfo> entry: Lists.newArrayList(running.entries())) {
-        final QueryInfo profile = entry.getValue();
-        if (principal.canManageProfileOf(profile.getUser())) {
-          runningQueries.add(new ProfileInfo(entry.getKey(), profile.getStart(), profile.getForeman().getAddress(),
-              profile.getQuery(), profile.getState().name(), profile.getUser()));
-        }
-      }
-
-      Collections.sort(runningQueries, Collections.reverseOrder());
-
-      List<ProfileInfo> finishedQueries = Lists.newArrayList();
-      for (Map.Entry<String, QueryProfile> entry : Lists.newArrayList(completed.getRange(0, MAX_PROFILES))) {
-        QueryProfile profile = entry.getValue();
-        if (principal.canManageProfileOf(profile.getUser())) {
-          finishedQueries.add(new ProfileInfo(entry.getKey(), profile.getStart(), profile.getForeman().getAddress(),
-              profile.getQuery(), profile.getState().name(), profile.getUser()));
-        }
-      }
-
-      return new QProfiles(runningQueries, finishedQueries);
+      return getProfiles(getProvider(), getCoordinator(), principal);
     } catch (Exception e) {
       logger.debug("Failed to get profiles from persistent or ephemeral store.");
       return new QProfiles(new ArrayList<ProfileInfo>(), new ArrayList<ProfileInfo>());
     }
 
+  }
+
+  public static QProfiles getProfiles(PersistentStoreProvider persistentStoreProvider,
+                                      ClusterCoordinator clusterCoordinator,
+                                      DrillUserPrincipal principal) throws StoreException {
+    final PersistentStore<QueryProfile> completed = persistentStoreProvider.getOrCreateStore(QueryManager.QUERY_PROFILE);
+    final TransientStore<QueryInfo> running = clusterCoordinator.getOrCreateTransientStore(QueryManager.RUNNING_QUERY_INFO);
+
+    final List<ProfileInfo> runningQueries = Lists.newArrayList();
+
+    for (final Map.Entry<String, QueryInfo> entry: Lists.newArrayList(running.entries())) {
+      final QueryInfo profile = entry.getValue();
+      if (principal.canManageProfileOf(profile.getUser())) {
+        runningQueries.add(new ProfileInfo(entry.getKey(), profile.getStart(), profile.getForeman().getAddress(),
+            profile.getQuery(), profile.getState().name(), profile.getUser()));
+      }
+    }
+
+    Collections.sort(runningQueries, Collections.reverseOrder());
+
+    List<ProfileInfo> finishedQueries = Lists.newArrayList();
+    for (Map.Entry<String, QueryProfile> entry : Lists.newArrayList(completed.getRange(0, MAX_PROFILES))) {
+      QueryProfile profile = entry.getValue();
+      if (principal.canManageProfileOf(profile.getUser())) {
+        finishedQueries.add(new ProfileInfo(entry.getKey(), profile.getStart(), profile.getForeman().getAddress(),
+            profile.getQuery(), profile.getState().name(), profile.getUser()));
+      }
+    }
+
+    return new QProfiles(runningQueries, finishedQueries);
   }
 
   @GET

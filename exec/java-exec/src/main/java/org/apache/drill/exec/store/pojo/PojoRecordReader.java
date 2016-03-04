@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.pojo;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -104,6 +105,8 @@ public class PojoRecordReader<T> extends AbstractRecordReader {
         } else if(type == String.class) {
           w = new StringWriter(f, output.getManagedBuffer());
         } else if (type == Timestamp.class) {
+          w = new NTimeStampWriter(f);
+        } else if (type == Date.class) {
           w = new NTimeStampWriter(f);
         } else {
           throw new ExecutionSetupException(String.format("PojoRecord reader doesn't yet support conversions from type [%s].", type));

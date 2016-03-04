@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.sys;
 import java.util.Iterator;
 
 import org.apache.drill.exec.ops.FragmentContext;
+import org.apache.drill.exec.server.rest.profile.ProfileResources;
 import org.apache.drill.exec.store.sys.OptionIterator.OptionValueWrapper;
 
 /**
@@ -84,6 +85,13 @@ public enum SystemTable {
     @Override
     public Iterator<Object> getIterator(final FragmentContext context) {
       return new MemoryIterator(context);
+    }
+  },
+
+  QUERIES("queries", true, ProfileResources.ProfileInfo.class) {
+    @Override
+    public Iterator<Object> getIterator(final FragmentContext context) {
+      return new QueryIterator(context);
     }
   },
 

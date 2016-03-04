@@ -112,7 +112,7 @@ public class TestOptiqPlans extends ExecTest {
         controller,
         com,
         workBus,
-        new LocalPersistentStoreProvider(config));
+        new LocalPersistentStoreProvider(config), null);
     final QueryContext qc = new QueryContext(UserSession.Builder.newBuilder().setSupportComplexTypes(true).build(),
         bitContext, QueryId.getDefaultInstance());
     final PhysicalPlanReader reader = bitContext.getPlanReader();

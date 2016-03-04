@@ -42,6 +42,7 @@ import org.apache.drill.exec.store.StoragePluginRegistry;
 import org.apache.drill.exec.store.sys.PersistentStoreProvider;
 
 import com.codahale.metrics.MetricRegistry;
+import org.apache.drill.exec.work.WorkManager;
 
 public class DrillbitContext implements AutoCloseable {
 //  private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DrillbitContext.class);
@@ -61,7 +62,7 @@ public class DrillbitContext implements AutoCloseable {
   private final CodeCompiler compiler;
   private final ScanResult classpathScan;
   private final LogicalPlanPersistence lpPersistence;
-
+  private final WorkManager workManager;
 
   public DrillbitContext(
       DrillbitEndpoint endpoint,
@@ -70,7 +71,8 @@ public class DrillbitContext implements AutoCloseable {
       Controller controller,
       DataConnectionCreator connectionsPool,
       WorkEventBus workBus,
-      PersistentStoreProvider provider) {
+      PersistentStoreProvider provider,
+      WorkManager workManager) {
     this.classpathScan = context.getClasspathScan();
     this.workBus = workBus;
     this.controller = checkNotNull(controller);
@@ -80,6 +82,7 @@ public class DrillbitContext implements AutoCloseable {
     this.endpoint = checkNotNull(endpoint);
     this.provider = provider;
     this.lpPersistence = new LogicalPlanPersistence(context.getConfig(), classpathScan);
+    this.workManager = workManager;
 
     // TODO remove escaping "this".
     this.storagePlugins = context.getConfig()
@@ -110,6 +113,10 @@ public class DrillbitContext implements AutoCloseable {
 
   public DrillbitEndpoint getEndpoint() {
     return endpoint;
+  }
+
+  public WorkManager getWorkManager() {
+    return workManager;
   }
 
   public DrillConfig getConfig() {

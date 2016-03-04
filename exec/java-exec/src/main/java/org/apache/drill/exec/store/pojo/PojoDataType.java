@@ -20,6 +20,7 @@ package org.apache.drill.exec.store.pojo;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.List;
 
 import org.apache.calcite.rel.type.RelDataType;
@@ -62,6 +63,8 @@ public class PojoDataType extends RecordDataType {
       } else if(type.isEnum()) {
         types.add(SqlTypeName.VARCHAR);
       } else if (type == Timestamp.class) {
+        types.add(SqlTypeName.TIMESTAMP);
+      } else if (type == Date.class) {
         types.add(SqlTypeName.TIMESTAMP);
       } else {
         throw new RuntimeException(String.format("PojoDataType doesn't yet support conversions from type [%s].", type));

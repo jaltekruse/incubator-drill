@@ -21,6 +21,7 @@ import io.netty.buffer.DrillBuf;
 
 import java.lang.reflect.Field;
 import java.sql.Timestamp;
+import java.util.Date;
 
 import org.apache.drill.common.types.TypeProtos.MinorType;
 import org.apache.drill.common.types.Types;
@@ -258,14 +259,14 @@ public class Writers {
 
     public NTimeStampWriter(Field field) {
       super(field, Types.optional(MinorType.TIMESTAMP));
-      if (field.getType() != Timestamp.class) {
+      if (field.getType() != Timestamp.class && field.getType() != Date.class) {
         throw new IllegalStateException();
       }
     }
 
     @Override
     public void writeField(Object pojo, int outboundIndex) throws IllegalArgumentException, IllegalAccessException {
-      Timestamp o = (Timestamp) field.get(pojo);
+      Date o = (Date) field.get(pojo);
       if (o != null) {
         vector.getMutator().setSafe(outboundIndex, o.getTime());
       }
