@@ -40,6 +40,11 @@ public enum SystemTable {
     }
   },
 
+  // I'm pretty sure boot options are all initialized/stored locally, we might want
+  // a way to check for inconsistent settings around a cluster, not sure making
+  // this table distributed is the right way to do it though
+  // maybe a system "materialized-view" that would query the distributed version of this
+  // table and look for inconsistencies
   BOOT("boot", false, OptionValueWrapper.class) {
     @Override
     public Iterator<Object> getIterator(final FragmentContext context) {
@@ -88,7 +93,7 @@ public enum SystemTable {
     }
   },
 
-  QUERIES("queries", true, ProfileResources.ProfileInfo.class) {
+  QUERIES("queries", true, QueryIterator.QueryInfo.class) {
     @Override
     public Iterator<Object> getIterator(final FragmentContext context) {
       return new QueryIterator(context);
