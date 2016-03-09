@@ -35,10 +35,51 @@ import com.google.common.collect.Collections2;
 public class FragmentWrapper {
   private final MajorFragmentProfile major;
   private final long start;
+  private final long firstStart;
+  private final long lastStart;
+  private final String operatorPath;
+  private final String minorFragmentsReporting;
+  private final long firstEnd;
+  private final long lastEnd;
+  private final long shortRunTime;
+  private final long longRunTime;
+  private final long avgRunTime;
+  private final long lastProgress;
+  private final long lastUpdate;
+  private final long maxMem;
 
   public FragmentWrapper(final MajorFragmentProfile major, final long start) {
     this.major = Preconditions.checkNotNull(major);
     this.start = start;
+
+    // Use only minor fragments that have complete profiles
+    // Complete iff the fragment profile has at least one operator profile, and start and end times.
+    final List<MinorFragmentProfile> complete = new ArrayList<>(
+        Collections2.filter(major.getMinorFragmentProfileList(), Filters.hasOperatorsAndTimes));
+    operatorPath = new OperatorPathBuilder().setMajor(major).build();
+    minorFragmentsReporting = complete.size() + " / " + major.getMinorFragmentProfileCount();
+
+    firstStart = Collections.min(complete, Comparators.startTime).getStartTime() - start;
+    lastStart = Collections.max(complete, Comparators.startTime).getStartTime() - start;
+
+    firstEnd = Collections.min(complete, Comparators.endTime).getEndTime() - start;
+    lastEnd = Collections.max(complete, Comparators.endTime).getEndTime() - start;
+
+    long total = 0;
+    for (final MinorFragmentProfile p : complete) {
+      total += p.getEndTime() - p.getStartTime();
+    }
+
+    final MinorFragmentProfile shortRun = Collections.min(complete, Comparators.runTime);
+    shortRunTime = shortRun.getEndTime() - shortRun.getStartTime();
+    final MinorFragmentProfile longRun = Collections.max(complete, Comparators.runTime);
+    longRunTime = longRun.getEndTime() - longRun.getStartTime();
+    avgRunTime = total / complete.size();
+    lastUpdate = Collections.max(complete, Comparators.lastUpdate).getLastUpdate();
+    lastProgress = Collections.max(complete, Comparators.lastProgress).getLastProgress();
+
+    // TODO(DRILL-3494): Names (maxMem, getMaxMemoryUsed) are misleading; the value is peak memory allocated to fragment
+    maxMem = Collections.max(complete, Comparators.fragmentPeakMemory).getMaxMemoryUsed();
   }
 
   public String getDisplayName() {
@@ -57,52 +98,32 @@ public class FragmentWrapper {
   public static final int NUM_NULLABLE_OVERVIEW_COLUMNS = FRAGMENT_OVERVIEW_COLUMNS.length - 2;
 
   public void addSummary(TableBuilder tb) {
-    final String fmt = " (%d)";
-
     // Use only minor fragments that have complete profiles
     // Complete iff the fragment profile has at least one operator profile, and start and end times.
     final List<MinorFragmentProfile> complete = new ArrayList<>(
       Collections2.filter(major.getMinorFragmentProfileList(), Filters.hasOperatorsAndTimes));
 
-    tb.appendCell(new OperatorPathBuilder().setMajor(major).build(), null);
-    tb.appendCell(complete.size() + " / " + major.getMinorFragmentProfileCount(), null);
+    tb.appendCell(operatorPath, null);
+    tb.appendCell(minorFragmentsReporting, null);
 
     // If there are no stats to aggregate, create an empty row
     if (complete.size() < 1) {
       tb.appendRepeated("", null, NUM_NULLABLE_OVERVIEW_COLUMNS);
       return;
+    } else {
+      tb.appendCells(
+          DataFormattingHelper.formatDuration(firstStart),
+          DataFormattingHelper.formatDuration(lastStart),
+          DataFormattingHelper.formatDuration(firstEnd),
+          DataFormattingHelper.formatDuration(lastEnd),
+          DataFormattingHelper.formatDuration(shortRunTime),
+          DataFormattingHelper.formatDuration(avgRunTime),
+          DataFormattingHelper.formatDuration(longRunTime),
+          DataFormattingHelper.formatTime(lastUpdate),
+          DataFormattingHelper.formatTime(lastProgress),
+          DataFormattingHelper.formatBinarySize(maxMem)
+      );
     }
-
-    final MinorFragmentProfile firstStart = Collections.min(complete, Comparators.startTime);
-    final MinorFragmentProfile lastStart = Collections.max(complete, Comparators.startTime);
-    tb.appendMillis(firstStart.getStartTime() - start, String.format(fmt, firstStart.getMinorFragmentId()));
-    tb.appendMillis(lastStart.getStartTime() - start, String.format(fmt, lastStart.getMinorFragmentId()));
-
-    final MinorFragmentProfile firstEnd = Collections.min(complete, Comparators.endTime);
-    final MinorFragmentProfile lastEnd = Collections.max(complete, Comparators.endTime);
-    tb.appendMillis(firstEnd.getEndTime() - start, String.format(fmt, firstEnd.getMinorFragmentId()));
-    tb.appendMillis(lastEnd.getEndTime() - start, String.format(fmt, lastEnd.getMinorFragmentId()));
-
-    long total = 0;
-    for (final MinorFragmentProfile p : complete) {
-      total += p.getEndTime() - p.getStartTime();
-    }
-
-    final MinorFragmentProfile shortRun = Collections.min(complete, Comparators.runTime);
-    final MinorFragmentProfile longRun = Collections.max(complete, Comparators.runTime);
-    tb.appendMillis(shortRun.getEndTime() - shortRun.getStartTime(), String.format(fmt, shortRun.getMinorFragmentId()));
-    tb.appendMillis(total / complete.size(), null);
-    tb.appendMillis(longRun.getEndTime() - longRun.getStartTime(), String.format(fmt, longRun.getMinorFragmentId()));
-
-    final MinorFragmentProfile lastUpdate = Collections.max(complete, Comparators.lastUpdate);
-    tb.appendTime(lastUpdate.getLastUpdate(), null);
-
-    final MinorFragmentProfile lastProgress = Collections.max(complete, Comparators.lastProgress);
-    tb.appendTime(lastProgress.getLastProgress(), null);
-
-    // TODO(DRILL-3494): Names (maxMem, getMaxMemoryUsed) are misleading; the value is peak memory allocated to fragment
-    final MinorFragmentProfile maxMem = Collections.max(complete, Comparators.fragmentPeakMemory);
-    tb.appendBytes(maxMem.getMaxMemoryUsed(), null);
   }
 
   public static final String[] FRAGMENT_COLUMNS = {"Minor Fragment ID", "Host Name", "Start", "End",
@@ -140,9 +161,9 @@ public class FragmentWrapper {
 
       builder.appendCell(new OperatorPathBuilder().setMajor(major).setMinor(minor).build(), null);
       builder.appendCell(minor.getEndpoint().getAddress(), null);
-      builder.appendMillis(minor.getStartTime() - start, null);
-      builder.appendMillis(minor.getEndTime() - start, null);
-      builder.appendMillis(minor.getEndTime() - minor.getStartTime(), null);
+      builder.appendMillis(minor.getStartTime() - start);
+      builder.appendMillis(minor.getEndTime() - start);
+      builder.appendMillis(minor.getEndTime() - minor.getStartTime());
 
       builder.appendFormattedInteger(biggestIncomingRecords, null);
       builder.appendFormattedInteger(biggestBatches, null);
