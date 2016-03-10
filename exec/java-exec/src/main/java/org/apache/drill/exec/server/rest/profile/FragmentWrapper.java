@@ -38,6 +38,7 @@ public class FragmentWrapper {
   private final long firstStart;
   private final long lastStart;
   private final String operatorPath;
+  private final long numberRunningFragments;
   private final String minorFragmentsReporting;
   private final long firstEnd;
   private final long lastEnd;
@@ -57,6 +58,7 @@ public class FragmentWrapper {
     final List<MinorFragmentProfile> complete = new ArrayList<>(
         Collections2.filter(major.getMinorFragmentProfileList(), Filters.hasOperatorsAndTimes));
     operatorPath = new OperatorPathBuilder().setMajor(major).build();
+    numberRunningFragments = major.getMinorFragmentProfileCount() - complete.size();
     minorFragmentsReporting = complete.size() + " / " + major.getMinorFragmentProfileCount();
 
     firstStart = Collections.min(complete, Comparators.startTime).getStartTime() - start;
@@ -167,6 +169,10 @@ public class FragmentWrapper {
       builder.appendRepeated(m.getState().toString(), null, NUM_NULLABLE_FRAGMENTS_COLUMNS);
     }
     return builder.build();
+  }
+
+  public long getNumberRunningFragments() {
+    return numberRunningFragments;
   }
 
   public static class MinorFragmentWrapper {

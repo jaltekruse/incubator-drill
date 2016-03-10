@@ -73,7 +73,8 @@ public enum SystemTable {
 
    TODO - DRILL-4258: fill in these system tables
     cpu: Drillbit, # Cores, CPU consumption (with different windows?)
-    queries: Foreman, QueryId, User, SQL, Start Time, rows processed, query plan, # nodes involved, number of running fragments, memory consumed
+    queries: Foreman, QueryId, User, SQL, Start Time, rows processed (inputs from all scans, output so far,
+    largest number anywhere in the query graph?), query plan, # nodes involved, number of running fragments, memory consumed
         - work manager as well?
     fragments: Drillbit, queryid, major fragmentid, minorfragmentid, coordinate, memory usage, rows processed, start time
         - combine with thread information?

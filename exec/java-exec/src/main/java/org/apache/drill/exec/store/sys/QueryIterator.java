@@ -78,11 +78,14 @@ public class QueryIterator implements Iterator<Object> {
       UserBitShared.QueryProfile queryProfile = f.getQueryManager().getQueryProfile();
       ProfileWrapper profileWrapper = new ProfileWrapper(queryProfile);
       long totalRowsProcessed = 0;
+      // TODO - This is currently minor fragments, is that right?
+      long totalRunningFragments = 0;
       for (FragmentWrapper fragmentWrapper : profileWrapper.getFragmentProfiles()) {
-        fragmentWrapper.getContent();
+        totalRunningFragments += fragmentWrapper.getNumberRunningFragments();
+        fragmentWrapper.
       }
       nextToReturn = null;
-      return new QueryInfo(ret, queryProfile.getPlan(), totalRowsProcessed);
+      return new QueryInfo(ret, queryProfile.getPlan(), totalRowsProcessed, totalRunningFragments);
     } else {
       throw new NoSuchElementException();
     }
@@ -117,14 +120,15 @@ public class QueryIterator implements Iterator<Object> {
     public String state;
     public String user;
     public long rowsProcessed;
+    public long runningFragments;
 
-    public QueryInfo(ProfileResources.ProfileInfo profileInfo, String plan, long rowsProcessed) {
+    public QueryInfo(ProfileResources.ProfileInfo profileInfo, String plan, long rowsProcessed, long runningFragments) {
       this(profileInfo.queryId, profileInfo.time.getTime(), profileInfo.foreman, profileInfo.query,
-          profileInfo.state, profileInfo.user, plan, rowsProcessed);
+          profileInfo.state, profileInfo.user, plan, rowsProcessed, runningFragments);
     }
 
     public QueryInfo(String queryId, long time, String foreman, String query, String state, String user,
-                     String plan, long rowsProcessed) {
+                     String plan, long rowsProcessed, long runningFragments) {
       this.queryId = queryId;
       this.time = new Date(time);
       this.foreman = foreman;
@@ -136,6 +140,7 @@ public class QueryIterator implements Iterator<Object> {
       this.user = user;
       this.plan = plan;
       this.rowsProcessed = rowsProcessed;
+      this.runningFragments = runningFragments;
     }
   }
 }
