@@ -21,6 +21,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.beust.jcommander.internal.Lists;
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.MajorFragmentProfile;
 import org.apache.drill.exec.proto.UserBitShared.MinorFragmentProfile;
 import org.apache.drill.exec.proto.UserBitShared.OperatorProfile;
@@ -33,12 +35,14 @@ import com.google.common.collect.Collections2;
  * Wrapper class for a major fragment profile.
  */
 public class FragmentWrapper {
+
+  private final List<MinorFragmentWrapper> completeMinorFragmentWrappers;
   private final MajorFragmentProfile major;
-  private final long start;
   private final long firstStart;
   private final long lastStart;
   private final String operatorPath;
   private final long numberRunningFragments;
+  private final long rowsProcessed;
   private final String minorFragmentsReporting;
   private final long firstEnd;
   private final long lastEnd;
@@ -51,14 +55,30 @@ public class FragmentWrapper {
 
   public FragmentWrapper(final MajorFragmentProfile major, final long start) {
     this.major = Preconditions.checkNotNull(major);
-    this.start = start;
 
     // Use only minor fragments that have complete profiles
     // Complete iff the fragment profile has at least one operator profile, and start and end times.
     final List<MinorFragmentProfile> complete = new ArrayList<>(
         Collections2.filter(major.getMinorFragmentProfileList(), Filters.hasOperatorsAndTimes));
+    final List<MinorFragmentProfile> running = new ArrayList<>(
+        Collections2.filter(major.getMinorFragmentProfileList(), Filters.notFinished));
+
+    Collections.sort(complete, Comparators.minorId);
+    completeMinorFragmentWrappers = Lists.newArrayList();
+    for (final MinorFragmentProfile minor : complete) {
+      completeMinorFragmentWrappers.add(new MinorFragmentWrapper(major, start, minor));
+    }
+
+    int rowsProcessed = 0;
+    for (final MinorFragmentWrapper fragmentWrapper : completeMinorFragmentWrappers) {
+      if (fragmentWrapper.isLeaf) {
+        rowsProcessed += fragmentWrapper.recordsFromScan;
+      }
+    }
+    this.rowsProcessed = rowsProcessed;
+
     operatorPath = new OperatorPathBuilder().setMajor(major).build();
-    numberRunningFragments = major.getMinorFragmentProfileCount() - complete.size();
+    numberRunningFragments = running.size();
     minorFragmentsReporting = complete.size() + " / " + major.getMinorFragmentProfileCount();
 
     firstStart = Collections.min(complete, Comparators.startTime).getStartTime() - start;
@@ -137,17 +157,10 @@ public class FragmentWrapper {
   public String getContent() {
     final TableBuilder builder = new TableBuilder(FRAGMENT_COLUMNS);
 
-    // Use only minor fragments that have complete profiles
-    // Complete iff the fragment profile has at least one operator profile, and start and end times.
-    final List<MinorFragmentProfile> complete = new ArrayList<>(
-      Collections2.filter(major.getMinorFragmentProfileList(), Filters.hasOperatorsAndTimes));
     final List<MinorFragmentProfile> incomplete = new ArrayList<>(
       Collections2.filter(major.getMinorFragmentProfileList(), Filters.missingOperatorsOrTimes));
 
-    Collections.sort(complete, Comparators.minorId);
-    for (final MinorFragmentProfile minor : complete) {
-      MinorFragmentWrapper fragmentWrapper = new MinorFragmentWrapper(major, start, minor);
-
+    for (final MinorFragmentWrapper fragmentWrapper : completeMinorFragmentWrappers) {
       builder.appendCells(
           fragmentWrapper.minorFragmentID,
           fragmentWrapper.hostName,
@@ -155,7 +168,6 @@ public class FragmentWrapper {
           DataFormattingHelper.formatDuration(fragmentWrapper.endTime),
           DataFormattingHelper.formatDuration(fragmentWrapper.runTime),
           DataFormattingHelper.formatInteger(fragmentWrapper.maxRecords),
-          DataFormattingHelper.formatInteger(fragmentWrapper.maxBatches),
           DataFormattingHelper.formatInteger(fragmentWrapper.maxBatches),
           DataFormattingHelper.formatTime(fragmentWrapper.lastProgress),
           DataFormattingHelper.formatTime(fragmentWrapper.lastUpdate),
@@ -187,21 +199,50 @@ public class FragmentWrapper {
     private final long lastUpdate;
     private final long maxMem;
     private final String state;
+    private final boolean isLeaf;
+    private final long recordsFromScan;
+    private final long batchesFromScan;
 
     public MinorFragmentWrapper(final MajorFragmentProfile major, final long start, final MinorFragmentProfile minor) {
       final ArrayList<OperatorProfile> ops = new ArrayList<>(minor.getOperatorProfileList());
 
       long biggestIncomingRecords = 0;
       long biggestBatches = 0;
+      int indexOfLargestOperatorId = 0;
+      int largestOpId = 0;
+      int indexInList = 0;
       for (final OperatorProfile op : ops) {
         long incomingRecords = 0;
         long batches = 0;
+        if (op.getOperatorId() > largestOpId) {
+          largestOpId = op.getOperatorId();
+          indexOfLargestOperatorId = indexInList;
+        }
+        UserBitShared.CoreOperatorType.valueOf(op.getOperatorType());
         for (final StreamProfile sp : op.getInputProfileList()) {
           incomingRecords += sp.getRecords();
           batches += sp.getBatches();
         }
         biggestIncomingRecords = Math.max(biggestIncomingRecords, incomingRecords);
         biggestBatches = Math.max(biggestBatches, batches);
+        indexInList++;
+      }
+      if (!UserBitShared.CoreOperatorType.valueOf(ops.get(indexOfLargestOperatorId).getOperatorType()).name().contains("RECEIVER")) {
+        // this is the end of a fragment that is not rooted by a reciever, it must be a leaf fragment
+        isLeaf = true;
+        OperatorProfile op = ops.get(indexOfLargestOperatorId);
+        long incomingRecords = 0;
+        long batches = 0;
+        for (final StreamProfile sp : op.getInputProfileList()) {
+          incomingRecords += sp.getRecords();
+          batches += sp.getBatches();
+        }
+        recordsFromScan = incomingRecords;
+        batchesFromScan = batches;
+      } else {
+        isLeaf = false;
+        recordsFromScan = -1;
+        batchesFromScan = -1;
       }
 
       minorFragmentID = new OperatorPathBuilder().setMajor(major).setMinor(minor).build();

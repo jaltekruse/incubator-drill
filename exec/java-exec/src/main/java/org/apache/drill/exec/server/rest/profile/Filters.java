@@ -17,6 +17,7 @@
  */
 package org.apache.drill.exec.server.rest.profile;
 
+import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.MinorFragmentProfile;
 
 import com.google.common.base.Predicate;
@@ -32,6 +33,12 @@ interface Filters {
   final static Predicate<MinorFragmentProfile> hasTimes = new Predicate<MinorFragmentProfile>() {
     public boolean apply(MinorFragmentProfile arg0) {
       return arg0.hasStartTime() && arg0.hasEndTime();
+    }
+  };
+
+  Predicate<MinorFragmentProfile> notFinished = new Predicate<MinorFragmentProfile>() {
+    public boolean apply(MinorFragmentProfile arg0) {
+      return (arg0.getState() != UserBitShared.FragmentState.FINISHED);
     }
   };
 

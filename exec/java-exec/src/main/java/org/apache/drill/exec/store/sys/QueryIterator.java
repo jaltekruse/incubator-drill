@@ -78,11 +78,13 @@ public class QueryIterator implements Iterator<Object> {
       UserBitShared.QueryProfile queryProfile = f.getQueryManager().getQueryProfile();
       ProfileWrapper profileWrapper = new ProfileWrapper(queryProfile);
       long totalRowsProcessed = 0;
+      for (FragmentWrapper fragmentWrapper : profileWrapper.getFragmentProfiles()) {
+
+      }
       // TODO - This is currently minor fragments, is that right?
       long totalRunningFragments = 0;
       for (FragmentWrapper fragmentWrapper : profileWrapper.getFragmentProfiles()) {
         totalRunningFragments += fragmentWrapper.getNumberRunningFragments();
-        fragmentWrapper.
       }
       nextToReturn = null;
       return new QueryInfo(ret, queryProfile.getPlan(), totalRowsProcessed, totalRunningFragments);
