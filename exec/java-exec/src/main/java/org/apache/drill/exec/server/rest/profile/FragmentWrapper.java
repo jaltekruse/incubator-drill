@@ -144,6 +144,45 @@ public class FragmentWrapper {
 
     Collections.sort(complete, Comparators.minorId);
     for (final MinorFragmentProfile minor : complete) {
+      MinorFragmentWrapper fragmentWrapper = new MinorFragmentWrapper(major, start, minor);
+
+      builder.appendCells(
+          fragmentWrapper.minorFragmentID,
+          fragmentWrapper.hostName,
+          DataFormattingHelper.formatDuration(fragmentWrapper.startTime),
+          DataFormattingHelper.formatDuration(fragmentWrapper.endTime),
+          DataFormattingHelper.formatDuration(fragmentWrapper.runTime),
+          DataFormattingHelper.formatInteger(fragmentWrapper.maxRecords),
+          DataFormattingHelper.formatInteger(fragmentWrapper.maxBatches),
+          DataFormattingHelper.formatInteger(fragmentWrapper.maxBatches),
+          DataFormattingHelper.formatTime(fragmentWrapper.lastProgress),
+          DataFormattingHelper.formatTime(fragmentWrapper.lastUpdate),
+          DataFormattingHelper.formatBinarySize(fragmentWrapper.maxMem),
+          fragmentWrapper.state
+      );
+    }
+
+    for (final MinorFragmentProfile m : incomplete) {
+      builder.appendCell(major.getMajorFragmentId() + "-" + m.getMinorFragmentId(), null);
+      builder.appendRepeated(m.getState().toString(), null, NUM_NULLABLE_FRAGMENTS_COLUMNS);
+    }
+    return builder.build();
+  }
+
+  public static class MinorFragmentWrapper {
+    private final String minorFragmentID;
+    private final String hostName;
+    private final long startTime;
+    private final long endTime;
+    private final long runTime;
+    private final long maxRecords;
+    private final long maxBatches;
+    private final long lastProgress;
+    private final long lastUpdate;
+    private final long maxMem;
+    private final String state;
+
+    public MinorFragmentWrapper(final MajorFragmentProfile major, final long start, final MinorFragmentProfile minor) {
       final ArrayList<OperatorProfile> ops = new ArrayList<>(minor.getOperatorProfileList());
 
       long biggestIncomingRecords = 0;
@@ -159,26 +198,20 @@ public class FragmentWrapper {
         biggestBatches = Math.max(biggestBatches, batches);
       }
 
-      builder.appendCell(new OperatorPathBuilder().setMajor(major).setMinor(minor).build(), null);
-      builder.appendCell(minor.getEndpoint().getAddress(), null);
-      builder.appendMillis(minor.getStartTime() - start);
-      builder.appendMillis(minor.getEndTime() - start);
-      builder.appendMillis(minor.getEndTime() - minor.getStartTime());
+      minorFragmentID = new OperatorPathBuilder().setMajor(major).setMinor(minor).build();
+      hostName = minor.getEndpoint().getAddress();
+      startTime = minor.getStartTime() - start;
+      endTime = minor.getEndTime() - start;
+      runTime = minor.getEndTime() - minor.getStartTime();
 
-      builder.appendFormattedInteger(biggestIncomingRecords, null);
-      builder.appendFormattedInteger(biggestBatches, null);
+      maxRecords = biggestIncomingRecords;
+      maxBatches = biggestBatches;
 
-      builder.appendTime(minor.getLastUpdate(), null);
-      builder.appendTime(minor.getLastProgress(), null);
+      lastUpdate = minor.getLastUpdate();
+      lastProgress = minor.getLastProgress();
 
-      builder.appendBytes(minor.getMaxMemoryUsed(), null);
-      builder.appendCell(minor.getState().name(), null);
+      maxMem = minor.getMaxMemoryUsed();
+      state = minor.getState().name();
     }
-
-    for (final MinorFragmentProfile m : incomplete) {
-      builder.appendCell(major.getMajorFragmentId() + "-" + m.getMinorFragmentId(), null);
-      builder.appendRepeated(m.getState().toString(), null, NUM_NULLABLE_FRAGMENTS_COLUMNS);
-    }
-    return builder.build();
   }
 }
