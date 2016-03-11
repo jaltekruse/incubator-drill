@@ -79,7 +79,7 @@ public class QueryIterator implements Iterator<Object> {
       ProfileWrapper profileWrapper = new ProfileWrapper(queryProfile);
       long totalRowsProcessed = 0;
       for (FragmentWrapper fragmentWrapper : profileWrapper.getFragmentProfiles()) {
-
+        totalRowsProcessed += fragmentWrapper.getRowsProcessed();
       }
       // TODO - This is currently minor fragments, is that right?
       long totalRunningFragments = 0;

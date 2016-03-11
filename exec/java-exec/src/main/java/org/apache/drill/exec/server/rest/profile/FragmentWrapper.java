@@ -187,6 +187,10 @@ public class FragmentWrapper {
     return numberRunningFragments;
   }
 
+  public long getRowsProcessed() {
+    return rowsProcessed;
+  }
+
   public static class MinorFragmentWrapper {
     private final String minorFragmentID;
     private final String hostName;
