@@ -52,6 +52,7 @@ import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.server.options.SystemOptionManager;
 import org.apache.drill.exec.store.sys.store.provider.LocalPersistentStoreProvider;
 import org.apache.drill.exec.vector.ValueVector;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -63,7 +64,7 @@ import com.google.common.io.Files;
 import mockit.Injectable;
 import mockit.NonStrictExpectations;
 
-
+@Ignore
 public class TestHashJoin extends PopUnitTestBase {
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestMergeJoin.class);
 

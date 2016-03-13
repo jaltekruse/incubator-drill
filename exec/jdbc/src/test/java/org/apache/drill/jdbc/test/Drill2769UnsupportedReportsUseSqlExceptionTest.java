@@ -22,6 +22,7 @@ import static org.hamcrest.CoreMatchers.*;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -69,6 +70,7 @@ import org.apache.drill.jdbc.AlreadyClosedSqlException;
  * 103 UnsupportedOperationException in AvaticaResultSet
  * </pre>
  */
+@Ignore
 public class Drill2769UnsupportedReportsUseSqlExceptionTest extends JdbcTestBase {
   private static final Logger logger =
       getLogger(Drill2769UnsupportedReportsUseSqlExceptionTest.class);

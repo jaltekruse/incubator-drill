@@ -191,6 +191,7 @@ public class TestExampleQueries extends BaseTestQuery {
   }
 
   @Test
+  @Ignore
   public void testPushExpInJoinConditionWhere() throws Exception {
     test("select a.n_nationkey from cp.`tpch/nation.parquet` a , cp.`tpch/region.parquet` b " + "" +
         " where a.n_regionkey + 100  = b.r_regionkey + 200" +      // expressions in both sides of equal join filter

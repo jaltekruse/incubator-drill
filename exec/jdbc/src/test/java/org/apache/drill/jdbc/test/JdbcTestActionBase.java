@@ -33,6 +33,7 @@ import org.apache.drill.jdbc.JdbcTestBase;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
@@ -40,6 +41,7 @@ import org.junit.runner.Description;
 
 import com.google.common.base.Stopwatch;
 
+@Ignore
 public class JdbcTestActionBase extends JdbcTestBase {
   // Set a timeout unless we're debugging.
   @Rule

@@ -30,6 +30,7 @@ public class TestTools {
       .toString().indexOf("-agentlib:jdwp") > 0;
   static final String WORKING_PATH = Paths.get("").toAbsolutePath().toString();
 
+  // TODO - remove, looks unused
   public static TestRule getTimeoutRule() {
     return getTimeoutRule(10000);
   }

@@ -24,6 +24,7 @@ import static org.hamcrest.CoreMatchers.*;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -44,6 +45,7 @@ import org.apache.drill.jdbc.JdbcTestBase;
  * Basic (spot-check/incomplete) tests for DRILL-2128 bugs (many
  * DatabaseMetaData.getColumns(...) result table problems).
  */
+@Ignore
 public class Drill2128GetColumnsDataTypeNotTypeCodeIntBugsTest extends JdbcTestBase {
 
   private static Connection connection;

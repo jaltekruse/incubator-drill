@@ -61,7 +61,7 @@ import com.google.common.io.Resources;
 public class PlanningBase extends ExecTest{
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(PlanningBase.class);
 
-  @Rule public final TestRule TIMEOUT = TestTools.getTimeoutRule(10000);
+  @Rule public final TestRule TIMEOUT = TestTools.getTimeoutRule(3000);
 
   @Mocked DrillbitContext dbContext;
   private final DrillConfig config = DrillConfig.create();

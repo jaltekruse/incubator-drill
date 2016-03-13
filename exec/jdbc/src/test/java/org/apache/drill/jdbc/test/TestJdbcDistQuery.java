@@ -39,6 +39,7 @@ import org.junit.rules.TestRule;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
+@Ignore
 public class TestJdbcDistQuery extends JdbcTestBase {
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestJdbcDistQuery.class);
 

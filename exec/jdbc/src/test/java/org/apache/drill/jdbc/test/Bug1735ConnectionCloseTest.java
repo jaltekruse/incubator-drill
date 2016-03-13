@@ -39,6 +39,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 * in DrillCursor.next(), lack of DrillMetrics reset, vectors buffer leak under
 * DrillCursor/DrillResultSet, and other problems).
 */
+@Ignore
 public class Bug1735ConnectionCloseTest extends JdbcTestQueryBase {
 
   static final Logger logger = getLogger( Bug1735ConnectionCloseTest.class );

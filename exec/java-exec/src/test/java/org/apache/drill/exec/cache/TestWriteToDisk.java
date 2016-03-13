@@ -47,12 +47,14 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 
 import com.google.common.collect.Lists;
 import org.junit.rules.TestRule;
 
+@Ignore
 public class TestWriteToDisk extends ExecTest {
   @Rule public final TestRule TIMEOUT = TestTools.getTimeoutRule(90000); // 90secs
 
