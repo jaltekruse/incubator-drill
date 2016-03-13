@@ -19,6 +19,7 @@
 package org.apache.drill.exec.vector.complex.writer;
 
 import org.apache.drill.BaseTestQuery;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class TestComplexTypeWriter  extends BaseTestQuery{
@@ -103,6 +104,7 @@ public class TestComplexTypeWriter  extends BaseTestQuery{
          " from cp.`tpch/nation.parquet` where n_nationkey > 5;");
   }
 
+  @Ignore
   @Test
   //Test multiple batches creation ( require multiple alloc for complex writer during Project ).
   public void testA100() throws Exception{

@@ -17,14 +17,19 @@
  */
 package org.apache.drill;
 
+import org.apache.drill.common.util.TestTools;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 public class TestTpchExplain extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTpchExplain.class);
 
   private static final String EXPLAIN_PREFIX = "EXPLAIN PLAN FOR ";
 
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   private void doExplain(String fileName) throws Exception{
     String query = getFile(fileName);
@@ -136,7 +141,6 @@ public class TestTpchExplain extends BaseTestQuery{
   public void tpch19_1() throws Exception{
     doExplain("queries/tpch/19_1.sql");
   }
-
 
   @Test
   public void tpch20() throws Exception{

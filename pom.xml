@@ -33,7 +33,7 @@
     <dep.junit.version>4.11</dep.junit.version>
     <dep.slf4j.version>1.7.6</dep.slf4j.version>
     <dep.guava.version>18.0</dep.guava.version>
-    <forkCount>2</forkCount>
+    <forkCount>6</forkCount>
     <parquet.version>1.8.1-drill-r0</parquet.version>
     <sqlline.version>1.1.9-drill-r7</sqlline.version>
     <jackson.version>2.7.1</jackson.version>
@@ -407,12 +407,12 @@
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.17</version>
           <configuration>
-            <argLine>-Xms512m -Xmx3g -Ddrill.exec.http.enabled=false
+            <argLine>-Xms128m -Xmx1g -Ddrill.exec.http.enabled=false
               -Ddrill.exec.sys.store.provider.local.write=false
               -Dorg.apache.drill.exec.server.Drillbit.system_options="org.apache.drill.exec.compile.ClassTransformer.scalar_replacement=on"
               -Ddrill.test.query.printing.silent=true
               -Ddrill.catastrophic_to_standard_out=true
-              -XX:MaxPermSize=512M -XX:MaxDirectMemorySize=3072M
+              -XX:MaxPermSize=512M -XX:MaxDirectMemorySize=1g
               -Djava.net.preferIPv4Stack=true
               -Djava.awt.headless=true
               -XX:+CMSClassUnloadingEnabled -ea</argLine>

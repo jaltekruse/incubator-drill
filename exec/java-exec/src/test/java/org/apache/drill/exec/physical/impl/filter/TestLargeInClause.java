@@ -18,8 +18,10 @@
 package org.apache.drill.exec.physical.impl.filter;
 
 import org.apache.drill.BaseTestQuery;
+import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class TestLargeInClause extends BaseTestQuery {
 
   private static String getInIntList(int size){

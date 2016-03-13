@@ -32,11 +32,13 @@ import org.apache.drill.exec.rpc.user.QueryDataBatch;
 import org.apache.drill.exec.server.Drillbit;
 import org.apache.drill.exec.server.RemoteServiceSet;
 import org.apache.drill.exec.vector.ValueVector;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
 
+@Ignore
 public class TestAggregateFunction extends PopUnitTestBase {
 
   public void runTest(Object[] values, String planPath, String dataPath) throws Throwable {

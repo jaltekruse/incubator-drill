@@ -20,10 +20,16 @@ package org.apache.drill.exec.fn.impl;
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.types.TypeProtos;
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.common.util.TestTools;
 import org.joda.time.DateTime;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 public class TestCastFunctions extends BaseTestQuery {
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   @Test
   public void testVarbinaryToDate() throws Exception {
@@ -51,7 +57,7 @@ public class TestCastFunctions extends BaseTestQuery {
       .build().run();
   }
 
-  @Test // DRILL-2808
+  @Test(timeout=10_000) // DRILL-2808
   public void testCastByConstantFolding() throws Exception {
     final String query = "SELECT count(DISTINCT employee_id) as col1, " +
         "count((to_number(date_diff(now(), cast(birth_date AS date)),'####'))) as col2 \n" +

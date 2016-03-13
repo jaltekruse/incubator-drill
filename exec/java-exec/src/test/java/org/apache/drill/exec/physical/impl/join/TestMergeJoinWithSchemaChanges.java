@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+@Ignore
 public class TestMergeJoinWithSchemaChanges extends BaseTestQuery {
 
   @Test

@@ -30,6 +30,7 @@ import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.proto.UserBitShared;
 import org.apache.drill.exec.proto.UserBitShared.QueryResult.QueryState;
 import org.apache.drill.exec.rpc.user.UserResultsListener;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -45,6 +46,7 @@ import static org.junit.Assert.assertNull;
  * unstable from running a lot of queries concurrently -- it's not about
  * any particular order of execution. We ignore the results.
  */
+@Ignore
 public class TestTpchDistributedConcurrent extends BaseTestQuery {
   @Rule public final TestRule TIMEOUT = TestTools.getTimeoutRule(140000); // Longer timeout than usual.
 

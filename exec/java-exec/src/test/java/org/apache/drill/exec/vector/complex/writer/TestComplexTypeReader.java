@@ -252,6 +252,7 @@ public class TestComplexTypeReader extends BaseTestQuery{
             .go();
   }
 
+  @Ignore
   @Test  // DRILL-4410
   // ListVector allocation
   public void test_array() throws Exception{

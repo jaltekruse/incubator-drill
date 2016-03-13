@@ -36,7 +36,7 @@ import com.google.common.base.Stopwatch;
 public class JdbcTestQueryBase extends JdbcTestBase {
   // Set a timeout unless we're debugging.
   @Rule
-  public TestRule TIMEOUT = TestTools.getTimeoutRule(3000);
+  public TestRule TIMEOUT = TestTools.getTimeoutRule(10000);
 
   protected static final String WORKING_PATH;
   static{

@@ -20,6 +20,7 @@ package org.apache.drill;
 import org.junit.Ignore;
 import org.junit.Test;
 
+@Ignore
 public class TestTpchDistributedStreaming extends BaseTestQuery{
   static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(TestTpchDistributedStreaming.class);
 

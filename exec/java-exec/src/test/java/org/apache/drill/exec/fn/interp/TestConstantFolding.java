@@ -31,6 +31,7 @@ import org.junit.rules.TemporaryFolder;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 
+@Ignore
 public class TestConstantFolding extends PlanTestBase {
 
   @Rule

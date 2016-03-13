@@ -18,12 +18,15 @@
 package org.apache.drill;
 
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.exception.OutOfMemoryException;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.proto.UserBitShared.DrillPBError;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 /**
  * Run several tpch queries and inject an OutOfMemoryException in ScanBatch that will cause an OUT_OF_MEMORY outcome to
@@ -32,6 +35,9 @@ import org.junit.Test;
 public class TestOutOfMemoryOutcome extends BaseTestQuery{
 
   private static final String SINGLE_MODE = "ALTER SESSION SET `planner.disable_exchanges` = true";
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   private void testSingleMode(String fileName) throws Exception{
     test(SINGLE_MODE);
@@ -126,7 +132,7 @@ public class TestOutOfMemoryOutcome extends BaseTestQuery{
     testSingleMode("queries/tpch/18.sql");
   }
 
-  @Test
+  @Test(timeout=10_000)
   public void tpch20() throws Exception{
     testSingleMode("queries/tpch/20.sql");
   }

@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.apache.drill.common.util.TestTools;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestRule;
@@ -79,6 +80,7 @@ public class TestJdbcMetadata extends JdbcTestActionBase {
     }, 1);
   }
 
+  @Ignore
   @Test
   public void allColumns() throws Exception{
     this.testAction(new JdbcAction(){
@@ -88,6 +90,7 @@ public class TestJdbcMetadata extends JdbcTestActionBase {
     });
   }
 
+  @Ignore
   @Test
   public void columnsWithConditions() throws Exception{
     this.testAction(new JdbcAction(){

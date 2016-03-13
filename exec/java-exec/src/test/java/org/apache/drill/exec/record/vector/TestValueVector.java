@@ -63,6 +63,7 @@ import org.apache.drill.exec.vector.complex.RepeatedListVector;
 import org.apache.drill.exec.vector.complex.RepeatedMapVector;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.base.Preconditions;
@@ -94,6 +95,7 @@ public class TestValueVector extends ExecTest {
     allocator.close();
   }
 
+  @Ignore
   @Test(expected = OversizedAllocationException.class)
   public void testFixedVectorReallocation() {
     final MaterializedField field = MaterializedField.create(EMPTY_SCHEMA_PATH, UInt4Holder.TYPE);
@@ -119,6 +121,7 @@ public class TestValueVector extends ExecTest {
     }
   }
 
+  @Ignore
   @Test(expected = OversizedAllocationException.class)
   public void testBitVectorReallocation() {
     final MaterializedField field = MaterializedField.create(EMPTY_SCHEMA_PATH, UInt4Holder.TYPE);
@@ -149,7 +152,7 @@ public class TestValueVector extends ExecTest {
     }
   }
 
-
+  @Ignore
   @Test(expected = OversizedAllocationException.class)
   public void testVariableVectorReallocation() {
     final MaterializedField field = MaterializedField.create(EMPTY_SCHEMA_PATH, UInt4Holder.TYPE);

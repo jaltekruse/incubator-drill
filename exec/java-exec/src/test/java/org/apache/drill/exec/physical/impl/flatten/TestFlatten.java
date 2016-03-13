@@ -190,6 +190,7 @@ public class TestFlatten extends BaseTestQuery {
     builder.go();
   };
 
+  @Ignore
   @Test
   public void drill1671() throws Exception{
     int rowCount = testSql("select * from (select count(*) as cnt from (select id, flatten(evnts1), flatten(evnts2), flatten(evnts3), flatten(evnts4), flatten(evnts5), flatten(evnts6), flatten(evnts7), flatten(evnts8), flatten(evnts9), flatten(evnts10), flatten(evnts11) from cp.`/flatten/many-arrays-50.json`)x )y where cnt = 2048");

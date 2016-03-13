@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import org.apache.drill.common.config.DrillConfig;
 import org.apache.drill.common.scanner.ClassPathScanner;
 import org.apache.drill.common.util.FileUtils;
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.ExecTest;
 import org.apache.drill.exec.compile.CodeCompilerTestFactory;
@@ -45,6 +46,7 @@ import org.apache.drill.exec.server.DrillbitContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.junit.Rule;
 import org.junit.Test;
 
 import com.codahale.metrics.MetricRegistry;
@@ -53,6 +55,7 @@ import com.google.common.io.Files;
 
 import mockit.Injectable;
 import mockit.NonStrictExpectations;
+import org.junit.rules.TestRule;
 
 /**
  * The unit test case will read a physical plan in json format. The physical plan contains a "trace" operator,
@@ -62,6 +65,9 @@ import mockit.NonStrictExpectations;
 public class DumpCatTest  extends ExecTest {
   //private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(DumpCatTest.class);
   private final DrillConfig c = DrillConfig.create();
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   @Test
   public void testDumpCat(@Injectable final DrillbitContext bitContext, @Injectable UserClientConnection connection) throws Throwable

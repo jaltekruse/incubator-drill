@@ -21,11 +21,16 @@ import org.apache.drill.BaseTestQuery;
 import org.apache.drill.PlanTestBase;
 import org.apache.drill.common.util.TestTools;
 import org.junit.Ignore;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 public class TestAggregateFunctions extends BaseTestQuery {
 
   private static final String TEST_RES_PATH =   TestTools.getWorkingPath() + "/src/test/resources";
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   /*
    * Test checks the count of a nullable column within a map

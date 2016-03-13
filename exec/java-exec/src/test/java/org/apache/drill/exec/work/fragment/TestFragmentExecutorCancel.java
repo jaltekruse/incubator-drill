@@ -21,10 +21,13 @@ import static org.junit.Assert.fail;
 
 import org.apache.drill.BaseTestQuery;
 import org.apache.drill.common.exceptions.UserException;
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.exception.OutOfMemoryException;
 import org.apache.drill.exec.proto.CoordinationProtos;
 import org.apache.drill.exec.testing.ControlsInjectionUtil;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 /**
  * Run several tpch queries and inject an OutOfMemoryException in ScanBatch that will cause an OUT_OF_MEMORY outcome to
@@ -32,6 +35,10 @@ import org.junit.Test;
  */
 public class TestFragmentExecutorCancel extends BaseTestQuery {
 
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
+
+  // TODO - this requires the longer timeout declared above
   @Test
   public void testCancelNonRunningFragments() throws Exception{
     test("alter session set `planner.slice_target` = 10");
