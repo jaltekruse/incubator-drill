@@ -125,6 +125,7 @@ public class DriverTest extends DrillTest {
     fail( "Not implemented yet" );
   }
 
+  @Ignore // requires 10 second timeout
   @Test
   public void test_connect_acceptsLocalZkDrillJdbcUrl()
       throws SQLException
@@ -134,6 +135,7 @@ public class DriverTest extends DrillTest {
     connection.close();
   }
 
+  @Ignore // requires 10 second timeout
   @Test
   public void test_connect_acceptsLocalViaProperties()
       throws SQLException

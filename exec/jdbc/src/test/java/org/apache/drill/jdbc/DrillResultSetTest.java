@@ -34,6 +34,7 @@ import org.apache.drill.jdbc.test.JdbcAssert;
 import org.apache.drill.test.DrillTest;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 
@@ -58,7 +59,7 @@ public class DrillResultSetTest extends DrillTest {
     System.setProperty( STATUS_SERVER_PROPERTY_NAME, origStatusServerPropValue );
   }
 
-
+  @Ignore // requires 10 second timeout
   @Test
   public void test_next_blocksFurtherAccessAfterEnd()
       throws SQLException
@@ -100,6 +101,7 @@ public class DrillResultSetTest extends DrillTest {
     // TODO:  Ideally, test all other accessor methods.
   }
 
+  @Ignore // requires 10 second timeout
   @Test
   public void test_next_blocksFurtherAccessWhenNoRows()
     throws Exception
@@ -135,6 +137,7 @@ public class DrillResultSetTest extends DrillTest {
     // TODO:  Ideally, test all other accessor methods.
   }
 
+  @Ignore // requires 10 second timeout
   @Test
   public void test_getRow_isOneBased()
     throws Exception

@@ -25,6 +25,7 @@ import static org.hamcrest.CoreMatchers.*;
 import org.hamcrest.Matcher;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.apache.drill.jdbc.Driver;
 
@@ -68,6 +69,7 @@ public class PreparedStatementTest extends JdbcTestBase {
   // Basic querying-works test:
 
   /** Tests that basic executeQuery() (with query statement) works. */
+  @Ignore // requires 10 second timeout
   @Test
   public void testExecuteQueryBasicCaseWorks() throws SQLException {
     PreparedStatement stmt = connection.prepareStatement( "VALUES 11" );

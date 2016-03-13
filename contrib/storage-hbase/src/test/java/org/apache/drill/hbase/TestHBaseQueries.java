@@ -20,15 +20,21 @@ package org.apache.drill.hbase;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.rpc.user.QueryDataBatch;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.client.HTable;
 import org.apache.hadoop.hbase.client.Put;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 public class TestHBaseQueries extends BaseHBaseTest {
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
 
   @Test
   public void testWithEmptyFirstAndLastRegion() throws Exception {

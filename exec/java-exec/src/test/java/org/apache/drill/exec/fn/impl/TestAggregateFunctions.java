@@ -139,6 +139,9 @@ public class TestAggregateFunctions extends BaseTestQuery {
         .build().run();
   }
 
+  // TODO - this takes more than 10 seconds, refactor to not scan lineitem and perform two aggregates over it, it is
+  // the largest table included on the classpath
+  @Ignore
   @Test //DRILL-2242
   public void testDRILLNestedGBWithSubsetKeys() throws Exception {
     String sql = " select count(*) as cnt from (select l_partkey from\n" +

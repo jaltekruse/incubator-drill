@@ -19,13 +19,16 @@ package org.apache.drill.exec.hive;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.drill.common.exceptions.UserRemoteException;
+import org.apache.drill.common.util.TestTools;
 import org.apache.drill.exec.ExecConstants;
 import org.apache.drill.exec.planner.physical.PlannerSettings;
 import org.apache.hadoop.fs.FileSystem;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestRule;
 
 import java.math.BigDecimal;
 import java.sql.Date;
@@ -37,11 +40,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
 
 public class TestHiveStorage extends HiveTestBase {
+
+  @Rule
+  public final TestRule TIMEOUT = TestTools.getTimeoutRule(10_000);
+
   @BeforeClass
   public static void setupOptions() throws Exception {
     test(String.format("alter session set `%s` = true", PlannerSettings.ENABLE_DECIMAL_DATA_TYPE_KEY));
   }
-
 
   @Test // DRILL-4083
   public void testNativeScanWhenNoColumnIsRead() throws Exception {
