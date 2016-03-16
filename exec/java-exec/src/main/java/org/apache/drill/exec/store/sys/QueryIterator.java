@@ -28,6 +28,7 @@ import org.apache.drill.exec.server.rest.profile.FragmentWrapper;
 import org.apache.drill.exec.server.rest.profile.ProfileResources;
 import org.apache.drill.exec.server.rest.profile.ProfileWrapper;
 import org.apache.drill.exec.work.foreman.Foreman;
+import org.apache.drill.exec.work.foreman.QueryManager;
 
 import java.util.Date;
 import java.util.Iterator;
@@ -75,7 +76,21 @@ public class QueryIterator implements Iterator<Object> {
     if (nextToReturn != null) {
       ProfileResources.ProfileInfo ret = nextToReturn;
       Foreman f = context.getDrillbitContext().getWorkManager().getBee().getForemanForQueryId(QueryIdHelper.getQueryIdFromString(ret.queryId));
-      UserBitShared.QueryProfile queryProfile = f.getQueryManager().getQueryProfile();
+      // This does not work for failed/completed queries, should get the profiles out of
+      // the pstore for both running and completed queries
+      final UserBitShared.QueryProfile queryProfile;
+      // not an active query
+      if (f == null) {
+        final PersistentStore<UserBitShared.QueryProfile> profiles;
+        try {
+          profiles = context.getDrillbitContext().getStoreProvider().getOrCreateStore(QueryManager.QUERY_PROFILE);
+          queryProfile = profiles.get(ret.queryId);
+        } catch (StoreException e) {
+          throw new RuntimeException(e);
+        }
+      } else {
+        queryProfile = f.getQueryManager().getQueryProfile();
+      }
       ProfileWrapper profileWrapper = new ProfileWrapper(queryProfile);
       long totalRowsProcessed = 0;
       for (FragmentWrapper fragmentWrapper : profileWrapper.getFragmentProfiles()) {
@@ -96,9 +111,9 @@ public class QueryIterator implements Iterator<Object> {
   private void findNextActiveQuery() {
     while (nextToReturn == null && allQueries.hasNext()) {
       nextToReturn = allQueries.next();
-      if (nextToReturn.state.equals("COMPLETED") ||
+      if (false && (nextToReturn.state.equals("COMPLETED") ||
           nextToReturn.state.equals("FAILED") ||
-          nextToReturn.state.equals("CANCELED")) {
+          nextToReturn.state.equals("CANCELED"))) {
         nextToReturn = null;
       }
     }
